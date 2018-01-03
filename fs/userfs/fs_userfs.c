@@ -1,7 +1,7 @@
 /****************************************************************************
  * fs/userfs/fs_userfs.c
  *
- *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2017-2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -167,6 +167,7 @@ const struct mountpt_operations userfs_operations =
   userfs_sync,       /* sync */
   userfs_dup,        /* dup */
   userfs_fstat,      /* fstat */
+  NULL,              /* truncate */
 
   userfs_opendir,    /* opendir */
   userfs_closedir,   /* closedir */

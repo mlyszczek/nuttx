@@ -1,7 +1,7 @@
 /****************************************************************************
  * fs/tmpfs/fs_tmpfs.c
  *
- *   Copyright (C) 2015, 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2015, 2017-2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -177,16 +177,21 @@ const struct mountpt_operations tmpfs_operations =
   tmpfs_write,      /* write */
   tmpfs_seek,       /* seek */
   tmpfs_ioctl,      /* ioctl */
+
   NULL,             /* sync */
   tmpfs_dup,        /* dup */
   tmpfs_fstat,      /* fstat */
+  NULL,             /* truncate */
+
   tmpfs_opendir,    /* opendir */
   tmpfs_closedir,   /* closedir */
   tmpfs_readdir,    /* readdir */
   tmpfs_rewinddir,  /* rewinddir */
+
   tmpfs_bind,       /* bind */
   tmpfs_unbind,     /* unbind */
   tmpfs_statfs,     /* statfs */
+
   tmpfs_unlink,     /* unlink */
   tmpfs_mkdir,      /* mkdir */
   tmpfs_rmdir,      /* rmdir */

@@ -1,7 +1,7 @@
 /****************************************************************************
  * fs/unionfs/fs_unionfs.c
  *
- *   Copyright (C) 2015, 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2015, 2017-2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -218,6 +218,7 @@ static const struct mountpt_operations g_unionfs_mops =
   unionfs_sync,        /* sync */
   unionfs_dup,         /* dup */
   unionfs_fstat,       /* fstat */
+  NULL,                /* truncate */
 
   unionfs_opendir,     /* opendir */
   unionfs_closedir,    /* closedir */
