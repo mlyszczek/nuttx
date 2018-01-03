@@ -55,7 +55,7 @@
  *
  * Description:
  *   The truncate() function causes the regular file named by path to have
- *   a size of length bytes. 
+ *   a size of length bytes.
  *
  *   If the file previously was larger than length, the extra data is
  *   discarded.  If it was previously shorter than length, it is unspecified
@@ -63,7 +63,7 @@
  *   extended, the extended area appears as if it were zero-filled.
 
  *   With truncate(), the file must be open for writing; for truncate(),
- *   the process must have write permission for the file. 
+ *   the process must have write permission for the file.
  *
  *   truncate() does not modify the file offset for any open file
  *   descriptions associated with the file.
@@ -74,37 +74,37 @@
  *
  * Returned Value:
  *    Upon successful completion, truncate() return 0s. Otherwise a -1 is
- *    returned, and errno is set to indicate the error. 
+ *    returned, and errno is set to indicate the error.
 
  *    EINTR
- *      - A signal was caught during execution. 
+ *      - A signal was caught during execution.
  *    EINVAL
- *      - The length argument was less than 0. 
+ *      - The length argument was less than 0.
  *    EFBIG or EINVAL
- *      - The length argument was greater than the maximum file size. 
+ *      - The length argument was greater than the maximum file size.
  *    EIO
  *      - An I/O error occurred while reading from or writing to a file
- *        system. 
+ *        system.
  *    EACCES
  *      - A component of the path prefix denies search permission, or write
- *        permission is denied on the file. 
+ *        permission is denied on the file.
  *    EISDIR
- *      - The named file is a directory. 
+ *      - The named file is a directory.
  *    ELOOP
- *      - Too many symbolic links were encountered in resolving path. 
+ *      - Too many symbolic links were encountered in resolving path.
  *    ENAMETOOLONG
  *      - The length of the specified pathname exceeds PATH_MAX bytes, or
- *        the length of a component of the pathname exceeds NAME_MAX bytes. 
+ *        the length of a component of the pathname exceeds NAME_MAX bytes.
  *    ENOENT
  *      - A component of path does not name an existing file or path is an
- *        empty string. 
+ *        empty string.
  *    ENOTDIR
- *      - A component of the path prefix of path is not a directory. 
+ *      - A component of the path prefix of path is not a directory.
  *    EROFS
  *      - he named file resides on a read-only file system.
  *    ENAMETOOLONG
  *      - Pathname resolution of a symbolic link produced an intermediate
- *        result whose length exceeds PATH_MAX. 
+ *        result whose length exceeds PATH_MAX.
  *
  ****************************************************************************/
 

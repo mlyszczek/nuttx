@@ -72,7 +72,7 @@ int file_truncate(FAR struct file *filep, off_t length)
 
   if ((filep->f_oflags & O_WROK) == 0)
     {
-      fwarn("WARNING: Cannot truncate a write-only file\n");
+      fwarn("WARNING: Cannot truncate a file opened read-only\n");
       return -EBADF;
     }
 
@@ -82,14 +82,33 @@ int file_truncate(FAR struct file *filep, off_t length)
    */
 
   inode = filep->f_inode;
-  if (!inode || !INODE_IS_MOUNTPT(inode) ||
-      !inode->u.i_mops || !inode->u.i_mops->truncate)
+  if (inode == NULL || !INODE_IS_MOUNTPT(inode) || inode->u.i_mops == NULL)
+    {
+      fwarn("WARNING:  Not a (regular) file on a mounted file system.\n");
+      return -EINVAL;
+    }
+
+  /* A NULL write() method is an indicator of a read-only file system (but
+   * possible not the only indicator)
+   */
+
+  if (inode->u.i_mops->write == NULL)
+    {
+      fwarn("WARNING: File system is read-only\n");
+      return -EROFS;
+    }
+
+  /* Does the file system support the truncate method?  It should if it is
+   * a write-able file system.
+   */
+
+  if (inode->u.i_mops->truncate == NULL)
     {
       fwarn("WARNING: File system does not support the truncate() method\n");
       return -ENOSYS;
     }
 
-  /* Yes, then tell the mountpoint to truncate this file */
+  /* Yes, then tell the file system to truncate this file */
 
   return inode->u.i_mops->truncate(filep, length);
 }
@@ -107,10 +126,10 @@ int file_truncate(FAR struct file *filep, off_t length)
  *   extended, the extended area appears as if it were zero-filled.  If fd
  *   references a shared memory object, ftruncate() sets the size of the
  *   shared memory object to length. If the file is not a regular file or
- *   a shared memory object, the result is unspecified. 
+ *   a shared memory object, the result is unspecified.
 
  *   With ftruncate(), the file must be open for writing; for truncate(),
- *   the process must have write permission for the file. 
+ *   the process must have write permission for the file.
  *
  *   ftruncate() does not modify the file offset for any open file
  *   descriptions associated with the file.
@@ -122,28 +141,28 @@ int file_truncate(FAR struct file *filep, off_t length)
  *
  * Returned Value:
  *    Upon successful completion, ftruncate() return 0s. Otherwise a -1 is
- *    returned, and errno is set to indicate the error. 
+ *    returned, and errno is set to indicate the error.
  *
  *    EINTR
- *      - A signal was caught during execution. 
+ *      - A signal was caught during execution.
  *    EINVAL
- *      - The length argument was less than 0. 
+ *      - The length argument was less than 0.
  *    EFBIG or EINVAL
- *      - The length argument was greater than the maximum file size. 
+ *      - The length argument was greater than the maximum file size.
  *    EIO
  *      - An I/O error occurred while reading from or writing to a file
- *        system. 
+ *        system.
  *    EBADF or EINVAL
- *       - the fd argument is not a file descriptor open for writing. 
+ *       - the fd argument is not a file descriptor open for writing.
  *    EFBIG
  *       - The file is a regular file and length is greater than the offset
  *         maximum established in the open file description associated with
- *         fd. 
+ *         fd.
  *    EINVAL
  *       - The fd argument references a file that was opened without write
- *         permission. 
+ *         permission.
  *    EROFS
- *       - The named file resides on a read-only file system. 
+ *       - The named file resides on a read-only file system.
  *
  ****************************************************************************/
 
