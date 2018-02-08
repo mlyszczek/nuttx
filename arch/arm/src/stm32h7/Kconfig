@@ -66,4 +66,10 @@ config STM32H7_FLASH_OVERRIDE_I
 
 endchoice # "Override Flash Size Designator"
 
+config STM32H7_CUSTOM_CLOCKCONFIG
+	bool "Custom clock configuration"
+	default n
+	---help---
+		Enables special, board-specific STM32 clock configuration.
+
 endif # ARCH_CHIP_STM32H7

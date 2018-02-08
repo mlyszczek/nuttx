@@ -69,18 +69,22 @@
 /* Size SRAM */
 
 #if defined(CONFIG_STM32H7_STM32H7X3XX)
-// TODO: #    define STM32H7_SRAM1_SIZE            (240*1024)  /* 240Kb SRAM1 on AHB bus Matrix */
-// TODO: #    define STM32H7_SRAM2_SIZE            (16*1024)   /* 16Kb SRAM2 on AHB bus Matrix */
-// TODO: #  if defined(CONFIG_ARMV7M_HAVE_DTCM)
-// TODO: #      define STM32H7_DTCM_SRAM_SIZE      (64*1024)   /* 64Kb DTCM SRAM on TCM interface */
-// TODO: #  else
-// TODO: #      define STM32H7_DTCM_SRAM_SIZE      (0)         /* No DTCM SRAM on TCM interface */
-// TODO: #  endif
-// TODO: #  if defined(CONFIG_ARMV7M_HAVE_ITCM)
-// TODO: #      define STM32H7_ITCM_SRAM_SIZE      (16*1024)   /* 16Kb ITCM SRAM on TCM interface */
-// TODO: #  else
-// TODO: #      define STM32H7_ITCM_SRAM_SIZE      (0)         /* No ITCM SRAM on TCM interface */
-// TODO: #  endif
+#    define STM32H7_SRAM_SIZE             (512*1024)  /* 512Kb SRAM on AXI bus Matrix (D1) */
+#    define STM32H7_SRAM1_SIZE            (128*1024)  /* 128Kb SRAM1 on AHB bus Matrix (D2) */
+#    define STM32H7_SRAM2_SIZE            (128*1024)  /* 128Kb SRAM2 on AHB bus Matrix (D2) */
+#    define STM32H7_SRAM3_SIZE             (32*1024)  /*  32Kb SRAM3 on AHB bus Matrix (D2) */
+#    define STM32H7_SRAM123_SIZE          (288*1024)  /* 128Kb SRAM123 on AHB bus Matrix (D2) */
+#    define STM32H7_SRAM4_SIZE             (64*1024)  /*  64Kb SRAM2 on AHB bus Matrix (D3) */
+#  if defined(CONFIG_ARMV7M_HAVE_DTCM)
+#      define STM32H7_DTCM_SRAM_SIZE      (128*1024)  /* 128Kb DTCM SRAM on TCM interface */
+#  else
+#      define STM32H7_DTCM_SRAM_SIZE      (0)         /* No DTCM SRAM on TCM interface */
+#  endif
+#  if defined(CONFIG_ARMV7M_HAVE_ITCM)
+#      define STM32H7_ITCM_SRAM_SIZE      (64*1024)   /*  64b ITCM SRAM on TCM interface */
+#  else
+#      define STM32H7_ITCM_SRAM_SIZE      (0)         /* No ITCM SRAM on TCM interface */
+#  endif
 #else
 #  error STM32 H7 chip Family not identified
 #endif
@@ -88,6 +92,7 @@
 /* Common to all Family members */
 
 // TODO: #  define STM32F7_NATIM                    2   /* Two advanced timers TIM1 and 8 */
+// TODO: etc ...
 
 /* TBD FPU Configuration */
 
