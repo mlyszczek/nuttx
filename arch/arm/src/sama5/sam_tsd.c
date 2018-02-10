@@ -432,7 +432,7 @@ errout:
  *   The ADC hardware can filter the touchscreen samples by averaging.  The
  *   function selects (or de-selects) that filtering.
  *
- * Input Parameters
+ * Input Parameters:
  *   priv - The touchscreen private data structure
  *   tsav - The new (shifted) value of the TSAV field of the ADC TSMR regsiter.
  *
@@ -494,7 +494,7 @@ static void sam_tsd_setaverage(struct sam_tsd_s *priv, uint32_t tsav)
  *   will re-enable TSD interrupts when it completes processing all pending
  *   TSD events.
  *
- * Input Parameters
+ * Input Parameters:
  *   arg - The touchscreen private data structure cast to (void *)
  *
  * Returned Value:
@@ -597,7 +597,8 @@ static void sam_tsd_bottomhalf(void *arg)
        * this case; we rely on the timer expiry to get us going again.
        */
 
-      wd_start(priv->wdog, TSD_WDOG_DELAY, sam_tsd_expiry, 1, (uint32_t)priv);
+      (void)wd_start(priv->wdog, TSD_WDOG_DELAY, sam_tsd_expiry, 1,
+                     (uint32_t)priv);
       ier = 0;
       goto ignored;
     }
@@ -675,7 +676,8 @@ static void sam_tsd_bottomhalf(void *arg)
 
       /* Continue to sample the position while the pen is down */
 
-      wd_start(priv->wdog, TSD_WDOG_DELAY, sam_tsd_expiry, 1, (uint32_t)priv);
+      (void)wd_start(priv->wdog, TSD_WDOG_DELAY, sam_tsd_expiry, 1,
+                     (uint32_t)priv);
 
       /* Check the thresholds.  Bail if (1) this is not the first
        * measurement and (2) there is no significant difference from
@@ -1032,7 +1034,7 @@ errout:
 }
 
 /****************************************************************************
- * Name:sam_tsd_ioctl
+ * Name: sam_tsd_ioctl
  ****************************************************************************/
 
 static int sam_tsd_ioctl(struct file *filep, int cmd, unsigned long arg)
@@ -1705,7 +1707,7 @@ errout_with_priv:
  * Description:
  *   Handles ADC interrupts associated with touchscreen channels
  *
- * Input parmeters:
+ * Input Parameters:
  *   pending - Current set of pending interrupts being handled
  *
  * Returned Value:

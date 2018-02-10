@@ -133,7 +133,7 @@ extern "C"
  *   swap      - Controls byte ordering.  See enum hex2bin_swap_e for
  *               description of the values.
  *
- * Returned Value
+ * Returned Value:
  *   Zero (OK) is returned on success; a negated errno value is returned on
  *   failure.
  *
@@ -146,7 +146,7 @@ int hex2bin(FAR struct lib_instream_s *instream,
             uint32_t endpaddr, enum hex2bin_swap_e swap);
 
 /****************************************************************************
- * Name hex2mem
+ * Name: hex2mem
  *
  * Description:
  *   Read the Intel HEX ASCII data provided on the file descriptor 'fd' and
@@ -163,7 +163,7 @@ int hex2bin(FAR struct lib_instream_s *instream,
  *   swap      - Controls byte ordering.  See enum hex2bin_swap_e for
  *               description of the values.
  *
- * Returned Value
+ * Returned Value:
  *   Zero (OK) is returned on success; a negated errno value is returned on
  *   failure.
  *
@@ -173,7 +173,7 @@ int hex2mem(int fd, uint32_t baseaddr, uint32_t endpaddr,
             enum hex2bin_swap_e swap);
 
 /****************************************************************************
- * Name fhex2mem
+ * Name: fhex2mem
  *
  * Description:
  *   Read the Intel HEX ASCII data provided on the standard stream
@@ -190,7 +190,7 @@ int hex2mem(int fd, uint32_t baseaddr, uint32_t endpaddr,
  *   swap      - Controls byte ordering.  See enum hex2bin_swap_e for
  *               description of the values.
  *
- * Returned Value
+ * Returned Value:
  *   Zero (OK) is returned on success; a negated errno value is returned on
  *   failure.
  *
@@ -208,7 +208,7 @@ int fhex2mem(FAR FILE *instream, uint32_t baseaddr, uint32_t endpaddr,
  * Input Parameters:
  *   Standard task inputs
  *
- * Returned Value
+ * Returned Value:
  *   EXIT_SUCESS on success; EXIT_FAILURE on failure
  *
  ****************************************************************************/
@@ -226,7 +226,7 @@ int hex2bin_main(int argc, char **argv);
  * Input Parameters:
  *   Standard task inputs
  *
- * Returned Value
+ * Returned Value:
  *   EXIT_SUCESS on success; EXIT_FAILURE on failure
  *
  ****************************************************************************/

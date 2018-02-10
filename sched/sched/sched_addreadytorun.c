@@ -1,7 +1,8 @@
 /****************************************************************************
  * sched/sched/sched_addreadytorun.c
  *
- *   Copyright (C) 2007-2009, 2014, 2016-2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007-2009, 2014, 2016-2018 Gregory Nutt. All rights
+ *     reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,10 +61,10 @@
  *   instead.  The pending tasks will be made ready-to-run when preemption is
  *   unlocked.
  *
- * Inputs:
+ * Input Parameters:
  *   btcb - Points to the blocked TCB that is ready-to-run
  *
- * Return Value:
+ * Returned Value:
  *   true if the currently active task (the head of the ready-to-run list)
  *   has changed.
  *
@@ -144,10 +145,10 @@ bool sched_addreadytorun(FAR struct tcb_s *btcb)
  *   g_pendingtasks list instead.  The pending tasks will be made
  *   ready-to-run when preemption isunlocked.
  *
- * Inputs:
+ * Input Parameters:
  *   btcb - Points to the blocked TCB that is ready-to-run
  *
- * Return Value:
+ * Returned Value:
  *   true if the currently active task (the head of the ready-to-run list)
  *   has changed.
  *
@@ -173,6 +174,10 @@ bool sched_addreadytorun(FAR struct tcb_s *btcb)
   int cpu;
   int me;
 
+  /* Lock the tasklists before accessing */
+
+  irqstate_t lock = sched_tasklist_lock();
+
   /* Check if the blocked TCB is locked to this CPU */
 
   if ((btcb->flags & TCB_FLAG_CPU_LOCKED) != 0)
@@ -190,7 +195,7 @@ bool sched_addreadytorun(FAR struct tcb_s *btcb)
       cpu = sched_cpu_select(btcb->affinity);
     }
 
-  /* Get the task currently running on the CPU (maybe the IDLE task) */
+  /* Get the task currently running on the CPU (may be the IDLE task) */
 
   rtcb = (FAR struct tcb_s *)g_assignedtasks[cpu].head;
 
@@ -236,7 +241,7 @@ bool sched_addreadytorun(FAR struct tcb_s *btcb)
    */
 
   me = this_cpu();
-  if ((spin_islocked(&g_cpu_schedlock) || irq_cpu_locked(me)) &&
+  if ((sched_islocked_global() || irq_cpu_locked(me)) &&
       task_state != TSTATE_TASK_ASSIGNED)
     {
       /* Add the new ready-to-run task to the g_pendingtasks task list for
@@ -339,10 +344,9 @@ bool sched_addreadytorun(FAR struct tcb_s *btcb)
 
           else if (g_cpu_nestcount[me] <= 0)
             {
-              /* Release our hold on the IRQ lock. */
-
-              spin_clrbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
-                          &g_cpu_irqlock);
+              /* Do nothing here
+               * NOTE: spin_clrbit() will be done in sched_resumescheduler()
+               */
             }
 
           /* Sanity check.  g_cpu_netcount should be greater than zero
@@ -384,7 +388,7 @@ bool sched_addreadytorun(FAR struct tcb_s *btcb)
                * different CPU the next time that it runs.
                */
 
-              if (spin_islocked(&g_cpu_schedlock))
+              if (sched_islocked_global())
                 {
                   next->task_state = TSTATE_TASK_PENDING;
                   tasklist         = (FAR dq_queue_t *)&g_pendingtasks;
@@ -426,6 +430,9 @@ bool sched_addreadytorun(FAR struct tcb_s *btcb)
         }
     }
 
+  /* Unlock the tasklists */
+
+  sched_tasklist_unlock(lock);
   return doswitch;
 }
 

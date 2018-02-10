@@ -82,7 +82,7 @@ struct hp_wqueue_s g_hpwork;
  *   bring up.  This entry point is referenced by OS internally and should
  *   not be accessed by application logic.
  *
- * Input parameters:
+ * Input Parameters:
  *   argc, argv (not used)
  *
  * Returned Value:
@@ -132,7 +132,7 @@ static int work_hpthread(int argc, char *argv[])
  * Description:
  *   Start the high-priority, kernel-mode work queue.
  *
- * Input parameters:
+ * Input Parameters:
  *   None
  *
  * Returned Value:
@@ -162,11 +162,8 @@ int work_hpstart(void)
   DEBUGASSERT(pid > 0);
   if (pid < 0)
     {
-      int errcode = get_errno();
-      DEBUGASSERT(errcode > 0);
-
-      serr("ERROR: kthread_create failed: %d\n", errcode);
-      return -errcode;
+      serr("ERROR: kthread_create failed: %d\n", (int)pid);
+      return (int)pid;
     }
 
   g_hpwork.worker[0].pid  = pid;

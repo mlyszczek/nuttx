@@ -1493,7 +1493,7 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
       ret = wd_start(priv->wdog, (int)ticks, spi_dma_timeout, 1, (uint32_t)priv);
       if (ret < 0)
         {
-          spierr("ERROR: Failed to start timeout\n");
+          spierr("ERROR: Failed to start timeout: %d\n", ret);
         }
 
       /* Then wait for each to complete.  TX should complete first */
@@ -1570,7 +1570,7 @@ static void spi_recvblock(struct spi_dev_s *dev, void *rxbuffer,
  *   Initialize the selected SPI port in its default state (Master, 8-bit,
  *   mode 0, etc.)
  *
- * Input Parameter:
+ * Input Parameters:
  *   priv - private SPI device structure
  *
  * Returned Value:
@@ -1695,7 +1695,7 @@ errout:
  * Description:
  *   Initialize the selected SPI port
  *
- * Input Parameter:
+ * Input Parameters:
  *   port - SPI port number to initialize.  One of {0,1,2}
  *
  * Returned Value:

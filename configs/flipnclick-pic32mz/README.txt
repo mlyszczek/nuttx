@@ -11,11 +11,13 @@ Contents
 
   Port Status
   On Board Debug Support
+  Using the mikroProg
   Creating Compatible NuttX HEX files
   Tool Issues
   Serial Console
   SPI
   LEDs
+  HiletGo OLED
   Configurations
 
 Port Status
@@ -26,8 +28,19 @@ Port Status
   2018-01-08:  Created the basic board configuration for the Mikroe
     Flip&Click PIC32MZ board.  No testing has yet been performed.  At this
     point, I have not even figured out how I am going to load and debug
-    new firmware.  I need understand how the memory map is set up when used
-    with the mikroBootloader.
+    new firmware.
+  2018-02-08:  I received a mikroProg PIC32 debugger (Thanks go to John Legg
+    of the Debug Shop!).
+  2018-02-09:  The NSH configuration is now functional, but only with the
+    RS-232 Click in mikroBUS slot B.  There is, apparently, some mis-
+    information  about how UART4 RX is connected in mikroBUS slot A; I
+    cannot receive serial there.  But life is good in slot B.
+  2018-02-10:  Added the nxlines configuration to test the custom HiletGo
+    OLED on a Click proto board.  Debug output indicates that the example is
+    running error free yet nothing appears on the OLED in mikroBUS slot A.
+    It looks like all of the signals are present at the mikroBUS A slot and
+    the proto click ohms out okay so this must be a software driver issue.
+    Write only LCDs are tough to debug!
 
 On Board Debug Support
 ======================
@@ -64,6 +77,58 @@ On Board Debug Support
      would, most likely, clobber the USB HID bootloader (and possibly the
      Arduino support as well).
 
+Using the mikroProg
+===================
+
+   WARNINGS:
+   1. Following there steps will most certainly overwrite the bootloader
+      that was factory installed in FLASH!
+   2. Due to the position and orientation of the mikroProg connector you
+      may lose functionality:  If you attach mikroProg to the red side of
+      the board, you will not be able to use the Arduino Shield Connector
+      while the mikroProg connected.  If you attach mikroProg to the white
+      side of the board, you will similarly lose access to mikroBUS
+      connectors A and D.
+
+   Hardware setup
+   --------------
+   You will need to add a five pin header to the mikroProg connector between
+   the A and D mikroBUS sockets.
+
+   Connect the mikroProg to the outer 5 pins of the mikroProg's 10-pin
+   connector to the 5-pin header, respecting the pin 1 position:  The
+   colored wire on the ribbon cable should be on the same side as the tiny
+   arrow on the board indicating pin 1.
+
+   Connect the mikroProg to your computer with the provided USB cable; also
+   power the Flip'n'Clip board with another USB cable connected to the
+   computer.  Either USB port will provide power.
+
+   Installing the Software
+   -----------------------
+   From the mikroProg website https://www.mikroe.com/mikroprog-pic-dspic-pic32
+   Download:
+
+     Drivers for mikroProg Suite
+     https://download.mikroe.com/setups/drivers/mikroprog/pic-dspic-pic32/mikroprog-pic-dspic-pic32-drivers.zip
+
+     mikroProg Suite for PIC, dsPIC, PIC32 v260
+     https://download.mikroe.com/setups/programming-software/mikroprog/pic-dspic-pic32/mikroprog-suite-pic-dspic-pic32-programming-software-setup-v260.zip
+
+  Install the mikroProg Suite.  From things I have read, I gather that you
+  must be Administrator when installing the tool  The instructions say that
+  it will automatically install the drivers.  It did not for me.
+
+  To install the drivers... You will find several directories under
+  mikroprog-pic-dspic-pic32-drivers/.  Select the correct directory and run
+  the .EXE file you find there.
+
+  When I started the mikroProg suite, it could not find the USB driver.
+  After a few frustrating hours of struggling with the drivers, I found
+  that if I start the mikroProg suite as a normal user, it does not find
+  the driver.  But if I instead start the mikroProg suite as Administrator...
+  There it is!  A little awkward but works just fine.
+
 Creating Compatible NuttX HEX files
 ===================================
 
@@ -92,7 +157,8 @@ Creating Compatible NuttX HEX files
       cd tools/pic32mx
       make
 
-    Now you will have an excecutable file call mkpichex (or mkpichex.exe on
+    Now you will have an executable
+    file call mkpichex (or mkpichex.exe on
     Cygwin).  This program will take the nutt.hex file as an input, it will
     convert all of the KSEG0 and KSEG1 addresses to physical address, and
     it will write the modified file, replacing the original nuttx.hex.
@@ -102,7 +168,7 @@ Creating Compatible NuttX HEX files
       export PATH=???  # Add the NuttX tools/pic32mx directory to your
                        # PATH variable
       make             # Build nuttx and nuttx.hex
-      mkpichex $PWD    #  Convert addresses in nuttx.hex.  $PWD is the path
+      mkpichex $PWD    # Convert addresses in nuttx.hex.  $PWD is the path
                        # to the top-level build directory.  It is the only
                        # required input to mkpichex.
 
@@ -144,8 +210,16 @@ Serial Console
   will leave that as an exercise for the interested reader.
 
   The outputs from these pins is 3.3V.  You will need to connect RS232
-  transceiver to get the signals to RS232 levels (or connect to the
-  USB virtual COM port in the case of UART0).
+  transceiver to get the signals to RS-232 levels.  The simplest options are
+  an expensive Arduino RS-232 shield or a Mikroe RS-232 Click board.
+
+  STATUS: I have been unable to get the RS-232 Click to work in the mikroBUS
+  A slot.  The PIC32MZ did not receive serial input.  It appears that there
+  is an error in the some documentation:  Either RG9 is not connected to
+  UART4_RX or the PPS bit definitions are documented incorrectly for UART4.
+
+  Switching to UART3 eliminates the problem and the serial console is fully
+  functional.  I have not tried the other options of UART1, 2, or 5.
 
 SPI
 ===
@@ -243,6 +317,30 @@ LEDs and Buttons
   The switches have external pull-up resistors. The switches are pulled high
   (+3.3V) and grounded when pressed.
 
+HiletGo OLED
+============
+
+  Hardware
+  --------
+  The HiletGo is a 128x64 OLED that can be driven either via SPI or I2C (SPI
+  is the default and is what is used here).  I have mounted the OLED on a
+  proto click board.  The OLED is connected as follows:
+
+  OLED  ALIAS       DESCRIPTION   PROTO CLICK
+  ----- ----------- ------------- -----------------
+   GND              Ground        GND
+   VCC              Power Supply  5V  (3-5V)
+   D0   SCL,CLK,SCK Clock         SCK
+   D1   SDA,MOSI    Data          MOSI,SDI
+   RES  RST,RESET   Reset         RST (GPIO OUTPUT)
+   DC   AO          Data/Command  INT (GPIO OUTPUT)
+   CS               Chip Select   CS  (GPIO OUTPUT)
+
+   NOTE that this is a write-only display (MOSI only)!
+
+   Configuration
+   -------------
+
 Configurations
 ==============
 
@@ -292,9 +390,9 @@ Where <subdir> is one of the following:
 
     NOTES:
 
-    1. Serial Console.  UART 4 is configured as the Serial Console.  This
+    1. Serial Console.  UART3 is configured as the Serial Console.  This
        assumes that you will be using a Mikroe RS-232 Click card in the
-       mikroBUS A slot.  Other serial consoles may be selected by re-
+       mikroBUS B slot.  Other serial consoles may be selected by re-
        configuring (see the section "Serial Consoles" above).
 
     2. Toolchain
@@ -308,3 +406,27 @@ Where <subdir> is one of the following:
        CONFIG_PIC32MZ_DEBUGGER_ENABLE=n  : Debugger is disabled
        CONFIG_PIC32MZ_TRACE_ENABLE=n     : Trace is disabled
        CONFIG_PIC32MZ_JTAG_ENABLE=n      : JTAG is disabled
+
+  nxlines
+
+    This is an NSH configuration that supports the NX graphics example at
+    apps/examples/nxlines as a built-in application.
+
+    NOTES:
+
+    1. This configuration derives from the nsh configuration.  All of the
+       notes there apply here as well.
+
+    2. The default configuration assumes there is the custom HiletGo OLED
+       in the mikroBUS A slot (and a Mikroe RS-232 Click card in the
+       mikroBUS B slot).  That is easily changed by reconfiguring, however.
+       See the section entitled "HiletGo OLED" for information about this
+       custom click card.
+
+    STATUS:
+
+    2018-02-10:  The debug output indicates that the nxlines example is
+      running with no errors, however, nothing appears on the OLED display.
+      It looks like all of the signals are present at the mikroBUS A slot and
+      the proto click ohms out okay so this must be a software driver issue.
+      Write only LCDs are tough to debug!

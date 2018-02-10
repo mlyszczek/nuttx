@@ -48,6 +48,7 @@
 #include <debug.h>
 
 #include <nuttx/irq.h>
+#include <nuttx/kthread.h>
 #include <nuttx/usb/usbdev.h>
 #include <nuttx/usb/usbhost.h>
 #include <nuttx/usb/usbdev_trace.h>
@@ -225,8 +226,9 @@ int lpc31_usbhost_initialize(void)
 
   /* Start a thread to handle device connection. */
 
-  pid = task_create("EHCI Monitor", CONFIG_USBHOST_DEFPRIO,  CONFIG_USBHOST_STACKSIZE,
-                    (main_t)ehci_waiter, (FAR char * const *)NULL);
+  pid = kthread_create("EHCI Monitor", CONFIG_USBHOST_DEFPRIO,
+                       CONFIG_USBHOST_STACKSIZE,
+                       (main_t)ehci_waiter, (FAR char * const *)NULL);
   if (pid < 0)
     {
       uerr("ERROR: Failed to create ehci_waiter task: %d\n", ret);
@@ -284,11 +286,11 @@ void lpc31_usbhost_vbusdrive(int rhport, bool enable)
  *   Setup to receive an interrupt-level callback if an overcurrent condition is
  *   detected.
  *
- * Input parameter:
+ * Input Parameters:
  *   handler - New overcurrent interrupt handler
  *   arg     - The argument that will accompany the interrupt
  *
- * Returned value:
+ * Returned Value:
  *   Zero (OK) returned on success; a negated errno value is returned on failure.
  *
  ************************************************************************************/

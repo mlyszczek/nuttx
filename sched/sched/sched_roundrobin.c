@@ -73,12 +73,12 @@
  * Description:
  *   Check if the currently executing task has exceeded its time slice.
  *
- * Inputs:
+ * Input Parameters:
  *   tcb - The TCB of the currently executing task
  *   ticks - The number of ticks that have elapsed on the interval timer.
  *   noswitches - True: Can't do context switches now.
  *
- * Return Value:
+ * Returned Value:
  *   The number if ticks remaining until the next time slice expires.
  *   Zero is returned if there is no time slicing (i.e., the task at the
  *   head of the ready-to-run list does not support round robin
@@ -121,7 +121,7 @@ uint32_t sched_roundrobin_process(FAR struct tcb_s *tcb, uint32_t ticks,
   /* Did decrementing the timeslice counter cause the timeslice to expire? */
 
   ret = tcb->timeslice;
-  if (tcb->timeslice <= 0 && !sched_islocked(tcb))
+  if (tcb->timeslice <= 0 && !sched_islocked_tcb(tcb))
     {
       /* We will also suppress context switches if we were called via one
        * of the unusual cases handled by sched_timer_reasses().  In that

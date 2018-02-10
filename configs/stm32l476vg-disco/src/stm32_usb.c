@@ -47,6 +47,7 @@
 #include <assert.h>
 #include <debug.h>
 
+#include <nuttx/kthread.h>
 #include <nuttx/usb/usbdev.h>
 #include <nuttx/usb/usbhost.h>
 #include <nuttx/usb/usbdev_trace.h>
@@ -237,9 +238,9 @@ int stm32l4_usbhost_initialize(void)
 
       uvdbg("Start usbhost_waiter\n");
 
-      pid = task_create("usbhost", CONFIG_STM32L4DISCO_USBHOST_PRIO,
-                        CONFIG_STM32L4DISCO_USBHOST_STACKSIZE,
-                        (main_t)usbhost_waiter, (FAR char * const *)NULL);
+      pid = kthread_create("usbhost", CONFIG_STM32L4DISCO_USBHOST_PRIO,
+                           CONFIG_STM32L4DISCO_USBHOST_STACKSIZE,
+                           (main_t)usbhost_waiter, (FAR char * const *)NULL);
       return pid < 0 ? -ENOEXEC : OK;
     }
 
@@ -300,10 +301,10 @@ void stm32l4_usbhost_vbusdrive(int iface, bool enable)
  *   Setup to receive an interrupt-level callback if an over current condition is
  *   detected.
  *
- * Input Parameter:
+ * Input Parameters:
  *   handler - New over current interrupt handler
  *
- * Returned value:
+ * Returned Value:
  *   Old over current interrupt handler
  *
  ************************************************************************************/

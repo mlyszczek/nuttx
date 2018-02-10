@@ -115,11 +115,48 @@ Status
 2016-11-28:  SMP is unusable until the SCU cache coherency logic is fixed.
   I do not know how to do that now.
 
-2016-12-01:  I committed a completely untest SPI driver.  This was taken
+2016-12-01:  I committed a completely untested SPI driver.  This was taken
   directly from the i.MX1 and is most certainly not ready for use yet.
 
 2016-12-07:  Just a note to remind myself.  The PL310 L2 cache has *not*
-  yet been enbled.
+  yet been enabled.
+
+2018-02-06:  Revisited SMP to see how much has been broken due to bit rot.
+  Several fixes were needed mostly due to:  (1) The new version of
+  this_task() that calls sched_lock() and sched_unlock(), and (2) to
+  deferred setting g_cpu_irqlock().  That latter setting is now deferred
+  until sched_resume_scheduler() runs.  These commits were made:
+
+    commit 50ab5d638a37b539775d1e60085f182bf26be57f
+      sched/task:  It is not appropriate for logic in task_exit() to call
+      the new version of this_task().  sched/irq:  Remove redundant fetch
+      of CPU index; configs/sabre-6quad: update README.
+
+    commit 0ba78530164814360eb09ed9805137b934c6f03b
+      sched/irq: Fix a infinite recursion problem that a recent change
+      introduced into the i.MX6 SMP implementation.
+
+    commit 8aa15385060bf705bbca2c22a5682128740e55a8
+      arch/arm/src/armv7-a:  Found some additional places were the new
+      this_task() function cannot be called in the i.MX6 SMP configuration.
+
+    commit de34b4523fc33c6f2f20619349af8fa081a3bfcd
+      sched/ and arch/arm/src/armv7-a:  Replace a few more occurrences
+      of this_task() with current_task(cpu) in an effort to get the i.MX6
+      working in SMP mode again.  It does not yet work, sadly.
+
+    commit cce21bef3292a40dcd97b6176ea016e2b559de8b
+      sched/sched: sched_lock() and sched_unlock().. back out some changes
+      I made recently.  The seemed correct but apparently not.  Also
+      reorder to logic so that g_global_lockcount is incremented for the very
+      minimum amount of time.
+
+  With these changes, basic SMP functionality is restored and there are no
+  known issues (Configuration 'smp' with 4 CPUs and data cache disabled).
+  It is possible, however, that additional changes similar to the above will
+  be required in other areas of the OS, but none such are known as of this
+  writing.  Insufficient stress testing has been done to prove that the
+  solution is stable.
 
 Platform Features
 =================
@@ -329,7 +366,7 @@ could do would be put the nuttx.bin file on that partition, then boot like:
      MX6Q SABRESD U-Boot > fatload mmc 2:4 0x10800000 nuttx.bin
 
 SD Card Image Copy (Successful Attempt #5)
--------------------------------------
+------------------------------------------
 
 You can use the 'dd' command to copy the first couple of megabytes from the
 8GB SD card and copy that to another SD card.  You then have to use 'fdisk'
@@ -386,7 +423,7 @@ Debugging the NuttX image on the SD card
    the terminal window.  Stop the U-Boot countdown to get to the U-Boot
    prompt.
 
-2. Start the Segger GDB server:
+3. Start the Segger GDB server:
 
      Target:           MCIMX6Q6
      Target Interface: JTAG
@@ -396,7 +433,7 @@ Debugging the NuttX image on the SD card
 
      Waiting for GDB Connection
 
-3. In another Xterm terminal window, start arm-none-eabi-gdb and connect to
+4. In another Xterm terminal window, start arm-none-eabi-gdb and connect to
    the GDB server.
 
    From the Xterm Window:
@@ -409,7 +446,7 @@ Debugging the NuttX image on the SD card
      gdb> target connect localhost:2331
      gdb> mon halt
 
-4. Start U-boot under GDB control:
+5. Start U-boot under GDB control:
 
    From GDB:
      gdb> mon reset
@@ -417,12 +454,12 @@ Debugging the NuttX image on the SD card
 
    Again stop the U-Boot countdown to get to the U-Boot prompt.
 
-5. Load NuttX from the SD card into RAM
+6. Load NuttX from the SD card into RAM
 
    From U-Boot:
      MX6Q SABRESD U-Boot > fatload mmc 2:1 0x10800000 nuttx.bin
 
-6. Load symbols and set a breakpoint
+7. Load symbols and set a breakpoint
 
    From GDB:
      gdb> mon halt
@@ -434,12 +471,12 @@ Debugging the NuttX image on the SD card
    of course, use a different symbol if you want to start debugging later
    in the boot sequence.
 
-7. Start NuttX
+8. Start NuttX
 
    From U-Boot:
      MX6Q SABRESD U-Boot > go 0x10800040
 
-8. You should hit the breakpoint that you set above and be off and
+9. You should hit the breakpoint that you set above and be off and
    debugging.
 
 Debugging a Different NuttX Image
@@ -449,10 +486,20 @@ Q: What if I want do run a different version of nuttx than the nuttx.bin
    file on the SD card.  I just want to build and debug without futzing with
    the SD card.  Can I do that?
 
-A: Yes with the following modifications to the prodecure above.
+A: Yes with the following modifications to the procedure above.
 
-   - Skip step 5, don't bother to load NuttX into RAM
-   - In step 6, load NuttX into RAM like this:
+   - Follow steps 1-5, i.e.,
+
+       1. Connect the J-Link to the 20-pin JTAG connector.
+       2. Connect the "USB TO UART" USB VCOM port to the host PC and start a
+          terminal emulation program.
+       3. Start the Segger GDB server.
+       4. Start arm-none-eabi-gdb and connect to the GDB server.
+       5. Start U-boot under GDB control, stopping the countdown to get
+          the U-boot prompt.
+
+   - Skip step 6, don't bother to load NuttX into RAM
+   - In step 7, load NuttX into RAM like this:
 
        gdb> mon halt
        gdb> load nuttx <-- Loads NuttX into RAM at 0x010800000
@@ -469,13 +516,16 @@ A: Yes with the following modifications to the prodecure above.
        gdb> mon halt
        gdb> load nuttx <-- Loads NuttX into RAM at 0x010800000
        gdb> file nuttx
-       gdb> mon set pc 0x10800040
+       gdb> mon reg pc 0x10800040
        gdb> s
 
      The final single will then step into the freshly loaded program.
-     You can then forget about steps 7 and 8.
+     You can then forget about steps 8 and 9.
 
      This is, in fact, my preferred way to debug.
+
+     NOTE:  Setting the PC to 0x10800040 is a superstituous step.  The PC
+     will be set 0x10800040 by the 'load nuttx' command.
 
    You can restart the debug session at any time at the gdb> prompt by:
 
@@ -520,7 +570,7 @@ Open Issues:
    This will cause the interrupt handlers on other CPUs to spin until
    leave_critical_section() is called.  More verification is needed.
 
-2. Cache Concurency.  Cache coherency in SMP configurations is managed by the
+2. Cache Concurrency.  Cache coherency in SMP configurations is managed by the
    MPCore snoop control unit (SCU).  But I don't think I have the set up
    correctly yet.
 
@@ -570,6 +620,10 @@ index eedf179..1db2092 100644
  }
 
  #endif
+
+3. Recent redesigns to SMP of another ARMv7-M platform have made changes to the OS
+   SMP support.  There are no known problem but the changes have not been verified
+   fully (see STATUS above for 2019-02-06).
 
 Configurations
 ==============
@@ -661,12 +715,114 @@ Configuration sub-directories
   smp
   ---
     This is a configuration of testing the SMP configuration.  It is
-    essentially equivalent to the SMP configuration except has SMP enabled.
+    essentially equivalent to the nsh configuration except has SMP enabled
+    and supports apps/examples/smp.
+
+    Sample output of the SMP test is show below (Configuration all 4 CPUs
+    but with data cache disabled):
+
+      NuttShell (NSH) NuttX-7.23
+      nsh> smp
+        Main[0]: Running on CPU0
+        Main[0]: Initializing barrier
+      Thread[1]: Started
+        Main[0]: Thread 1 created
+      Thread[1]: Running on CPU0
+        Main[0]: Now running on CPU1
+      Thread[2]: Started
+        Main[0]: Thread 2 created
+      Thread[2]: Running on CPU1
+        Main[0]: Now running on CPU2
+      Thread[3]: Started
+        Main[0]: Thread 3 created
+      Thread[3]: Running on CPU2
+        Main[0]: Now running on CPU3
+      Thread[4]: Started
+      Thread[4]: Running on CPU3
+        Main[0]: Thread 4 created
+        Main[0]: Now running on CPU0
+      Thread[5]: Started
+      Thread[5]: Running on CPU0
+        Main[0]: Thread 5 created
+      Thread[6]: Started
+      Thread[6]: Running on CPU0
+        Main[0]: Thread 6 created
+      Thread[7]: Started
+      Thread[7]: Running on CPU0
+        Main[0]: Thread 7 created
+      Thread[8]: Started
+      Thread[8]: Running on CPU0
+        Main[0]: Thread 8 created
+      Thread[2]: Now running on CPU0
+      Thread[3]: Now running on CPU0
+      Thread[4]: Now running on CPU0
+      Thread[3]: Now running on CPU2
+      Thread[3]: Now running on CPU0
+      Thread[5]: Now running on CPU1
+      Thread[5]: Now running on CPU0
+      Thread[6]: Calling pthread_barrier_wait()
+      Thread[8]: Calling pthread_barrier_wait()
+      Thread[3]: Calling pthread_barrier_wait()
+      Thread[5]: Calling pthread_barrier_wait()
+      Thread[1]: Calling pthread_barrier_wait()
+      Thread[2]: Now running on CPU2
+      Thread[2]: Calling pthread_barrier_wait()
+      Thread[7]: Now running on CPU3
+      Thread[4]: Now running on CPU1
+      Thread[4]: Calling pthread_barrier_wait()
+      Thread[7]: Calling pthread_barrier_wait()
+      Thread[7]: Back with ret=PTHREAD_BARRIER_SERIAL_THREAD (I AM SPECIAL)
+      Thread[6]: Back with ret=0 (I am not special)
+      Thread[8]: Back with ret=0 (I am not special)
+      Thread[3]: Back with ret=0 (I am not special)
+      Thread[5]: Back with ret=0 (I am not special)
+      Thread[1]: Back with ret=0 (I am not special)
+      Thread[2]: Back with ret=0 (I am not special)
+      Thread[4]: Back with ret=0 (I am not special)
+      Thread[7]: Now running on CPU1
+      Thread[6]: Now running on CPU2
+      Thread[3]: Now running on CPU1
+      Thread[5]: Now running on CPU2
+      Thread[1]: Now running on CPU1
+      Thread[4]: Now running on CPU3
+      Thread[2]: Now running on CPU0
+      Thread[7]: Now running on CPU0
+      Thread[6]: Now running on CPU0
+      Thread[3]: Now running on CPU0
+      Thread[4]: Now running on CPU0
+      Thread[1]: Now running on CPU0
+      Thread[5]: Now running on CPU0
+      Thread[3]: Now running on CPU3
+      Thread[3]: Now running on CPU0
+      Thread[4]: Now running on CPU2
+      Thread[3]: Done
+      Thread[4]: Now running on CPU0
+      Thread[4]: Done
+      Thread[7]: Done
+      Thread[2]: Done
+      Thread[5]: Now running on CPU2
+      Thread[8]: Now running on CPU1
+      Thread[8]: Done
+      Thread[6]: Now running on CPU3
+      Thread[5]: Done
+      Thread[1]: Done
+        Main[0]: Now running on CPU1
+        Main[0]: Thread 1 completed with result=0
+        Main[0]: Thread 2 completed with result=0
+        Main[0]: Thread 3 completed with result=0
+        Main[0]: Thread 4 completed with result=0
+        Main[0]: Thread 5 completed with result=0
+      Thread[6]: Done
+        Main[0]: Now running on CPU0
+        Main[0]: Thread 6 completed with result=0
+        Main[0]: Thread 7 completed with result=0
+        Main[0]: Thread 8 completed with result=0
+      nsh>
 
     NOTES:
 
-    1. See the notest for the nsh configuration.  Since this configuration
+    1. See the notes for the nsh configuration.  Since this configuration
        is essentially the same all of those comments apply.
 
-    2. SMP is not fully functional.  See the STATUS and SMP sections above
-       for detailed SMP-related issues.
+    2. See the STATUS and SMP sections above for detailed SMP-related
+       issues.

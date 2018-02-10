@@ -1,7 +1,7 @@
 /****************************************************************************
  * sched/sched/sched_lock.c
  *
- *   Copyright (C) 2007, 2009, 2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007, 2009, 2016, 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,9 @@
 #include <sched.h>
 #include <assert.h>
 
+#include <arch/irq.h>
+
+#include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/sched_note.h>
 
@@ -116,6 +119,13 @@ volatile spinlock_t g_cpu_schedlock SP_SECTION = SP_UNLOCKED;
 volatile spinlock_t g_cpu_locksetlock SP_SECTION;
 volatile cpu_set_t g_cpu_lockset SP_SECTION;
 
+#if defined(CONFIG_ARCH_HAVE_FETCHADD) && !defined(CONFIG_ARCH_GLOBAL_IRQDISABLE)
+/* This is part of the sched_lock() logic to handle atomic operations when
+ * locking the scheduler.
+ */
+
+volatile int16_t g_global_lockcount;
+#endif
 #endif /* CONFIG_SMP */
 
 /****************************************************************************
@@ -132,32 +142,74 @@ volatile cpu_set_t g_cpu_lockset SP_SECTION;
  *   either calls  sched_unlock() (the appropriate number of times) or
  *   until it blocks itself.
  *
- * Inputs
+ * Input Parameters:
  *   None
  *
- * Return Value:
+ * Returned Value:
  *   OK on success; ERROR on failure
  *
  ****************************************************************************/
 
+#ifdef CONFIG_SMP
+
 int sched_lock(void)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb;
+#if defined(CONFIG_ARCH_GLOBAL_IRQDISABLE)
+  irqstate_t flags;
+#endif
+  int cpu;
+
+  /* The following operation is non-atomic unless CONFIG_ARCH_GLOBAL_IRQDISABLE
+   * or CONFIG_ARCH_HAVE_FETCHADD is defined.
+   */
+
+#if defined(CONFIG_ARCH_GLOBAL_IRQDISABLE)
+  /* If the CPU supports suppression of interprocessor interrupts, then simple
+   * disabling interrupts will provide sufficient protection for the following
+   * operation.
+   */
+
+  flags = up_irq_save();
+
+#elif defined(CONFIG_ARCH_HAVE_FETCHADD)
+  /* If the CPU supports an atomic fetch add operation, then we can use the
+   * global lockcount to assure that the following operation is atomic.
+   */
+
+  DEBUGASSERT((uint16_t)g_global_lockcount < INT16_MAX); /* Not atomic! */
+  (void)up_fetchadd16(&g_global_lockcount, 1);
+#endif
+
+  /* This operation is save if CONFIG_ARCH_HAVE_FETCHADD is defined.  NOTE
+   * we cannot use this_task() because it calls sched_lock().
+   */
+
+  cpu  = this_cpu();
+  rtcb = current_task(cpu);
 
   /* Check for some special cases:  (1) rtcb may be NULL only during early
    * boot-up phases, and (2) sched_lock() should have no effect if called
    * from the interrupt level.
    */
 
-  if (rtcb && !up_interrupt_context())
+  if (rtcb == NULL || up_interrupt_context())
     {
-      /* Catch attempts to increment the lockcount beyound the range of the
+#if defined(CONFIG_ARCH_GLOBAL_IRQDISABLE)
+      up_irq_restore(flags);
+#elif defined(CONFIG_ARCH_HAVE_FETCHADD)
+      DEBUGASSERT(g_global_lockcount > 0);
+      (void)up_fetchsub16(&g_global_lockcount, 1);
+#endif
+    }
+  else
+    {
+      /* Catch attempts to increment the lockcount beyond the range of the
        * integer type.
        */
 
       DEBUGASSERT(rtcb->lockcount < MAX_LOCK_COUNT);
 
-#ifdef CONFIG_SMP
       /* We must hold the lock on this CPU before we increment the lockcount
        * for the first time. Holding the lock is sufficient to lockout context
        * switching.
@@ -184,7 +236,6 @@ int sched_lock(void)
           DEBUGASSERT(g_cpu_schedlock == SP_LOCKED &&
                       (g_cpu_lockset & (1 << this_cpu())) != 0);
         }
-#endif
 
       /* A counter is used to support locking.  This allows nested lock
        * operations on this thread (on any CPU)
@@ -192,6 +243,12 @@ int sched_lock(void)
 
       rtcb->lockcount++;
 
+#if defined(CONFIG_ARCH_GLOBAL_IRQDISABLE)
+      up_irq_restore(flags);
+#elif defined(CONFIG_ARCH_HAVE_FETCHADD)
+      DEBUGASSERT(g_global_lockcount > 0);
+      (void)up_fetchsub16(&g_global_lockcount, 1);
+#endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_PREEMPTION
       /* Check if we just acquired the lock */
@@ -204,7 +261,6 @@ int sched_lock(void)
         }
 #endif
 
-#ifdef CONFIG_SMP
       /* Move any tasks in the ready-to-run list to the pending task list
        * where they will not be available to run until the scheduler is
        * unlocked and sched_mergepending() is called.
@@ -213,8 +269,49 @@ int sched_lock(void)
       sched_mergeprioritized((FAR dq_queue_t *)&g_readytorun,
                              (FAR dq_queue_t *)&g_pendingtasks,
                              TSTATE_TASK_PENDING);
+    }
+
+  return OK;
+}
+
+#else /* CONFIG_SMP */
+
+int sched_lock(void)
+{
+  FAR struct tcb_s *rtcb = this_task();
+
+  /* Check for some special cases:  (1) rtcb may be NULL only during early
+   * boot-up phases, and (2) sched_lock() should have no effect if called
+   * from the interrupt level.
+   */
+
+  if (rtcb != NULL && !up_interrupt_context())
+    {
+      /* Catch attempts to increment the lockcount beyond the range of the
+       * integer type.
+       */
+
+      DEBUGASSERT(rtcb->lockcount < MAX_LOCK_COUNT);
+
+      /* A counter is used to support locking.  This allows nested lock
+       * operations on this thread (on any CPU)
+       */
+
+      rtcb->lockcount++;
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_PREEMPTION
+      /* Check if we just acquired the lock */
+
+      if (rtcb->lockcount == 1)
+        {
+          /* Note that we have pre-emption locked */
+
+          sched_note_premption(rtcb, true);
+        }
 #endif
     }
 
   return OK;
 }
+
+#endif /* CONFIG_SMP */

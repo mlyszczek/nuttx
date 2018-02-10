@@ -1520,7 +1520,7 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
 
       ret = wd_start(spics->dmadog, DMA_TIMEOUT_TICKS,
                      (wdentry_t)spi_dmatimeout, 1, (uint32_t)spics);
-      if (ret != OK)
+      if (ret < 0)
         {
            spierr("ERROR: wd_start failed: %d\n", ret);
         }
@@ -1638,7 +1638,7 @@ static void spi_recvblock(struct spi_dev_s *dev, void *buffer, size_t nwords)
  * Description:
  *   Initialize the selected SPI port
  *
- * Input Parameter:
+ * Input Parameters:
  *   cs - Chip select number (identifying the "logical" SPI port)
  *
  * Returned Value:

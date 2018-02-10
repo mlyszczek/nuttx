@@ -568,7 +568,7 @@ static void tim_modifyreg(FAR struct stm32_dev_s *priv, int offset,
  * Description:
  *   Dump all timer registers.
  *
- * Input parameters:
+ * Input Parameters:
  *   priv - A reference to the ADC block status
  *
  * Returned Value:
@@ -1082,9 +1082,9 @@ static void adc_rccreset(FAR struct stm32_dev_s *priv, bool reset)
 /****************************************************************************
  * Name: adc_enable
  *
- * Description    : Enables or disables the specified ADC peripheral.
- *                  Also, starts a conversion when the ADC is not
- *                  triggered by timers
+ * Description:
+ *   Enables or disables the specified ADC peripheral.  Also, starts a
+ *   conversion when the ADC is not triggered by timers
  *
  * Input Parameters:
  *

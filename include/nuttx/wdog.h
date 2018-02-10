@@ -1,7 +1,8 @@
 /****************************************************************************
  * include/nuttx/wdog.h
  *
- *   Copyright (C) 2007-2009, 2014-2015 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007-2009, 2014-2015, 2018 Gregory Nutt. All rights
+ *     reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -175,7 +176,7 @@ extern "C"
  * Parameters:
  *   None
  *
- * Return Value:
+ * Returned Value:
  *   Pointer to watchdog (i.e., the watchdog ID), or NULL if insufficient
  *   watchdogs are available.
  *
@@ -195,8 +196,9 @@ WDOG_ID wd_create(void);
  *   wdog - The watchdog ID to delete.  This is actually a pointer to a
  *          watchdog structure.
  *
- * Return Value:
- *   Returns OK or ERROR
+ * Returned Value:
+ *   Zero (OK) is returned on success; a negated errno value is return to
+ *   indicate the nature of any failure.
  *
  * Assumptions:
  *   The caller has assured that the watchdog is no longer in use.
@@ -229,8 +231,9 @@ int wd_delete(WDOG_ID wdog);
  *   wdentry  - function to call on timeout
  *   parm1..4 - parameters to pass to wdentry
  *
- * Return Value:
- *   OK or ERROR
+ * Returned Value:
+ *   Zero (OK) is returned on success; a negated errno value is return to
+ *   indicate the nature of any failure.
  *
  * Assumptions:
  *   The watchdog routine runs in the context of the timer interrupt handler
@@ -250,7 +253,7 @@ int wd_start(WDOG_ID wdog, int32_t delay, wdentry_t wdentry, int argc, ...);
  * Parameters:
  *   wdog - ID of the watchdog to cancel.
  *
- * Return Value:
+ * Returned Value:
  *   Zero (OK) is returned on success;  A negated errno value is returned to
  *   indicate the nature of any failure.
  *
@@ -268,7 +271,7 @@ int wd_cancel(WDOG_ID wdog);
  * Parameters:
  *   wdog - watchdog ID
  *
- * Return Value:
+ * Returned Value:
  *   The time in system ticks remaining until the watchdog time expires.
  *   Zero means either that wdog is not valid or that the wdog has already
  *   expired.

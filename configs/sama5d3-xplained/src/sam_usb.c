@@ -48,6 +48,7 @@
 #include <debug.h>
 
 #include <nuttx/irq.h>
+#include <nuttx/kthread.h>
 #include <nuttx/usb/usbdev.h>
 #include <nuttx/usb/usbhost.h>
 #include <nuttx/usb/usbdev_trace.h>
@@ -357,9 +358,9 @@ int sam_usbhost_initialize(void)
 
   /* Start a thread to handle device connection. */
 
-  pid = task_create("OHCI Monitor", CONFIG_SAMA5D3XPLAINED_USBHOST_PRIO,
-                    CONFIG_SAMA5D3XPLAINED_USBHOST_STACKSIZE,
-                    (main_t)ohci_waiter, (FAR char * const *)NULL);
+  pid = kthread_create("OHCI Monitor", CONFIG_SAMA5D3XPLAINED_USBHOST_PRIO,
+                       CONFIG_SAMA5D3XPLAINED_USBHOST_STACKSIZE,
+                       (main_t)ohci_waiter, (FAR char * const *)NULL);
   if (pid < 0)
     {
       uerr("ERROR: Failed to create ohci_waiter task: %d\n", ret);
@@ -379,9 +380,9 @@ int sam_usbhost_initialize(void)
 
   /* Start a thread to handle device connection. */
 
-  pid = task_create("EHCI Monitor", CONFIG_SAMA5D3XPLAINED_USBHOST_PRIO,
-                    CONFIG_SAMA5D3XPLAINED_USBHOST_STACKSIZE,
-                    (main_t)ehci_waiter, (FAR char * const *)NULL);
+  pid = kthread_create("EHCI Monitor", CONFIG_SAMA5D3XPLAINED_USBHOST_PRIO,
+                       CONFIG_SAMA5D3XPLAINED_USBHOST_STACKSIZE,
+                       (main_t)ehci_waiter, (FAR char * const *)NULL);
   if (pid < 0)
     {
       uerr("ERROR: Failed to create ehci_waiter task: %d\n", ret);
@@ -486,10 +487,10 @@ void sam_usbhost_vbusdrive(int rhport, bool enable)
  *   REVISIT: Since this is a common signal, we will need to come up with some way
  *   to inform both EHCI and OHCI drivers when this error occurs.
  *
- * Input Parameter:
+ * Input Parameters:
  *   handler - New overcurrent interrupt handler
  *
- * Returned value:
+ * Returned Value:
  *   Old overcurrent interrupt handler
  *
  ************************************************************************************/

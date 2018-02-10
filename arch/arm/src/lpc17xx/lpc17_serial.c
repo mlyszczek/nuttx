@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/arm/src/lpc17xx/lpc17_serial.c
  *
- *   Copyright (C) 2010-2013, 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2010-2013, 2017-2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -550,7 +550,7 @@ static inline void up_enablebreaks(struct up_dev_s *priv, bool enable)
 /************************************************************************************
  * Name: lpc17_uartcclkdiv
  *
- * Descrption:
+ * Description:
  *   Select a CCLK divider to produce the UART PCLK.  The stratey is to select the
  *   smallest divisor that results in an solution within range of the 16-bit
  *   DLM and DLL divisor:
@@ -667,7 +667,7 @@ static inline uint32_t lpc17_uartcclkdiv(uint32_t baud)
 /************************************************************************************
  * Name: lpc17_uart0config, uart1config, uart2config, and uart3config
  *
- * Descrption:
+ * Description:
  *   Configure the UART.  UART0/1/2/3 peripherals are configured using the following
  *   registers:
  *
@@ -815,7 +815,7 @@ static inline void lpc17_uart3config(void)
 /************************************************************************************
  * Name: lpc17_uartdl
  *
- * Descrption:
+ * Description:
  *   Select a divider to produce the BAUD from the UART PCLK.
  *
  *     BAUD = PCLK / (16 * DL), or
@@ -919,6 +919,13 @@ static int up_setup(struct uart_dev_s *dev)
     {
       lcr |= (UART_LCR_PE | UART_LCR_PS_EVEN);
     }
+
+  /* Disable FDR (fractional divider, not used by baudrate settings -> has
+   * to be disabled)
+   */
+
+  up_serialout(priv, LPC17_UART_FDR_OFFSET,
+              (1 << UART_FDR_MULVAL_SHIFT) + (0 << UART_FDR_DIVADDVAL_SHIFT));
 
   /* Enter DLAB=1 */
 

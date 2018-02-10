@@ -135,10 +135,10 @@ static bool g_poolinit = false;
  *   be called early in the initialization sequence before any radios
  *   begin operation.
  *
- * Inputs:
+ * Input Parameters:
  *   None
  *
- * Return Value:
+ * Returned Value:
  *   None
  *
  ****************************************************************************/
@@ -224,10 +224,10 @@ void ieee802154_primitivepool_initialize(void)
  *   list.  If that the list is empty, then the primitive structure will be
  *   allocated from the dynamic memory pool.
  *
- * Inputs:
+ * Input Parameters:
  *   None
  *
- * Return Value:
+ * Returned Value:
  *   A reference to the allocated primitive structure.  All user fields in this
  *   structure have been zeroed.  On a failure to allocate, NULL is
  *   returned.
@@ -309,12 +309,17 @@ FAR struct ieee802154_primitive_s *ieee802154_primitive_allocate(void)
 
           /* Check if we allocated the primitive structure */
 
-          if (prim != NULL)
+          if (prim == NULL)
             {
-              /* Yes... remember that this primitive structure was dynamically allocated */
+              /* No..  memory not available */
 
-              pool = POOL_PRIMITIVE_DYNAMIC;
+              wlerr("ERROR: Failed to allocate primitive.\n");
+              return NULL;
             }
+
+          /* Remember that this primitive structure was dynamically allocated */
+
+          pool = POOL_PRIMITIVE_DYNAMIC;
         }
     }
 
@@ -341,10 +346,10 @@ FAR struct ieee802154_primitive_s *ieee802154_primitive_allocate(void)
  *   structure. If the primitive structure was allocated dynamically it will
  *   be deallocated.
  *
- * Inputs:
+ * Input Parameters:
  *   prim - primitive structure to free
  *
- * Return Value:
+ * Returned Value:
  *   None
  *
  ****************************************************************************/

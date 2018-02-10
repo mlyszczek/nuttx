@@ -252,6 +252,19 @@ int stm32_adc_setup(void);
 int stm32_apds9960initialize(FAR const char *devpath);
 #endif
 
+/****************************************************************************
+ * Name: stm32_bmp180initialize
+ *
+ * Description:
+ *   Called to configure an I2C and to register BMP180 for the stm32f4discovery
+ *   board.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SENSORS_BMP180
+int stm32_bmp180initialize(FAR const char *devpath);
+#endif
+
 /************************************************************************************
  * Name: stm32_spidev_initialize
  *
@@ -331,7 +344,7 @@ int stm32_qencoder_initialize(FAR const char *devpath, int timer);
 #endif
 
 /****************************************************************************
- * Name stm32_rgbled_setup
+ * Name: stm32_rgbled_setup
  *
  * Description:
  *   This function is called by board initialization logic to configure the
@@ -402,7 +415,7 @@ int stm32_pwm_setup(void);
  * Description:
  *   Initialize the NRF24L01 wireless module
  *
- * Input Parmeters:
+ * Input Parameters:
  *   None
  *
  * Returned Value:

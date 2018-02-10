@@ -225,7 +225,7 @@ static void ads7843e_unlock(FAR struct spi_dev_s *spi)
 /****************************************************************************
  * Name: ads7843e_sendcmd
  *
- * Description.
+ * Description:
  *   The command/data sequences is as follows:
  *
  *            DCLK
@@ -607,7 +607,8 @@ static void ads7843e_worker(FAR void *arg)
        * later.
        */
 
-       wd_start(priv->wdog, ADS7843E_WDOG_DELAY, ads7843e_wdog, 1, (uint32_t)priv);
+       (void)wd_start(priv->wdog, ADS7843E_WDOG_DELAY, ads7843e_wdog, 1,
+                      (uint32_t)priv);
        goto ignored;
     }
   else
@@ -974,7 +975,7 @@ errout:
 }
 
 /****************************************************************************
- * Name:ads7843e_ioctl
+ * Name: ads7843e_ioctl
  ****************************************************************************/
 
 static int ads7843e_ioctl(FAR struct file *filep, int cmd, unsigned long arg)

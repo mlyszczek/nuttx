@@ -42,6 +42,7 @@
 #include <stdbool.h>
 #include <queue.h>
 #include <assert.h>
+#include <nuttx/sched_note.h>
 
 #include "irq/irq.h"
 #include "sched/sched.h"
@@ -56,10 +57,10 @@
  * Description:
  *   This function removes a TCB from the ready to run list.
  *
- * Inputs:
+ * Input Parameters:
  *   rtcb - Points to the TCB that is ready-to-run
  *
- * Return Value:
+ * Returned Value:
  *   true if the currently active task (the head of the ready-to-run list)
  *     has changed.
  *
@@ -115,10 +116,10 @@ bool sched_removereadytorun(FAR struct tcb_s *rtcb)
  * Description:
  *   This function removes a TCB from the ready to run list.
  *
- * Inputs:
+ * Input Parameters:
  *   rtcb - Points to the TCB that is ready-to-run
  *
- * Return Value:
+ * Returned Value:
  *   true if the currently active task (the head of the ready-to-run list)
  *     has changed.
  *
@@ -137,6 +138,10 @@ bool sched_removereadytorun(FAR struct tcb_s *rtcb)
   FAR dq_queue_t *tasklist;
   bool doswitch = false;
   int cpu;
+
+  /* Lock the tasklists before accessing */
+
+  irqstate_t lock = sched_tasklist_lock();
 
   /* Which CPU (if any) is the task running on?  Which task list holds the
    * TCB?
@@ -203,7 +208,7 @@ bool sched_removereadytorun(FAR struct tcb_s *rtcb)
        * REVISIT: What if it is not the IDLE thread?
        */
 
-      if (!spin_islocked(&g_cpu_schedlock) && !irq_cpu_locked(me))
+      if (!sched_islocked_global() && !irq_cpu_locked(me))
         {
           /* Search for the highest priority task that can run on this
            * CPU.
@@ -283,10 +288,9 @@ bool sched_removereadytorun(FAR struct tcb_s *rtcb)
 
       else if (g_cpu_nestcount[me] <= 0)
         {
-          /* Release our hold on the IRQ lock. */
-
-          spin_clrbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
-                      &g_cpu_irqlock);
+          /* Do nothing here
+           * NOTE: spin_clrbit() will be done in sched_resumescheduler()
+           */
         }
 
       /* Sanity check.  g_cpu_netcount should be greater than zero
@@ -330,6 +334,10 @@ bool sched_removereadytorun(FAR struct tcb_s *rtcb)
   /* Since the TCB is no longer in any list, it is now invalid */
 
   rtcb->task_state = TSTATE_TASK_INVALID;
+
+  /* Unlock the tasklists */
+
+  sched_tasklist_unlock(lock);
   return doswitch;
 }
 #endif /* CONFIG_SMP */

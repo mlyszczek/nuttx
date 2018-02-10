@@ -2262,7 +2262,7 @@ static sdio_eventset_t lpc43_eventwait(FAR struct sdio_dev_s *dev,
       delay = MSEC2TICK(timeout);
       ret   = wd_start(priv->waitwdog, delay, (wdentry_t)lpc43_eventtimeout,
                        1, (uint32_t)priv);
-      if (ret != OK)
+      if (ret < 0)
         {
           mcerr("ERROR: wd_start failed: %d\n", ret);
         }
@@ -2709,7 +2709,7 @@ static void lpc43_callback(struct lpc43_dev_s *priv)
  * Input Parameters:
  *   slotno - Not used.
  *
- * Returned Values:
+ * Returned Value:
  *   A reference to an SD card interface structure.  NULL is returned on failures.
  *
  ****************************************************************************/

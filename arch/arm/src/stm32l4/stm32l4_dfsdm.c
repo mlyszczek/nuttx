@@ -545,7 +545,7 @@ static void tim_modifyreg(FAR struct stm32_dev_s *priv, int offset,
  * Description:
  *   Dump all timer registers.
  *
- * Input parameters:
+ * Input Parameters:
  *   priv - A reference to the DFSDM block status
  *
  * Returned Value:
@@ -1070,7 +1070,8 @@ static void dfsdm_rccreset(FAR struct stm32_dev_s *priv, bool reset)
 /****************************************************************************
  * Name: dfsdm_enable
  *
- * Description    : Enables the DFSDM peripheral.
+ * Description:
+ *   Enables the DFSDM peripheral.
  *
  * Input Parameters:
  *   priv - A reference to the DFSDM block status

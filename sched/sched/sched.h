@@ -72,16 +72,22 @@
 
 /* These are macros to access the current CPU and the current task on a CPU.
  * These macros are intended to support a future SMP implementation.
+ * NOTE: this_task() for SMP is implemented in sched_thistask.c if the CPU
+ * supports disabling of inter-processor interrupts or if it supports the
+ * atomic fetch add operation.
  */
 
 #ifdef CONFIG_SMP
 #  define current_task(cpu)      ((FAR struct tcb_s *)g_assignedtasks[cpu].head)
 #  define this_cpu()             up_cpu_index()
+#  if !defined(CONFIG_ARCH_GLOBAL_IRQDISABLE) && !defined(CONFIG_ARCH_HAVE_FETCHADD)
+#    define this_task()          (current_task(this_cpu()))
+#  endif
 #else
 #  define current_task(cpu)      ((FAR struct tcb_s *)g_readytorun.head)
 #  define this_cpu()             (0)
+#  define this_task()            (current_task(this_cpu()))
 #endif
-#define this_task()              (current_task(this_cpu()))
 
 /* List attribute flags */
 
@@ -364,6 +370,18 @@ extern volatile spinlock_t g_cpu_schedlock SP_SECTION;
 extern volatile spinlock_t g_cpu_locksetlock SP_SECTION;
 extern volatile cpu_set_t g_cpu_lockset SP_SECTION;
 
+/* Used to lock tasklist to prevent from concurrent access */
+
+extern volatile spinlock_t g_cpu_tasklistlock SP_SECTION;
+
+#if defined(CONFIG_ARCH_HAVE_FETCHADD) && !defined(CONFIG_ARCH_GLOBAL_IRQDISABLE)
+/* This is part of the sched_lock() logic to handle atomic operations when
+ * locking the scheduler.
+ */
+
+extern volatile int16_t g_global_lockcount;
+#endif
+
 #endif /* CONFIG_SMP */
 
 /****************************************************************************
@@ -423,13 +441,30 @@ void sched_sporadic_lowpriority(FAR struct tcb_s *tcb);
 #endif
 
 #ifdef CONFIG_SMP
+#if defined(CONFIG_ARCH_GLOBAL_IRQDISABLE) || defined(CONFIG_ARCH_HAVE_FETCHADD)
+FAR struct tcb_s *this_task(void);
+#endif
+
 int  sched_cpu_select(cpu_set_t affinity);
 int  sched_cpu_pause(FAR struct tcb_s *tcb);
-#  define sched_islocked(tcb) spin_islocked(&g_cpu_schedlock)
+
+irqstate_t sched_tasklist_lock(void);
+void sched_tasklist_unlock(irqstate_t lock);
+
+#if defined(CONFIG_ARCH_HAVE_FETCHADD) && !defined(CONFIG_ARCH_GLOBAL_IRQDISABLE)
+#  define sched_islocked_global() \
+     (spin_islocked(&g_cpu_schedlock) || g_global_lockcount > 0)
 #else
-#  define sched_cpu_select(a) (0)
-#  define sched_cpu_pause(t)  (-38)  /* -ENOSYS */
-#  define sched_islocked(tcb) ((tcb)->lockcount > 0)
+#  define sched_islocked_global() \
+     spin_islocked(&g_cpu_schedlock)
+#endif
+
+#  define sched_islocked_tcb(tcb) sched_islocked_global()
+
+#else
+#  define sched_cpu_select(a)     (0)
+#  define sched_cpu_pause(t)      (-38)  /* -ENOSYS */
+#  define sched_islocked_tcb(tcb) ((tcb)->lockcount > 0)
 #endif
 
 /* CPU load measurement support */

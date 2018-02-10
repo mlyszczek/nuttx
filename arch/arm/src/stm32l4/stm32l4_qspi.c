@@ -1447,7 +1447,7 @@ static int qspi_memory_dma(struct stm32l4_qspidev_s *priv,
 
       ret = wd_start(priv->dmadog, DMA_TIMEOUT_TICKS,
                      (wdentry_t)qspi_dma_timeout, 1, (uint32_t)priv);
-      if (ret != OK)
+      if (ret < 0)
         {
            spierr("ERROR: wd_start failed: %d\n", ret);
         }
@@ -2421,7 +2421,7 @@ static int qspi_hw_initialize(struct stm32l4_qspidev_s *priv)
  * Description:
  *   Initialize the selected QSPI port in master mode
  *
- * Input Parameter:
+ * Input Parameters:
  *   intf - Interface number(must be zero)
  *
  * Returned Value:
@@ -2594,7 +2594,7 @@ errout_with_dmahandles:
  * Description:
  *   Put the QSPI device into memory mapped mode
  *
- * Input Parameter:
+ * Input Parameters:
  *   dev - QSPI device
  *   meminfo - parameters like for a memory transfer used for reading
  *
@@ -2686,7 +2686,7 @@ void stm32l4_qspi_enter_memorymapped(struct qspi_dev_s* dev,
  * Description:
  *   Take the QSPI device out of memory mapped mode
  *
- * Input Parameter:
+ * Input Parameters:
  *   dev - QSPI device
  *
  * Returned Value:

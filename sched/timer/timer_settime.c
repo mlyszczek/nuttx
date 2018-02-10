@@ -1,7 +1,8 @@
 /****************************************************************************
  * sched/timer/timer_settime.c
  *
- *   Copyright (C) 2007-2010, 2013-2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007-2010, 2013-2016, 2018 Gregory Nutt. All rights
+ *     reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -76,7 +77,7 @@ static void timer_timeout(int argc, wdparm_t itimer);
  * Parameters:
  *   timer - A reference to the POSIX timer that just timed out
  *
- * Return Value:
+ * Returned Value:
  *   None
  *
  * Assumptions:
@@ -131,7 +132,7 @@ static inline void timer_signotify(FAR struct posix_timer_s *timer)
  * Parameters:
  *   timer - A reference to the POSIX timer that just timed out
  *
- * Return Value:
+ * Returned Value:
  *   None
  *
  * Assumptions:
@@ -164,7 +165,7 @@ static inline void timer_restart(FAR struct posix_timer_s *timer,
  *   itimer - A reference to the POSIX timer that just timed out
  *   signo  - The signal to use to wake up the task
  *
- * Return Value:
+ * Returned Value:
  *   None
  *
  * Assumptions:
@@ -283,7 +284,7 @@ static void timer_timeout(int argc, wdparm_t itimer)
  *   ovalue - A location in which to return the time remaining from the
  *     previous timer setting. (ignored)
  *
- * Return Value:
+ * Returned Value:
  *   If the timer_settime() succeeds, a value of 0 (OK) will be returned.
  *   If an error occurs, the value -1 (ERROR) will be returned, and errno set
  *   to indicate the error.
@@ -390,6 +391,15 @@ int timer_settime(timer_t timerid, int flags,
       timer->pt_last = delay;
       ret = wd_start(timer->pt_wdog, delay, (wdentry_t)timer_timeout,
                      1, (uint32_t)((wdparm_t)timer));
+      if (ret < 0)
+        {
+          set_errno(-ret);
+          ret = ERROR;
+        }
+      else
+        {
+          ret = OK;
+        }
     }
 
   leave_critical_section(intflags);

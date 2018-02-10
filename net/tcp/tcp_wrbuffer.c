@@ -125,7 +125,7 @@ void tcp_wrbuffer_initialize(void)
  *   the free list.  This function is called from TCP logic when a buffer
  *   of TCP data is about to sent
  *
- * Input parameters:
+ * Input Parameters:
  *   None
  *
  * Assumptions:
@@ -211,8 +211,15 @@ void tcp_wrbuffer_release(FAR struct tcp_wrbuffer_s *wrb)
 int tcp_wrbuffer_test(void)
 {
   int val = 0;
-  nxsem_getvalue(&g_wrbuffer.sem, &val);
-  return val > 0 ? OK : ERROR;
+  int ret;
+
+  ret = nxsem_getvalue(&g_wrbuffer.sem, &val);
+  if (ret >= 0)
+    {
+      ret = val > 0 ? OK : -ENOSPC;
+    }
+
+  return ret;
 }
 
 #endif /* CONFIG_NET && CONFIG_NET_TCP && CONFIG_NET_TCP_WRITE_BUFFERS */

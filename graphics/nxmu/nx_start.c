@@ -190,11 +190,9 @@ int nx_start(void)
                               CONFIG_NXSTART_SERVERSTACK, nx_server, NULL);
       if (server < 0)
         {
-          int errcode = get_errno();
-          DEBUGASSERT(errcode > 0);
-
-          gerr("ERROR: Failed to create nx_server kernel thread: %d\n", errcode);
-          return -errcode;
+          gerr("ERROR: Failed to create nx_server kernel thread: %d\n",
+               (int)server);
+          return (int)server;
         }
 
       g_nxserver_started = true;

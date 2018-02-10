@@ -47,6 +47,7 @@
 #include <assert.h>
 #include <debug.h>
 
+#include <nuttx/kthread.h>
 #include <nuttx/usb/usbdev.h>
 #include <nuttx/usb/usbhost.h>
 #include <nuttx/usb/usbdev_trace.h>
@@ -236,9 +237,9 @@ int stm32_usbhost_setup(void)
 
       uinfo("Start usbhost_waiter\n");
 
-      pid = task_create("usbhost", CONFIG_OLIMEXP407_USBHOST_PRIO,
-                        CONFIG_OLIMEXP407_USBHOST_STACKSIZE,
-                        (main_t)usbhost_waiter, (FAR char * const *)NULL);
+      pid = kthread_create("usbhost", CONFIG_OLIMEXP407_USBHOST_PRIO,
+                           CONFIG_OLIMEXP407_USBHOST_STACKSIZE,
+                           (main_t)usbhost_waiter, (FAR char * const *)NULL);
       return pid < 0 ? -ENOEXEC : OK;
     }
 
@@ -299,11 +300,11 @@ void stm32_usbhost_vbusdrive(int iface, bool enable)
  *   Setup to receive an interrupt-level callback if an overcurrent condition is
  *   detected.
  *
- * Input Parameter:
+ * Input Parameters:
  *   handler - New overcurrent interrupt handler
  *   arg     - The argument provided for the interrupt handler
  *
- * Returned value:
+ * Returned Value:
  *   Zero (OK) is returned on success.  Otherwise, a negated errno value is returned
  *   to indicate the nature of the failure.
  *
