@@ -38,9 +38,10 @@ Port Status
   2018-02-10:  Added the nxlines configuration to test the custom HiletGo
     OLED on a Click proto board.  Debug output indicates that the example is
     running error free yet nothing appears on the OLED in mikroBUS slot A.
-    It looks like all of the signals are present at the mikroBUS A slot and
-    the proto click ohms out okay so this must be a software driver issue.
-    Write only LCDs are tough to debug!
+    I tried slot D with same result.  I also ported the configuration to
+    the Flip&Click SAM3X and got the same result.  There could be SPI issues
+    on the PIC32MX, but more likely that there is an error in my custom
+    HiletGo Click.  Damn!
 
 On Board Debug Support
 ======================
@@ -230,8 +231,8 @@ SPI
      Pin J1 Board Signal PIC32MZ
      --- -- ------------ -------
      D10 8  SPI3_SCK     RB14
-     D10 7  SPI3_MISO    RB9
-     D11 6  SPI3_MOSI    RB10
+     D11 7  SPI3_MISO    RB9
+     D12 6  SPI3_MOSI    RB10
      D13 5  SPI3_SS      RB9
 
    SPI1 and SPI2 are also available on the mikroBUS Click connectors (in
@@ -338,9 +339,6 @@ HiletGo OLED
 
    NOTE that this is a write-only display (MOSI only)!
 
-   Configuration
-   -------------
-
 Configurations
 ==============
 
@@ -427,6 +425,7 @@ Where <subdir> is one of the following:
 
     2018-02-10:  The debug output indicates that the nxlines example is
       running with no errors, however, nothing appears on the OLED display.
-      It looks like all of the signals are present at the mikroBUS A slot and
-      the proto click ohms out okay so this must be a software driver issue.
-      Write only LCDs are tough to debug!
+      I tried slot D with same result.  I also ported the configuration to
+      the Flip&Click SAM3X and got the same result.  There could be SPI issues
+      on the PIC32MX, but more likely that there is an error in my custom
+      HiletGo Click.  Damn!
