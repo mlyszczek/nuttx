@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/lcd/ft800.h
+ * include/nuttx/lcd/ft80x.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -37,8 +37,8 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_LCD_FT800_H
-#define __INCLUDE_NUTTX_LCD_FT800_H
+#ifndef __INCLUDE_NUTTX_LCD_FT80X_H
+#define __INCLUDE_NUTTX_LCD_FT80X_H
 
 /****************************************************************************
  * Included Files
@@ -48,7 +48,7 @@
 #include <nuttx/spi/spi.h>
 #include <nuttx/i2c/i2c_master.h>
 
-#ifdef CONFIG_LCD_FT800
+#ifdef CONFIG_LCD_FT80X
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -58,12 +58,12 @@
  * Public Types
  ****************************************************************************/
 
-/* Pins relevant to software control.  The FT800 is a 48-pin part.  Most of
+/* Pins relevant to software control.  The FT80X is a 48-pin part.  Most of
  * the pins are associated with the TFT panel and other board-related
  * support.  A few a relevant to software control of the part.  Those are
  * listed here:
  *
- * FT800 PIN  DIR DESCRIPTION
+ * FT80X PIN  DIR DESCRIPTION
  *  3          I  SPI: SCLK, I2C: SCL
  *  4          I  SPI: MISO, I2C: SDA
  *  5         I/O SPI: MOSI
@@ -75,40 +75,40 @@
  * and nPD are directly managed by this interface.
  */
 
-/* A reference to a structure of this type must be passed to the FT800
+/* A reference to a structure of this type must be passed to the FT80X
  * driver.  This structure provides information about the configuration
- * of the FT800 and provides some board-specific hooks.
+ * of the FT80X and provides some board-specific hooks.
  *
  * Memory for this structure is provided by the caller.  It is not copied
  * by the driver and is presumed to persist while the driver is active.  The
  * memory may be read-only.
  */
 
-struct ft800_config_s
+struct ft80x_config_s
 {
   /* Device characterization */
 
   uint32_t frequency;  /* I2C/SPI frequency */
-#ifdef CONFIG_FT800_I2C
+#ifdef CONFIG_LCD_FT80X_I2C
   uint8_t address;     /* 7-bit I2C address */
 #endif
 
   /* IRQ/GPIO access callbacks.  These operations all hidden behind
-   * callbacks to isolate the FT800 driver from differences in GPIO
+   * callbacks to isolate the FT80X driver from differences in GPIO
    * interrupt handling by varying boards and MCUs. Interrupts should be
    * configured on the falling edge of nINT.
    *
    *   attach  - Attach the ADS7843E interrupt handler to the GPIO interrupt
    *   enable  - Enable or disable the GPIO interrupt
    *   clear   - Acknowledge/clear any pending GPIO interrupt
-   *   pwrdown - Power down the FT800
+   *   pwrdown - Power down the FT80X
    */
 
-  int  (*attach)(FAR const struct ft800_config_s *state, xcpt_t isr,
+  int  (*attach)(FAR const struct ft80x_config_s *state, xcpt_t isr,
                  FAR void *arg);
-  void (*enable)(FAR const struct ft800_config_s *state, bool enable);
-  void (*clear)(FAR const struct ft800_config_s *state);
-  bool (*pwrdown)(FAR const struct ft800_config_s *state, bool pwrdown);
+  void (*enable)(FAR const struct ft80x_config_s *state, bool enable);
+  void (*clear)(FAR const struct ft80x_config_s *state);
+  bool (*pwrdown)(FAR const struct ft80x_config_s *state, bool pwrdown);
 };
 
 /****************************************************************************
@@ -124,11 +124,11 @@ extern "C"
 #endif
 
 /****************************************************************************
- * Name: ft800_register
+ * Name: ft80x_register
  *
  * Description:
  *   Configure the ADS7843E to use the provided SPI device instance.  This
- *   will register the driver as /dev/ft800.
+ *   will register the driver as /dev/ft80x.
  *
  * Input Parameters:
  *   spi     - An SPI driver instance
@@ -141,12 +141,12 @@ extern "C"
  *
  ****************************************************************************/
 
-#if defined(CONFIG_FT800_SPI)
-int ft800_register(FAR struct spi_dev_s *spi,
-                   FAR const struct ft800_config_s *config);
-#elif defined(CONFIG_FT800_I2C)
-int ft800_register(FAR struct i2c_master_s *i2c,
-                   FAR const struct ft800_config_s *config);
+#if defined(CONFIG_LCD_FT80X_SPI)
+int ft80x_register(FAR struct spi_dev_s *spi,
+                   FAR const struct ft80x_config_s *config);
+#elif defined(CONFIG_LCD_FT80X_I2C)
+int ft80x_register(FAR struct i2c_master_s *i2c,
+                   FAR const struct ft80x_config_s *config);
 #endif
 
 #undef EXTERN
@@ -154,5 +154,5 @@ int ft800_register(FAR struct i2c_master_s *i2c,
 }
 #endif
 
-#endif /* CONFIG_LCD_FT800 */
-#endif /* __INCLUDE_NUTTX_LCD_FT800_H */
+#endif /* CONFIG_LCD_FT80X */
+#endif /* __INCLUDE_NUTTX_LCD_FT80X_H */
