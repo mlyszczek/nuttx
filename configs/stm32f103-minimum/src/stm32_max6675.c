@@ -1,9 +1,8 @@
 /************************************************************************************
- * configs/stm32f103-minimum/src/stm32_pwm.c
+ * configs/stm32f4discovery/src/stm32_max6675.c
  *
- *   Copyright (C) 2013, 2015, 2016, 2018 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
- *           Alan Carvalho de Assis <acassis@gmail.com>
+ *   Copyright (C) 2018 Alan Carvalho de Assis. All rights reserved.
+ *   Author: Alan Carvalho de Assis <acassis@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,101 +39,64 @@
 
 #include <nuttx/config.h>
 
-#include <sys/types.h>
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/board.h>
-#include <nuttx/drivers/pwm.h>
+#include <nuttx/spi/spi.h>
+#include <nuttx/sensors/max6675.h>
 
-#include <arch/board/board.h>
-
-#include "chip.h"
-#include "up_arch.h"
-#include "stm32_pwm.h"
+#include "stm32.h"
+#include "stm32_spi.h"
 #include "stm32f103_minimum.h"
+
+#if defined(CONFIG_SPI) && defined(CONFIG_SENSORS_MAX6675) && defined(CONFIG_STM32_SPI1)
 
 /************************************************************************************
  * Pre-processor Definitions
  ************************************************************************************/
-/* Configuration *******************************************************************/
-/* PWM
- *
- * The stm32f103-minimum has no real on-board PWM devices, but the board can be
- * configured to output a pulse train using TIM4 CH2.  This pin is used by FSMC
- * is connect to CN5 just for this purpose:
- *
- * PB0 ADC12_IN8/TIM3_CH3
- *
- */
 
-#define HAVE_PWM 1
-
-#ifndef CONFIG_PWM
-#  undef HAVE_PWM
-#endif
-
-#ifndef CONFIG_STM32_TIM3
-#  undef HAVE_PWM
-#endif
-
-#ifndef CONFIG_STM32_TIM3_PWM
-#  undef HAVE_PWM
-#endif
-
-#if !defined(CONFIG_STM32_TIM3_CHANNEL) || CONFIG_STM32_TIM3_CHANNEL != STM32F103MINIMUM_PWMCHANNEL
-#  undef HAVE_PWM
-#endif
+#define MAX6675_SPI_PORTNO 1   /* On SPI1 */
 
 /************************************************************************************
  * Public Functions
  ************************************************************************************/
 
 /************************************************************************************
- * Name: stm32_pwm_setup
+ * Name: stm32_max6675initialize
  *
  * Description:
- *   Initialize PWM and register the PWM device.
+ *   Initialize and register the MAX6675 Temperature Sensor driver.
+ *
+ * Input Parameters:
+ *   devpath - The full path to the driver to register. E.g., "/dev/temp0"
+ *
+ * Returned Value:
+ *   Zero (OK) on success; a negated errno value on failure.
  *
  ************************************************************************************/
 
-int stm32_pwm_setup(void)
+int stm32_max6675initialize(FAR const char *devpath)
 {
-#ifdef HAVE_PWM
-  static bool initialized = false;
-  struct pwm_lowerhalf_s *pwm;
+  FAR struct spi_dev_s *spi;
   int ret;
 
-  /* Have we already initialized? */
+  spi = stm32_spibus_initialize(MAX6675_SPI_PORTNO);
 
-  if (!initialized)
+  if (!spi)
     {
-      /* Call stm32_pwminitialize() to get an instance of the PWM interface */
-
-      pwm = stm32_pwminitialize(STM32F103MINIMUM_PWMTIMER);
-      if (!pwm)
-        {
-          aerr("ERROR: Failed to get the STM32 PWM lower half\n");
-          return -ENODEV;
-        }
-
-      /* Register the PWM driver at "/dev/pwm0" */
-
-      ret = pwm_register("/dev/pwm0", pwm);
-      if (ret < 0)
-        {
-          aerr("ERROR: pwm_register failed: %d\n", ret);
-          return ret;
-        }
-
-      /* Now we are initialized */
-
-      initialized = true;
+      return -ENODEV;
     }
 
-  return OK;
-#else
-  return -ENODEV;
-#endif
+  /* Then register the barometer sensor */
+
+  ret = max6675_register(devpath, spi);
+  if (ret < 0)
+    {
+      snerr("ERROR: Error registering MAX6675\n");
+    }
+
+  return ret;
 }
+
+#endif /* CONFIG_SPI && CONFIG_SENSORS_MAX6675 */
 
