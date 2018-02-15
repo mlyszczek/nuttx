@@ -228,7 +228,7 @@
 
 /* For SPI memory read transaction, the host sends two zero bits, followed by the 22-bit
  * address. This is followed by a dummy byte. After the dummy byte, the FT80x responds to
- *  each host byte with read data bytes.
+ * each host byte with read data bytes.
  *
  * For I2C memory read transaction, bytes are packed in the I2C protocol as follow:
  *
@@ -257,7 +257,7 @@ struct ft80x_i2cread_s
   uint8_t addrl;   /* Address[7:0] */
 };
 
-/* For SPI memory write transaction, the host sends a ‘1’ bit and ‘0’ bit, followed by the
+/* For SPI memory write transaction, the host sends a '1' bit and '0' bit, followed by the
  * 22-bit address. This is followed by the write data.
  *
  * For I2C memory write transaction, bytes are packed in the I2C protocol as follow:
@@ -302,7 +302,6 @@ struct ft80x_dev_s
   FAR struct spi_dev_s  *spi;    /* Cached SPI device reference */
 #else
   FAR struct i2c_master_s *i2c;  /* Cached SPI device reference */
-  uint8_t addr;                  /* 7-bit I2C address */
 #endif
 
   FAR const struct ft80x_config_s *lower; /* Lower half instance */

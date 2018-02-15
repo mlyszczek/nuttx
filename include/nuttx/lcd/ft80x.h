@@ -135,7 +135,7 @@ extern "C"
  * Input Parameters:
  *   spi     - An SPI driver instance
  *   i2c     - An I2C master driver instance
- *   config  - Persistent board configuration data
+ *   lower   - Persistent board configuration data / lower half interface
  *
  * Returned Value:
  *   Zero is returned on success.  Otherwise, a negated errno value is
@@ -145,10 +145,10 @@ extern "C"
 
 #if defined(CONFIG_LCD_FT80X_SPI)
 int ft80x_register(FAR struct spi_dev_s *spi,
-                   FAR const struct ft80x_config_s *config);
+                   FAR const struct ft80x_config_s *lower);
 #elif defined(CONFIG_LCD_FT80X_I2C)
 int ft80x_register(FAR struct i2c_master_s *i2c,
-                   FAR const struct ft80x_config_s *config);
+                   FAR const struct ft80x_config_s *lower);
 #endif
 
 #undef EXTERN
