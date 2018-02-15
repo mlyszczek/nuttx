@@ -1,7 +1,7 @@
 /************************************************************************************
  * configs/stm32f103-minimum/src/stm32f103_minimum.h
  *
- *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2016, 2018 Gregory Nutt. All rights reserved.
  *   Author: Laurent Latil <laurent@latil.nom.fr>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,6 +44,12 @@
 #include <nuttx/compiler.h>
 #include <stdint.h>
 
+#include <arch/chip/chip.h>
+
+/************************************************************************************
+ * Pre-processor Definitions
+ ************************************************************************************/
+
 #define HAVE_AT24 1
 
 /* AT24 Serial EEPROM */
@@ -76,10 +82,6 @@
     !defined(CONFIG_STM32F103MINIMUM_AT24_NXFFS)
 #  undef HAVE_AT24
 #endif
-
-/************************************************************************************
- * Pre-processor Definitions
- ************************************************************************************/
 
 /* How many SPI modules does this chip support? The LM3S6918 supports 2 SPI
  * modules (others may support more -- in such case, the following must be
@@ -133,6 +135,9 @@
                            GPIO_OUTPUT_SET|GPIO_PORTA|GPIO_PIN4)
 
 #define STM32_LCD_CS      (GPIO_OUTPUT|GPIO_CNF_OUTPP|GPIO_MODE_50MHz|\
+                           GPIO_OUTPUT_SET|GPIO_PORTA|GPIO_PIN4)
+
+#define GPIO_MAX6675_CS   (GPIO_OUTPUT|GPIO_CNF_OUTPP|GPIO_MODE_50MHz|\
                            GPIO_OUTPUT_SET|GPIO_PORTA|GPIO_PIN4)
 
 #define GPIO_MCP2515_CS   (GPIO_OUTPUT|GPIO_CNF_OUTPP|GPIO_MODE_50MHz|\
@@ -335,6 +340,18 @@ int stm32_hcsr04_initialize(FAR const char *devname);
 
 #ifdef CONFIG_LM75_I2C
 int stm32_lm75initialize(FAR const char *devpath);
+#endif
+
+/************************************************************************************
+ * Name: stm32_max6675initialize
+ *
+ * Description:
+ *   Called to initialize MAX6675 temperature sensor
+ *
+ ************************************************************************************/
+
+#ifdef CONFIG_SENSORS_MAX6675
+int stm32_max6675initialize(FAR const char *devpath);
 #endif
 
 /************************************************************************************
