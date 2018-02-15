@@ -166,7 +166,7 @@ void ft80x_read(FAR struct ft80x_dev_s *priv, uint32_t addr,
 void ft80x_write(FAR struct ft80x_dev_s *priv, uint32_t addr,
                  FAR const uint8_t *buffer, size_t buflen)
 {
-  struct ft80x_i2cwrite_s spiwrite;
+  struct ft80x_spiwrite_s spiwrite;
 
   DEBUGASSERT(priv != NULL && (addr & 0xffc0 0000) == 0 &&
               buffer != NULL && bulen > 0);
@@ -183,7 +183,7 @@ void ft80x_write(FAR struct ft80x_dev_s *priv, uint32_t addr,
 
   /* Send the write header */
 
-  SPI_SNDBLOCK(priv->spi, &spiwrite, sizeof(struct ft80x_i2cwrite_s));
+  SPI_SNDBLOCK(priv->spi, &spiwrite, sizeof(struct ft80x_spiwrite_s));
 
   /* Then write to the FT80x memory from the user provided buffer */
 
