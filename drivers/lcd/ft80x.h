@@ -10,6 +10,7 @@
  *    Clearance No.: FTDI# 334, Future Technology Devices International Ltd.
  *  - Document No.: FT_000986, "FT801 Embedded Video Engine Datasheet", Version 1.0,
  *    Clearance No.: FTDI#376, Future Technology Devices International Ltd.
+ *  - Some definitions derive from FTDI sample code.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,6 +54,8 @@
 
 /* FT80x Memory Map ************************************************************************/
 
+/* Address region */
+
 #define FT80X_RAM_G                0x000000  /* Main graphics RAM (256Kb) */
 #define FT80X_ROM_CHIPID           0x0c0000  /* FT80x chip identification and revision
                                               * information (4b):
@@ -66,8 +69,15 @@
 #define FT80X_RAM_CMD              0x108000  /* Command Buffer (4Kb) */
 
 #ifdef CONFIG_LCD_FT801
-#  define FT80X_RAM_SCREENSHOT     0x108000  /* Screenshot readout buffer  (2Kb) */
+#  define FT80X_RAM_SCREENSHOT     0x1c2000  /* Screenshot readout buffer  (2Kb) */
 #endif
+
+/* Memory buffer sizes */
+
+#define FT80X_RAM_G_SIZE           (256 * 1024)
+#define FT80X_CMDFIFO_SIZE         (4 * 1024)
+#define FT80X_RAM_DL_SIZE          (8 * 1024)
+#define FT80X_RAM_PAL_SIZE         (1 * 1024)
 
 /* FT80x Registers *************************************************************************/
 
@@ -221,6 +231,150 @@
 
 #define FT80X_TRACKER              0x109000  /* Track register (Track value – MSB16;
                                               * Tag value - LSB8) */
+
+/* Coprocessor commands */
+
+#define FT80X_CMD_APPEND           0xffffff1e
+#define FT80X_CMD_BGCOLOR          0xffffff09
+#define FT80X_CMD_BITMAP_TRANSFORM 0xffffff21
+#define FT80X_CMD_BUTTON           0xffffff0d
+#define FT80X_CMD_CALIBRATE        0xffffff15
+#define FT80X_CMD_CLOCK            0xffffff14
+#define FT80X_CMD_COLDSTART        0xffffff32
+#define FT80X_CMD_CRC              0xffffff03
+#define FT80X_CMD_DIAL             0xffffff2d
+#define FT80X_CMD_DLSTART          0xffffff00
+#define FT80X_CMD_EXECUTE          0xffffff07
+#define FT80X_CMD_FGCOLOR          0xffffff0a
+#define FT80X_CMD_GAUGE            0xffffff13
+#define FT80X_CMD_GETMATRIX        0xffffff33
+#define FT80X_CMD_GETPOINT         0xffffff08
+#define FT80X_CMD_GETPROPS         0xffffff25
+#define FT80X_CMD_GETPTR           0xffffff23
+#define FT80X_CMD_GRADCOLOR        0xffffff34
+#define FT80X_CMD_GRADIENT         0xffffff0b
+#define FT80X_CMD_HAMMERAUX        0xffffff04
+#define FT80X_CMD_IDCT             0xffffff06
+#define FT80X_CMD_INFLATE          0xffffff22
+#define FT80X_CMD_INTERRUPT        0xffffff02
+#define FT80X_CMD_KEYS             0xffffff0e
+#define FT80X_CMD_LOADIDENTITY     0xffffff26
+#define FT80X_CMD_LOADIMAGE        0xffffff24
+#define FT80X_CMD_LOGO             0xffffff31
+#define FT80X_CMD_MARCH            0xffffff05
+#define FT80X_CMD_MEMCPY           0xffffff1d
+#define FT80X_CMD_MEMCRC           0xffffff18
+#define FT80X_CMD_MEMSET           0xffffff1b
+#define FT80X_CMD_MEMWRITE         0xffffff1a
+#define FT80X_CMD_MEMZERO          0xffffff1c
+#define FT80X_CMD_NUMBER           0xffffff2e
+#define FT80X_CMD_PROGRESS         0xffffff0f
+#define FT80X_CMD_REGREAD          0xffffff19
+#define FT80X_CMD_ROTATE           0xffffff29
+#define FT80X_CMD_SCALE            0xffffff28
+#define FT80X_CMD_SCREENSAVER      0xffffff2f
+#define FT80X_CMD_SCROLLBAR        0xffffff11
+#define FT80X_CMD_SETFONT          0xffffff2b
+#define FT80X_CMD_SETMATRIX        0xffffff2a
+#define FT80X_CMD_SKETCH           0xffffff30
+#define FT80X_CMD_SLIDER           0xffffff10
+#define FT80X_CMD_SNAPSHOT         0xffffff1f
+#define FT80X_CMD_SPINNER          0xffffff16
+#define FT80X_CMD_STOP             0xffffff17
+#define FT80X_CMD_SWAP             0xffffff01
+#define FT80X_CMD_TEXT             0xffffff0c
+#define FT80X_CMD_TOGGLE           0xffffff12
+#define FT80X_CMD_TOUCH_TRANSFORM  0xffffff20
+#define FT80X_CMD_TRACK            0xffffff2c
+#define FT80X_CMD_TRANSLATE        0xffffff27
+
+/* FT800 graphics engine specific macros useful for static display list generation */
+
+#define FT80X_VERTEX2F(x,y) \
+  ((1 << 30) | (((x) & 32767) << 15) | (((y) & 32767) << 0))
+#define FT80X_VERTEX2II(x,y,handle,cell) \
+  ((2 << 30) | (((x) & 511) << 21) | (((y) & 511) << 12) | (((handle) & 31) << 7) | \
+   (((cell) & 127) << 0))
+#define FT80X_BITMAP_SOURCE(addr) \
+  ((1 << 24) | (((addr) & 1048575) << 0))
+#define FT80X_CLEAR_COLOR_RGB(red,green,blue) \
+  ((2 << 24) | (((red) & 255) << 16) | (((green) & 255) << 8) | (((blue) & 255) << 0))
+#define FT80X_TAG(s) \
+  ((3 << 24) | (((s) & 255) << 0))
+#define FT80X_COLOR_RGB(red,green,blue) \
+  ((4 << 24) | (((red) & 255) << 16) | (((green) & 255) << 8) | (((blue) & 255) << 0))
+#define FT80X_BITMAP_HANDLE(handle) \
+  ((5 << 24) | (((handle) & 31) << 0))
+#define FT80X_CELL(cell) \
+  ((6 << 24) | (((cell) & 127) << 0))
+#define FT80X_BITMAP_LAYOUT(format,linestride,height) \
+  ((7 << 24) | (((format) & 31) << 19) | (((linestride) & 1023) << 9) | \
+   (((height) & 511) << 0))
+#define FT80X_BITMAP_SIZE(filter,wrapx,wrapy,width,height) \
+  ((8 << 24) | (((filter) & 1) << 20) | (((wrapx) & 1) << 19) | (((wrapy) & 1) << 18) | \
+   (((width) & 511) << 9) | (((height) & 511) << 0))
+#define FT80X_ALPHA_FUNC(func,ref) \
+  ((9 << 24) | (((func) & 7) << 8) | (((ref) & 255) << 0))
+#define FT80X_STENCIL_FUNC(func,ref,mask) \
+  ((10 << 24) | (((func) & 7) << 16) | (((ref) & 255) << 8) | (((mask) & 255) << 0))
+#define FT80X_BLEND_FUNC(src,dst) \
+  ((11 << 24) | (((src) & 7) << 3) | (((dst) & 7) << 0))
+#define FT80X_STENCIL_OP(sfail,spass) \
+  ((12 << 24) | (((sfail) & 7) << 3) | (((spass) & 7) << 0))
+#define FT80X_POINT_SIZE(size) \
+  ((13 << 24) | (((size) & 8191) << 0))
+#define FT80X_LINE_WIDTH(width) \
+  ((14 << 24) | (((width) & 4095) << 0))
+#define FT80X_CLEAR_COLOR_A(alpha) \
+  ((15 << 24) | (((alpha) & 255) << 0))
+#define FT80X_COLOR_A(alpha) \
+  ((16 << 24) | (((alpha) & 255) << 0))
+#define FT80X_CLEAR_STENCIL(s) \
+  ((17 << 24) | (((s) & 255) << 0))
+#define FT80X_CLEAR_TAG(s) \
+  ((18 << 24) | (((s) & 255) << 0))
+#define FT80X_STENCIL_MASK(mask) \
+  ((19 << 24) | (((mask) & 255) << 0))
+#define FT80X_TAG_MASK(mask) \
+  ((20 << 24) | (((mask) & 1) << 0))
+#define FT80X_BITMAP_TRANSFORM_A(a) \
+  ((21 << 24) | (((a) & 131071) << 0))
+#define FT80X_BITMAP_TRANSFORM_B(b) \
+  ((22 << 24) | (((b) & 131071) << 0))
+#define FT80X_BITMAP_TRANSFORM_C(c) \
+  ((23 << 24) | (((c) & 16777215) << 0))
+#define FT80X_BITMAP_TRANSFORM_D(d) \
+  ((24 << 24) | (((d) & 131071) << 0))
+#define FT80X_BITMAP_TRANSFORM_E(e) \
+  ((25 << 24) | (((e) & 131071) << 0))
+#define FT80X_BITMAP_TRANSFORM_F(f) \
+  ((26 << 24) | (((f) & 16777215) << 0))
+#define FT80X_SCISSOR_XY(x,y) \
+  ((27 << 24) | (((x) & 511) << 9) | (((y) & 511) << 0))
+#define FT80X_SCISSOR_SIZE(width,height) \
+  ((28 << 24) | (((width) & 1023) << 10) | (((height) & 1023) << 0))
+#define FT80X_CALL(dest) \
+  ((29 << 24) | (((dest) & 65535) << 0))
+#define FT80X_JUMP(dest) \
+  ((30 << 24) | (((dest) & 65535) << 0))
+#define FT80X_BEGIN(prim) \
+  ((31 << 24) | (((prim) & 15) << 0))
+#define FT80X_COLOR_MASK(r,g,b,a) \
+  ((32 << 24) | (((r) & 1) << 3) | (((g) & 1) << 2) | (((b) & 1) << 1) | (((a) & 1) << 0))
+#define FT80X_CLEAR(c,s,t) \
+  ((38 << 24) | (((c) & 1) << 2) | (((s) & 1) << 1) | (((t) & 1) << 0))
+#define FT80X_END() \
+  (33 << 24)
+#define FT80X_SAVE_CONTEXT() \
+  (34 << 24)
+#define FT80X_RESTORE_CONTEXT() \
+  (35 << 24)
+#define FT80X_RETURN() \
+  (36 << 24)
+#define FT80X_MACRO(m) \
+  (37 << 24) | (((m) & 1) << 0)
+#define FT80X_DISPLAY() \
+  (0 << 24)
 
 /*******************************************************************************************
  * Public Types
