@@ -5,8 +5,10 @@
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * References:
- *   "Touch Screen Controller, ADS7843," Burr-Brown Products from Texas
- *    Instruments, SBAS090B, September 2000, Revised May 2002"
+ *  - Document No.: FT_000792, "FT800 Embedded Video Engine", Datasheet Version 1.1,
+ *    Clearance No.: FTDI# 334, Future Technology Devices International Ltd.
+ *  - Document No.: FT_000986, "FT801 Embedded Video Engine Datasheet", Version 1.0,
+ *    Clearance No.: FTDI#376, Future Technology Devices International Ltd.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

@@ -10,7 +10,7 @@
  *    Clearance No.: FTDI# 334, Future Technology Devices International Ltd.
  *  - Document No.: FT_000986, "FT801 Embedded Video Engine Datasheet", Version 1.0,
  *    Clearance No.: FTDI#376, Future Technology Devices International Ltd.
-
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -286,5 +286,26 @@ struct ft80x_i2cwrite_s
   uint8_t addrl;   /* Address[7:0] */
                    /* Write data follows */
 };
+
+/* This structure describes the overall state of the FT80x driver */
+
+struct spi_dev_s;    /* Forward reference */
+struct i2c_master_s; /* Forward reference */
+
+struct ft80x_dev_s
+{
+  struct lcd_dev_s dev;          /* Publicly visible LCD device structure */
+
+  /* Private LCD-specific information follows */
+
+#ifdef CONFIG_LCD_FT80X_SPI
+  FAR struct spi_dev_s  *spi;    /* Cached SPI device reference */
+#else
+  FAR struct i2c_master_s *i2c;  /* Cached SPI device reference */
+  uint8_t addr;                  /* 7-bit I2C address */
+#endif
+
+  FAR const struct ft80x_config_s *lower; /* Lower half instance */
+}.
 
 #endif /* __DRIVERS_LCD_FT80X_H */
