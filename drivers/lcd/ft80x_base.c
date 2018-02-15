@@ -49,10 +49,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <poll.h>
 #include <errno.h>
 #include <debug.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/semaphore.h>
+#include <nuttx/fs/fs.h>
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/spi/spi.h>
 #include <nuttx/lcd/lcd.h>
@@ -64,276 +67,365 @@
 
 #ifdef CONFIG_LCD_FT80X
 
-/**************************************************************************************
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifdef CONFIG_LCD_FT800
+#  define DEVNAME "/dev/ft800"
+#ifdef CONFIG_LCD_FT801
+#  define DEVNAME "/dev/ft801"
+#else
+#  error No FT80x device configured
+#endif
+
+/****************************************************************************
  * Private Function Prototypes
- **************************************************************************************/
+ ****************************************************************************/
 
-/* LCD Data Transfer Methods */
+/* Coprocessor commands */
 
-static int ft80x_putrun(fb_coord_t row, fb_coord_t col,
-                        FAR const uint8_t *buffer, size_t npixels);
-static int ft80x_getrun(fb_coord_t row, fb_coord_t col, FAR uint8_t *buffer,
-                        size_t npixels);
+static void ft80x_cmd_text(FAR struct ft80x_dev_s *priv, int16_t x,
+              int16_t y, int16_t font, uint16_t options,
+              FAR const ft_char8_t *s);
+static void ft80x_cmd_number(FAR struct ft80x_dev_s *priv, int16_t x,
+              int16_t y, int16_t font, uint16_t options, int32_t n);
+static void ft80x_cmd_loadidentity(FAR struct ft80x_dev_s *priv);
+static void ft80x_cmd_toggle(FAR struct ft80x_dev_s *priv, int16_t x,
+              int16_t y, int16_t w, int16_t font, uint16_t options,
+              uint16_t state, const ft_char8_t *s);
+static void ft80x_cmd_gauge(FAR struct ft80x_dev_s *priv, int16_t x,
+              int16_t y, int16_t r, uint16_t options, uint16_t major,
+              uint16_t minor, uint16_t val, uint16_t range);
+static void ft80x_cmd_regread(FAR struct ft80x_dev_s *priv, uint32_t ptr,
+              uint32_t result);
+static void ft80x_cmd_getprops(FAR struct ft80x_dev_s *priv, uint32_t ptr,
+              uint32_t w, uint32_t h);
+static void ft80x_cmd_memcpy(FAR struct ft80x_dev_s *priv, uint32_t dest,
+              uint32_t src, uint32_t num);
+static void ft80x_cmd_spinner(FAR struct ft80x_dev_s *priv, int16_t x,
+              int16_t y, uint16_t style, uint16_t scale);
+static void ft80x_cmd_bgcolor(FAR struct ft80x_dev_s *priv, uint32_t c);
+static void ft80x_cmd_swap(FAR struct ft80x_dev_s *priv);
+static void ft80x_cmd_inflate(FAR struct ft80x_dev_s *priv, uint32_t ptr);
+static void ft80x_cmd_translate(FAR struct ft80x_dev_s *priv, int32_t tx,
+              int32_t ty);
+static void ft80x_cmd_stop(FAR struct ft80x_dev_s *priv);
+static void ft80x_cmd_slider(FAR struct ft80x_dev_s *priv, int16_t x,
+              int16_t y, int16_t w, int16_t h, uint16_t options,
+              uint16_t val, uint16_t range);
+static void ft80x_cmd_interrupt(FAR struct ft80x_dev_s *priv, uint32_t ms);
+static void ft80x_cmd_fgcolor(FAR struct ft80x_dev_s *priv, uint32_t c);
+static void ft80x_cmd_rotate(FAR struct ft80x_dev_s *priv, int32_t a);
+static void ft80x_cmd_button(FAR struct ft80x_dev_s *priv, int16_t x,
+              int16_t y, int16_t w, int16_t h, int16_t font,
+              uint16_t options, FAR const ft_char8_t *s);
+static void ft80x_cmd_memwrite(FAR struct ft80x_dev_s *priv, uint32_t ptr,
+              uint32_t num);
+static void ft80x_cmd_Scrollbar(FAR struct ft80x_dev_s *priv, int16_t x,
+              int16_t y, int16_t w, int16_t h, uint16_t options,
+              uint16_t val, uint16_t size, uint16_t range);
+static void ft80x_cmd_getmatrix(FAR struct ft80x_dev_s *priv, int32_t a,
+              int32_t b, int32_t c, int32_t d, int32_t e, int32_t f);
+static void ft80x_cmd_sketch(FAR struct ft80x_dev_s *priv, int16_t x,
+              int16_t y, uint16_t w, uint16_t h, uint32_t ptr,
+              uint16_t format);
+static void ft80x_cmd_csketch(FAR struct ft80x_dev_s *priv, int16_t x,
+              int16_t y, uint16_t w, uint16_t h, uint32_t ptr,
+              uint16_t format, uint16_t freq);
+static void ft80x_cmd_memset(FAR struct ft80x_dev_s *priv, uint32_t ptr,
+              uint32_t value, uint32_t num);
+static void ft80x_cmd_calibrate(FAR struct ft80x_dev_s *priv,
+              uint32_t result);
+static void ft80x_cmd_setfont(FAR struct ft80x_dev_s *priv, uint32_t font,
+              uint32_t ptr);
+static void ft80x_cmd_bitmap_transform(FAR struct ft80x_dev_s *priv,
+              int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t x2,
+              int32_t y2, int32_t tx0, int32_t ty0, int32_t tx1,
+              int32_t ty1, int32_t tx2, int32_t ty2, uint16_t result);
+static void ft80x_cmd_gradcolor(FAR struct ft80x_dev_s *priv, uint32_t c);
+static void ft80x_cmd_append(FAR struct ft80x_dev_s *priv, uint32_t ptr,
+              uint32_t num);
+static void ft80x_cmd_memzero(FAR struct ft80x_dev_s *priv, uint32_t ptr,
+              uint32_t num);
+static void ft80x_cmd_scale(FAR struct ft80x_dev_s *priv, int32_t sx,
+              int32_t sy);
+static void ft80x_cmd_clock(FAR struct ft80x_dev_s *priv, int16_t x,
+              int16_t y, int16_t r, uint16_t options, uint16_t h,
+              uint16_t m, uint16_t s, uint16_t ms);
+static void ft80x_cmd_gradient(FAR struct ft80x_dev_s *priv, int16_t x0,
+              int16_t y0, uint32_t rgb0, int16_t x1, int16_t y1,
+              uint32_t rgb1);
+static void ft80x_cmd_setmatrix(FAR struct ft80x_dev_s *priv);
+static void ft80x_cmd_track(FAR struct ft80x_dev_s *priv, int16_t x,
+              int16_t y, int16_t w, int16_t h, int16_t tag);
+static void ft80x_cmd_getptr(FAR struct ft80x_dev_s *priv, uint32_t result);
+static void ft80x_cmd_progress(FAR struct ft80x_dev_s *priv, int16_t x,
+              int16_t y, int16_t w, int16_t h, uint16_t options,
+              uint16_t val, uint16_t range);
+static void ft80x_cmd_coldstart(FAR struct ft80x_dev_s *priv);
+static void ft80x_cmd_keys(FAR struct ft80x_dev_s *priv, int16_t x,
+              int16_t y, int16_t w, int16_t h, int16_t font,
+              uint16_t options, FAR const ft_char8_t *s);
+static void ft80x_cmd_dial(FAR struct ft80x_dev_s *priv, int16_t x,
+              int16_t y, int16_t r, uint16_t options, uint16_t val);
+static void ft80x_cmd_loadimage(FAR struct ft80x_dev_s *priv, uint32_t ptr,
+              uint32_t options);
+static void ft80x_cmd_dlstart(FAR struct ft80x_dev_s *priv);
+static void ft80x_cmd_snapshot(FAR struct ft80x_dev_s *priv, uint32_t ptr);
+static void ft80x_cmd_screensaver(FAR struct ft80x_dev_s *priv);
+static void ft80x_cmd_memcrc(FAR struct ft80x_dev_s *priv, uint32_t ptr,
+              uint32_t num, uint32_t result);
+static void ft80x_cmd_logo(FAR struct ft80x_dev_s *priv);
+static void ft80x_cmd_calibrate(FAR struct ft80x_dev_s *priv,
+              uint32_t result);
+static void ft80x_cmd_text(FAR struct ft80x_dev_s *priv, int16_t x,
+              int16_t y, int16_t font, uint16_t options,\
+              FAR const ft_char8_t *s);
 
-/* LCD Configuration */
+/* Character driver methods */
 
-static int ft80x_getvideoinfo(FAR struct lcd_dev_s *dev,
-                              FAR struct fb_videoinfo_s *vinfo);
-static int ft80x_getplaneinfo(FAR struct lcd_dev_s *dev, unsigned int planeno,
-                              FAR struct lcd_planeinfo_s *pinfo);
+static int  ft80x_open(FAR struct file *filep);
+static int  ft80x_close(FAR struct file *filep);
 
-/* LCD RGB Mapping */
-
-#ifdef CONFIG_FB_CMAP
-#  error "RGB color mapping not supported by this driver"
+static ssize_t ft80x_read(FAR struct file *filep, FAR char *buffer,
+              size_t buflen);
+static ssize_t ft80x_write(FAR struct file *filep, FAR const char *buffer,
+              size_t buflen);
+static int  ft80x_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
+#ifndef CONFIG_DISABLE_POLL
+static int  ft80x_poll(FAR struct file *filep, FAR struct pollfd *fds,
+              bool setup);
 #endif
 
-/* Cursor Controls */
-
-#ifdef CONFIG_FB_HWCURSOR
-#  error "Cursor control not supported by this driver"
-#endif
-
-/* LCD Specific Controls */
-
-static int ft80x_getpower(struct lcd_dev_s *dev);
-static int ft80x_setpower(struct lcd_dev_s *dev, int power);
-static int ft80x_getcontrast(struct lcd_dev_s *dev);
-static int ft80x_setcontrast(struct lcd_dev_s *dev, unsigned int contrast);
-
-/**************************************************************************************
+/****************************************************************************
  * Private Data
- **************************************************************************************/
+ ****************************************************************************/
 
-/* This is working memory allocated by the LCD driver for each LCD device
- * and for each color plane.  This memory will hold one raster line of data.
- * The size of the allocated run buffer must therefore be at least
- * (bpp * xres / 8).  Actual alignment of the buffer must conform to the
- * bitwidth of the underlying pixel type.
- *
- * If there are multiple planes, they may share the same working buffer
- * because different planes will not be operate on concurrently.  However,
- * if there are multiple LCD devices, they must each have unique run buffers.
- */
-
-static uint8_t g_runbuffer[FT80X_DEV_ROWSIZE];
-
-/* This structure describes the overall LCD video controller */
-
-static const struct fb_videoinfo_s g_videoinfo =
+static const struct file_operations ft80x_fops =
 {
-  .fmt     = FT80X_DEV_COLORFMT,  /* Color format: B&W */
-  .xres    = FT80X_DEV_XRES,      /* Horizontal resolution in pixel columns */
-  .yres    = FT80X_DEV_YRES,      /* Vertical resolution in pixel rows */
-  .nplanes = 1,                   /* Number of color planes supported */
+  ft80x_open,    /* open */
+  ft80x_close,   /* close */
+  ft80x_read,    /* read */
+  ft80x_write,   /* write */
+  NULL,          /* seek */
+  ft80x_ioctl    /* ioctl */
+#ifndef CONFIG_DISABLE_POLL
+  , ft80x_poll   /* poll */
+#endif
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL         /* unlink */
+#endif
 };
 
-/* This is the standard, NuttX Plane information object */
+/* This is the FT80x driver instance (only a single device is supported for now) */
 
-static const struct lcd_planeinfo_s g_planeinfo =
-{
-  .putrun = ft80x_putrun,             /* Put a run into LCD memory */
-  .getrun = ft80x_getrun,             /* Get a run from LCD memory */
-  .buffer = (FAR uint8_t *)g_runbuffer, /* Run scratch buffer */
-  .bpp    = FT80X_DEV_BPP,            /* Bits-per-pixel */
-};
+static const struct ft80x_dev_s g_ft80x_lcddev;
 
-/* This is the OLED driver instance (only a single device is supported for now) */
-
-static const struct lcd_dev_s g_ft80x_lcddev;
-
-/**************************************************************************************
+/****************************************************************************
  * Private Functions
- **************************************************************************************/
+ ****************************************************************************/
 
-/**************************************************************************************
- * Name:  ft80x_putrun
+/****************************************************************************
+ * Name: ft80x_open
  *
  * Description:
- *   This method can be used to write a partial raster line to the LCD.
+ *   This function is called whenever the PWM device is opened.
  *
- * Input Parameters:
- *   row     - Starting row to write to (range: 0 <= row < yres)
- *   col     - Starting column to write to (range: 0 <= col <= xres-npixels)
- *   buffer  - The buffer containing the run to be written to the LCD
- *   npixels - The number of pixels to write to the LCD
- *             (range: 0 < npixels <= xres-col)
- *
- **************************************************************************************/
+ ****************************************************************************/
 
-#if defined(CONFIG_LCD_LANDSCAPE) || defined(CONFIG_LCD_RLANDSCAPE)
-static int ft80x_putrun(fb_coord_t row, fb_coord_t col, FAR const uint8_t *buffer,
-                          size_t npixels)
+static int ft80x_open(FAR struct file *filep)
 {
-  /* Because of this line of code, we will only be able to support a single UG device */
+  FAR struct inode *inode;
+  FAR struct ft80x_dev_s *priv;
+  uint8_t tmp;
+  int ret;
 
-  FAR struct ft80x_dev_s *priv = (FAR struct ft80x_dev_s *)&g_ft80x_lcddev;
+  DEBUGASSERT(filep != NULL);
+  inode = filep->f_inode;
+  DEBUGASSERT(inode != NULL && inode->i_private != NULL);
+  priv  = inode->i_private;
 
-#warning Missing logic
-  return OK;
-}
-#else
-#  error "Configuration not implemented"
-#endif
+  ft80xinfo("crefs: %d\n", priv->crefs);
 
-/**************************************************************************************
- * Name:  ft80x_getrun
- *
- * Description:
- *   This method can be used to read a partial raster line from the LCD.
- *
- * Description:
- *   This method can be used to write a partial raster line to the LCD.
- *
- *  row     - Starting row to read from (range: 0 <= row < yres)
- *  col     - Starting column to read read (range: 0 <= col <= xres-npixels)
- *  buffer  - The buffer in which to return the run read from the LCD
- *  npixels - The number of pixels to read from the LCD
- *            (range: 0 < npixels <= xres-col)
- *
- **************************************************************************************/
+  /* Get exclusive access to the device structures */
 
-#if defined(CONFIG_LCD_LANDSCAPE) || defined(CONFIG_LCD_RLANDSCAPE)
-static int ft80x_getrun(fb_coord_t row, fb_coord_t col, FAR uint8_t *buffer,
-                      size_t npixels)
-{
-  /* Because of this line of code, we will only be able to support a single UG device */
-
-  FAR struct ft80x_dev_s *priv = &g_ft80x_lcddev;
-
-#warning Missing logic
-  return OK;
-}
-#else
-#  error "Configuration not implemented"
-#endif
-
-/**************************************************************************************
- * Name:  ft80x_getvideoinfo
- *
- * Description:
- *   Get information about the LCD video controller configuration.
- *
- **************************************************************************************/
-
-static int ft80x_getvideoinfo(FAR struct lcd_dev_s *dev,
-                              FAR struct fb_videoinfo_s *vinfo)
-{
-  DEBUGASSERT(dev != NULL && vinfo != NULL);
-
-  lcdinfo("fmt: %d xres: %d yres: %d nplanes: %d\n",
-          g_videoinfo.fmt, g_videoinfo.xres, g_videoinfo.yres, g_videoinfo.nplanes);
-
-  memcpy(vinfo, &g_videoinfo, sizeof(struct fb_videoinfo_s));
-  return OK;
-}
-
-/**************************************************************************************
- * Name:  ft80x_getplaneinfo
- *
- * Description:
- *   Get information about the configuration of each LCD color plane.
- *
- **************************************************************************************/
-
-static int ft80x_getplaneinfo(FAR struct lcd_dev_s *dev, unsigned int planeno,
-                              FAR struct lcd_planeinfo_s *pinfo)
-{
-  DEBUGASSERT(pinfo != NULL&& planeno == 0);
-
-  lcdinfo("planeno: %d bpp: %d\n", planeno, g_planeinfo.bpp);
-
-  memcpy(pinfo, &g_planeinfo, sizeof(struct lcd_planeinfo_s));
-  return OK;
-}
-
-/**************************************************************************************
- * Name:  ft80x_getpower
- *
- * Description:
- *   Get the LCD panel power status (0: full off - CONFIG_LCD_MAXPOWER: full on. On
- *   backlit LCDs, this setting may correspond to the backlight setting.
- *
- **************************************************************************************/
-
-static int ft80x_getpower(FAR struct lcd_dev_s *dev)
-{
-  FAR struct ft80x_dev_s *priv = (FAR struct ft80x_dev_s *)dev;
-
-  DEBUGASSERT(priv != NULL);
-
-#warning Missing logic
-  return 0;
-}
-
-/**************************************************************************************
- * Name:  ft80x_setpower
- *
- * Description:
- *   Enable/disable LCD panel power (0: full off - CONFIG_LCD_MAXPOWER: full on). On
- *   backlit LCDs, this setting may correspond to the backlight setting.
- *
- **************************************************************************************/
-
-static int ft80x_setpower(FAR struct lcd_dev_s *dev, int power)
-{
-  FAR struct ft80x_dev_s *priv = (FAR struct ft80x_dev_s *)dev;
-  DEBUGASSERT(priv != NULL && (unsigned)power <= CONFIG_LCD_MAXPOWER);
-
-  lcdinfo("power: %d [%d]\n", power, priv->on ? CONFIG_LCD_MAXPOWER : 0);
-
-  if (power <= 0)
+  ret = nxsem_wait(&priv->exclsem);
+  if (ret < 0)
     {
-      /* Turn the display off */
-#warning Missing logic
-    }
-  else
-    {
-      /* Configure display and turn the display on */
-#warning Missing logic
+      goto errout;
     }
 
-  return OK;
+  /* Increment the count of references to the device */
+
+  tmp = priv->crefs + 1;
+  if (tmp == 0)
+    {
+      /* More than 255 opens; uint8_t overflows to zero */
+
+      ret = -EMFILE;
+      goto errout_with_sem;
+    }
+
+  /* Save the new open count */
+
+  priv->crefs = tmp;
+  ret = OK;
+
+errout_with_sem:
+  nxsem_post(&priv->exclsem);
+
+errout:
+  return ret;
 }
 
-/**************************************************************************************
- * Name:  ft80x_getcontrast
+/****************************************************************************
+ * Name: ft80x_close
  *
  * Description:
- *   Get the current contrast setting (0-CONFIG_LCD_MAXCONTRAST).
+ *   This function is called when the PWM device is closed.
  *
- **************************************************************************************/
+ ****************************************************************************/
 
-static int ft80x_getcontrast(struct lcd_dev_s *dev)
+static int ft80x_close(FAR struct file *filep)
 {
-  FAR struct ft80x_dev_s *priv = (FAR struct ft80x_dev_s *)dev;
+  FAR struct inode *inode;
+  FAR struct ft80x_dev_s *priv;
+  int ret;
 
-  DEBUGASSERT(priv != NULL);
+  DEBUGASSERT(filep != NULL);
+  inode = filep->f_inode;
+  DEBUGASSERT(inode != NULL && inode->i_private != NULL);
+  priv  = inode->i_private;
 
-  lcdinfo("contrast: %d\n", priv->contrast);
+  ft80xinfo("crefs: %d\n", priv->crefs);
 
-#warning Missing logic
-  return 0;
+  /* Get exclusive access to the device structures */
+
+  ret = nxsem_wait(&priv->exclsem);
+  if (ret < 0)
+    {
+      goto errout;
+    }
+
+  /* Decrement the references to the driver. */
+
+  if (priv->crefs > 1)
+    {
+      priv->crefs--;
+    }
+
+  ret = OK;
+  nxsem_post(&priv->exclsem);
+
+errout:
+  return ret;
 }
 
-/**************************************************************************************
- * Name:  ft80x_setcontrast
+/****************************************************************************
+ * Name: ft80x_read
+ ****************************************************************************/
+
+static ssize_t ft80x_read(FAR struct file *filep, FAR char *buffer,
+                          size_t len)
+{
+  FAR struct inode *inode;
+  FAR struct ft80x_dev_s *priv;
+  int ret;
+
+  DEBUGASSERT(filep != NULL);
+  inode = filep->f_inode;
+  DEBUGASSERT(inode != NULL && inode->i_private != NULL);
+  priv  = inode->i_private;
+
+  ft80xinfo("buffer: %p len %lu\n", buffer, (unsigned long)len);
+
+#warning Missing logic
+  return len;
+}
+
+/****************************************************************************
+ * Name: ft80x_write
+ ****************************************************************************/
+
+static ssize_t ft80x_write(FAR struct file *filep, FAR const char *buffer,
+                             size_t len)
+{
+  FAR struct inode *inode;
+  FAR struct ft80x_dev_s *priv;
+  int ret;
+
+  DEBUGASSERT(filep != NULL);
+  inode = filep->f_inode;
+  DEBUGASSERT(inode != NULL && inode->i_private != NULL);
+  priv  = inode->i_private;
+
+  ft80xinfo("buffer: %p len %lu\n", buffer, (unsigned long)len);
+
+#warning Missing logic
+  return len;
+}
+
+/****************************************************************************
+ * Name: ft80x_ioctl
  *
  * Description:
- *   Set LCD panel contrast (0-CONFIG_LCD_MAXCONTRAST).
+ *   The standard ioctl method.  This is where ALL of the PWM work is done.
  *
- **************************************************************************************/
+ ****************************************************************************/
 
-static int ft80x_setcontrast(FAR struct lcd_dev_s *dev, unsigned int contrast)
+static int ft80x_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
-  FAR struct ft80x_dev_s *priv = (FAR struct ft80x_dev_s *)dev;
+  FAR struct inode *inode;
+  FAR struct ft80x_dev_s *priv;
+  FAR struct ft80x_config_s *lower;
+  int ret;
 
-  lcdinfo("contrast: %d\n", contrast);
-  DEBUGASSERT(priv != NULL && contrast <= CONFIG_LCD_MAXCONTRAST);
+  DEBUGASSERT(filep != NULL);
+  inode = filep->f_inode;
+  DEBUGASSERT(inode != NULL && inode->i_private != NULL);
+  priv  = inode->i_private;
+  lower = priv->lower;
+  DEBUGASSET(lower != NULL);
 
-#warning Missing logic
-  return OK;
+  ft80xinfo("cmd: %d arg: %lu\n", cmd, arg);
+
+  /* Get exclusive access to the device structures */
+
+  ret = nxsem_wait(&priv->exclsem);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  /* Handle built-in ioctl commands */
+
+  switch (cmd)
+    {
+      /* Any unrecognized IOCTL commands might be platform-specific ioctl commands */
+
+      default:
+        lcderr("ERROR: Unrecognized cmd: %d arg: %ld\n", cmd, arg);
+        ret = -ENOTTY;
+        break;
+    }
+
+  nxsem_post(&priv->exclsem);
+  return ret;
 }
+
+/****************************************************************************
+ * Name: ft80x_poll
+ ****************************************************************************/
+
+#ifndef CONFIG_DISABLE_POLL
+static int ft80x_poll(FAR struct file *filep, FAR struct pollfd *fds,
+                        bool setup)
+{
+#warning Missing logic
+  return -ENOSYS;
+}
+#endif
 
 /**************************************************************************************
  * Public Functions
@@ -373,37 +465,33 @@ int ft80x_register(FAR struct i2c_master_s *i2c,
   DEBUGASSERT(i2c != NULL && lower != NULL);
 #endif
 
-  /* Initialize the device state structure */
-
-  priv->dev.getvideoinfo = ft80x_getvideoinfo;
-  priv->dev.getplaneinfo = ft80x_getplaneinfo;
-  priv->dev.getpower     = ft80x_getpower;
-  priv->dev.setpower     = ft80x_setpower;
-  priv->dev.getcontrast  = ft80x_getcontrast;
-  priv->dev.setcontrast  = ft80x_setcontrast;
-
   /* Save the lower level interface and configuration information */
 
-  priv->lower            = lower;
+  priv->lower = lower;
 
 #ifdef CONFIG_LCD_FT80X_SPI
   /* Remember the SPI configuration */
 
-  priv->spi = dev;
-
-  /* Configure the SPI */
-
-  ft80x_configspi(priv->spi);
-
+  priv->spi = spi;
 #else
   /* Remember the I2C configuration */
 
-  priv->i2c  = dev;
+  priv->i2c = i2c;
 #endif
 
-  /* Power on and configure display */
+  /* Initialize the mutual exclusion semaphore */
 
-  ft80x_setpower(&priv->dev, true);
+  sem_init(&priv->exclsem, 0, 1);
+
+  /* Register the FT80x character driver */
+
+  ret = register_driver(DEVNAME, &ft80x_fops, 0666, priv);
+  if (ret < 0)
+    {
+      sem_destory(&priv->exclsem);
+    }
+
+  return ret;
   return &priv->dev;
 }
 

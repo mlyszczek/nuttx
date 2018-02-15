@@ -448,17 +448,14 @@ struct i2c_master_s; /* Forward reference */
 
 struct ft80x_dev_s
 {
-  struct lcd_dev_s dev;          /* Publicly visible LCD device structure */
-
-  /* Private LCD-specific information follows */
-
 #ifdef CONFIG_LCD_FT80X_SPI
-  FAR struct spi_dev_s  *spi;    /* Cached SPI device reference */
+  FAR struct spi_dev_s  *spi;             /* Cached SPI device reference */
 #else
-  FAR struct i2c_master_s *i2c;  /* Cached SPI device reference */
+  FAR struct i2c_master_s *i2c;           /* Cached SPI device reference */
 #endif
-
-  FAR const struct ft80x_config_s *lower; /* Lower half instance */
+  FAR const struct ft80x_config_s *lower; /* Cached lower half instance */
+  sem_t exclsem;                          /* Mutual exclusion semaphore */
+  uint_t crefs;                           /* Open count */
 }.
 
 #endif /* __DRIVERS_LCD_FT80X_H */
