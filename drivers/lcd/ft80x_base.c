@@ -89,89 +89,89 @@
 
 /* Coprocessor display list commands */
 
-static void ft80x_cmd_append(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_append(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_append_s *data);
-static void ft80x_cmd_bgcolor(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_bgcolor(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_bgcolor_s *data);
 static void ft80x_cmd_bitmaptransform(FAR struct ft80x_dev_s *priv,
-              FAR struct ft80x_data_bitmaptransform_s *data);
-static void ft80x_cmd_button(FAR struct ft80x_dev_s *priv,
+              uint32_t dladdr, FAR struct ft80x_data_bitmaptransform_s *data);
+static void ft80x_cmd_button(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_button_s *data);
-static void ft80x_cmd_calibrate(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_calibrate(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_calibrate_s *data);
-static void ft80x_cmd_clock(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_clock(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_clock_s *data);
 static void ft80x_cmd_coldstart(FAR struct ft80x_dev_s *priv);
-static void ft80x_cmd_dial(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_dial(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_dial_s *data);
 static void ft80x_cmd_dlstart(FAR struct ft80x_dev_s *priv);
-static void ft80x_cmd_fgcolor(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_fgcolor(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_fgcolor_s *data);
-static void ft80x_cmd_gauge(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_gauge(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_gauge_s *data);
-static void ft80x_cmd_getmatrix(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_getmatrix(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_getmatrix_s *data);
-static void ft80x_cmd_getprops(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_getprops(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_getprops_s *data);
-static void ft80x_cmd_getptr(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_getptr(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_getptr_s *data);
-static void ft80x_cmd_gradcolor(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_gradcolor(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_gradcolor_s *data);
-static void ft80x_cmd_gradient(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_gradient(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_gradient_s *data);
-static void ft80x_cmd_inflate(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_inflate(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_inflate_s *data);
-static void ft80x_cmd_interrupt(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_interrupt(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_interrupt_s *data);
-static void ft80x_cmd_keys(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_keys(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_keys_s *data);
 static void ft80x_cmd_loadidentity(FAR struct ft80x_dev_s *priv);
-static void ft80x_cmd_loadimage(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_loadimage(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_loadimage_s *data);
 static void ft80x_cmd_logo(FAR struct ft80x_dev_s *priv);
-static void ft80x_cmd_memcpy(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_memcpy(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_memcpy_s *data);
-static void ft80x_cmd_memcrc(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_memcrc(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_memcrc_s *data);
-static void ft80x_cmd_memset(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_memset(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_memset_s *data);
-static void ft80x_cmd_memwrite(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_memwrite(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_memwrite_s *data);
-static void ft80x_cmd_memzero(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_memzero(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_memzero_s *data);
-static void ft80x_cmd_number(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_number(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_number_s *data);
-static void ft80x_cmd_progress(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_progress(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_progress_s *data);
-static void ft80x_cmd_regread(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_regread(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_regread_s *data);
-static void ft80x_cmd_rotate(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_rotate(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_rotate_s *data);
-static void ft80x_cmd_scale(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_scale(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_scale_s *data);
 static void ft80x_cmd_screensaver(FAR struct ft80x_dev_s *priv);
-static void ft80x_cmd_scrollbar(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_scrollbar(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_scrollbar_s *data);
-static void ft80x_cmd_setfont(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_setfont(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_setfont_s *data);
 static void ft80x_cmd_setmatrix(FAR struct ft80x_dev_s *priv);
-static void ft80x_cmd_sketch(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_sketch(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_sketch_s *data);
-static void ft80x_cmd_slider(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_slider(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_slider_s *data);
-static void ft80x_cmd_snapshot(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_snapshot(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_snapshot_s *data);
-static void ft80x_cmd_spinner(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_spinner(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_spinner_s *data);
 static void ft80x_cmd_stop(FAR struct ft80x_dev_s *priv);
 static void ft80x_cmd_swap(FAR struct ft80x_dev_s *priv);
-static void ft80x_cmd_text(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_text(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_text_s *data);
-static void ft80x_cmd_toggle(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_toggle(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_toggle_s *data);
-static void ft80x_cmd_track(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_track(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_track_s *data);
-static void ft80x_cmd_translate(FAR struct ft80x_dev_s *priv,
+static void ft80x_cmd_translate(FAR struct ft80x_dev_s *priv, uint32_t dladdr,
               FAR struct ft80x_data_translate_s *data);
 
 static int  ft80x_displaylist(FAR struct ft80x_dev_s *priv,
@@ -232,263 +232,333 @@ static int ft80x_displaylist(FAR struct ft80x_dev_s *priv,
                              FAR struct ft80x_displaylist_s *dl)
 {
   FAR struct ft80x_dlcmd_s *cmd;
+  uint32_t dladdr;
   unsigned int ncmds;
   unsigned int i;
   int ret = OK;
 
   DEBUGASSERT(priv != NULL && dl != NULL);
 
-  ncmds = dl->ncmds;
-  cmd   = &dl->cmd;
+  ncmds  = dl->ncmds;
+  cmd    = &dl->cmd;
+  dladdr = FT80X_RAM_DL;
 
-  for (i = 0; i < ncmds; i++)
+  /* Mark the start of the display list */
+
+  (void)ft80x_cmd_dlstart(priv);
+  dladdr += 4;
+
+  for (i = 0; i < ncmds && ret == OK; i++)
     {
-      /* Process the command */
+      /* Process the command.
+       *
+       * Commands are identified by the MS bits of the cmd.  32-bit display
+       * commands have 2-8 bit MS endings (none of which take the value 0xff).
+       * Multi-word graphics engine co-processor commands all begin with
+       * 0xffffff--
+       */
 
-      switch (cmd->cmd)
+      if (cmd->cmd & 0xffffff00 != 0xffffff00)
         {
-          case FT80X_CMD_APPEND:  /* Append memory to a display list */
-            ret = ft80x_cmd_append(priv,
-                    (FAR struct ft80x_data_append_s *)&cmd->data);
-            break;
+          /* Add a simple 32-bit command to the display list */
 
-          case FT80X_CMD_BGCOLOR:  /* Set the background color */
-            ret = ft80x_cmd_bgcolor(priv,
-                    (FAR struct ft80x_data_bgcolor_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_BITMAP_TRANSFORM:
-            ret = ft80x_cmd_bitmaptransform(priv,
-                    (FAR struct ft80x_data_bitmaptransform_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_BUTTON:  /* Draw a button */
-            ret = ft80x_cmd_button(priv,
-                    (FAR struct ft80x_data_button_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_CALIBRATE:  /* Execute touchscreen calibration routine */
-            ret = ft80x_cmd_calibrate(priv,
-                    (FAR struct ft80x_data_calibrate_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_CLOCK:  /* Draw an analog clock */
-            ret = ft80x_cmd_clock(priv,
-                    (FAR struct ft80x_data_clock_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_COLDSTART:  /* Set co-processor engine state to default values */
-            ret = ft80x_cmd_coldstart(priv);
-            break;
-
-          case FT80X_CMD_DIAL:  /* Draw a rotary dial control */
-            ret = ft80x_cmd_dial(priv,
-                    (FAR struct ft80x_data_dial_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_DLSTART:  /* Start a new display list */
-            ret = ft80x_cmd_dlstart(priv);
-            break;
-
-          case FT80X_CMD_FGCOLOR:  /* Set the foreground color */
-            ret = ft80x_cmd_fgcolor(priv,
-                    (FAR struct ft80x_data_fgcolor_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_GAUGE:  /* Draw a gauge */
-            ret = ft80x_cmd_gauge(priv,
-                    (FAR struct ft80x_data_gauge_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_GETMATRIX:  /* Retrieves the current matrix coefficients */
-            ret = ft80x_cmd_getmatrix(priv,
-                    (FAR struct ft80x_data_getmatrix_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_GETPROPS:
-            ret = ft80x_cmd_getprops(priv,
-                    (FAR struct ft80x_data_getprops_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_GETPTR:
-            ret = ft80x_cmd_getptr(priv,
-                    (FAR struct ft80x_data_getptr_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_GRADCOLOR:  /* Set 3D effects for BUTTON and KEYS highlight colors */
-            ret = ft80x_cmd_gradcolor(priv,
-                    (FAR struct ft80x_data_gradcolor_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_GRADIENT:
-            ret = ft80x_cmd_gradient(priv,
-                    (FAR struct ft80x_data_gradient_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_HAMMERAUX:
-            ret = ft80x_cmd_hammeraux(priv,
-                    (FAR struct ft80x_data_hammeraux_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_IDCT:
-            ret = ft80x_cmd_idct(priv,
-                    (FAR struct ft80x_data_idct_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_INFLATE:  /* Decompress data into memory */
-            ret = ft80x_cmd_inflate(priv,
-                    (FAR struct ft80x_data_inflate_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_INTERRUPT:  /* Trigger interrupt INT_CMDFLAG */
-            ret = ft80x_cmd_interrupt(priv,
-                    (FAR struct ft80x_data_interrupt_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_KEYS:  /* Draw a row of keys */
-            ret = ft80x_cmd_keys(priv,
-                    (FAR struct ft80x_data_keys_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_LOADIDENTITY:  /* Set the current matrix to identity */
-            ret = ft80x_cmd_loadidentity(priv);
-            break;
-
-          case FT80X_CMD_LOADIMAGE:  /* Load a JPEG image */
-            ret = ft80x_cmd_loadimage(priv,
-                    (FAR struct ft80x_data_loadimage_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_LOGO:  /* Play a device logo animation */
-            ret = ft80x_cmd_logo(priv);
-            break;
-
-          case FT80X_CMD_MEMCPY:  /* Copy a block of memory */
-            ret = ft80x_cmd_memcpy(priv,
-                    (FAR struct ft80x_data_memcpy_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_MEMCRC:  /* Compute a CRC for memory */
-            ret = ft80x_cmd_memcrc(priv,
-                    (FAR struct ft80x_data_memcrc_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_MEMSET:  /* Fill memory with a byte value */
-            ret = ft80x_cmd_memset(priv,
-                    (FAR struct ft80x_data_memset_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_MEMWRITE:  /* Write bytes into memory */
-            ret = ft80x_cmd_memwrite(priv,
-                    (FAR struct ft80x_data_memwrite_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_MEMZERO:  /* Write zero to a block of memory */
-            ret = ft80x_cmd_memzero(priv,
-                    (FAR struct ft80x_data_memzero_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_NUMBER:  /* Draw a decimal number */
-            ret = ft80x_cmd_number(priv,
-                    (FAR struct ft80x_data_number_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_PROGRESS:  /* Draw a progress bar */
-            ret = ft80x_cmd_progress(priv,
-                    (FAR struct ft80x_data_progress_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_REGREAD:  /* Read a register value */
-            ret = ft80x_cmd_regread(priv,
-                    (FAR struct ft80x_data_regread_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_ROTATE:  /* Apply a rotation to the current matrix */
-            ret = ft80x_cmd_rotate(priv,
-                    (FAR struct ft80x_data_rotate_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_SCALE:  /* Apply a scale to the current matrix */
-            ret = ft80x_cmd_scale(priv,
-                    (FAR struct ft80x_data_scale_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_SCREENSAVER:
-            ret = ft80x_cmd_screensaver(priv,
-                    (FAR struct ft80x_data_screensaver_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_SCROLLBAR:  /* Draw a scroll bar */
-            ret = ft80x_cmd_scrollbar(priv,
-                    (FAR struct ft80x_data_scrollbar_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_SETFONT:
-            ret = ft80x_cmd_setfont(priv,
-                    (FAR struct ft80x_data_setfont_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_SETMATRIX:  /* Write current matrix as a bitmap transform */
-            ret = ft80x_cmd_setmatrix(priv,
-                    (FAR struct ft80x_data_setmatrix_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_SKETCH:  /* Start a continuous sketch update */
-            ret = ft80x_cmd_sketch(priv,
-                    (FAR struct ft80x_data_sketch_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_SLIDER:  /* Draw a slider */
-            ret = ft80x_cmd_slider(priv,
-                    (FAR struct ft80x_data_slider_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_SNAPSHOT:  /* Take a snapshot of the current screen */
-            ret = ft80x_cmd_snapshot(priv,
-                    (FAR struct ft80x_data_snapshot_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_SPINNER:  /* Start an animated spinner */
-            ret = ft80x_cmd_spinner(priv,
-                    (FAR struct ft80x_data_spinner_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_STOP:  /* Stop any spinner, screensave, or sketch */
-            ret = ft80x_cmd_stop(priv);
-            break;
-
-          case FT80X_CMD_SWAP:  /* Swap the current display list */
-            ret = ft80x_cmd_swap(priv);
-            break;
-
-          case FT80X_CMD_TEXT:  /* Draw text */
-            ret = ft80x_cmd_text(priv,
-                    (FAR struct ft80x_data_text_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_TOGGLE:  /* Draw a toggle switch */
-            ret = ft80x_cmd_toggle(priv,
-                    (FAR struct ft80x_data_toggle_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_TRACK:
-            ret = ft80x_cmd_track(priv,
-                    (FAR struct ft80x_data_track_s *)&cmd->data);
-            break;
-
-          case FT80X_CMD_TRANSLATE:  /* Apply a translation to the current matrix */
-            ret = ft80x_cmd_translate(priv,
-                    (FAR struct ft80x_data_translate_s *)&cmd->data);
-            break;
-
-          default:
-            lcderr("ERROR: Unrecognized command in display list: 0x8lx\n",
-                   (unsigned long)cmd->cmd);
-            return -EINVAL;
+          DEBUGASSERT(cmd->len == 4);
+          ret = ft80x_write_word(priv, dladdr, cmd->cmd);
         }
+      else
+        {
+          switch (cmd->cmd)
+            {
+              case FT80X_CMD_APPEND:  /* Append memory to a display list */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_append_s));
+                ret = ft80x_cmd_append(priv, dladdr,
+                        (FAR struct ft80x_data_append_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_BGCOLOR:  /* Set the background color */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_bgcolor_s));
+                ret = ft80x_cmd_bgcolor(priv, dladdr,
+                        (FAR struct ft80x_data_bgcolor_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_BITMAP_TRANSFORM:
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_bitmaptransform_s));
+                ret = ft80x_cmd_bitmaptransform(priv, dladdr,
+                        (FAR struct ft80x_data_bitmaptransform_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_BUTTON:  /* Draw a button */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_button_s));
+                ret = ft80x_cmd_button(priv, dladdr,
+                        (FAR struct ft80x_data_button_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_CALIBRATE:  /* Execute touchscreen calibration routine */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_calibrate_s));
+                ret = ft80x_cmd_calibrate(priv, dladdr,
+                        (FAR struct ft80x_data_calibrate_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_CLOCK:  /* Draw an analog clock */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_clock_s));
+                ret = ft80x_cmd_clock(priv, dladdr,
+                        (FAR struct ft80x_data_clock_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_COLDSTART:  /* Set co-processor engine state to default values */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_coldstart_s));
+                ret = ft80x_cmd_coldstart(priv);
+                break;
+
+              case FT80X_CMD_DIAL:  /* Draw a rotary dial control */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_dial_s));
+                ret = ft80x_cmd_dial(priv, dladdr,
+                        (FAR struct ft80x_data_dial_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_DLSTART:  /* Start a new display list */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_dlstart_s));
+                ret = ft80x_cmd_dlstart(priv);
+                break;
+
+              case FT80X_CMD_FGCOLOR:  /* Set the foreground color */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_fgcolor_s));
+                ret = ft80x_cmd_fgcolor(priv, dladdr,
+                        (FAR struct ft80x_data_fgcolor_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_GAUGE:  /* Draw a gauge */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_gauge_s));
+                ret = ft80x_cmd_gauge(priv, dladdr,
+                        (FAR struct ft80x_data_gauge_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_GETMATRIX:  /* Retrieves the current matrix coefficients */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_getmatrix_s));
+                ret = ft80x_cmd_getmatrix(priv, dladdr,
+                        (FAR struct ft80x_data_getmatrix_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_GETPROPS:
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_getprops_s));
+                ret = ft80x_cmd_getprops(priv, dladdr,
+                        (FAR struct ft80x_data_getprops_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_GETPTR:
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_getptr_s));
+                ret = ft80x_cmd_getptr(priv, dladdr,
+                        (FAR struct ft80x_data_getptr_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_GRADCOLOR:  /* Set 3D effects for BUTTON and KEYS highlight colors */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_gradcolor_s));
+                ret = ft80x_cmd_gradcolor(priv, dladdr,
+                        (FAR struct ft80x_data_gradcolor_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_GRADIENT:
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_gradient_s));
+                ret = ft80x_cmd_gradient(priv, dladdr,
+                        (FAR struct ft80x_data_gradient_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_INFLATE:  /* Decompress data into memory */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_inflate_s));
+                ret = ft80x_cmd_inflate(priv, dladdr,
+                        (FAR struct ft80x_data_inflate_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_INTERRUPT:  /* Trigger interrupt INT_CMDFLAG */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_interrupt_s));
+                ret = ft80x_cmd_interrupt(priv, dladdr,
+                        (FAR struct ft80x_data_interrupt_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_KEYS:  /* Draw a row of keys */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_keys_s));
+                ret = ft80x_cmd_keys(priv, dladdr,
+                        (FAR struct ft80x_data_keys_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_LOADIDENTITY:  /* Set the current matrix to identity */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_loadidentity_s));
+                ret = ft80x_cmd_loadidentity(priv);
+                break;
+
+              case FT80X_CMD_LOADIMAGE:  /* Load a JPEG image */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_loadimage_s));
+                ret = ft80x_cmd_loadimage(priv, dladdr,
+                        (FAR struct ft80x_data_loadimage_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_LOGO:  /* Play a device logo animation */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_logo_s));
+                ret = ft80x_cmd_logo(priv);
+                break;
+
+              case FT80X_CMD_MEMCPY:  /* Copy a block of memory */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_memcpy_s));
+                ret = ft80x_cmd_memcpy(priv, dladdr,
+                        (FAR struct ft80x_data_memcpy_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_MEMCRC:  /* Compute a CRC for memory */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_memcrc_s));
+                ret = ft80x_cmd_memcrc(priv, dladdr,
+                        (FAR struct ft80x_data_memcrc_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_MEMSET:  /* Fill memory with a byte value */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_memset_s));
+                ret = ft80x_cmd_memset(priv, dladdr,
+                        (FAR struct ft80x_data_memset_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_MEMWRITE:  /* Write bytes into memory */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_memwrite_s));
+                ret = ft80x_cmd_memwrite(priv, dladdr,
+                        (FAR struct ft80x_data_memwrite_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_MEMZERO:  /* Write zero to a block of memory */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_memzero_s));
+                ret = ft80x_cmd_memzero(priv, dladdr,
+                        (FAR struct ft80x_data_memzero_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_NUMBER:  /* Draw a decimal number */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_number_s));
+                ret = ft80x_cmd_number(priv, dladdr,
+                        (FAR struct ft80x_data_number_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_PROGRESS:  /* Draw a progress bar */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_progress_s));
+                ret = ft80x_cmd_progress(priv, dladdr,
+                        (FAR struct ft80x_data_progress_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_REGREAD:  /* Read a register value */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_regread_s));
+                ret = ft80x_cmd_regread(priv, dladdr,
+                        (FAR struct ft80x_data_regread_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_ROTATE:  /* Apply a rotation to the current matrix */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_rotate_s));
+                ret = ft80x_cmd_rotate(priv, dladdr,
+                        (FAR struct ft80x_data_rotate_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_SCALE:  /* Apply a scale to the current matrix */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_scale_s));
+                ret = ft80x_cmd_scale(priv, dladdr,
+                        (FAR struct ft80x_data_scale_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_SCREENSAVER:
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_screensaver_s));
+                ret = ft80x_cmd_screensaver(priv, dladdr,
+                        (FAR struct ft80x_data_screensaver_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_SCROLLBAR:  /* Draw a scroll bar */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_scrollbar_s));
+                ret = ft80x_cmd_scrollbar(priv, dladdr,
+                        (FAR struct ft80x_data_scrollbar_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_SETFONT:
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_setfont_s));
+                ret = ft80x_cmd_setfont(priv, dladdr,
+                        (FAR struct ft80x_data_setfont_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_SETMATRIX:  /* Write current matrix as a bitmap transform */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_setmatrix_s));
+                ret = ft80x_cmd_setmatrix(priv, dladdr,
+                        (FAR struct ft80x_data_setmatrix_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_SKETCH:  /* Start a continuous sketch update */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_sketch_s));
+                ret = ft80x_cmd_sketch(priv, dladdr,
+                        (FAR struct ft80x_data_sketch_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_SLIDER:  /* Draw a slider */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_slider_s));
+                ret = ft80x_cmd_slider(priv, dladdr,
+                        (FAR struct ft80x_data_slider_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_SNAPSHOT:  /* Take a snapshot of the current screen */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_snapshot_s));
+                ret = ft80x_cmd_snapshot(priv, dladdr,
+                        (FAR struct ft80x_data_snapshot_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_SPINNER:  /* Start an animated spinner */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_spinner_s));
+                ret = ft80x_cmd_spinner(priv, dladdr,
+                        (FAR struct ft80x_data_spinner_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_STOP:  /* Stop any spinner, screensaver, or sketch */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_stop_s));
+                ret = ft80x_cmd_stop(priv);
+                break;
+
+              case FT80X_CMD_SWAP:  /* Swap the current display list */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_swap_s));
+                ret = ft80x_cmd_swap(priv);
+                break;
+
+              case FT80X_CMD_TEXT:  /* Draw text */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_text_s));
+                ret = ft80x_cmd_text(priv, dladdr,
+                        (FAR struct ft80x_data_text_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_TOGGLE:  /* Draw a toggle switch */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_toggle_s));
+                ret = ft80x_cmd_toggle(priv, dladdr,
+                        (FAR struct ft80x_data_toggle_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_TRACK:
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_track_s));
+                ret = ft80x_cmd_track(priv, dladdr,
+                        (FAR struct ft80x_data_track_s *)&cmd->data);
+                break;
+
+              case FT80X_CMD_TRANSLATE:  /* Apply a translation to the current matrix */
+                DEBUGASSERT(priv->len == sizeof(struct ft80x_cmd_translate_s));
+                ret = ft80x_cmd_translate(priv, dladdr,
+                        (FAR struct ft80x_data_translate_s *)&cmd->data);
+                break;
+
+              default:
+                lcderr("ERROR: Unrecognized command in display list: 0x8lx\n",
+                       (unsigned long)cmd->cmd);
+                return -EINVAL;
+            }
+        }
+
       /* Point to the next command in the display list */
 
-      cmd = (FAR struct ft80x_dlcmd_s *)((uintptr_t)cmd + cmd->len);
+      dladdr += cmd->len;
+      cmd     = (FAR struct ft80x_dlcmd_s *)((uintptr_t)cmd + cmd->len);
+    }
+
+  /* Check for errors */
+  if (ret >= 0)
+    {
+      /* Finish the display list and swap to the new one */
+
+      ft80x_write_word(priv, dladdr, FT80X_DISPLAY());
+      ret = ft80x_cmd_swap(priv);
     }
 
   return ret;
@@ -886,9 +956,9 @@ static int ft80x_initialize(FAR struct ft80x_dev_s *priv)
 
   /* 5. Write first display list */
 
-  ft80x_write_word(priv, FT80X_RAM_DL + 0, CLEAR_COLOR_RGB(0,0,0));
-  ft80x_write_word(priv, FT80X_RAM_DL + 4, CLEAR(1,1,1));
-  ft80x_write_word(priv, FT80X_RAM_DL + 8, DISPLAY());
+  ft80x_write_word(priv, FT80X_RAM_DL + 0, FT80X_CLEAR_COLOR_RGB(0,0,0));
+  ft80x_write_word(priv, FT80X_RAM_DL + 4, FT80X_CLEAR(1,1,1));
+  ft80x_write_word(priv, FT80X_RAM_DL + 8, FT80X_DISPLAY());
 
   /* 6. Write FT80X_DLSWAP, FT800 swaps display list immediately */
 

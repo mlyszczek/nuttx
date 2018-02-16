@@ -75,7 +75,7 @@
 
 #define FT80XIOC_DISPLYLIST        _LCDIOC(FT80X_NIOCTL_BASE)
 
-/* Host commands */
+/* Host commands.  3 word commands.  The first word begins with 0b01, the next two are zero */
 
 #define FT80X_CMD_ACTIVE           0x00        /* Switch from Standby/Sleep modes to active mode */
 #define FT80X_CMD_STANDBY          0x41        /* Put FT80x core to standby mode */
@@ -86,7 +86,236 @@
 #define FT80X_CMD_CLK36M           0x61        /* Switch PLL output clock to 36MHz */
 #define FT80X_CMD_CORERST          0x68        /* Send reset pulse to FT800 core */
 
-/* FT80x Coprocessor commands */
+/* Display list command encoding
+ *
+ * Each display list command has a 32-bit encoding. The most significant bits
+ * of the code determine the command.  Command parameters (if any) are present
+ * in the least significant bits. Any bits marked reserved must be zero.
+ */
+
+/* FT800 graphics engine specific macros useful for static display list generation */
+/* Setting Graphics state */
+/* ALPHA_FUNC (0x09) - Set the alpha test function */
+
+#define FT80X_ALPHA_FUNC(func,ref) \
+  ((9 << 24) | (((func) & 7) << 8) | (((ref) & 255) << 0))
+
+/* BITMAP_HANDLE (0x05) - Set the bitmap handle */
+
+#define FT80X_BITMAP_HANDLE(handle) \
+  ((5 << 24) | (((handle) & 31) << 0))
+
+/* BITMAP_LAYOUT (0x07) - Set the source bitmap memory format and layout for
+ * the current handle
+ */
+
+#define FT80X_BITMAP_LAYOUT(format,linestride,height) \
+  ((7 << 24) | (((format) & 31) << 19) | (((linestride) & 1023) << 9) | \
+   (((height) & 511) << 0))
+
+/* BITMAP_SIZE (0x08) - Set the screen drawing of bitmaps for the current
+ * handle
+ */
+
+#define FT80X_BITMAP_SIZE(filter,wrapx,wrapy,width,height) \
+  ((8 << 24) | (((filter) & 1) << 20) | (((wrapx) & 1) << 19) | \
+   (((wrapy) & 1) << 18) | (((width) & 511) << 9) | (((height) & 511) << 0))
+
+/* BITMAP_SOURCE (0x01) - Set the source address for bitmap graphics */
+
+#define FT80X_BITMAP_SOURCE(addr) \
+  ((1 << 24) | (((addr) & 1048575) << 0))
+
+/* BITMAP_TRANSFORM_A (0x15) - F (0x1a) - Set the components of the bitmap
+ * transform matrix
+ */
+
+#define FT80X_BITMAP_TRANSFORM_A(a) \
+  ((21 << 24) | (((a) & 131071) << 0))
+#define FT80X_BITMAP_TRANSFORM_B(b) \
+  ((22 << 24) | (((b) & 131071) << 0))
+#define FT80X_BITMAP_TRANSFORM_C(c) \
+  ((23 << 24) | (((c) & 16777215) << 0))
+#define FT80X_BITMAP_TRANSFORM_D(d) \
+  ((24 << 24) | (((d) & 131071) << 0))
+#define FT80X_BITMAP_TRANSFORM_E(e) \
+  ((25 << 24) | (((e) & 131071) << 0))
+#define FT80X_BITMAP_TRANSFORM_F(f) \
+  ((26 << 24) | (((f) & 16777215) << 0))
+
+/* BLEND_FUNC(0x0b) - Set pixel arithmetic */
+
+#define FT80X_BLEND_FUNC(src,dst) \
+  ((11 << 24) | (((src) & 7) << 3) | (((dst) & 7) << 0))
+
+/* CELL (0x06) - Set the bitmap cell number for the VERTEX2F command */
+
+#define FT80X_CELL(cell) \
+  ((6 << 24) | (((cell) & 127) << 0))
+
+/* CLEAR (0x26) - Clear buffers to preset values */
+
+#define FT80X_CLEAR(c,s,t) \
+  ((38 << 24) | (((c) & 1) << 2) | (((s) & 1) << 1) | (((t) & 1) << 0))
+
+/* CLEAR_COLOR_A (0x0f) - Set clear value for the alpha channel */
+
+#define FT80X_CLEAR_COLOR_A(alpha) \
+  ((15 << 24) | (((alpha) & 255) << 0))
+
+/* CLEAR_COLOR_RGB (0x02) - Set clear values for red, green and blue
+ * channels
+ */
+
+#define FT80X_CLEAR_COLOR_RGB(red,green,blue) \
+  ((2 << 24) | (((red) & 255) << 16) | (((green) & 255) << 8) | \
+   (((blue) & 255) << 0))
+
+/* CLEAR_STENCIL (0x11) - Set clear value for the stencil buffer */
+
+#define FT80X_CLEAR_STENCIL(s) \
+  ((17 << 24) | (((s) & 255) << 0))
+
+/* CLEAR_TAG (0x12) - Set clear value for the tag buffer */
+
+#define FT80X_CLEAR_TAG(s) \
+  ((18 << 24) | (((s) & 255) << 0))
+
+/* COLOR_A (0x10) - Set the current color alpha */
+
+#define FT80X_COLOR_A(alpha) \
+  ((16 << 24) | (((alpha) & 255) << 0))
+
+/* COLOR_MASK (0x20) - Enable or disable writing of color components */
+
+#define FT80X_COLOR_MASK(r,g,b,a) \
+  ((32 << 24) | (((r) & 1) << 3) | (((g) & 1) << 2) | (((b) & 1) << 1) | \
+   (((a) & 1) << 0))
+
+/* COLOR_RGB (0x04) - Set the current color red, green and blue */
+
+#define FT80X_COLOR_RGB(red,green,blue) \
+  ((4 << 24) | (((red) & 255) << 16) | (((green) & 255) << 8) | \
+   (((blue) & 255) << 0))
+
+/* LINE_WIDTH (0x0e) - Set the line width */
+
+#define FT80X_LINE_WIDTH(width) \
+  ((14 << 24) | (((width) & 4095) << 0))
+
+/* POINT_SIZE (0x0d) - Set point size */
+
+#define FT80X_POINT_SIZE(size) \
+  ((13 << 24) | (((size) & 8191) << 0))
+
+/* RESTORE_CONTEXT (0x23) - Restore the current graphics context from the
+ * context stack
+ */
+
+#define FT80X_RESTORE_CONTEXT() \
+  (35 << 24)
+
+/* SAVE_CONTEXT (0x22) - Push the current graphics context on the context
+ * stack
+ */
+
+#define FT80X_SAVE_CONTEXT() \
+  (34 << 24)
+
+/* SCISSOR_SIZE (0x1c) - Set the size of the scissor clip rectangle */
+
+#define FT80X_SCISSOR_SIZE(width,height) \
+  ((28 << 24) | (((width) & 1023) << 10) | (((height) & 1023) << 0))
+
+/* SCISSOR_XY (0x1b) - Set the top left corner of the scissor clip rectangle */
+
+#define FT80X_SCISSOR_XY(x,y) \
+  ((27 << 24) | (((x) & 511) << 9) | (((y) & 511) << 0))
+
+/* STENCIL_FUNC (0x0a) - Set function and reference value for stencil testing */
+
+#define FT80X_STENCIL_FUNC(func,ref,mask) \
+  ((10 << 24) | (((func) & 7) << 16) | (((ref) & 255) << 8) | (((mask) & 255) << 0))
+
+/* STENCIL_MASK (0x13) - Control the writing of individual bits in the
+ * stencil planes
+ */
+
+#define FT80X_STENCIL_MASK(mask) \
+  ((19 << 24) | (((mask) & 255) << 0))
+
+/* STENCIL_OP (0x0c) - Set stencil test actions */
+
+#define FT80X_STENCIL_OP(sfail,spass) \
+  ((12 << 24) | (((sfail) & 7) << 3) | (((spass) & 7) << 0))
+
+/* TAG (0x03) - Set the current tag value */
+
+#define FT80X_TAG(s) \
+  ((3 << 24) | (((s) & 255) << 0))
+
+/* TAG_MASK (0x14) - Control the writing of the tag buffer */
+
+#define FT80X_TAG_MASK(mask) \
+  ((20 << 24) | (((mask) & 1) << 0))
+
+/* Drawing actions */
+/* BEGIN (0x1f) - Start drawing a graphics primitive */
+
+#define FT80X_BEGIN(prim) \
+  ((31 << 24) | (((prim) & 15) << 0))
+
+/* END (0x21) -Finish drawing a graphics primitive */
+
+#define FT80X_END() \
+  (33 << 24)
+
+/* VERTEX2F (0b01) -Supply a vertex with fractional coordinates */
+
+#define FT80X_VERTEX2F(x,y) \
+  ((1 << 30) | (((x) & 32767) << 15) | (((y) & 32767) << 0))
+
+/* VERTEX2II (0b10) - Supply a vertex with positive integer coordinates */
+
+#define FT80X_VERTEX2II(x,y,handle,cell) \
+  ((2 << 30) | (((x) & 511) << 21) | (((y) & 511) << 12) | \
+   (((handle) & 31) << 7) | (((cell) & 127) << 0))
+
+/* Execution control */
+/* JUMP (0x1e) - Execute commands at another location in the display list */
+
+#define FT80X_JUMP(dest) \
+  ((30 << 24) | (((dest) & 65535) << 0))
+
+/* MACRO(0x25) - Execute a single command from a macro register */
+
+#define FT80X_MACRO(m) \
+  (37 << 24) | (((m) & 1) << 0)
+
+/* CALL (0x1d) - Execute a sequence of commands at another location in the
+ * display list
+ */
+
+#define FT80X_CALL(dest) \
+  ((29 << 24) | (((dest) & 65535) << 0))
+
+/* RETURN (0x24) -Return from a previous CALL command */
+
+#define FT80X_RETURN() \
+  (36 << 24)
+
+/* DISPLAY (0x00) - End the display list */
+
+#define FT80X_DISPLAY() \
+  (0 << 24)
+
+/* FT80x Graphic Engine Co-processor commands.
+ *
+ * Like the 32-bit commands above, these commands are elements of the display list.
+ * Unlike the 32-bit commands, these all begin with 0xffffffxx and consist of multiple
+ * 32-bit words.  In all cases, byte data such as strings must be padded to the even
+ * 32-bit boundaries.
+ */
 
 #define FT80X_CMD_APPEND           0xffffff1e  /* Append memory to a display list */
 #define FT80X_CMD_BGCOLOR          0xffffff09  /* Set the background color */
@@ -206,10 +435,18 @@ struct ft80x_dlcmd_s
 {
   uint32_t len;     /* Size of the command structure instance */
   uint32_t cmd;     /* Display list command.  See FT80X_CMD_* definitions */
-  uint8_t  data[1]; /* Data associated with the command */
+  uint8_t  data[1]; /* Data associated with the command (may not be present) */
 };
 
 /* Specific display list command structures */
+/* 32-bit commands */
+
+struct ft80x_cmd32_s
+{
+  uint32_t len;     /* sizeof(struct ft80x_cmd_append_s) */
+  uint32_t cmd;     /* See macro encoding definitions above */
+};
+
 /* FT80X_CMD_APPEND:  Append memory to a display list */
 
 struct ft80x_data_append_s
