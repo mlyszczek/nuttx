@@ -75,6 +75,17 @@
 
 #define FT80XIOC_DISPLYLIST        _LCDIOC(FT80X_NIOCTL_BASE)
 
+/* Host commands */
+
+#define FT80X_CMD_ACTIVE           0x00        /* Switch from Standby/Sleep modes to active mode */
+#define FT80X_CMD_STANDBY          0x41        /* Put FT80x core to standby mode */
+#define FT80X_CMD_SLEEP            0x42        /* Put FT80x core to sleep mode */
+#define FT80X_CMD_PWRDOWN          0x50        /* Switch off 1.2V internal regulator */
+#define FT80X_CMD_CLKEXT           0x44        /* Enable PLL input from oscillator or external clock */
+#define FT80X_CMD_CLK48M           0x62        /* Switch PLL output clock to 48MHz (default). */
+#define FT80X_CMD_CLK36M           0x61        /* Switch PLL output clock to 36MHz */
+#define FT80X_CMD_CORERST          0x68        /* Send reset pulse to FT800 core */
+
 /* FT80x Coprocessor commands */
 
 #define FT80X_CMD_APPEND           0xffffff1e  /* Append memory to a display list */
@@ -165,9 +176,10 @@ struct ft80x_config_s
 {
   /* Device characterization */
 
-  uint32_t frequency;  /* I2C/SPI frequency */
+  uint32_t int_frequency;  /* I2C/SPI initialization frequency */
+  uint32_t op_frequency;   /* I2C/SPI operational frequency */
 #ifdef CONFIG_LCD_FT80X_I2C
-  uint8_t address;     /* 7-bit I2C address */
+  uint8_t address;         /* 7-bit I2C address */
 #endif
 
   /* IRQ/GPIO access callbacks.  These operations all hidden behind

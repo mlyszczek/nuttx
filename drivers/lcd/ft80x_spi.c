@@ -67,7 +67,7 @@ static void ft80x_select(FAR struct ft80x_dev_s *priv)
   lcdinfo("Mode: %d Bits: 8 Frequency: %d\n",
           CONFIG_FT80X_SPIMODE, CONFIG_FT80X_FREQUENCY);
 
-  DEBUGASSERT(priv != NULL && priv->lower != NULL);
+  DEBUGASSERT(priv != NULL);
 
   /* Lock the SPI bus */
 
@@ -78,7 +78,7 @@ static void ft80x_select(FAR struct ft80x_dev_s *priv)
   SPI_SETMODE(spi, SPIDEV_MODE0);
   SPI_SETBITS(spi, 8);
   (void)SPI_HWFEATURES(spi, 0);
-  (void)SPI_SETFREQUENCY(spi, lower->frequency);
+  (void)SPI_SETFREQUENCY(spi, priv->frequency);
 
   /* Select SPI device */
 
@@ -109,7 +109,44 @@ static void ft80x_deselect(FAR struct ft80x_dev_s *priv)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: ft80x_read
+ * Name: ft80x_host_command
+ *
+ * Description:
+ *   Send a host command to the FT80x
+ *
+ *   FFor a SPI write command write transaction, the host writes a zero bit
+ *   followed by a one bit, followed by the 5-bit command, followed by two
+ *   bytes of zero. All data is streamed with a single chip select.
+ *
+ ****************************************************************************/
+
+void ft80x_host_command(FAR struct ft80x_dev_s *priv, uint8_t cmd)
+{
+  struct ft80x_hostwrite_s hostwrite;
+
+  DEBUGASSERT(priv != NULL && (cnd & 0xc0) == 0);
+
+  /* Format the host write command */
+
+  hostwrite.cmd  = 0x40 | cmd;
+  hostwrite.pad1 = 0
+  hostwrite.pad2 = 0
+
+  /* Select the FT80x */
+
+  ft80x_select(priv);
+
+  /* Send the host write command */
+
+  SPI_SNDBLOCK(priv->spi, &hostwrite, sizeof(struct ft80x_hostwrite_s));
+
+  /* De-select the FT80x */
+
+  ft80x_deselect(priv);
+}
+
+/****************************************************************************
+ * Name: ft80x_read_memory
  *
  * Description:
  *   Read from FT80X memory
@@ -120,12 +157,12 @@ static void ft80x_deselect(FAR struct ft80x_dev_s *priv)
  *
  ****************************************************************************/
 
-void ft80x_read(FAR struct ft80x_dev_s *priv, uint32_t addr,
-                FAR uint8_t *buffer, size_t buflen)
+void ft80x_read_memory(FAR struct ft80x_dev_s *priv, uint32_t addr,
+                       FAR void *buffer, size_t buflen)
 {
   struct ft80x_spiread_s spiread;
 
-  DEBUGASSERT(priv != NULL && (addr & 0xffc0 0000) == 0 &&
+  DEBUGASSERT(priv != NULL && (addr & 0xffc00000) == 0 &&
               buffer != NULL && bulen > 0);
 
   /* Format the read header */
@@ -153,29 +190,62 @@ void ft80x_read(FAR struct ft80x_dev_s *priv, uint32_t addr,
 }
 
 /****************************************************************************
- * Name: ft80x_write
+ * Name: ft80x_read_byte, ft80x_read_hword, ft80x_read_word
+ *
+ * Description:
+ *   Read an 8-, 16-, or 32-bt bit value from FT80X memory
+ *
+ *   For SPI memory read transaction, the host sends two zero bits, followed
+ *   by the 22-bit address. This is followed by a dummy byte. After the dummy
+ *   byte, the FT80x responds to each host byte with read data bytes.
+ *
+ ****************************************************************************/
+
+uint8_t ft80x_read_byte(FAR struct ft80x_dev_s *priv, uint32_t addr)
+{
+  uint8_t data;
+  ft80x_read_memory(priv, addr, (FAR void *)&data, 1);
+  return data;
+}
+
+uint16_t ft80x_read_hword(FAR struct ft80x_dev_s *priv, uint32_t addr)
+{
+  uint16_t data;
+  ft80x_read_memory(priv, addr, (FAR void *)&data, 2);
+  return data;
+}
+
+uint32_t ft80x_read_word(FAR struct ft80x_dev_s *priv, uint32_t addr)
+{
+  uint32_t data;
+  ft80x_read_memory(priv, addr, (FAR void *)&data, 4);
+  return data;
+}
+
+/****************************************************************************
+ * Name: ft80x_write_memory
  *
  * Description:
  *   Write to FT80X memory
  *
- * For SPI memory write transaction, the host sends a '1' bit and '0' bit,
- * followed by the 22-bit address. This is followed by the write data.
+ *   For SPI memory write transaction, the host sends a '1' bit and '0' bit,
+ *   followed by the 22-bit address. This is followed by the write data.
  *
  ****************************************************************************/
 
-void ft80x_write(FAR struct ft80x_dev_s *priv, uint32_t addr,
-                 FAR const uint8_t *buffer, size_t buflen)
+void ft80x_write_memory(FAR struct ft80x_dev_s *priv, uint32_t addr,
+                        FAR const void *buffer, size_t buflen)
 {
   struct ft80x_spiwrite_s spiwrite;
 
-  DEBUGASSERT(priv != NULL && (addr & 0xffc0 0000) == 0 &&
+  DEBUGASSERT(priv != NULL && (addr & 0xffc00000) == 0 &&
               buffer != NULL && bulen > 0);
 
   /* Format the write header */
 
   spiwrite.addrh = 0x80 | ((addr >> 16) & 0x3f);
-  spiwrite.addrm = (addr >> 8)  & 0xff;
-  spiwrite.addrl =  addr        & 0xff;
+  spiwrite.addrm = (addr >> 8) & 0xff;
+  spiwrite.addrl =  addr       & 0xff;
 
   /* Select the FT80x */
 
@@ -188,6 +258,102 @@ void ft80x_write(FAR struct ft80x_dev_s *priv, uint32_t addr,
   /* Then write to the FT80x memory from the user provided buffer */
 
   SPI_SNDBLOCK(priv->spi, buffer, buflen);
+
+  /* De-select the FT80x */
+
+  ft80x_deselect(priv);
+}
+
+/****************************************************************************
+ * Name: ft80x_write_byte, ft80x_write_hword, ft80x_write_word
+ *
+ * Description:
+ *   Write an 8-, 16-, or 32-bt bit value to FT80X memory
+ *
+ *   For SPI memory write transaction, the host sends a '1' bit and '0' bit,
+ *   followed by the 22-bit address. This is followed by the write data.
+ *
+ ****************************************************************************/
+
+void ft80x_write_byte(FAR struct ft80x_dev_s *priv, uint32_t addr,
+                      uint8_t data)
+{
+  struct ft80x_spiwrite8_s spiwrite;
+
+  DEBUGASSERT(priv != NULL && (addr & 0xffc00000) == 0);
+
+  /* Format the write header */
+
+  spiwrite.addrh = 0x80 | ((addr >> 16) & 0x3f);
+  spiwrite.addrm = (addr >> 8) & 0xff;
+  spiwrite.addrl =  addr       & 0xff;
+  spiwrite.data  =  data;
+
+  /* Select the FT80x */
+
+  ft80x_select(priv);
+
+  /* Send the write header and 8-bit data */
+
+  SPI_SNDBLOCK(priv->spi, &spiwrite, sizeof(struct ft80x_spiwrite8_s));
+
+  /* De-select the FT80x */
+
+  ft80x_deselect(priv);
+}
+
+void ft80x_write_hword(FAR struct ft80x_dev_s *priv, uint32_t addr,
+                       uint16_t data)
+{
+  struct ft80x_spiwrite16_s spiwrite;
+
+  DEBUGASSERT(priv != NULL && (addr & 0xffc00000) == 0);
+
+  /* Format the write header */
+
+  spiwrite.addrh   = 0x80 | ((addr >> 16) & 0x3f);
+  spiwrite.addrm   = (addr >> 8) & 0xff;
+  spiwrite.addrl   =  addr       & 0xff;
+  spiwrite.data[0] =  data       & 0xff; /* Little endian */
+  spiwrite.data[1] = (data >> 8) & 0xff;
+
+  /* Select the FT80x */
+
+  ft80x_select(priv);
+
+  /* Send the write header and 16-bit data */
+
+  SPI_SNDBLOCK(priv->spi, &spiwrite, sizeof(struct ft80x_spiwrite16_s));
+
+  /* De-select the FT80x */
+
+  ft80x_deselect(priv);
+}
+
+void ft80x_write_word(FAR struct ft80x_dev_s *priv, uint32_t addr,
+                      uint16_t data)
+{
+  struct ft80x_spiwrite32_s spiwrite;
+
+  DEBUGASSERT(priv != NULL && (addr & 0xffc00000) == 0);
+
+  /* Format the write header */
+
+  spiwrite.addrh   = 0x80 | ((addr >> 16) & 0x3f);
+  spiwrite.addrm   = (addr >> 8)  & 0xff;
+  spiwrite.addrl   =  addr        & 0xff;
+  spiwrite.data[0] =  data        & 0xff; /* Little endian */
+  spiwrite.data[1] = (data >> 8)  & 0xff;
+  spiwrite.data[2] = (data >> 16) & 0xff;
+  spiwrite.data[3] = (data >> 24) & 0xff;
+
+  /* Select the FT80x */
+
+  ft80x_select(priv);
+
+  /* Send the write header and 32-bit data */
+
+  SPI_SNDBLOCK(priv->spi, &spiwrite, sizeof(struct ft80x_spiwrite32_s));
 
   /* De-select the FT80x */
 

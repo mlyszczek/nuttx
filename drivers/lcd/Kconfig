@@ -1213,6 +1213,17 @@ config LCD_FT801_MULTITOUCH
 	bool "FT801 Multi-touch"
 	default n
 
+choice
+	prompt "Display size"
+	default LCD_FT80X_WQVGA
+
+config LCD_FT80X_WQVGA
+	bool "WQVGA 480x272"
+
+config LCD_FT80X_QVGA
+	bool "QVGA 320x240"
+
+endchoice # Display size
 endif # LCD_FT80X
 
 endmenu # LCD Driver selection

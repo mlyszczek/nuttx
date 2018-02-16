@@ -324,6 +324,22 @@
  * Public Types
  *******************************************************************************************/
 
+/* Host write command
+ *
+ * For a SPI write command write transaction, the host writes a zero bit followed by a one
+ * bit, followed by the 5-bit command, followed by two bytes of zero. All data is streamed
+ * with a single chip select.
+ *
+ * I2C data format is equivalent (with obvious differences in bus protocol)
+ */
+
+struct ft80x_hostwrite_s
+{
+  uint8_t cmd;   /* Bits 6-7: 01, Bits 0-5: command */
+  uint8_t pad1;  /* Zero */
+  uint8_t pad2;  /* Zero */
+};
+
 /* For SPI memory read transaction, the host sends two zero bits, followed by the 22-bit
  * address. This is followed by a dummy byte. After the dummy byte, the FT80x responds to
  * each host byte with read data bytes.
@@ -398,8 +414,90 @@ struct ft80x_dev_s
   FAR struct i2c_master_s *i2c;           /* Cached SPI device reference */
 #endif
   FAR const struct ft80x_config_s *lower; /* Cached lower half instance */
+  uint32_t frequency;                     /* Effective frequency */
   sem_t exclsem;                          /* Mutual exclusion semaphore */
-  uint_t crefs;                           /* Open count */
+  uint8_t crefs;                          /* Open count */
 }.
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: ft80x_host_command
+ *
+ * Description:
+ *   Send a host command to the FT80x
+ *
+ *   FFor a SPI write command write transaction, the host writes a zero bit
+ *   followed by a one bit, followed by the 5-bit command, followed by two
+ *   bytes of zero. All data is streamed with a single chip select.
+ *
+ ****************************************************************************/
+
+void ft80x_host_command(FAR struct ft80x_dev_s *priv, uint8_t cmd);
+
+/****************************************************************************
+ * Name: ft80x_read_memory
+ *
+ * Description:
+ *   Read from FT80X memory
+ *
+ *   For SPI memory read transaction, the host sends two zero bits, followed
+ *   by the 22-bit address. This is followed by a dummy byte. After the dummy
+ *   byte, the FT80x responds to each host byte with read data bytes.
+ *
+ ****************************************************************************/
+
+void ft80x_read_memory(FAR struct ft80x_dev_s *priv, uint32_t addr,
+                       FAR void *buffer, size_t buflen);
+
+/****************************************************************************
+ * Name: ft80x_read_byte, ft80x_read_hword, ft80x_read_word
+ *
+ * Description:
+ *   Read an 8-, 16-, or 32-bt bit value from FT80X memory
+ *
+ *   For SPI memory read transaction, the host sends two zero bits, followed
+ *   by the 22-bit address. This is followed by a dummy byte. After the dummy
+ *   byte, the FT80x responds to each host byte with read data bytes.
+ *
+ ****************************************************************************/
+
+uint8_t  ft80x_read_byte(FAR struct ft80x_dev_s *priv, uint32_t addr);
+uint16_t ft80x_read_hword(FAR struct ft80x_dev_s *priv, uint32_t addr);
+uint32_t ft80x_read_word(FAR struct ft80x_dev_s *priv, uint32_t addr);
+
+/****************************************************************************
+ * Name: ft80x_write_memory
+ *
+ * Description:
+ *   Write to FT80X memory
+ *
+ *   For SPI memory write transaction, the host sends a '1' bit and '0' bit,
+ *   followed by the 22-bit address. This is followed by the write data.
+ *
+ ****************************************************************************/
+
+void ft80x_write_memory(FAR struct ft80x_dev_s *priv, uint32_t addr,
+                        FAR const void *buffer, size_t buflen);
+
+/****************************************************************************
+ * Name: ft80x_write_byte, ft80x_write_hword, ft80x_write_word
+ *
+ * Description:
+ *   Write an 8-, 16-, or 32-bt bit value to FT80X memory
+ *
+ *   For SPI memory write transaction, the host sends a '1' bit and '0' bit,
+ *   followed by the 22-bit address. This is followed by the write data.
+ *
+ ****************************************************************************/
+
+void ft80x_write_byte(FAR struct ft80x_dev_s *priv, uint32_t addr,
+                      uint8_t data);
+void ft80x_write_hword(FAR struct ft80x_dev_s *priv, uint32_t addr,
+                       uint16_t data);
+void ft80x_write_word(FAR struct ft80x_dev_s *priv, uint32_t addr,
+                      uint16_t data);
 
 #endif /* __DRIVERS_LCD_FT80X_H */

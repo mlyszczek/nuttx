@@ -87,7 +87,7 @@
  * Private Function Prototypes
  ****************************************************************************/
 
-/* Coprocessor commands */
+/* Coprocessor display list commands */
 
 static void ft80x_cmd_append(FAR struct ft80x_dev_s *priv,
               FAR struct ft80x_data_append_s *data);
@@ -192,6 +192,10 @@ static int  ft80x_poll(FAR struct file *filep, FAR struct pollfd *fds,
               bool setup);
 #endif
 
+/* Initialization */
+
+static int  ft80x_initialize(FAR struct ft80x_dev_s *priv);
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -211,10 +215,6 @@ static const struct file_operations ft80x_fops =
   , NULL         /* unlink */
 #endif
 };
-
-/* This is the FT80x driver instance (only a single device is supported for now) */
-
-static const struct ft80x_dev_s g_ft80x_lcddev;
 
 /****************************************************************************
  * Private Functions
@@ -719,6 +719,211 @@ static int ft80x_poll(FAR struct file *filep, FAR struct pollfd *fds,
 }
 #endif
 
+/****************************************************************************
+ * Name: ft80x_initialize
+ *
+ * Description:
+ *  Initialize the FT80x
+ *
+ ****************************************************************************/
+
+static int ft80x_initialize(FAR struct ft80x_dev_s *priv)
+{
+#if 0
+  uint8_t regval8;
+#endif
+
+  /* To configure the display, load the timing control registers with values
+   * for the particular display. These registers control horizontal timing:
+   *
+   *   - FT80X_PCLK
+   *   - FT80X_PCLK_POL
+   *   - FT80X_HCYCLE
+   *   - FT80X_HOFFSET
+   *   - FT80X_HSIZE
+   *   - FT80X_HSYNC0
+   *   - FT80X_HSYNC1
+   *
+   * These registers control vertical timing:
+   *
+   *   - FT80X_VCYCLE
+   *   - FT80X_VOFFSET
+   *   - FT80X_VSIZE
+   *   - FT80X_VSYNC0
+   *   - FT80X_VSYNC1
+   *
+   * And the FT80X_CSPREAD register changes color clock timing to reduce system
+   * noise.
+   *
+   * GPIO bit 7 is used for the display enable pin of the LCD module. By
+   * setting the direction of the GPIO bit to out direction, the display can
+   * be enabled by writing value of 1 into GPIO bit 7 or the display can be
+   * disabled by writing a value of 0 into GPIO bit 7. By default GPIO bit 7
+   * direction is output and the value is 0.
+   */
+
+  /* Initialization Sequence from Power Down using PD_N pin:
+   *
+   * 1. Drive the PD_N pin high
+   * 2. Wait for at least 20ms
+   * 3. Execute "Initialization Sequence during the Boot up" from steps 1 to 9
+   *
+   * Initialization Sequence from Sleep Mode:
+   *
+   * 1. Send Host command "ACTIVE" to enable clock to FT800
+   * 2. Wait for at least 20ms
+   * 3. Execute "Initialization Sequence during Boot Up" from steps 5 to 8
+   *
+   * Initialization sequence from standby mode:
+   *
+   * Execute all the steps mentioned in "Initialization Sequence from Sleep
+   * Mode" except waiting for at least 20ms in step 2.
+   */
+
+   DEBUGASSERT(priv->lower != NULL && priv->lower->pwrdown != NULL);
+   priv->lower->pwrdown(priv->lower, false);
+   up_mdelay(20);
+
+  /* Initialization Sequence during the boot up:
+   *
+   * 1. Use MCU SPI clock not more than 11MHz
+   * 2. Send Host command CLKEXT to FT800
+   * 3. Send Host command ACTIVE to enable clock to FT800.
+   * 4. Configure video timing registers, except FT80X_PCLK
+   * 5. Write first display list
+   * 6. Write FT80X_DLSWAP, FT800 swaps display list immediately
+   * 7. Enable back light control for display
+   * 8. Write FT80X_PCLK, video output begins with the first display list
+   * 9. Use MCU SPI clock not more than 30MHz
+   */
+
+  /* 1. Select the initial SPI frequency */
+
+  DEBUGASSERT(priv->lower->init_frequency <= 11000000);
+  priv->frequency = priv->lower->init_frequency;
+
+  /* 2. Send Host command CLKEXT to FT800
+   * 3. Send Host command ACTIVE to enable clock to FT800.
+   */
+
+  ft80x_host_command(priv, FT80X_CMD_CLKEXT);
+  ft80x_host_command(priv, FT80X_CMD_ACTIVE);
+
+  /* Verify the chip ID */
+#warning Missing logic
+
+  /* 4. Configure video timing registers, except FT80X_PCLK
+   *
+   * Once the FT800 is awake and the internal clock set and Device ID
+   * checked, the next task is to configure the LCD display parameters for
+   * the chosen display with the values determined in Section 2.3.3 above.
+   *
+   * a. Set FT80X_PCLK to zero - This disables the pixel clock output while
+   *    the LCD and other system parameters are configured
+   * b. Set the following registers with values for the chosen display.
+   *    Typical WQVGA and QVGA values are shown:
+   *
+   *    Register        Description                      WQVGA    QVGA 320 x 240
+   *                                                     480x272  320x240
+   *    FT80X_PCLK_POL  Pixel Clock Polarity             1        0
+   *    FT80X_HSIZE     Image width in pixels            480      320
+   *    FT80X_HCYCLE    Total number of clocks per line  548      408
+   *    FT80X_HOFFSET   Horizontal image start           43       70
+   *                    (pixels from left)
+   *    FT80X_HSYNC0    Start of HSYNC pulse             0        0
+   *                    (falling edge)
+   *    FT80X_HSYNC1    End of HSYNC pulse               41       10
+   *                    (rising edge)
+   *    FT80X_VSIZE     Image height in pixels           272      240
+   *    FT80X_VCYCLE    Total number of lines per screen 292      263
+   *    FT80X_VOFFSET   Vertical image start             12       13
+   *                    (lines from top)
+   *    FT80X_VSYNC0    Start of VSYNC pulse             0        0
+   *                    (falling edge)
+   *    FT80X_VSYNC1    End of VSYNC pulse               10       2
+   *                    (rising edge)
+   *
+   * c. Enable or disable FT80X_CSPREAD with a value of 01h or 00h,
+   *    respectively.  Enabling FT80X_CSPREAD will offset the R, G and B
+   *    output bits so all they do not all change at the same time.
+   */
+
+  ft80x_write_byte(priv, FT80X_PCLK, 0);
+
+#if defined(CONFIG_LCD_FT80X_WQVGA)
+  ft80x_write_hword(priv, FT80X_HCYCLE, 548);
+  ft80x_write_hword(priv, FT80X_HOFFSET, 43);
+  ft80x_write_hword(priv, FT80X_HSYNC0, 0);
+  ft80x_write_hword(priv, FT80X_HSYNC1, 41);
+  ft80x_write_hword(priv, FT80X_VCYCLE, 292);
+  ft80x_write_hword(priv, FT80X_VOFFSET, 12);
+  ft80x_write_hword(priv, FT80X_VSYNC0, 0);
+  ft80x_write_hword(priv, FT80X_VSYNC1, 10);
+  ft80x_write_byte(priv, FT80X_SWIZZLE, 0);
+  ft80x_write_byte(priv, FT80X_PCLK_POL, 1);
+  ft80x_write_byte(priv, FT80X_CSPREAD, 1);
+  ft80x_write_hword(priv, FT80X_HSIZE, 480);
+  ft80x_write_hword(priv, FT80X_VSIZE, 272);
+
+#elif defined(CONFIG_LCD_FT80X_QVGA)
+  ft80x_write_hword(priv, FT80X_HCYCLE, 408);
+  ft80x_write_hword(priv, FT80X_HOFFSET, 70);
+  ft80x_write_hword(priv, FT80X_HSYNC0, 0);
+  ft80x_write_hword(priv, FT80X_HSYNC1, 10);
+  ft80x_write_hword(priv, FT80X_VCYCLE, 263);
+  ft80x_write_hword(priv, FT80X_VOFFSET, 13);
+  ft80x_write_hword(priv, FT80X_VSYNC0, 0);
+  ft80x_write_hword(priv, FT80X_VSYNC1, 2);
+  ft80x_write_byte(priv, FT80X_SWIZZLE, 0);  /* REVISIT */
+  ft80x_write_byte(priv, FT80X_PCLK_POL, 0);
+  ft80x_write_byte(priv, FT80X_CSPREAD, 1);
+  ft80x_write_hword(priv, FT80X_HSIZE, 320);
+  ft80x_write_hword(priv, FT80X_VSIZE, 240);
+
+#else
+#  error Unknown display size
+#endif
+
+  /* 5. Write first display list */
+
+  ft80x_write_word(priv, FT80X_RAM_DL + 0, CLEAR_COLOR_RGB(0,0,0));
+  ft80x_write_word(priv, FT80X_RAM_DL + 4, CLEAR(1,1,1));
+  ft80x_write_word(priv, FT80X_RAM_DL + 8, DISPLAY());
+
+  /* 6. Write FT80X_DLSWAP, FT800 swaps display list immediately */
+
+  ft80x_write_byte(priv, FT80X_DLSWAP, DLSWAP_FRAME);
+
+  /* GPIO bit 7 is used for the display enable pin of the LCD module. By
+   * setting the direction of the GPIO bit to out direction, the display can
+   * be enabled by writing value of 1 into GPIO bit 7 or the display can be
+   * disabled by writing a value of 0 into GPIO bit 7. By default GPIO bit 7
+   * direction is output and the value is 0.
+   */
+
+  regval8  = ft80x_read_byte(priv, FT80X_GPIO_DIR);
+  regval8 |= (1 << 7);
+  ft80x_write_byte(priv, FT80X_GPIO_DIR, regval8);
+
+  regval8  = ft80x_read_byte(priv, FT80X_GPIO);
+  regval8 |= (1 << 7);
+  ft80x_write_byte(priv, FT80X_GPIO, regval8);
+
+  /* 7. Enable back light control for display */
+#warning Missing logic
+
+  /* 8. Write FT80X_PCLK, video output begins with the first display list */
+
+  ft80x_write_byte(priv, FT80X_PCLK, 5);
+
+  /* 9. Use MCU SPI clock not more than 30MHz */
+
+  DEBUGASSERT(priv->lower->op_frequency <= 30000000);
+  priv->frequency = priv->lower->op_frequency;
+
+  return OK;
+}
+
 /**************************************************************************************
  * Public Functions
  **************************************************************************************/
@@ -749,13 +954,22 @@ int ft80x_register(FAR struct i2c_master_s *i2c,
                    FAR const struct ft80x_config_s *lower);
 #endif
 {
-  FAR struct ft80x_dev_s *priv = &g_ft80x_lcddev;
+  FAR struct ft80x_dev_s *priv;
 
 #if defined(CONFIG_LCD_FT80X_SPI)
   DEBUGASSERT(spi != NULL && lower != NULL);
 #elif defined(CONFIG_LCD_FT80X_I2C)
   DEBUGASSERT(i2c != NULL && lower != NULL);
 #endif
+
+  /* Allocate the driver state structure */
+
+  priv = (FAR struct ft80x_dev_s *)kmm_zalloc(sizeof(struct ft80x_dev_s));
+  if (priv == NULL)
+    {
+      lcderr("ERROR: Failed to allocate state structure\n");
+      return -ENOMEM;
+    }
 
   /* Save the lower level interface and configuration information */
 
@@ -775,16 +989,27 @@ int ft80x_register(FAR struct i2c_master_s *i2c,
 
   sem_init(&priv->exclsem, 0, 1);
 
+  /* Initialize the FT80x */
+
+  ret = ft80x_initialize(priv);
+  if (ret < 0)
+    {
+      goto errout_with_sem;
+    }
+
   /* Register the FT80x character driver */
 
   ret = register_driver(DEVNAME, &ft80x_fops, 0666, priv);
   if (ret < 0)
     {
-      sem_destory(&priv->exclsem);
+      goto errout_with_sem;
     }
 
+  return OK;
+
+errout_with_sem:
+  sem_destory(&priv->exclsem);
   return ret;
-  return &priv->dev;
 }
 
 #endif /* CONFIG_LCD_FT80X */
