@@ -232,62 +232,6 @@
 #define FT80X_TRACKER              0x109000  /* Track register (Track value – MSB16;
                                               * Tag value - LSB8) */
 
-/* Coprocessor commands */
-
-#define FT80X_CMD_APPEND           0xffffff1e
-#define FT80X_CMD_BGCOLOR          0xffffff09
-#define FT80X_CMD_BITMAP_TRANSFORM 0xffffff21
-#define FT80X_CMD_BUTTON           0xffffff0d
-#define FT80X_CMD_CALIBRATE        0xffffff15
-#define FT80X_CMD_CLOCK            0xffffff14
-#define FT80X_CMD_COLDSTART        0xffffff32
-#define FT80X_CMD_CRC              0xffffff03
-#define FT80X_CMD_DIAL             0xffffff2d
-#define FT80X_CMD_DLSTART          0xffffff00
-#define FT80X_CMD_EXECUTE          0xffffff07
-#define FT80X_CMD_FGCOLOR          0xffffff0a
-#define FT80X_CMD_GAUGE            0xffffff13
-#define FT80X_CMD_GETMATRIX        0xffffff33
-#define FT80X_CMD_GETPOINT         0xffffff08
-#define FT80X_CMD_GETPROPS         0xffffff25
-#define FT80X_CMD_GETPTR           0xffffff23
-#define FT80X_CMD_GRADCOLOR        0xffffff34
-#define FT80X_CMD_GRADIENT         0xffffff0b
-#define FT80X_CMD_HAMMERAUX        0xffffff04
-#define FT80X_CMD_IDCT             0xffffff06
-#define FT80X_CMD_INFLATE          0xffffff22
-#define FT80X_CMD_INTERRUPT        0xffffff02
-#define FT80X_CMD_KEYS             0xffffff0e
-#define FT80X_CMD_LOADIDENTITY     0xffffff26
-#define FT80X_CMD_LOADIMAGE        0xffffff24
-#define FT80X_CMD_LOGO             0xffffff31
-#define FT80X_CMD_MARCH            0xffffff05
-#define FT80X_CMD_MEMCPY           0xffffff1d
-#define FT80X_CMD_MEMCRC           0xffffff18
-#define FT80X_CMD_MEMSET           0xffffff1b
-#define FT80X_CMD_MEMWRITE         0xffffff1a
-#define FT80X_CMD_MEMZERO          0xffffff1c
-#define FT80X_CMD_NUMBER           0xffffff2e
-#define FT80X_CMD_PROGRESS         0xffffff0f
-#define FT80X_CMD_REGREAD          0xffffff19
-#define FT80X_CMD_ROTATE           0xffffff29
-#define FT80X_CMD_SCALE            0xffffff28
-#define FT80X_CMD_SCREENSAVER      0xffffff2f
-#define FT80X_CMD_SCROLLBAR        0xffffff11
-#define FT80X_CMD_SETFONT          0xffffff2b
-#define FT80X_CMD_SETMATRIX        0xffffff2a
-#define FT80X_CMD_SKETCH           0xffffff30
-#define FT80X_CMD_SLIDER           0xffffff10
-#define FT80X_CMD_SNAPSHOT         0xffffff1f
-#define FT80X_CMD_SPINNER          0xffffff16
-#define FT80X_CMD_STOP             0xffffff17
-#define FT80X_CMD_SWAP             0xffffff01
-#define FT80X_CMD_TEXT             0xffffff0c
-#define FT80X_CMD_TOGGLE           0xffffff12
-#define FT80X_CMD_TOUCH_TRANSFORM  0xffffff20
-#define FT80X_CMD_TRACK            0xffffff2c
-#define FT80X_CMD_TRANSLATE        0xffffff27
-
 /* FT800 graphics engine specific macros useful for static display list generation */
 
 #define FT80X_VERTEX2F(x,y) \
