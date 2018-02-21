@@ -1,7 +1,8 @@
-/****************************************************************************
- * libc/wqueue/work_lock.c
+/************************************************************************************
+ * include/nuttx/input/slcd_ioctl.h
+ * IOCTL commands for segment LCDs
  *
- *   Copyright (C) 2014 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,88 +32,25 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ****************************************************************************/
+ ************************************************************************************/
+
+#ifndef __INCLUDE_NUTTX_INPUT_LCD_IOCTL_H
+#define __INCLUDE_NUTTX_INPUT_LCD_IOCTL_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <nuttx/config.h>
-
-#include <pthread.h>
-#include <semaphore.h>
-#include <assert.h>
-#include <errno.h>
-
-#include "wqueue/wqueue.h"
-
-#if defined(CONFIG_LIB_USRWORK) && !defined(__KERNEL__)
+#include <nuttx/fs/ioctl.h>
 
 /****************************************************************************
- * Public Functions
+ * Pre-processor Definitions
  ****************************************************************************/
 
-/****************************************************************************
- * Name: work_lock
- *
- * Description:
- *   Lock the user-mode work queue.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   Zero (OK) on success, a negated errno on failure.  This error may be
- *   reported:
- *
- *   -EINTR - Wait was interrupted by a signal
- *
- ****************************************************************************/
+/* IOCTL commands set aside for FT80x character driver */
 
-int work_lock(void)
-{
-  int ret;
+#define FT80X_NIOCTL_CMDS  14
+#define FT80X_NIOCTL_BASE  0x0001
 
-#ifdef CONFIG_BUILD_PROTECTED
-  ret = sem_wait(&g_usrsem);
-  if (ret < 0)
-    {
-      DEBUGASSERT(errno == EINTR || errno == ECANCELED);
-      return -EINTR;
-    }
-#else
-   ret = pthread_mutex_lock(&g_usrmutex);
-   if (ret != 0)
-     {
-       DEBUGASSERT(ret == EINTR);
-       return -EINTR;
-     }
-#endif
-
-  return ret;
-}
-
-/****************************************************************************
- * Name: work_unlock
- *
- * Description:
- *   Unlock the user-mode work queue.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void work_unlock(void)
-{
-#ifdef CONFIG_BUILD_PROTECTED
-  (void)sem_post(&g_usrsem);
-#else
-  (void)pthread_mutex_unlock(&g_usrmutex);
-#endif
-}
-
-#endif /* CONFIG_LIB_USRWORK && !__KERNEL__*/
+#endif /* __INCLUDE_NUTTX_INPUT_LCD_IOCTL_H */
