@@ -62,12 +62,13 @@
 
 #include "netdev/netdev.h"
 #include "devif/devif.h"
+#include "socket/socket.h"
 #include "inet/inet.h"
 #include "arp/arp.h"
 #include "icmpv6/icmpv6.h"
 #include "neighbor/neighbor.h"
+#include "route/route.h"
 #include "tcp/tcp.h"
-#include "socket/socket.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -233,10 +234,13 @@ static inline void tcpsend_ipselect(FAR struct net_driver_s *dev,
 #ifdef CONFIG_NET_ETHERNET
 static inline bool psock_send_addrchck(FAR struct tcp_conn_s *conn)
 {
+  /* Only Ethernet drivers are supported by this function */
   /* REVISIT: Could the MAC address not also be in a routing table? */
 
   if (conn->dev->d_lltype != NET_LL_ETHERNET)
     {
+      /* Return true for non-Ethernet devices. */
+
       return true;
     }
 
@@ -245,11 +249,41 @@ static inline bool psock_send_addrchck(FAR struct tcp_conn_s *conn)
   if (conn->domain == PF_INET)
 #endif
     {
-#if !defined(CONFIG_NET_ARP_IPIN) && !defined(CONFIG_NET_ARP_SEND)
-      return (arp_find(conn->u.ipv4.raddr) != NULL);
-#else
-      return true;
+      /* For historical reasons, we will return true if both the ARP and the
+       * routing table are disabled.
+       */
+
+      bool ret = true;
+#ifdef CONFIG_NET_ROUTE
+      in_addr_t router;
 #endif
+
+#if !defined(CONFIG_NET_ARP_IPIN) && !defined(CONFIG_NET_ARP_SEND)
+      if (arp_find(conn->u.ipv4.raddr) != NULL)
+        {
+          /* Return true if the address was found in the ARP table */
+
+          return true;
+        }
+
+      /* Otherwise, return false */
+
+      ret = false;
+#endif
+#ifdef CONFIG_NET_ROUTE
+      if (net_ipv4_router(conn->u.ipv4.raddr, &router) == OK)
+        {
+          /* Return true if the address was found in the routing table */
+
+          return true;
+        }
+
+      /* Otherwise, return false */
+
+      ret = false;
+#endif
+
+      return ret;
     }
 #endif /* CONFIG_NET_IPv4 */
 
@@ -258,11 +292,41 @@ static inline bool psock_send_addrchck(FAR struct tcp_conn_s *conn)
   else
 #endif
     {
-#if !defined(CONFIG_NET_ICMPv6_NEIGHBOR)
-      return (neighbor_findentry(conn->u.ipv6.raddr) != NULL);
-#else
-      return true;
+      /* For historical reasons, we will return true if both the ICMPv6
+       * neighbor support and the routing table are disabled.
+       */
+
+      bool ret = true;
+#ifdef CONFIG_NET_ROUTE
+      net_ipv6addr_t router;
 #endif
+
+#if !defined(CONFIG_NET_ICMPv6_NEIGHBOR)
+      if (neighbor_findentry(conn->u.ipv6.raddr) != NULL)
+        {
+          /* Return true if the address was found in the ARP table */
+
+          return true;
+        }
+
+      /* Otherwise, return false */
+
+      ret = false;
+#endif
+#ifdef CONFIG_NET_ROUTE
+      if (net_ipv6_router(conn->u.ipv6.raddr, router) == OK)
+        {
+          /* Return true if the address was found in the routing table */
+
+          return true;
+        }
+
+      /* Otherwise, return false */
+
+      ret = false;
+#endif
+
+      return ret;
     }
 #endif /* CONFIG_NET_IPv6 */
 }

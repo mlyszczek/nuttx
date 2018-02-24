@@ -191,6 +191,11 @@
  *                 indicate only the tag value for TOUCH0.
  *   Argument:     A reference to an instance of struct ft80x_notify_s.
  *   Returns:      None
+ *
+ * FT80X_IOC_FADE:
+ *   Description:  Change the backlight intensity with a controllable fade.
+ *   Argument:     A reference to an instance of struct ft80x_fade_s below.
+ *   Returns:      None.
  */
 
 #define FT80X_IOC_CREATEDL          _LCDIOC(FT80X_NIOCTL_BASE + 0)
@@ -207,6 +212,7 @@
 #define FT80X_IOC_PUTREG32          _LCDIOC(FT80X_NIOCTL_BASE + 11)
 #define FT80X_IOC_PUTREGS           _LCDIOC(FT80X_NIOCTL_BASE + 12)
 #define FT80X_IOC_EVENTNOTIFY       _LCDIOC(FT80X_NIOCTL_BASE + 13)
+#define FT80X_IOC_FADE              _LCDIOC(FT80X_NIOCTL_BASE + 14)
 
 /* FT80x Memory Map *************************************************************************/
 
@@ -533,8 +539,17 @@
 
 /* BLEND_FUNC(0x0b) - Set pixel arithmetic */
 
-#define FT80X_BLEND_FUNC(src,dst) \
-  ((11 << 24) | (((src) & 7) << 3) | (((dst) & 7) << 0))
+#define FT80X_BLEND_FUNC(src,dest) \
+  ((11 << 24) | (((src) & 7) << 3) | (((dest) & 7) << 0))
+
+/* src/dest */
+
+#define FT80X_BLEND_ZERO                0
+#define FT80X_BLEND_ONE                 1
+#define FT80X_BLEND_SRC_ALPHA           2
+#define FT80X_BLEND_DST_ALPHA           3
+#define FT80X_BLEND_ONE_MINUS_SRC_ALPHA 4
+#define FT80X_BLEND_ONE_MINUS_DST_ALPHA 5
 
 /* CELL (0x06) - Set the bitmap cell number for the VERTEX2F command */
 
@@ -813,7 +828,7 @@
  * In addition, if there is a audio amplifier on board (such as TPA6205A or LM4864), then
  * there may also be an active low audio shutdown output:
  *
- *  N/A        O  nSHDN Audio shutdown (active los)
+ *  N/A        O  nSHDN Audio shutdown (active low)
  *
  * SCL/SDA, SCLK/MISO/MOSI/nCS are handled by generic I2C or SPI logic. nInt and nPD are
  * directly managed by this interface.
@@ -854,8 +869,8 @@ struct ft80x_config_s
                       FAR void *arg);
   CODE void (*enable)(FAR const struct ft80x_config_s *lower, bool enable);
   CODE void (*clear)(FAR const struct ft80x_config_s *lower);
-  CODE bool (*pwrdown)(FAR const struct ft80x_config_s *lower, bool pwrdown);
-  CODE bool (*audio)(FAR const struct ft80x_config_s *lower, bool enable);
+  CODE void (*pwrdown)(FAR const struct ft80x_config_s *lower, bool pwrdown);
+  CODE void (*audio)(FAR const struct ft80x_config_s *lower, bool enable);
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   CODE void (*destroy)(FAR const struct ft80x_config_s *lower);
 #endif
@@ -1436,6 +1451,14 @@ struct ft80x_registers_s
   uint32_t addr;             /* 32-bit aligned start register address */
   uint8_t nregs;             /* Number of 32-bit registers to be accessed */
   FAR uint32_t *value;       /* A pointer to an array of 32-bit register values */
+};
+
+/* Used with FT80X_IOC_FADE: */
+
+struct ft80x_fade_s
+{
+  uint8_t duty ;             /* Terminal backlight duty as a percentage (0-100) */
+  uint16_t delay;            /* Total number of milliseconds for the fade (10-16700)*/
 };
 
 /********************************************************************************************
