@@ -77,103 +77,119 @@
 
 /* System Group Registers */
 
-#define SPR_SYS_VR      (SPR_GROUP_SYS | 0)    /* Version Register */
-#define SPR_SYS_UPR     (SPR_GROUP_SYS | 1)    /* Unit Present Register */
-#define SPR_SYS_CPUCFGR (SPR_GROUP_SYS | 2)    /* CPU Configuration */
-#define SPR_SYS_DMMUCFGR (SPR_GROUP_SYS | 3)   /* Data MMU Configuration */
-#define SPR_SYS_IMMUCFGR (SPR_GROUP_SYS | 4)   /* Instruction MMU Config */
-#define SPR_SYS_DCCFGR  (SPR_GROUP_SYS | 5)    /* Data Cache Configuration */
-#define SPR_SYS_ICCFGR  (SPR_GROUP_SYS | 6)    /* Instruction Cache Config */
-#define SPR_SYS_DCFGR   (SPR_GROUP_SYS | 7)    /* Debug Configuration */
-#define SPR_SYS_PCCFGR  (SPR_GROUP_SYS | 8)    /* Performance Counter Config */
-#define SPR_SYS_VR2     (SPR_GROUP_SYS | 9)    /* Version Register 2 */
-#define SPR_SYS_AVR     (SPR_GROUP_SYS | 10)   /* Architecture Version */
-#define SPR_SYS_EVBAR   (SPR_GROUP_SYS | 11)   /* Exception vector base */
-#define SPR_SYS_AECR    (SPR_GROUP_SYS | 12)   /* Arithmetic exception control */
-#define SPR_SYS_AESR    (SPR_GROUP_SYS | 13)   /* Arithmetic exception status */
-#define SPR_SYS_NPC     (SPR_GROUP_SYS | 16)   /* PC mapped to SPR - next PC */
-#define SPR_SYS_SR      (SPR_GROUP_SYS | 17)   /* Supervision register */
-#define SPR_SYS_PPC     (SPR_GROUP_SYS | 18)   /* PC mapped to SPR space */
-#define SPR_SYS_FPCSR   (SPR_GROUP_SYS | 20)   /* FP Control Status */
-#define SPR_SYS_ISR0    (SPR_GROUP_SYS | 21)   /* Implementation specific */
-#define SPR_SYS_ISR1    (SPR_GROUP_SYS | 22)   /* Implementation specific */
-#define SPR_SYS_ISR2    (SPR_GROUP_SYS | 23)   /* Implementation specific */
-#define SPR_SYS_ISR3    (SPR_GROUP_SYS | 24)   /* Implementation specific */
-#define SPR_SYS_ISR4    (SPR_GROUP_SYS | 25)   /* Implementation specific */
-#define SPR_SYS_ISR5    (SPR_GROUP_SYS | 26)   /* Implementation specific */
-#define SPR_SYS_ISR6    (SPR_GROUP_SYS | 27)   /* Implementation specific */
-#define SPR_SYS_ISR7    (SPR_GROUP_SYS | 28)   /* Implementation specific */
-#define SPR_SYS_EPCR0   (SPR_GROUP_SYS | 32)   /* Exception PC register */
-#define SPR_SYS_EPCR1   (SPR_GROUP_SYS | 33)   /* Exception PC register */
-#define SPR_SYS_EPCR2   (SPR_GROUP_SYS | 34)   /* Exception PC register */
-#define SPR_SYS_EPCR3   (SPR_GROUP_SYS | 35)   /* Exception PC register */
-#define SPR_SYS_EPCR4   (SPR_GROUP_SYS | 36)   /* Exception PC register */
-#define SPR_SYS_EPCR5   (SPR_GROUP_SYS | 37)   /* Exception PC register */
-#define SPR_SYS_EPCR6   (SPR_GROUP_SYS | 38)   /* Exception PC register */
-#define SPR_SYS_EPCR7   (SPR_GROUP_SYS | 39)   /* Exception PC register */
-#define SPR_SYS_EPCR8   (SPR_GROUP_SYS | 40)   /* Exception PC register */
-#define SPR_SYS_EPCR9   (SPR_GROUP_SYS | 41)   /* Exception PC register */
-#define SPR_SYS_EPCR10  (SPR_GROUP_SYS | 42)   /* Exception PC register */
-#define SPR_SYS_EPCR11  (SPR_GROUP_SYS | 43)   /* Exception PC register */
-#define SPR_SYS_EPCR12  (SPR_GROUP_SYS | 44)   /* Exception PC register */
-#define SPR_SYS_EPCR13  (SPR_GROUP_SYS | 45)   /* Exception PC register */
-#define SPR_SYS_EPCR14  (SPR_GROUP_SYS | 46)   /* Exception PC register */
-#define SPR_SYS_EPCR15  (SPR_GROUP_SYS | 47)   /* Exception PC register */
-#define SPR_SYS_EEAR0   (SPR_GROUP_SYS | 48)   /* Exception EA register */
-#define SPR_SYS_EEAR1   (SPR_GROUP_SYS | 49)   /* Exception EA register */
-#define SPR_SYS_EEAR2   (SPR_GROUP_SYS | 50)   /* Exception EA register */
-#define SPR_SYS_EEAR3   (SPR_GROUP_SYS | 51)   /* Exception EA register */
-#define SPR_SYS_EEAR4   (SPR_GROUP_SYS | 52)   /* Exception EA register */
-#define SPR_SYS_EEAR5   (SPR_GROUP_SYS | 53)   /* Exception EA register */
-#define SPR_SYS_EEAR6   (SPR_GROUP_SYS | 54)   /* Exception EA register */
-#define SPR_SYS_EEAR7   (SPR_GROUP_SYS | 55)   /* Exception EA register */
-#define SPR_SYS_EEAR8   (SPR_GROUP_SYS | 56)   /* Exception EA register */
-#define SPR_SYS_EEAR9   (SPR_GROUP_SYS | 57)   /* Exception EA register */
-#define SPR_SYS_EEAR10  (SPR_GROUP_SYS | 58)   /* Exception EA register */
-#define SPR_SYS_EEAR11  (SPR_GROUP_SYS | 59)   /* Exception EA register */
-#define SPR_SYS_EEAR12  (SPR_GROUP_SYS | 60)   /* Exception EA register */
-#define SPR_SYS_EEAR13  (SPR_GROUP_SYS | 61)   /* Exception EA register */
-#define SPR_SYS_EEAR14  (SPR_GROUP_SYS | 62)   /* Exception EA register */
-#define SPR_SYS_EEAR15  (SPR_GROUP_SYS | 63)   /* Exception EA register */
-#define SPR_SYS_ESR0    (SPR_GROUP_SYS | 64)   /* Exception SR register */
-#define SPR_SYS_ESR1    (SPR_GROUP_SYS | 65)   /* Exception SR register */
-#define SPR_SYS_ESR2    (SPR_GROUP_SYS | 66)   /* Exception SR register */
-#define SPR_SYS_ESR3    (SPR_GROUP_SYS | 67)   /* Exception SR register */
-#define SPR_SYS_ESR4    (SPR_GROUP_SYS | 68)   /* Exception SR register */
-#define SPR_SYS_ESR5    (SPR_GROUP_SYS | 69)   /* Exception SR register */
-#define SPR_SYS_ESR6    (SPR_GROUP_SYS | 70)   /* Exception SR register */
-#define SPR_SYS_ESR7    (SPR_GROUP_SYS | 71)   /* Exception SR register */
-#define SPR_SYS_ESR8    (SPR_GROUP_SYS | 72)   /* Exception SR register */
-#define SPR_SYS_ESR9    (SPR_GROUP_SYS | 73)   /* Exception SR register */
-#define SPR_SYS_ESR10   (SPR_GROUP_SYS | 74)   /* Exception SR register */
-#define SPR_SYS_ESR11   (SPR_GROUP_SYS | 75)   /* Exception SR register */
-#define SPR_SYS_ESR12   (SPR_GROUP_SYS | 76)   /* Exception SR register */
-#define SPR_SYS_ESR13   (SPR_GROUP_SYS | 77)   /* Exception SR register */
-#define SPR_SYS_ESR14   (SPR_GROUP_SYS | 78)   /* Exception SR register */
-#define SPR_SYS_ESR15   (SPR_GROUP_SYS | 79)   /* Exception SR register */
-#define SPR_SYS_COREID  (SPR_GROUP_SYS | 128)  /* Core Identifier */
-#define SPR_SYS_NUMCORES (SPR_GROUP_SYS | 129) /* Number of cores */
-#define SPR_SYS_GPR(n)  (SPR_GROUP_SYS | 1024+(n)) /* GPRs mapped to SPR */
+#define SPR_SYS_VR       (SPR_GROUP_SYS | 0)          /* Version Register */
+#define SPR_SYS_UPR      (SPR_GROUP_SYS | 1)          /* Unit Present Register */
+#define SPR_SYS_CPUCFGR  (SPR_GROUP_SYS | 2)          /* CPU Configuration */
+#define SPR_SYS_DMMUCFGR (SPR_GROUP_SYS | 3)          /* Data MMU Configuration */
+#define SPR_SYS_IMMUCFGR (SPR_GROUP_SYS | 4)          /* Instruction MMU Config */
+#define SPR_SYS_DCCFGR   (SPR_GROUP_SYS | 5)          /* Data Cache Configuration */
+#define SPR_SYS_ICCFGR   (SPR_GROUP_SYS | 6)          /* Instruction Cache Config */
+#define SPR_SYS_DCFGR    (SPR_GROUP_SYS | 7)          /* Debug Configuration */
+#define SPR_SYS_PCCFGR   (SPR_GROUP_SYS | 8)          /* Performance Counter Config */
+#define SPR_SYS_VR2      (SPR_GROUP_SYS | 9)          /* Version Register 2 */
+#define SPR_SYS_AVR      (SPR_GROUP_SYS | 10)         /* Architecture Version */
+#define SPR_SYS_EVBAR    (SPR_GROUP_SYS | 11)         /* Exception vector base */
+#define SPR_SYS_AECR     (SPR_GROUP_SYS | 12)         /* Arithmetic exception control */
+#define SPR_SYS_AESR     (SPR_GROUP_SYS | 13)         /* Arithmetic exception status */
+#define SPR_SYS_NPC      (SPR_GROUP_SYS | 16)         /* PC mapped to SPR - next PC */
+#define SPR_SYS_SR       (SPR_GROUP_SYS | 17)         /* Supervision register */
+#define SPR_SYS_PPC      (SPR_GROUP_SYS | 18)         /* PC mapped to SPR space */
+#define SPR_SYS_FPCSR    (SPR_GROUP_SYS | 20)         /* FP Control Status */
+#define SPR_SYS_ISR0     (SPR_GROUP_SYS | 21)         /* Implementation specific */
+#define SPR_SYS_ISR1     (SPR_GROUP_SYS | 22)         /* Implementation specific */
+#define SPR_SYS_ISR2     (SPR_GROUP_SYS | 23)         /* Implementation specific */
+#define SPR_SYS_ISR3     (SPR_GROUP_SYS | 24)         /* Implementation specific */
+#define SPR_SYS_ISR4     (SPR_GROUP_SYS | 25)         /* Implementation specific */
+#define SPR_SYS_ISR5     (SPR_GROUP_SYS | 26)         /* Implementation specific */
+#define SPR_SYS_ISR6     (SPR_GROUP_SYS | 27)         /* Implementation specific */
+#define SPR_SYS_ISR7     (SPR_GROUP_SYS | 28)         /* Implementation specific */
+#define SPR_SYS_EPCR0    (SPR_GROUP_SYS | 32)         /* Exception PC register */
+#define SPR_SYS_EPCR1    (SPR_GROUP_SYS | 33)         /* Exception PC register */
+#define SPR_SYS_EPCR2    (SPR_GROUP_SYS | 34)         /* Exception PC register */
+#define SPR_SYS_EPCR3    (SPR_GROUP_SYS | 35)         /* Exception PC register */
+#define SPR_SYS_EPCR4    (SPR_GROUP_SYS | 36)         /* Exception PC register */
+#define SPR_SYS_EPCR5    (SPR_GROUP_SYS | 37)         /* Exception PC register */
+#define SPR_SYS_EPCR6    (SPR_GROUP_SYS | 38)         /* Exception PC register */
+#define SPR_SYS_EPCR7    (SPR_GROUP_SYS | 39)         /* Exception PC register */
+#define SPR_SYS_EPCR8    (SPR_GROUP_SYS | 40)         /* Exception PC register */
+#define SPR_SYS_EPCR9    (SPR_GROUP_SYS | 41)         /* Exception PC register */
+#define SPR_SYS_EPCR10   (SPR_GROUP_SYS | 42)         /* Exception PC register */
+#define SPR_SYS_EPCR11   (SPR_GROUP_SYS | 43)         /* Exception PC register */
+#define SPR_SYS_EPCR12   (SPR_GROUP_SYS | 44)         /* Exception PC register */
+#define SPR_SYS_EPCR13   (SPR_GROUP_SYS | 45)         /* Exception PC register */
+#define SPR_SYS_EPCR14   (SPR_GROUP_SYS | 46)         /* Exception PC register */
+#define SPR_SYS_EPCR15   (SPR_GROUP_SYS | 47)         /* Exception PC register */
+#define SPR_SYS_EEAR0    (SPR_GROUP_SYS | 48)         /* Exception EA register */
+#define SPR_SYS_EEAR1    (SPR_GROUP_SYS | 49)         /* Exception EA register */
+#define SPR_SYS_EEAR2    (SPR_GROUP_SYS | 50)         /* Exception EA register */
+#define SPR_SYS_EEAR3    (SPR_GROUP_SYS | 51)         /* Exception EA register */
+#define SPR_SYS_EEAR4    (SPR_GROUP_SYS | 52)         /* Exception EA register */
+#define SPR_SYS_EEAR5    (SPR_GROUP_SYS | 53)         /* Exception EA register */
+#define SPR_SYS_EEAR6    (SPR_GROUP_SYS | 54)         /* Exception EA register */
+#define SPR_SYS_EEAR7    (SPR_GROUP_SYS | 55)         /* Exception EA register */
+#define SPR_SYS_EEAR8    (SPR_GROUP_SYS | 56)         /* Exception EA register */
+#define SPR_SYS_EEAR9    (SPR_GROUP_SYS | 57)         /* Exception EA register */
+#define SPR_SYS_EEAR10   (SPR_GROUP_SYS | 58)         /* Exception EA register */
+#define SPR_SYS_EEAR11   (SPR_GROUP_SYS | 59)         /* Exception EA register */
+#define SPR_SYS_EEAR12   (SPR_GROUP_SYS | 60)         /* Exception EA register */
+#define SPR_SYS_EEAR13   (SPR_GROUP_SYS | 61)         /* Exception EA register */
+#define SPR_SYS_EEAR14   (SPR_GROUP_SYS | 62)         /* Exception EA register */
+#define SPR_SYS_EEAR15   (SPR_GROUP_SYS | 63)         /* Exception EA register */
+#define SPR_SYS_ESR0     (SPR_GROUP_SYS | 64)         /* Exception SR register */
+#define SPR_SYS_ESR1     (SPR_GROUP_SYS | 65)         /* Exception SR register */
+#define SPR_SYS_ESR2     (SPR_GROUP_SYS | 66)         /* Exception SR register */
+#define SPR_SYS_ESR3     (SPR_GROUP_SYS | 67)         /* Exception SR register */
+#define SPR_SYS_ESR4     (SPR_GROUP_SYS | 68)         /* Exception SR register */
+#define SPR_SYS_ESR5     (SPR_GROUP_SYS | 69)         /* Exception SR register */
+#define SPR_SYS_ESR6     (SPR_GROUP_SYS | 70)         /* Exception SR register */
+#define SPR_SYS_ESR7     (SPR_GROUP_SYS | 71)         /* Exception SR register */
+#define SPR_SYS_ESR8     (SPR_GROUP_SYS | 72)         /* Exception SR register */
+#define SPR_SYS_ESR9     (SPR_GROUP_SYS | 73)         /* Exception SR register */
+#define SPR_SYS_ESR10    (SPR_GROUP_SYS | 74)         /* Exception SR register */
+#define SPR_SYS_ESR11    (SPR_GROUP_SYS | 75)         /* Exception SR register */
+#define SPR_SYS_ESR12    (SPR_GROUP_SYS | 76)         /* Exception SR register */
+#define SPR_SYS_ESR13    (SPR_GROUP_SYS | 77)         /* Exception SR register */
+#define SPR_SYS_ESR14    (SPR_GROUP_SYS | 78)         /* Exception SR register */
+#define SPR_SYS_ESR15    (SPR_GROUP_SYS | 79)         /* Exception SR register */
+#define SPR_SYS_COREID   (SPR_GROUP_SYS | 128)        /* Core Identifier */
+#define SPR_SYS_NUMCORES (SPR_GROUP_SYS | 129)        /* Number of cores */
+#define SPR_SYS_GPR(n)   (SPR_GROUP_SYS | 1024+(n))   /* GPRs mapped to SPR */
 
 /* Data MMU Group Registers */
 
-#define SPR_DMMU_CR     (SPR_GROUP_DMMU | 0)   /* DMMU Control Register */
-#define SPR_DMMU_PR     (SPR_GROUP_DMMU | 1)   /* DMMU Protection Register */
-#define SPR_DMMU_DTLBEIR (SPR_GROUP_DMMU | 2)  /* TLB invalidate register */
-#define SPR_DMMU_DATBMR0 (SPR_GROUP_DMMU | 4)  /* Data ATB match register */
-#define SPR_DMMU_DATBMR1 (SPR_GROUP_DMMU | 5)  /* Data ATB match register */
-#define SPR_DMMU_DATBMR2 (SPR_GROUP_DMMU | 6)  /* Data ATB match register */
-#define SPR_DMMU_DATBMR3 (SPR_GROUP_DMMU | 7)  /* Data ATB match register */
+#define SPR_DMMU_CR      (SPR_GROUP_DMMU | 0)         /* DMMU Control Register */
+#define SPR_DMMU_PR      (SPR_GROUP_DMMU | 1)         /* DMMU Protection Register */
+#define SPR_DMMU_DTLBEIR (SPR_GROUP_DMMU | 2)         /* TLB invalidate register */
+#define SPR_DMMU_DATBMR0 (SPR_GROUP_DMMU | 4)         /* Data ATB match register */
+#define SPR_DMMU_DATBMR1 (SPR_GROUP_DMMU | 5)         /* Data ATB match register */
+#define SPR_DMMU_DATBMR2 (SPR_GROUP_DMMU | 6)         /* Data ATB match register */
+#define SPR_DMMU_DATBMR3 (SPR_GROUP_DMMU | 7)         /* Data ATB match register */
+
+/* DCACHE Group Registers */
+
+#define SPR_DCACHE_CR    (SPR_GROUP_DCACHE | 0)
+#define SPR_DCACHE_BPR   (SPR_GROUP_DCACHE | 1)
+#define SPR_DCACHE_BFR   (SPR_GROUP_DCACHE | 2)
+#define SPR_DCACHE_BIR   (SPR_GROUP_DCACHE | 3)
+#define SPR_DCACHE_BWR   (SPR_GROUP_DCACHE | 4)
+#define SPR_DCACHE_BLR   (SPR_GROUP_DCACHE | 5)
+
+/* ICACHE Group Registers */
+
+#define SPR_ICACHE_CR    (SPR_GROUP_DCACHE | 0)
+#define SPR_ICACHE_BPR   (SPR_GROUP_DCACHE | 1)
+#define SPR_ICACHE_BIR   (SPR_GROUP_DCACHE | 2)
+#define SPR_ICACHE_BLR   (SPR_GROUP_DCACHE | 3)
 
 /* Programmable Interrupt Controller */
 
-#define SPR_PIC_MR      (SPR_GROUP_PIC | 0)    /* PIC Mask Register */
-#define SPR_PIC_SR      (SPR_GROUP_PIC | 2)    /* PIC Status Register */
+#define SPR_PIC_MR       (SPR_GROUP_PIC | 0)          /* PIC Mask Register */
+#define SPR_PIC_SR       (SPR_GROUP_PIC | 2)          /* PIC Status Register */
 
 /* Tick Timer Group Registers */
 
-#define SPR_TICK_TTMR   (SPR_GROUP_TICK | 0)   /* Tick Timer Mode Register */
-#define SPR_TICK_TTCR   (SPR_GROUP_TICK | 1)   /* Tick Timer Count Register */
+#define SPR_TICK_TTMR    (SPR_GROUP_TICK | 0)         /* Tick Timer Mode Register */
+#define SPR_TICK_TTCR    (SPR_GROUP_TICK | 1)         /* Tick Timer Count Register */
 
 /* Version Register Bits */
 
@@ -223,6 +239,37 @@
 #define SPR_CPUCFGR_EVBARP      (1 << 12)               /* Exception Vector Base Addr */
 #define SPR_CPUCFGR_ISRP        (1 << 13)               /* Implementation specific present */
 #define SPR_CPUCFGR_AECSRP      (1 << 14)               /* Arithmetic Exception Status present */
+
+/* DMMU Register Bits */
+
+/* IMMU Register Bits */
+
+/* Data Cache Configurtion Register Bits */
+
+#define SPR_DCCFGR_NCW_SHIFT    (0)
+#define SPR_DCCFGR_NCW_MASK     (0x7 << SPR_DCCFGR_NCW_SHIFT)
+#define SPR_DCCFGR_NCS_SHIFT    (3)
+#define SPR_DCCFGR_NCS_MASK     (0xf << SPR_DCCFGR_NCS_SHIFT)
+#define SPR_DCCFGR_CBS          (1 << 7)
+#define SPR_DCCFGR_CWS          (1 << 8)
+#define SPR_DCCFGR_CCRI         (1 << 9)
+#define SPR_DCCFGR_CBIRI        (1 << 10)
+#define SPR_DCCFGR_CBPRI        (1 << 11)
+#define SPR_DCCFGR_CBLRI        (1 << 12)
+#define SPR_DCCFGR_CBFRI        (1 << 13)
+#define SPR_DCCFGR_CBWBRI       (1 << 14)
+
+/* Instruction Cache Configuration Register Bits */
+
+#define SPR_ICCFGR_NCW_SHIFT    (0)
+#define SPR_ICCFGR_NCW_MASK     (0x7 << SPR_ICCFGR_NCW_SHIFT)
+#define SPR_ICCFGR_NCS_SHIFT    (3)
+#define SPR_ICCFGR_NCS_MASK     (0xf << SPR_ICCFGR_NCS_SHIFT)
+#define SPR_ICCFGR_CBS          (1 << 7)
+#define SPR_ICCFGR_CCRI         (1 << 9)
+#define SPR_ICCFGR_CBIRI        (1 << 10)
+#define SPR_ICCFGR_CBPRI        (1 << 11)
+#define SPR_ICCFGR_CBLRI        (1 << 12)
 
 /* Supervision Register Bits */
 

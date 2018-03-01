@@ -58,12 +58,71 @@
 
 #include <arch/board/board.h>
 
+#include <arch/spr.h>
+
 #include "up_arch.h"
 #include "up_internal.h"
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+#ifdef CONFIG_OR1K_ICACHE
+static void up_enable_icache(void)
+{
+  uint32_t iccfg;
+  uint32_t sr;
+  uint32_t bir;
+
+  mfspr(SPR_SYS_ICCFGR, iccfg);
+
+  syslog(LOG_INFO, "ICACHE NCW: %d NCS: %d CBS: %d CCRI: %d CBIRI: %d CBPRI: %d\n",
+         (iccfg & SPR_ICCFGR_NCW_MASK) >> SPR_ICCFGR_NCW_SHIFT,
+         (iccfg & SPR_ICCFGR_NCS_MASK) >> SPR_ICCFGR_NCS_SHIFT,
+         (iccfg & SPR_ICCFGR_CBS) ? 1 : 0,
+         (iccfg & SPR_ICCFGR_CCRI) ? 1 : 0,
+         (iccfg & SPR_ICCFGR_CBIRI) ? 1 : 0,
+         (iccfg & SPR_ICCFGR_CBPRI) ? 1 : 0,
+         (iccfg & SPR_ICCFGR_CBLRI) ? 1 : 0);
+
+  /* Invalidate blocks */
+
+  bir = 0xffffffff;
+  mtspr(SPR_ICACHE_BIR, bir);
+
+  mfspr(SPR_SYS_SR, sr);
+  sr |= SPR_SR_ICE;
+  mtspr(SPR_SYS_SR, sr);
+
+}
+#endif
+
+#ifdef CONFIG_OR1K_DCACHE
+static void up_enable_dcache(void)
+{
+  uint32_t dccfg;
+  uint32_t sr;
+  uint32_t bir;
+
+  mfspr(SPR_SYS_DCCFGR, dccfg);
+
+  syslog(LOG_INFO, "DCACHE NCW: %d NCS: %d CBS: %d CCRI: %d CBIRI: %d CBPRI: %d\n",
+         (dccfg & SPR_DCCFGR_NCW_MASK) >> SPR_DCCFGR_NCW_SHIFT,
+         (dccfg & SPR_DCCFGR_NCS_MASK) >> SPR_DCCFGR_NCS_SHIFT,
+         (dccfg & SPR_DCCFGR_CBS) ? 1 : 0,
+         (dccfg & SPR_DCCFGR_CCRI) ? 1 : 0,
+         (dccfg & SPR_DCCFGR_CBIRI) ? 1 : 0,
+         (dccfg & SPR_DCCFGR_CBPRI) ? 1 : 0,
+         (dccfg & SPR_DCCFGR_CBLRI) ? 1 : 0);
+
+  bir = 0xffffffff;
+  mtspr(SPR_DCACHE_BIR, bir);
+
+  mfspr(SPR_SYS_SR, sr);
+  sr |= SPR_SR_DCE;
+  mtspr(SPR_SYS_SR, sr);
+}
+#endif
 
 /****************************************************************************
  * Name: up_calibratedelay
@@ -300,5 +359,14 @@ void up_initialize(void)
   /* Initialize the L2 cache if present and selected */
 
   up_l2ccinitialize();
+
+#ifdef CONFIG_OR1K_ICACHE
+  up_enable_icache();
+#endif
+
+#ifdef CONFIG_OR1K_DCACHE
+  up_enable_dcache();
+#endif
+
   board_autoled_on(LED_IRQSENABLED);
 }

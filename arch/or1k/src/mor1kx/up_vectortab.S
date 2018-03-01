@@ -234,6 +234,9 @@ _reset_vector:
   l.movhi r30, 0x0;
   l.movhi r31, 0x0;
 
+  l.ori   r1,r0,SPR_SR_SM;
+  l.mtspr r0,r1,SPR_SYS_SR;
+
   /* Disable external interrupts */
 
   _pic_disable;
@@ -241,11 +244,6 @@ _reset_vector:
   /* Initialize LED GPIO early to get some feedback */
 
   _led_init;
-
-  /* Enter supervisor mode */
-
-  l.ori   r1,r0,SPR_SR_SM;
-  l.mtspr r0,r1,SPR_SYS_SR;
 
   /* Clear Tick Timer SPR */
 
