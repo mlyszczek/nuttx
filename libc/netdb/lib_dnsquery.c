@@ -5,7 +5,7 @@
  * The DNS resolver functions are used to lookup a hostname and map it to a
  * numerical IP address.
  *
- *   Copyright (C) 2007, 2009, 2012, 2014-2017 Gregory Nutt. All rights
+ *   Copyright (C) 2007, 2009, 2012, 2014-2018 Gregory Nutt. All rights
  *     reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
@@ -106,25 +106,58 @@ static uint8_t g_seqno;           /* Sequence number of the next request */
  * Description:
  *   Walk through a compact encoded DNS name and return the end of it.
  *
+ * Input Parameters:
+ *
+ *   query    - A pointer to the starting byte of the name entry in the DNS
+ *              response.
+ *   queryend - A pointer to the byte after the last byte of the DNS response.
+ *
+ * Returned Value:
+ *   Pointer to the first byte after the parsed name, or the value of
+ *   `queryend` if the name did not fit into provided DNS response.
+ *
  ****************************************************************************/
 
-static FAR uint8_t *dns_parse_name(FAR uint8_t *query)
+static FAR uint8_t *dns_parse_name(FAR uint8_t *query, FAR uint8_t *queryend)
 {
   uint8_t n;
 
-  do
+  while (query < queryend)
     {
       n = *query++;
 
-      while (n > 0)
-        {
-          ++query;
-          --n;
-        }
-    }
-  while (*query != 0);
+      /* Check for a leading or trailing pointer.*/
 
-  return query + 1;
+      if (n & 0xC0)
+        {
+          /* Eat second pointer byte and terminate search */
+
+          ninfo("Compressed answer\n");
+          query++;
+          break;
+        }
+
+      /* Check for final label with zero-length */
+
+      if (!n)
+        {
+          break;
+        }
+
+      /* Eat non-empty label */
+
+      query += n;
+    }
+
+  if (query >= queryend)
+    {
+      /* Always return `queryend` in case of errors */
+
+      nerr("ERROR: DNS response is too short\n");
+      query = queryend;
+    }
+
+  return query;
 }
 
 /****************************************************************************
@@ -240,6 +273,7 @@ static int dns_recv_response(int sd, FAR struct sockaddr *addr,
                              FAR socklen_t *addrlen)
 {
   FAR uint8_t *nameptr;
+  FAR uint8_t *endofbuffer;
   char buffer[RECV_BUFFER_SIZE];
   FAR struct dns_answer_s *ans;
   FAR struct dns_header_s *hdr;
@@ -260,7 +294,16 @@ static int dns_recv_response(int sd, FAR struct sockaddr *addr,
       return errcode;
     }
 
-  hdr = (FAR struct dns_header_s *)buffer;
+  if (ret < 12)
+    {
+      /* DNS header can't fit in received data */
+
+      nerr("ERROR: DNS response is too short\n");
+      return -EILSEQ;
+    }
+
+  hdr         = (FAR struct dns_header_s *)buffer;
+  endofbuffer = (FAR uint8_t*)buffer + ret;
 
   ninfo("ID %d\n", htons(hdr->id));
   ninfo("Query %d\n", hdr->flags1 & DNS_FLAG1_RESPONSE);
@@ -294,7 +337,14 @@ static int dns_recv_response(int sd, FAR struct sockaddr *addr,
 #if defined(CONFIG_DEBUG_NET) && defined(CONFIG_DEBUG_INFO)
   {
     int d = 64;
-    nameptr = dns_parse_name((uint8_t *)buffer + 12) + 4;
+
+    nameptr = dns_parse_name((uint8_t *)buffer + 12, endofbuffer);
+    if (nameptr == endofbuffer)
+      {
+        return -EILSEQ;
+      }
+
+    nameptr += 4;
 
     for (; ; )
       {
@@ -312,26 +362,22 @@ static int dns_recv_response(int sd, FAR struct sockaddr *addr,
   }
 #endif
 
-  nameptr = dns_parse_name((uint8_t *)buffer + 12) + 4;
+  nameptr = dns_parse_name((uint8_t *)buffer + 12, endofbuffer);
+  if (nameptr == endofbuffer)
+    {
+      return -EILSEQ;
+    }
+
+  nameptr += 4;
 
   for (; nanswers > 0; nanswers--)
     {
-      /* The first byte in the answer resource record determines if it
-       * is a compressed record or a normal one.
-       */
+      /* Each answer starts with a name */
 
-      if (*nameptr & 0xc0)
+      nameptr = dns_parse_name(nameptr, endofbuffer);
+      if (nameptr == endofbuffer)
         {
-          /* Compressed name. */
-
-          nameptr += 2;
-          ninfo("Compressed answer\n");
-        }
-      else
-        {
-          /* Not compressed name. */
-
-          nameptr = dns_parse_name(nameptr);
+          return -EILSEQ;
         }
 
       ans = (FAR struct dns_answer_s *)nameptr;
@@ -346,7 +392,8 @@ static int dns_recv_response(int sd, FAR struct sockaddr *addr,
 #ifdef CONFIG_NET_IPv4
       if (ans->type  == HTONS(DNS_RECTYPE_A) &&
           ans->class == HTONS(DNS_CLASS_IN) &&
-          ans->len   == HTONS(4))
+          ans->len   == HTONS(4) &&
+          nameptr + 10 + 4 < endofbuffer)
         {
           ans->u.ipv4.s_addr = *(FAR uint32_t *)(nameptr + 10);
 
@@ -378,7 +425,8 @@ static int dns_recv_response(int sd, FAR struct sockaddr *addr,
 #ifdef CONFIG_NET_IPv6
       if (ans->type  == HTONS(DNS_RECTYPE_AAAA) &&
           ans->class == HTONS(DNS_CLASS_IN) &&
-          ans->len   == HTONS(16))
+          ans->len   == HTONS(16) &&
+          nameptr + 10 + 16 < endofbuffer)
         {
           memcpy(&ans->u.ipv6.s6_addr, nameptr + 10, 16);
 

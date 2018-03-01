@@ -101,7 +101,9 @@ static void ft80x_clear(FAR const struct ft80x_config_s *lower);
 
 static void ft80x_pwrdown(FAR const struct ft80x_config_s *lower,
                           bool pwrdown);
+#ifdef CONFIG_LCD_FT80X_AUDIO_MCUSHUTDOWN
 static void ft80x_audio(FAR const struct ft80x_config_s *lower, bool enable);
+#endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
 static void ft80x_destroy(FAR const struct ft80x_config_s *lower);
 #endif
@@ -131,7 +133,9 @@ static struct viewtool_ft80xlower_s g_ft80xlower =
     .enable         = ft80x_enable,
     .clear          = ft80x_clear,
     .pwrdown        = ft80x_pwrdown,
+#ifdef CONFIG_LCD_FT80X_AUDIO_MCUSHUTDOWN
     .audio          = ft80x_audio,
+#endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
     .destroy        = ft80x_destroy,
 #endif
@@ -202,9 +206,9 @@ static void ft80x_enable(FAR const struct ft80x_config_s *lower,
   flags = enter_critical_section();
   if (enable && priv->handler)
     {
-      /* Configure the EXTI interrupt using the SAVED handler */
+      /* Configure the EXTI interrupt using the saved handler */
 
-      (void)stm32_gpiosetevent(GPIO_LCDTP_IRQ, true, true, true,
+      (void)stm32_gpiosetevent(GPIO_FT80X_INT, true, true, true,
                                priv->handler, priv->arg);
     }
   else
@@ -212,10 +216,10 @@ static void ft80x_enable(FAR const struct ft80x_config_s *lower,
       /* Configure the EXTI interrupt with a NULL handler to disable it.
        *
        * REVISIT:  There is a problem here... interrupts received while
-       * the EXIT is de-configured will not pend but will be lost.
+       * the EXTI is de-configured will not pend but will be lost.
        */
 
-     (void)stm32_gpiosetevent(GPIO_LCDTP_IRQ, false, false, false,
+     (void)stm32_gpiosetevent(GPIO_FT80X_INT, false, false, false,
                               NULL, NULL);
     }
 
@@ -235,10 +239,12 @@ static void ft80x_pwrdown(FAR const struct ft80x_config_s *lower,
   stm32_gpiowrite(GPIO_FT80_PD, !pwrdown);
 }
 
+#ifdef CONFIG_LCD_FT80X_AUDIO_MCUSHUTDOWN
 static void ft80x_audio(FAR const struct ft80x_config_s *lower, bool enable)
 {
   /* Does nothing */
 }
+#endif
 
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
 static void ft80x_destroy(FAR const struct ft80x_config_s *lower)
