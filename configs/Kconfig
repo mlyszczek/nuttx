@@ -20,6 +20,13 @@ config ARCH_BOARD_AMBER
 		on the Atmel AVR ATMega128 MCU.  There is not much there yet and what is
 		there is untested due to tool-related issues.
 
+config ARCH_BOARD_OR1K
+	bool "OpenRISC generic board"
+	depends on ARCH_CHIP_MOR1KX
+	select ARCH_HAVE_LEDS
+	---help---
+		Generic OpenRISC board.
+
 config ARCH_BOARD_ARDUINO_MEGA2560
 	bool "Arduino Mega 2560"
 	depends on ARCH_CHIP_ATMEGA2560
@@ -1691,6 +1698,7 @@ config ARCH_BOARD
 	default "olimex-strp711"           if ARCH_BOARD_OLIMEX_STRP711
 	default "olimexino-stm32"          if ARCH_BOARD_OLIMEXINO_STM32
 	default "open1788"                 if ARCH_BOARD_OPEN1788
+	default "or1k"                     if ARCH_BOARD_OR1K
 	default "p112"                     if ARCH_BOARD_P112
 	default "pcblogic-pic32mx"         if ARCH_BOARD_PCBLOGICPIC32MX
 	default "pcduino-a10"              if ARCH_BOARD_PCDUINO_A10
