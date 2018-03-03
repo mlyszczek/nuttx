@@ -70,15 +70,15 @@
   l.movhi gpr,hi(symbol); \
   l.ori   gpr,gpr,lo(symbol)
 
+/*
 .macro _led_init
   l.movhi r3,hi(LED_BASE);
-  l.ori   r3,r3,0x1;
-  l.addi  r4,r0,-1;
+  l.addi  r4,r0,0x80;
   l.sb    0(r3),r4;
-  l.movhi r3,hi(LED_BASE);
-  l.addi  r4,r0,-128;
-  l.sb    0(r3),r4
+  l.addi  r4,r0,0x80;
+  l.sb    4(r3),r4
 .endm
+*/
 
 /* Disable the programmable interrupt controller */
 
@@ -243,7 +243,7 @@ _reset_vector:
 
   /* Initialize LED GPIO early to get some feedback */
 
-  _led_init;
+  //_led_init;
 
   /* Clear Tick Timer SPR */
 

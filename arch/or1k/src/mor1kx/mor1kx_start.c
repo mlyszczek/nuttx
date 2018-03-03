@@ -119,7 +119,9 @@ void __start(void)
     {
       *dest++ = *src++;
     }
-  
+
+  board_autoled_initialize();  
+
   up_earlyserialinit();
 
   os_start();

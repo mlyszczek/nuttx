@@ -55,7 +55,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define TTMR_MATCH (500000)
+#define TTMR_MATCH (CONFIG_OR1K_CPU_FREQUENCY/100)
 #define TTMR_LOAD (TTMR_MATCH | SPR_TTMR_IE | SPR_TTMR_M)
 
 /****************************************************************************
