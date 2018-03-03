@@ -51,10 +51,10 @@
 
 #define LED_BASE      (0x91000000)
 #define LED_DATA      (LED_BASE)
-#define LED_DIRECTION (LED_BASE+1)
+#define LED_DIRECTION (LED_BASE+4)
 
-static uint8_t *led_data = (uint8_t *)LED_DATA;
-static uint8_t *led_dir  = (uint8_t *)LED_DIRECTION;
+static uint32_t *led_data = (uint32_t *)LED_DATA;
+static uint32_t *led_dir  = (uint32_t *)LED_DIRECTION;
 
 /****************************************************************************
  * Private Functions
@@ -73,8 +73,10 @@ void board_autoled_initialize(void)
 {
   /* Set the or1k GPIO direction register to output */
 
-  *led_dir = 0xff;
-  *led_data = 0x00;
+  /* The Terasic C5G has 18 LEDs on GPIO0[0:17] */
+  
+  *led_dir = 0x3fff;
+  *led_data = 0x0;
 }
 
 /****************************************************************************

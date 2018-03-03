@@ -17,6 +17,9 @@ config OR1K_TOOLCHAIN_GNU_ELF
 endchoice
 
 menu "OpenRISC Options"
+config OR1K_CPU_FREQUENCY
+  int "CPU Clock Frequency"
+  default 50000000
 config OR1K_ICACHE
   bool "Enable Instruction Cache"
   default n
