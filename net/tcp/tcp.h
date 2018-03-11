@@ -205,12 +205,12 @@ struct tcp_conn_s
    * system clock tick.
    */
 
-  systime_t keeplive;     /* Last time that the TCP socket was known to be
+  systime_t  keeplive;    /* Last time that the TCP socket was known to be
                            * alive (ACK or data received) */
-  uint32_t keepidle;      /* Elapsed idle time before probe sent */
-  uint16_t keepintvl;     /* Interval between probes */
-  uint8_t keepcnt;        /* Number of retries before the socket is closed */
-  uint8_t keepretries;    /* Number of retries attempted */
+  uint32_t   keepidle;    /* Elapsed idle time before probe sent */
+  uint16_t   keepintvl;   /* Interval between probes */
+  uint8_t    keepcnt;     /* Number of retries before the socket is closed */
+  uint8_t    keepretries; /* Number of retries attempted */
 #endif
 
   /* Application callbacks:
