@@ -104,7 +104,7 @@ int tcp_setsockopt(FAR struct socket *psock, int option,
    * enabled?
    */
 
-  if (_SO_GETOPT(psock->s_options, SO_KEEPALIVE))
+  if (!_SO_GETOPT(psock->s_options, SO_KEEPALIVE))
     {
       nerr("ERROR: Keep alive not enabled\n");
       return -EINVAL;
