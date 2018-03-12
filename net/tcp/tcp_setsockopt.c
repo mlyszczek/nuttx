@@ -50,6 +50,7 @@
 #include <nuttx/net/net.h>
 #include <nuttx/net/tcp.h>
 
+#include "socket/socket.h"
 #include "tcp/tcp.h"
 
 #ifdef CONFIG_NET_TCP_KEEPALIVE
@@ -91,9 +92,30 @@ int tcp_setsockopt(FAR struct socket *psock, int option,
   DEBUGASSERT(psock != NULL && value != NULL && psock->s_conn != NULL);
   conn = (FAR struct tcp_conn_s *)psock->s_conn;
 
+  /* All of the TCP protocol options apply only for connected, TCP sockets */
+
+  if (psock->s_type != SOCK_STREAM || !_SS_ISCONNECTED(psock->s_flags))
+    {
+      nerr("ERROR: Not connected\n");
+      return -ENOTCONN;
+    }
+
+  /* It makes no sense to set or query these options if SO_KEEPALIVE is not
+   * enabled?
+   */
+
+  if (_SO_GETOPT(psock->s_options, SO_KEEPALIVE))
+    {
+      nerr("ERROR: Keep alive not enabled\n");
+      return -EINVAL;
+    }
+
+  /* Handle the Keep-Alive option */
+
   switch (option)
     {
       case TCP_NODELAY: /* Avoid coalescing of small segments. */
+        nerr("ERROR: TCP_NODELAY not supported\n");
         ret = -ENOSYS;
         break;
 
@@ -108,6 +130,7 @@ int tcp_setsockopt(FAR struct socket *psock, int option,
 
             if (keepidle < 0)
               {
+                nerr("ERROR: TCP_KEEPIDLE value out of range: %d\n", keepidle);
                 ret = -EDOM;
               }
             else
@@ -130,6 +153,7 @@ int tcp_setsockopt(FAR struct socket *psock, int option,
 
             if (keepintvl < 0 || keepintvl > UINT16_MAX)
               {
+                nerr("ERROR: TCP_KEEPINTVL value out of range: %d\n", keepintvl);
                 ret = -EDOM;
               }
             else
@@ -152,6 +176,7 @@ int tcp_setsockopt(FAR struct socket *psock, int option,
 
             if (keepcnt < 0 || keepcnt > UINT8_MAX)
               {
+                nerr("ERROR: TCP_KEEPCNT value out of range: %d\n", keepcnt);
                 return -EDOM;
               }
             else
@@ -164,7 +189,8 @@ int tcp_setsockopt(FAR struct socket *psock, int option,
         break;
 
       default:
-        ret = -EINVAL;
+        nerr("ERROR: Unrecognized TCP option: %d\n", option);
+        ret = -ENOPROTOOPT;
         break;
     }
 

@@ -325,7 +325,7 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
  *     There was insufficient memory available for the operation to complete.
  *   ENOBUFS
  *    Insufficient resources are available in the system to complete the
- *     call.
+ *    call.
  *
  ****************************************************************************/
 
