@@ -1,0 +1,51 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+comment "i.MX RT Configuration Options"
+
+choice
+	prompt "i.MX RT Chip Selection"
+	default ARCH_CHIP_MIMXRT1052DVL6A
+	depends on ARCH_CHIP_IMXRT
+
+config ARCH_CHIP_MIMXRT1051DVL6A
+	bool "MIMXRT1051DVL6A"
+	select ARCH_FAMILY_MXRT105xDVL6A
+
+config ARCH_CHIP_MIMXRT1051CVL5A
+	bool "MIMXRT1051CVL5A"
+	select ARCH_FAMILY_IMIMXRT105xCVL5A
+
+config ARCH_CHIP_MIMXRT1052DVL6A
+	bool "MIMXRT1052DVL6A"
+	select ARCH_FAMILY_MXRT105xDVL6A
+
+config ARCH_CHIP_MIMXRT1052CVL5A
+	bool "MIMXRT1052DVL6A"
+	select ARCH_FAMILY_MIMXRT1052CVL5A
+
+endchoice # i.MX RT Chip Selection
+
+# i.MX RT Families
+
+config ARCH_FAMILY_MXRT105xDVL6A
+	bool
+	default n
+	select ARCH_FAMILY_IMXRT105x
+	---help---
+		i.MX RT1050 Crossover Processors for Consumer Products
+
+config ARCH_FAMILY_MIMXRT1052CVL5A
+	bool
+	default n
+	select ARCH_FAMILY_IMXRT105x
+	---help---
+		i.MX RT1050 Crossover Processors for Industrial Products
+
+config ARCH_FAMILY_IMXRT105x
+	bool
+	default n
+
+# Peripheral support
