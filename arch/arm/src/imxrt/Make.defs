@@ -86,7 +86,7 @@ endif
 # Required i.MX RT files
 
 CHIP_ASRCS  =
-CHIP_CSRCS  =
+CHIP_CSRCS  = imxrt_clrpend.c
 
 # Configuration-dependent i.MX RT files
 
