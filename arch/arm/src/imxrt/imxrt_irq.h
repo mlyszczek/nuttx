@@ -1,7 +1,7 @@
 /****************************************************************************
- * arch/arm/src/lpc54xx/lpc54_irq.h
+ * arch/arm/src/imxrt/imxrt_irq.h
  *
- *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,8 +33,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_LPC54XX_LPC54_IRQ_H
-#define __ARCH_ARM_SRC_LPC54XX_LPC54_IRQ_H
+#ifndef __ARCH_ARM_SRC_IMXRT_IMXRT_IRQ_H
+#define __ARCH_ARM_SRC_IMXRT_IMXRT_IRQ_H
 
 /****************************************************************************
  * Included Files
@@ -47,7 +47,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: lpc54_clrpend
+ * Name: imxrt_clrpend
  *
  * Description:
  *   Clear a pending interrupt at the NVIC.  This does not seem to be
@@ -55,6 +55,6 @@
  *
  ****************************************************************************/
 
-void lpc54_clrpend(int irq);
+void imxrt_clrpend(int irq);
 
-#endif /* __ARCH_ARM_SRC_LPC54XX_LPC54_IRQ_H */
+#endif /* __ARCH_ARM_SRC_IMXRT_IMXRT_IRQ_H */
