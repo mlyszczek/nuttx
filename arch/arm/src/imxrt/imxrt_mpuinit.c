@@ -1,7 +1,7 @@
 /****************************************************************************
- * arch/arm/src/samv7/sam_mpuinit.c
+ * arch/arm/src/imxrt/imxrt_mpuinit.c
  *
- *   Copyright (C) 2011, 2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,9 +45,9 @@
 
 #include "mpu.h"
 #include "cache.h"
-#include "chip/sam_memorymap.h"
+#include "chip/imxrt_memorymap.h"
 
-#include "sam_mpuinit.h"
+#include "imxrt_mpuinit.h"
 
 #ifdef CONFIG_ARM_MPU
 
@@ -64,19 +64,11 @@
 #endif
 
 /****************************************************************************
- * Private Data
- ****************************************************************************/
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: sam_mpu_initialize
+ * Name: imxrt_mpu_initialize
  *
  * Description:
  *   Configure the MPU to permit user-space access to only restricted SAM3/4
@@ -84,7 +76,7 @@
  *
  ****************************************************************************/
 
-void sam_mpu_initialize(void)
+void imxrt_mpu_initialize(void)
 {
 #ifdef CONFIG_BUILD_PROTECTED
   uintptr_t datastart;
@@ -130,7 +122,7 @@ void sam_mpu_initialize(void)
 }
 
 /****************************************************************************
- * Name: sam_mpu_uheap
+ * Name: imxrt_mpu_uheap
  *
  * Description:
  *  Map the user-heap region.
@@ -140,11 +132,10 @@ void sam_mpu_initialize(void)
  ****************************************************************************/
 
 #ifdef CONFIG_BUILD_PROTECTED
-void sam_mpu_uheap(uintptr_t start, size_t size)
+void imxrt_mpu_uheap(uintptr_t start, size_t size)
 {
   mpu_user_intsram(start, size);
 }
 #endif
 
 #endif /* CONFIG_ARM_MPU */
-

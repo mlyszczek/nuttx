@@ -1,7 +1,7 @@
 /****************************************************************************
- * arch/arm/src/samv7/sam_mpuinit.c
+ * arch/arm/src/imxrt/imxrt_mpuinit.h
  *
- *   Copyright (C) 2011, 2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,118 +33,74 @@
  *
  ****************************************************************************/
 
+#ifndef __ARCH_ARM_SRC_IMXRT_IMXRT_MPUINIT_H
+#define __ARCH_ARM_SRC_IMXRT_IMXRT_MPUINIT_H
+
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <nuttx/config.h>
 
-#include <assert.h>
-
-#include <nuttx/userspace.h>
-
-#include "mpu.h"
-#include "cache.h"
-#include "chip/sam_memorymap.h"
-
-#include "sam_mpuinit.h"
-
-#ifdef CONFIG_ARM_MPU
+#include <sys/types.h>
+#include <stdint.h>
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Inline Functions
  ****************************************************************************/
 
-#ifndef MAX
-#  define MAX(a,b) a > b ? a : b
+#ifndef __ASSEMBLY__
+
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+#undef EXTERN
+#if defined(__cplusplus)
+#define EXTERN extern "C"
+extern "C"
+{
+#else
+#define EXTERN extern
 #endif
 
-#ifndef MIN
-#  define MIN(a,b) a < b ? a : b
-#endif
-
 /****************************************************************************
- * Private Data
+ * Public Function Prototypes
  ****************************************************************************/
 
 /****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: sam_mpu_initialize
+ * Name: imxrt_mpu_initialize
  *
  * Description:
- *   Configure the MPU to permit user-space access to only restricted SAM3/4
+ *   Configure the MPU to permit user-space access to only unrestricted SAMV7
  *   resources.
  *
  ****************************************************************************/
 
-void sam_mpu_initialize(void)
-{
-#ifdef CONFIG_BUILD_PROTECTED
-  uintptr_t datastart;
-  uintptr_t dataend;
+#ifdef CONFIG_ARM_MPU
+void imxrt_mpu_initialize(void);
+#else
+#  define imxrt_mpu_initialize()
 #endif
-
-  /* Show MPU information */
-
-  mpu_showtype();
-
-#ifdef CONFIG_ARMV7M_DCACHE
-  /* Memory barrier */
-
-  ARM_DMB();
-
-#ifdef CONFIG_SAMV7_QSPI
-  /* Make QSPI memory region strongly ordered */
-
-  mpu_priv_stronglyordered(SAM_QSPIMEM_BASE, SAM_QSPIMEM_SIZE);
-
-#endif
-#endif
-
-#ifdef CONFIG_BUILD_PROTECTED
-  /* Configure user flash and SRAM space */
-
-  DEBUGASSERT(USERSPACE->us_textend >= USERSPACE->us_textstart);
-
-  mpu_user_flash(USERSPACE->us_textstart,
-                 USERSPACE->us_textend - USERSPACE->us_textstart);
-
-  datastart = MIN(USERSPACE->us_datastart, USERSPACE->us_bssstart);
-  dataend   = MAX(USERSPACE->us_dataend,   USERSPACE->us_bssend);
-
-  DEBUGASSERT(dataend >= datastart);
-
-  mpu_user_intsram(datastart, dataend - datastart);
-#endif
-
-  /* Then enable the MPU */
-
-  mpu_control(true, false, true);
-}
 
 /****************************************************************************
- * Name: sam_mpu_uheap
+ * Name: imxrt_mpu_uheap
  *
  * Description:
- *  Map the user-heap region.
- *
- *  This logic may need an extension to handle external SDRAM).
+ *  Map the user heap region.
  *
  ****************************************************************************/
 
 #ifdef CONFIG_BUILD_PROTECTED
-void sam_mpu_uheap(uintptr_t start, size_t size)
-{
-  mpu_user_intsram(start, size);
+void imxrt_mpu_uheap(uintptr_t start, size_t size);
+#else
+#  define imxrt_mpu_uheap(start,size)
+#endif
+
+#undef EXTERN
+#if defined(__cplusplus)
 }
 #endif
 
-#endif /* CONFIG_ARM_MPU */
-
+#endif /* __ASSEMBLY__ */
+#endif /* __ARCH_ARM_SRC_IMXRT_IMXRT_MPUINIT_H */

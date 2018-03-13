@@ -82,3 +82,10 @@ endif
 CHIP_ASRCS  =
 CHIP_CSRCS  =
 
+ifeq ($(CONFIG_ARM_MPU),y)
+CHIP_CSRCS += imxrt_mpuinit.c
+ifeq ($(CONFIG_BUILD_PROTECTED),y)
+CHIP_CSRCS += imxrt_userspace.c
+endif
+endif
+
