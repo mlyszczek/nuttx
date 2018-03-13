@@ -77,7 +77,7 @@
 
 #define IMXRT_IRQ_EXTINT        (16) /* Vector number of the first external interrupt */
 
-#if defined(ARCH_FAMILY_IMXRT105x)
+#if defined(CONFIG_ARCH_FAMILY_IMXRT105x)
 #  include <arch/imxrt/imxrt105x_irq.h>
 #else
 #  error Unrecognized i.MX RT architecture
