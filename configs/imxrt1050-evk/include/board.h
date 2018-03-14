@@ -50,6 +50,52 @@
 /* FLASH wait states. */
 
 /* LED definitions ******************************************************************/
+/* There are four LED status indicators located on the EVK Board.  The functions of
+ * these LEDs include:
+ *
+ *   - Main Power Supply(D3)
+ *     Green: DC 5V main supply is normal.
+ *     Red:   J2 input voltage is over 5.6V.
+ *     Off:   The board is not powered.
+ *   - Reset RED LED(D15)
+ *   - OpenSDA LED(D16)
+ *   - USER LED(D18)
+ *
+ * Only a single LED, D18, is under software control.
+ */
+
+/* LED index values for use with board_userled() */
+
+#define BOARD_USERLED     0
+#define BOARD_NLEDS       1
+
+/* LED bits for use with board_userled_all() */
+
+#define BOARD_USERLED_BIT (1 << BOARD_USERLED)
+
+/* This LED is not used by the board port unless CONFIG_ARCH_LEDS is
+ * defined.  In that case, the usage by the board port is defined in
+ * include/board.h and src/sam_autoleds.c. The LED is used to encode
+ * OS-related events as follows:
+ *
+ *   -------------------- ----------------------------- ------
+ *   SYMBOL                   Meaning                   LED
+ *   -------------------- ----------------------------- ------ */
+
+#define LED_STARTED       0  /* NuttX has been started  OFF    */
+#define LED_HEAPALLOCATE  0  /* Heap has been allocated OFF    */
+#define LED_IRQSENABLED   0  /* Interrupts enabled      OFF    */
+#define LED_STACKCREATED  1  /* Idle stack created      ON     */
+#define LED_INIRQ         2  /* In an interrupt         N/C    */
+#define LED_SIGNAL        2  /* In a signal handler     N/C    */
+#define LED_ASSERTION     2  /* An assertion failed     N/C    */
+#define LED_PANIC         3  /* The system has crashed  FLASH  */
+#undef  LED_IDLE             /* Not used                       */
+
+/* Thus if the LED is statically on, NuttX has successfully  booted and is,
+ * apparently, running normally.  If the LED is flashing at approximately
+ * 2Hz, then a fatal error has been detected and the system has halted.
+ */
 
 /* Button definitions ***************************************************************/
 

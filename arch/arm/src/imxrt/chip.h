@@ -1,5 +1,5 @@
 /************************************************************************************
- * configs/imxrt1050-evk/src/imxrt1050-evk.h
+ * arch/arm/src/imxrt/chip.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -33,8 +33,8 @@
  *
  ************************************************************************************/
 
-#ifndef __CONFIGS_IMXRT1050_EVK_SRC_IMXRT1050_EVK_H
-#define __CONFIGS_IMXRT1050_EVK_SRC_IMXRT1050_EVK_H
+#ifndef __ARCH_ARM_SRC_IMXRT_CHIP_H
+#define __ARCH_ARM_SRC_IMXRT_CHIP_H
 
 /************************************************************************************
  * Included Files
@@ -42,74 +42,40 @@
 
 #include <nuttx/config.h>
 
-#include <stdint.h>
-#include <stdbool.h>
+/* Include the memory map and the chip definitions file.  Other chip hardware files
+ * should then include this file for the proper setup.
+ */
 
 #include <arch/irq.h>
-#include <nuttx/irq.h>
+#include <arch/imxrt/chip.h>
+#include "chip/imxrt_memorymap.h"
+
+/* If the common ARMv7-M vector handling logic is used, then it expects the following
+ * definition in this file that provides the number of supported vectors external
+ * interrupts.
+ */
+
+#define ARMV7M_PERIPHERAL_INTERRUPTS IMXRT_IRQ_NEXTINT
+
+/* Cache line sizes (in bytes)for the SAMV71 */
+
+#define ARMV7M_DCACHE_LINESIZE 32  /* 32 bytes (8 words) */
+#define ARMV7M_ICACHE_LINESIZE 32  /* 32 bytes (8 words) */
 
 /************************************************************************************
  * Pre-processor Definitions
  ************************************************************************************/
-/* Configuration ********************************************************************/
-
-/* i.MX RT 1050 GPIO Pin Definitions ************************************************/
 
 /************************************************************************************
  * Public Types
  ************************************************************************************/
 
 /************************************************************************************
- * Public data
+ * Public Data
  ************************************************************************************/
-
-#ifndef __ASSEMBLY__
 
 /************************************************************************************
  * Public Functions
  ************************************************************************************/
 
-/************************************************************************************
- * Name: imxrt_bringup
- *
- * Description:
- *   Bring up board features
- *
- ************************************************************************************/
-
-#if defined(CONFIG_LIB_BOARDCTL) || defined(CONFIG_BOARD_INITIALIZE)
-int imxrt_bringup(void);
-#endif
-
-/****************************************************************************
- * Name: imxrt_autoled_initialize
- *
- * Description:
- *   Initialize NuttX-controlled LED logic
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-#ifdef CONFIG_ARCH_LEDS
-void imxrt_autoled_initialize(void);
-#endif
-
-/************************************************************************************
- * Name: imxrt_spidev_initialize
- *
- * Description:
- *   Called to configure SPI chip select GPIO pins for the SAMV71-XULT board.
- *
- ************************************************************************************/
-
-#ifdef CONFIG_IMXRT_HAVE_SPI
-void imxrt_spidev_initialize(void);
-#endif
-
-#endif /* __ASSEMBLY__ */
-#endif /* __CONFIGS_IMXRT1050_EVK_SRC_IMXRT1050_EVK_H */
+#endif /* __ARCH_ARM_SRC_IMXRT_CHIP_H */

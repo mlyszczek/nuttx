@@ -40,7 +40,7 @@ include ${TOPDIR}/arch/arm/src/armv7-m/Toolchain.defs
 ifeq ($(CONFIG_ARMV7M_DTCM),y)
   LDSCRIPT = flash-dtcm.ld
 else
-  LDSCRIPT = flash-sram.ld
+  LDSCRIPT = flash-ocram.ld
 endif
 
 ifeq ($(WINTOOL),y)

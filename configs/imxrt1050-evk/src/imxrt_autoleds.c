@@ -52,6 +52,16 @@
 
 /****************************************************************************
  * Name: imxrt_autoled_initialize
+ *
+ * Description:
+ *   Initialize NuttX-controlled LED logic
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
  ****************************************************************************/
 
 void imxrt_autoled_initialize(void)
@@ -62,6 +72,17 @@ void imxrt_autoled_initialize(void)
 
 /****************************************************************************
  * Name: board_autoled_on
+ *
+ * Description:
+ *   Turn on the "logical" LED state
+ *
+ * Input Parameters:
+ *   led - Identifies the "logical" LED state (see definitions in
+ *         include/board.h)
+ *
+ * Returned Value:
+ *   None
+ *
  ****************************************************************************/
 
 void board_autoled_on(int led)
@@ -71,6 +92,17 @@ void board_autoled_on(int led)
 
 /****************************************************************************
  * Name: board_autoled_off
+ *
+ * Description:
+ *   Turn off the "logical" LED state
+ *
+ * Input Parameters:
+ *   led - Identifies the "logical" LED state (see definitions in
+ *         include/board.h)
+ *
+ * Returned Value:
+ *   None
+ *
  ****************************************************************************/
 
 void board_autoled_off(int led)

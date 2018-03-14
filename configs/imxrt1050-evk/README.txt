@@ -33,32 +33,90 @@ README
       - CAN transceivers
       - Arduino® interface
 
+Contents
+========
+
+  o Serial Console
+  o LEDs and buttons
+  o Configurations
+    - Configuration sub-directories
+
+Serial Console
+==============
+
+  To be provided.
+
+LEDs and buttons
+================
+
+  LEDs
+  ----
+
+  There are four LED status indicators located on the EVK Board.  The
+  functions of these LEDs include:
+
+    - Main Power Supply(D3)
+      Green: DC 5V main supply is normal.
+      Red:   J2 input voltage is over 5.6V.
+      Off:   The board is not powered.
+    - Reset RED LED(D15)
+    - OpenSDA LED(D16)
+    - USER LED(D18)
+
+  Only a single LED, D18, is under software control.
+
+  This LED is not used by the board port unless CONFIG_ARCH_LEDS is
+  defined.  In that case, the usage by the board port is defined in
+  include/board.h and src/sam_autoleds.c. The LED is used to encode
+  OS-related events as follows:
+
+    ------------------- ----------------------- ------
+    SYMBOL              Meaning                 LED
+    ------------------- ----------------------- ------
+    LED_STARTED         NuttX has been started  OFF
+    LED_HEAPALLOCATE    Heap has been allocated OFF
+    LED_IRQSENABLED     Interrupts enabled      OFF
+    LED_STACKCREATED    Idle stack created      ON
+    LED_INIRQ           In an interrupt         N/C
+    LED_SIGNAL          In a signal handler     N/C
+    LED_ASSERTION       An assertion failed     N/C
+    LED_PANIC           The system has crashed  FLASH
+
+  Thus if the LED is statically on, NuttX has successfully  booted and is,
+  apparently, running normally.  If the LED is flashing at approximately
+  2Hz, then a fatal error has been detected and the system has halted.
+
+  Buttons
+  -------
+
+  To be provided.
+
 Configurations
 ==============
 
-Information Common to All Configurations
-----------------------------------------
-Each i.MX RT 10050 configuration is maintained in a sub-directory and
-can be selected as follow:
+  Information Common to All Configurations
+  ----------------------------------------
+  Each i.MX RT 10050 configuration is maintained in a sub-directory and
+  can be selected as follow:
 
-   tools/configure.sh [OPTIONS] imxrt1050-evk/<subdir>
+    tools/configure.sh [OPTIONS] imxrt1050-evk/<subdir>
 
-Where typical options are -l to configure to build on Linux or -c to
-configure for Cygwin under Linux.  'tools/configure.sh -h' will show
-you all of the options.
+  Where typical options are -l to configure to build on Linux or -c to
+  configure for Cygwin under Linux.  'tools/configure.sh -h' will show
+  you all of the options.
 
-Before building, make sure the PATH environment variable include the
-correct path to the directory than holds your toolchain binaries.
+  Before building, make sure the PATH environment variable include the
+  correct path to the directory than holds your toolchain binaries.
 
-And then build NuttX by simply typing the following.  At the conclusion of
-the make, the nuttx binary will reside in an ELF file called, simply, nuttx.
+  And then build NuttX by simply typing the following.  At the conclusion of
+  the make, the nuttx binary will reside in an ELF file called, simply, nuttx.
 
-  make
+    make
 
-The <subdir> that is provided above as an argument to the tools/configure.sh
-must be is one of the following.
+  The <subdir> that is provided above as an argument to the tools/configure.sh
+  must be is one of the following.
 
-NOTES:
+  NOTES:
 
   1. These configurations use the mconf-based configuration tool.  To
     change any of these configurations using that tool, you should:

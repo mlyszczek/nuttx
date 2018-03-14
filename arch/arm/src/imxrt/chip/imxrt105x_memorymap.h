@@ -65,7 +65,7 @@
                                /* 0x20400000     252MB Reserved */
                                /* 0x30000000     256MB Reserved */
 #define IMXRT_AIPS1_BASE          0x40000000  /* 1MB AIPS-1 */
-#define IMXRT_AIPS3_BASE          0x40100000  /* 1MB AIPS-2 */
+#define IMXRT_AIPS2_BASE          0x40100000  /* 1MB AIPS-2 */
 #define IMXRT_AIPS3_BASE          0x40200000  /* 1MB AIPS-3 */
 #define IMXRT_AIPS4_BASE          0x40300000  /* 1MB AIPS-4 */
                                /* 40400000       12MB Reserved */
@@ -84,7 +84,7 @@
 #define IMXRT_FLEXCIPHER_BASE     0x60000000  /* 504MB FlexSPI/ FlexSPI ciphertext */
 #define IMXRT_FLEXSPITX_BASE      0x7f800000  /* 4MB FlexSPI TX FIFO */
 #define IMXRT_FLEXSPIRX_BASE      0x7fc00000  /* 4MB FlexSPI RX FIFO */
-#define IMXRT_SEMC_BASE           0x80000000  /* 1.5GB SEMC external memories shared memory space */
+#define IMXRT_EXTMEM_BASE         0x80000000  /* 1.5GB SEMC external memories shared memory space */
 #define IMXRT_CM7_BASE            0xe0000000  /* 1MB CM7 PPB */
                                /* 0xe0100000     511MB Reserved */
 
@@ -131,7 +131,7 @@
                                /* 0x40100000     256KB Reserved */
                                /* 0x40140000     240KB Reserved */
 #define IMXRT_AIPS2CNF_BASE       0x4017c000  /* 116KB AIPS-2 Configuration */
-#define IMXRT_ROMCP_BASE          0x40180000  /* 116KB ROMCP */
+#define IMXRT_ROMCPC_BASE         0x40180000  /* 116KB ROMCP controller*/
 #define IMXRT_LPUART1_BASE        0x40184000  /* 116KB LPUART1 */
 #define IMXRT_LPUART2_BASE        0x40188000  /* 116KB LPUART2 */
 #define IMXRT_LPUART3_BASE        0x4018c000  /* 116KB LPUART3 */
@@ -179,7 +179,7 @@
                                /* 0x4029c000     16KB Reserved */
                                /* 0x402a0000     16KB Reserved */
                                /* 0x402a4000     16KB Reserved */
-#define IMXRT_FLEXSPI_BASE        0x402a8000  /* 16KB FlexSPI */
+#define IMXRT_FLEXSPIC_BASE       0x402a8000  /* 16KB FlexSPI controller */
                                /* 0x402ac000     16KB Reserved */
                                /* 0x402b0000     16KB Reserved */
 #define IMXRT_PXP_BASE            0x402b4000  /* 16KB PXP */
