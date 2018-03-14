@@ -63,7 +63,8 @@ LEDs and buttons
     - OpenSDA LED(D16)
     - USER LED(D18)
 
-  Only a single LED, D18, is under software control.
+  Only a single LED, D18, is under software control.  It connects to
+  GPIO_AD_B0_09 which is shared with JTAG_TDI and ENET_RST
 
   This LED is not used by the board port unless CONFIG_ARCH_LEDS is
   defined.  In that case, the usage by the board port is defined in
@@ -89,7 +90,15 @@ LEDs and buttons
   Buttons
   -------
 
-  To be provided.
+  There are four user interface switches on the MIMXRT1050 EVK Board:
+
+    - SW1: Power Switch (slide switch)
+    - SW2: ON/OFF Button
+    - SW3: Reset button
+    - SW8: User button
+
+  Only the user button is available to the software.  It is sensed on the
+  WAKEUP pin which will be pulled low when the button is pressed.
 
 Configurations
 ==============
