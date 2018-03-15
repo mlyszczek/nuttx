@@ -46,6 +46,9 @@ Serial Console
 
   To be provided.
 
+  GPIO_AD_B0_12 LPUART1_TX UART Console
+  GPIO_AD_B0_13 LPUART1_RX UART Console
+
 LEDs and buttons
 ================
 
