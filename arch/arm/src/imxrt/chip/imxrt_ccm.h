@@ -86,7 +86,6 @@
                                  /* 0x0084  Reserved */
 #define IMXRT_CCM_CMEOR_OFFSET      0x0088  /* CCM Module Enable Overide Register */
 
-
 /* Register addresses ***************************************************************/
 
 #define IMXRT_CCM_CCR               (IMXRT_CCM_BASE+IMXRT_CCM_CCR_OFFSET)
@@ -118,8 +117,7 @@
 #define IMXRT_CCM_CCGR6             (IMXRT_CCM_BASE+IMXRT_CCM_CCGR6_OFFSET)
 #define IMXRT_CCM_CMEOR             (IMXRT_CCM_BASE+IMXRT_CCM_CMEOR_OFFSET)
 
-
 /* Register bit definitions *********************************************************/
 
-
 #endif /* __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT_CCM_H */
+

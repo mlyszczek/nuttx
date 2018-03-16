@@ -140,3 +140,4 @@
 #define RTWDOG_REFRESH_KEY          (0xb480a602)
 
 #endif /* __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT_WDOG_H */
+
