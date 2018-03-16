@@ -38,6 +38,11 @@
 #define LZF_VERSION 0x0105 /* 1.5, API version */
 #define HLOG        CONFIG_LIBC_LZF_HLOG
 
+#define LZF_TYPE0_HDR_SIZE 5
+#define LZF_TYPE1_HDR_SIZE 7
+#define LZF_MAX_HDR_SIZE   7
+#define LZF_MIN_HDR_SIZE   5
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -50,54 +55,67 @@
   typedef const uint8_t *lzf_hslot_t;
 #endif
 
-typedef lzf_hslot_t LZF_STATE[1 << HLOG];
+typedef lzf_hslot_t lzf_state_t[1 << HLOG];
 
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
-/* Compress in_len bytes stored at the memory block starting at
- * in_data and write the result to out_data, up to a maximum length
- * of out_len bytes.
+/****************************************************************************
+ * Name: lzf_compress
  *
- * If the output buffer is not large enough or any error occurs return 0,
- * otherwise return the number of bytes used, which might be considerably
- * more than in_len (but less than 104% of the original size), so it
- * makes sense to always use out_len == in_len - 1), to ensure _some_
- * compression, and store the data uncompressed otherwise (with a flag, of
- * course.
+ * Description:
+ * Compress in_len bytes stored at the memory block starting at
+ *   in_data and write the result to out_data, up to a maximum length
+ *   of out_len bytes.
  *
- * lzf_compress might use different algorithms on different systems and
- * even different runs, thus might result in different compressed strings
- * depending on the phase of the moon or similar factors. However, all
- * these strings are architecture-independent and will result in the
- * original data when decompressed using lzf_decompress.
+ *   If the output buffer is not large enough or any error occurs return 0,
+ *   otherwise return the number of bytes used, which might be considerably
+ *   more than in_len (but less than 104% of the original size), so it
+ *   makes sense to always use out_len == in_len - 1), to ensure _some_
+ *   compression, and store the data uncompressed otherwise (with a flag, of
+ *   course.
  *
- * The buffers must not be overlapping.
+ *   lzf_compress might use different algorithms on different systems and
+ *   even different runs, thus might result in different compressed strings
+ *   depending on the phase of the moon or similar factors. However, all
+ *   these strings are architecture-independent and will result in the
+ *   original data when decompressed using lzf_decompress.
  *
- * If the option LZF_STATE_ARG is enabled, an extra argument must be
- * supplied which is not reflected in this header file. Refer to lzfP.h
- * and lzf_c.c.
- */
+ *   The buffers must not be overlapping.
+ *
+ *   Compressed format:
+ *
+ *     000LLLLL <L+1>    ; literal, L+1=1..33 octets
+ *     LLLooooo oooooooo ; backref L+1=1..7 octets, o+1=1..4096 offset
+ *     111ooooo LLLLLLLL oooooooo ; backref L+8 octets, o+1=1..4096 offset
+ *
+ ****************************************************************************/
 
-unsigned int lzf_compress(FAR const void *const in_data,
-                          unsigned int in_len, FAR void *out_data,
-                          unsigned int out_len);
+size_t lzf_compress(FAR const void *const in_data,
+                    unsigned int in_len, FAR void *out_data,
+                    unsigned int out_len, lzf_state_t htab,
+                    FAR uint8_t **reshdr);
 
-/* Decompress data compressed with some version of the lzf_compress
- * function and stored at location in_data and length in_len. The result
- * will be stored at out_data up to a maximum of out_len characters.
+/****************************************************************************
+ * Name: lzf_decompress
  *
- * If the output buffer is not large enough to hold the decompressed
- * data, a 0 is returned and errno is set to E2BIG. Otherwise the number
- * of decompressed bytes (i.e. the original length of the data) is
- * returned.
+ * Description:
+ *   Decompress data compressed with some version of the lzf_compress
+ *   function and stored at location in_data and length in_len. The result
+ *   will be stored at out_data up to a maximum of out_len characters.
  *
- * If an error in the compressed data is detected, a zero is returned and
- * errno is set to EINVAL.
+ *   If the output buffer is not large enough to hold the decompressed
+ *   data, a 0 is returned and errno is set to E2BIG. Otherwise the number
+ *   of decompressed bytes (i.e. the original length of the data) is
+ *   returned.
  *
- * This function is very fast, about as fast as a copying loop.
- */
+ *   If an error in the compressed data is detected, a zero is returned and
+ *   errno is set to EINVAL.
+ *
+ *   This function is very fast, about as fast as a copying loop.
+ *
+ ****************************************************************************/
 
 unsigned int lzf_decompress(FAR const void *const in_data,
                             unsigned int in_len, FAR void *out_data,
