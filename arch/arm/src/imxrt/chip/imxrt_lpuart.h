@@ -408,4 +408,3 @@
                                                  /* Bits 27-31:  Reserved */
 
 #endif /* __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT_LPUART_H */
-
