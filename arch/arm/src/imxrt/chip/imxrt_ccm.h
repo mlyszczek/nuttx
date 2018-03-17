@@ -120,4 +120,3 @@
 /* Register bit definitions *********************************************************/
 
 #endif /* __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT_CCM_H */
-
