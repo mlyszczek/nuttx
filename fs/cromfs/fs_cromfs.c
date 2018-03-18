@@ -101,45 +101,45 @@ struct cromfs_comparenode_s
 
 static FAR void *cromfs_offset2addr(FAR const struct cromfs_volume_s *fs,
                                     size_t offset);
-static size_t  cromfs_addr2offset(FAR const struct cromfs_volume_s *fs,
-                                  FAR const void *addr);
-static int     cromfs_foreach_node(FAR const struct cromfs_volume_s *fs,
-                                   cromfs_foreach_t callback, FAR void *arg);
+static size_t   cromfs_addr2offset(FAR const struct cromfs_volume_s *fs,
+                                   FAR const void *addr);
+static int      cromfs_foreach_node(FAR const struct cromfs_volume_s *fs,
+                                    cromfs_foreach_t callback, FAR void *arg);
 static uint16_t cromfs_seglen(FAR const char *relpath);
-static int     cromfs_comparenode(FAR const struct cromfs_volume_s *fs,
-                                  FAR const struct cromfs_node_s *node,
-                                  FAR void *arg);
-static int     cromfs_findnode(FAR const struct cromfs_volume_s *fs,
-                               FAR const struct cromfs_node_s **node,
-                               FAR const char *relpath);
+static int      cromfs_comparenode(FAR const struct cromfs_volume_s *fs,
+                                   FAR const struct cromfs_node_s *node,
+                                   FAR void *arg);
+static int      cromfs_findnode(FAR const struct cromfs_volume_s *fs,
+                                FAR const struct cromfs_node_s **node,
+                                FAR const char *relpath);
 
 /* Common file system methods */
 
-static int     cromfs_open(FAR struct file *filep, const char *relpath,
-                           int oflags, mode_t mode);
-static int     cromfs_close(FAR struct file *filep);
-static ssize_t cromfs_read(FAR struct file *filep, char *buffer, size_t buflen);
-static int     cromfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
+static int      cromfs_open(FAR struct file *filep, const char *relpath,
+                            int oflags, mode_t mode);
+static int      cromfs_close(FAR struct file *filep);
+static ssize_t  cromfs_read(FAR struct file *filep, char *buffer, size_t buflen);
+static int      cromfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
 
-static int     cromfs_dup(FAR const struct file *oldp, FAR struct file *newp);
-static int     cromfs_fstat(FAR const struct file *filep, FAR struct stat *buf);
+static int      cromfs_dup(FAR const struct file *oldp, FAR struct file *newp);
+static int      cromfs_fstat(FAR const struct file *filep, FAR struct stat *buf);
 
-static int     cromfs_opendir(struct inode *mountpt, const char *relpath,
-                              struct fs_dirent_s *dir);
-static int     cromfs_readdir(FAR struct inode *mountpt,
-                              FAR struct fs_dirent_s *dir);
-static int     cromfs_rewinddir(FAR struct inode *mountpt,
-                                FAR struct fs_dirent_s *dir);
+static int      cromfs_opendir(struct inode *mountpt, const char *relpath,
+                               struct fs_dirent_s *dir);
+static int      cromfs_readdir(FAR struct inode *mountpt,
+                               FAR struct fs_dirent_s *dir);
+static int      cromfs_rewinddir(FAR struct inode *mountpt,
+                                 FAR struct fs_dirent_s *dir);
 
-static int     cromfs_bind(FAR struct inode *blkdriver, FAR const void *data,
-                           FAR void **handle);
-static int     cromfs_unbind(FAR void *handle, FAR struct inode **blkdriver,
-                             unsigned int flags);
-static int     cromfs_statfs(FAR struct inode *mountpt,
-                             FAR struct statfs *buf);
+static int      cromfs_bind(FAR struct inode *blkdriver, FAR const void *data,
+                            FAR void **handle);
+static int      cromfs_unbind(FAR void *handle, FAR struct inode **blkdriver,
+                              unsigned int flags);
+static int      cromfs_statfs(FAR struct inode *mountpt,
+                              FAR struct statfs *buf);
 
-static int     cromfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
-                           FAR struct stat *buf);
+static int      cromfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
+                            FAR struct stat *buf);
 
 /****************************************************************************
  * Public Data
