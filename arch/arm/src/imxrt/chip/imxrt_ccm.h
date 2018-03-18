@@ -52,36 +52,36 @@
 #define IMXRT_CCM_CCR_OFFSET        0x0000  /* CCM Control Register */
                                  /* 0x0004  Reserved */
 #define IMXRT_CCM_CSR_OFFSET        0x0008  /* CCM Status Register */
-#define IMXRT_CCM_CCSR_OFFSET       0x000C  /* CCM Clock Switcher Register */
+#define IMXRT_CCM_CCSR_OFFSET       0x000c  /* CCM Clock Switcher Register */
 #define IMXRT_CCM_CACRR_OFFSET      0x0010  /* CCM Arm Clock Root Register */
 #define IMXRT_CCM_CBCDR_OFFSET      0x0014  /* CCM Bus Clock Divider Register */
 #define IMXRT_CCM_CBCMR_OFFSET      0x0018  /* CCM Bus Clock Multiplexer Register */
-#define IMXRT_CCM_CSCMR1_OFFSET     0x001C  /* CCM Serial Clock Multiplexer Register 1 */
+#define IMXRT_CCM_CSCMR1_OFFSET     0x001c  /* CCM Serial Clock Multiplexer Register 1 */
 #define IMXRT_CCM_CSCMR2_OFFSET     0x0020  /* CCM Serial Clock Multiplexer Register 2 */
 #define IMXRT_CCM_CSCDR1_OFFSET     0x0024  /* CCM Serial Clock Divider Register 1 */
 #define IMXRT_CCM_CS1CDR_OFFSET     0x0028  /* CCM Clock Divider Register */
-#define IMXRT_CCM_CS2CDR_OFFSET     0x002C  /* CCM Clock Divider Register */
+#define IMXRT_CCM_CS2CDR_OFFSET     0x002c  /* CCM Clock Divider Register */
 #define IMXRT_CCM_CDCDR_OFFSET      0x0030  /* CCM D1 Clock Divider Register */
                                  /* 0x0034  Reserved */
 #define IMXRT_CCM_CSCDR2_OFFSET     0x0038  /* CCM Serial Clock Divider Register 2 */
-#define IMXRT_CCM_CSCDR3_OFFSET     0x003C  /* CCM Serial Clock Divider Register 3 */
+#define IMXRT_CCM_CSCDR3_OFFSET     0x003c  /* CCM Serial Clock Divider Register 3 */
                                  /* 0x0040  Reserved */
                                  /* 0x0044  Reserved */
 #define IMXRT_CCM_CDHIPR_OFFSET     0x0048  /* CCM Divider Handshake In-Process Register */
-                                 /* 0x004C  Reserved */
+                                 /* 0x004c  Reserved */
                                  /* 0x0050  Reserved */
 #define IMXRT_CCM_CLPCR_OFFSET      0x0054  /* CCM Low Power Control Register */
 
 #define IMXRT_CCM_CISR_OFFSET       0x0058  /* CCM Interrupt Status Register */
-#define IMXRT_CCM_CIMR_OFFSET       0x005C  /* CCM Interrupt Mask Register */
+#define IMXRT_CCM_CIMR_OFFSET       0x005c  /* CCM Interrupt Mask Register */
 #define IMXRT_CCM_CCOSR_OFFSET      0x0060  /* CCM Clock Output Source Register */
 #define IMXRT_CCM_CGPR_OFFSET       0x0064  /* CCM General Purpose Register */
 #define IMXRT_CCM_CCGR0_OFFSET      0x0068  /* CCM Clock Gating Register 0 */
-#define IMXRT_CCM_CCGR1_OFFSET      0x006C  /* CCM Clock Gating Register 1 */
+#define IMXRT_CCM_CCGR1_OFFSET      0x006c  /* CCM Clock Gating Register 1 */
 #define IMXRT_CCM_CCGR2_OFFSET      0x0070  /* CCM Clock Gating Register 2 */
 #define IMXRT_CCM_CCGR3_OFFSET      0x0074  /* CCM Clock Gating Register 3 */
 #define IMXRT_CCM_CCGR4_OFFSET      0x0078  /* CCM Clock Gating Register 4 */
-#define IMXRT_CCM_CCGR5_OFFSET      0x007C  /* CCM Clock Gating Register 5 */
+#define IMXRT_CCM_CCGR5_OFFSET      0x007c  /* CCM Clock Gating Register 5 */
 #define IMXRT_CCM_CCGR6_OFFSET      0x0080  /* CCM Clock Gating Register 6 */
                                  /* 0x0084  Reserved */
 #define IMXRT_CCM_CMEOR_OFFSET      0x0088  /* CCM Module Enable Overide Register */
@@ -118,5 +118,486 @@
 #define IMXRT_CCM_CMEOR             (IMXRT_CCM_BASE + IMXRT_CCM_CMEOR_OFFSET)
 
 /* Register bit definitions *********************************************************/
+
+/* Control Register */
+
+#define CCM_CCR_OSCNT_SHIFT                      (0)       /* Bits 0-7:   Oscillator ready counter value */
+#define CCM_CCR_OSCNT_MASK                       (0xff << CCM_CCR_OSCNT_SHIFT)
+#  define CCM_CCR_OSCNT(n)                       ((uint32_t)(n) << CCM_CCR_OSCNT_SHIFT)
+                                                           /* Bits 8-11:  Reserved */
+#define CCM_CCR_COSC_EN                          (1 << 12) /* Bit  12:    On chip oscillator enable */
+                                                           /* Bits 13-20: Reserved */
+#define CCM_CCR_REG_BYPASS_COUNT_SHIFT           (21)      /* Bits 21-26: Counter for analog_reg_bypass */
+#define CCM_CCR_REG_BYPASS_COUNT_MASK            (0x3f << CCM_CCR_REG_BYPASS_COUNT_SHIFT)
+#  define CCM_CCR_REG_BYPASS_COUNT(n)            ((uint32_t)(n) << CCM_CCR_REG_BYPASS_COUNT_SHIFT)
+#define CCM_CCR_RBC_EN                           (1 << 27) /* Bit  27:    Enable for REG_BYPASS_COUNTER */
+                                                           /* Bits 28-31: Reserved */
+/*  Status Register  */
+
+#define CCM_CSR_REF_EN_B                         (1 << 0)  /* Bit 0:      Status of the value of CCM_REF_EN_B */
+                                                           /* Bits 1-2:   Reserved */
+#define CCM_CSR_CAMP2_READY                      (3 << 0)  /* Bit 3:      Status indication of CAMP2 */
+                                                           /* Bit 4:      Reserved */
+#define CCM_CSR_COSC_READY                       (5 << 0)  /* Bit 5:      Status indication of on board oscillator */
+                                                           /* Bits 6-31:  Reserved */
+/* Clock Switcher Register */
+
+#define CCM_CCSR_PLL3_SW_CLK_SEL	               (1 << 0)  /* Bit 0: Selects source to generate pll3_sw_clk */
+
+/* Arm Clock Root Register */
+
+#define CCM_CACRR_ARM_PODF_SHIFT                 (0)       /* Bits 0-2:   Divider for ARM clock root */
+#define CCM_CACRR_ARM_PODF_MASK                  (0x3 << CCM_CACRR_ARM_PODF_SHIFT)
+#  define CCM_CACRR_ARM_PODF(n)                  ((uint32_t)(n) << CCM_CACRR_ARM_PODF_SHIFT)
+
+/* Bus Clock Divider Register */
+
+                                                           /* Bits 0-5:   Reserved */
+#define CCM_CBCDR_SEMC_CLK_SEL                   (1 << 6)  /* Bit 6:      SEMC clock source select */
+#define CCM_CBCDR_SEMC_ALT_CLK_SEL               (1 << 7)  /* Bit 7:      SEMC alternative clock select */
+#define CCM_CBCDR_SEMC_ALT_CLK_SEL_PLL2          (0 << 7)  /* Bit 7:      PLL2 PFD2 will be selected */
+#define CCM_CBCDR_SEMC_ALT_CLK_SEL_PLL3          (1 << 7)  /* Bit 7:      PLL3 PFD1 will be selected  */
+#define CCM_CBCDR_IPG_PODF_SHIFT                 (8)       /* Bits 8-9:   Divider for ipg podf */
+#define CCM_CBCDR_IPG_PODF_MASK                  (0x3 << CCM_CBCDR_IPG_PODF_SHIFT)
+#  define CCM_CBCDR_IPG_PODF(n)                  ((uint32_t)(n) << CCM_CBCDR_IPG_PODF_SHIFT)
+#define CCM_CBCDR_AHB_PODF_SHIFT                 (10)      /* Bits 10-12: Divider for AHB PODF */
+#define CCM_CBCDR_AHB_PODF_MASK                  (0x3 << CCM_CBCDR_AHB_PODF_SHIFT)
+#  define CCM_CBCDR_AHB_PODF(n)                  ((uint32_t)(n) << CCM_CBCDR_AHB_PODF_SHIFT)
+                                                           /* Bits 13-15: Reserved */
+#define CCM_CBCDR_SEMC_PODF_SHIFT                (16)      /* Bits 16-18: Post divider for SEMC clock */
+#define CCM_CBCDR_SEMC_PODF_MASK                 (0x3 << CCM_CBCDR_SEMC_PODF_SHIFT)
+# define CCM_CBCDR_SEMC_PODF(n)                  ((uint32_t)(n) << CCM_CBCDR_SEMC_PODF_SHIFT)
+                                                           /* Bits 19-24: Reserved */
+#define CCM_CBCDR_SEMC_PERIPH_CLK_SEL            (1 << 25) /* Bit 25:     Selector for peripheral main clock */
+                                                           /* Bit 26:     Reserved */
+#define CCM_CBCDR_PERIPH_CLK2_PODF_SHIFT         (27)      /* Bits 27-29: Divider for periph_clk2_podf */
+#define CCM_CBCDR_PERIPH_CLK2_PODF_MASK          (0x7 << CCM_CBCDR_PERIPH_CLK2_PODF_SHIFT)
+#  define CCM_CBCDR_PERIPH_CLK2_PODF(n)          ((uint32_t)(n) << CCM_CBCDR_PERIPH_CLK2_PODF_SHIFT)
+                                                          /* Bits 30-31: Reserved */
+
+/* Bus Clock Multiplexer Register */
+
+                                                           /* Bits 0-3:   Reserved */
+#define CCM_CBCM_LPSPI_CLK_SEL_SHIFT             (4)       /* Bits 4-5:   Selector for lpspi clock multiplexer */
+#define CCM_CBCM_LPSPI_CLK_SEL_MASK              (0x3 << CCM_CBCM_LPSPI_CLK_SEL_SHIFT)
+#  define CCM_CBCM_LPSPI_CLK_SEL(n)              ((uint32_t)(n) << CCM_CBCM_LPSPI_CLK_SEL_SHIFT)
+#  define CCM_CBCM_LPSPI_CLK_SEL_PLL3_PFD1       ((uint32_t)(0) << CCM_CBCM_LPSPI_CLK_SEL_SHIFT)
+#  define CCM_CBCM_LPSPI_CLK_SEL_PLL3_PFD0       ((uint32_t)(1) << CCM_CBCM_LPSPI_CLK_SEL_SHIFT)
+#  define CCM_CBCM_LPSPI_CLK_SEL_PLL2            ((uint32_t)(2) << CCM_CBCM_LPSPI_CLK_SEL_SHIFT)
+#  define CCM_CBCM_LPSPI_CLK_SEL_PLL2_PFD2       ((uint32_t)(3) << CCM_CBCM_LPSPI_CLK_SEL_SHIFT)
+                                                           /* Bits 6-11:  Reserved */
+#define CCM_CBCM_PERIPH_CLK2_SEL_SHIFT           (12)      /* Bits 13-13: Selector for peripheral clk2 clock multiplexer */
+#define CCM_CBCM_PERIPH_CLK2_SEL_MASK            (0x3 << CCM_CBCM_PERIPH_CLK2_SEL_SHIFT)
+#  define CCM_CBCM_PERIPH_CLK2_SEL(n)            ((uint32_t)(n) << CCM_CBCM_PERIPH_CLK2_SEL_SHIFT)
+#  define CCM_CBCM_PERIPH_CLK2_SEL_PLL3_SW       ((uint32_t)(0) << CCM_CBCM_PERIPH_CLK2_SEL_SHIFT)
+#  define CCM_CBCM_PERIPH_CLK2_SEL_OSC_CLK       ((uint32_t)(1) << CCM_CBCM_PERIPH_CLK2_SEL_SHIFT)
+#  define CCM_CBCM_PERIPH_CLK2_SEL_PLL2_BP       ((uint32_t)(2) << CCM_CBCM_PERIPH_CLK2_SEL_SHIFT)
+#define CCM_CBCM_TRACE_CLK_SEL_SHIFT             (14)      /* Bits 14-15: Selector for Trace clock multiplexer */
+#define CCM_CBCM_TRACE_CLK_SEL_MASK              (0x3 << CCM_CBCM_TRACE_CLK_SEL_SHIFT)
+#  define CCM_CBCM_TRACE_CLK_SEL(n)              ((uint32_t)(n) << CCM_CBCM_TRACE_CLK_SEL_SHIFT)
+#  define CCM_CBCM_TRACE_CLK_SEL_PLL2            ((uint32_t)(0) << CCM_CBCM_TRACE_CLK_SEL_SHIFT)
+#  define CCM_CBCM_TRACE_CLK_SEL_PLL2_PFD2       ((uint32_t)(1) << CCM_CBCM_TRACE_CLK_SEL_SHIFT)
+#  define CCM_CBCM_TRACE_CLK_SEL_PLL2_PFD0       ((uint32_t)(2) << CCM_CBCM_TRACE_CLK_SEL_SHIFT)
+#  define CCM_CBCM_TRACE_CLK_SEL_PLL2_PFD1       ((uint32_t)(3) << CCM_CBCM_TRACE_CLK_SEL_SHIFT)
+                                                           /* Bits 16-17: Reserved */
+#define CCM_CBCM_PRE_PERIPH_CLK_SEL_SHIFT        (18)      /* Bits 18-19: Selector for pre_periph clock multiplexer */
+#define CCM_CBCM_PRE_PERIPH_CLK_SEL_MASK         (0x3 << CCM_CBCM_PRE_PERIPH_CLK_SEL_SHIFT)
+#  define CCM_CBCM_PRE_PERIPH_CLK_SEL(n)         ((uint32_t)(n) << CCM_CBCM_PRE_PERIPH_CLK_SEL_SHIFT)
+#  define CCM_CBCM_PRE_PERIPH_CLK_SEL_PLL2       ((uint32_t)(0) << CCM_CBCM_PRE_PERIPH_CLK_SEL_SHIFT)
+#  define CCM_CBCM_PRE_PERIPH_CLK_SEL_PLL2_PFD2  ((uint32_t)(1) << CCM_CBCM_PRE_PERIPH_CLK_SEL_SHIFT)
+#  define CCM_CBCM_PRE_PERIPH_CLK_SEL_PLL2_PFD0  ((uint32_t)(2) << CCM_CBCM_PRE_PERIPH_CLK_SEL_SHIFT)
+#  define CCM_CBCM_PRE_PERIPH_CLK_SEL_PLL1       ((uint32_t)(3) << CCM_CBCM_PRE_PERIPH_CLK_SEL_SHIFT)
+                                                           /* Bits 20-22: Reserved */
+#define CCM_CBCM_LCDIF_PODF_SHIFT                (23)      /* Bits 23-25: Post-divider for LCDIF clock */
+#define CCM_CBCM_LCDIF_PODF_MASK                 (0x7 << CCM_CBCM_LCDIF_PODF_SHIFT)
+# define CCM_CBCM_LCDIF_PODF(n)                  ((uint32_t)(n) << CCM_CBCM_LCDIF_PODF_SHIFT)
+#define CCM_CBCM_LPSPI_PODF_SHIFT                (26)      /* Bits 26-28: Divider for LPSPI */
+#define CCM_CBCM_LPSPI_PODF_MASK                 (0x7 << CCM_CBCM_LPSPI_PODF_SHIFT)
+#  define CCM_CBCM_LPSPI_PODF(n)                 ((uint32_t)(n) << CCM_CBCM_LPSPI_PODF_SHIFT)
+
+/* Serial Clock Multiplexer Register 1 */
+
+#define CCM_CSCMR1_PERCLK_PODF_SHIFT             (0)       /* Bits 0-5:   Divider for perclk podf  */
+#define CCM_CSCMR1_PERCLK_PODF_MASK              (0x3f << CCM_CSCMR1_PERCLK_PODF_SHIFT)
+#  define CCM_CSCMR1_PERCLK_PODF(n)              ((uint32_t)(n) << CCM_CSCMR1_PERCLK_PODF_SHIFT)
+#define CCM_CSCMR1_PERCLK_CLK_SEL                (1 << 6)  /* Bit 6:      Selector for the perclk clock multiplexer */
+                                                           /* Bits 7-9:   Reserved */
+#define CCM_CSCMR1_SAI1_CLK_SEL_SHIFT            (10)      /* Bits 10-11: Selector for sai1 clock multiplexer */
+#define CCM_CSCMR1_SAI1_CLK_SEL_MASK             (0x3 << CCM_CSCMR1_SAI1_CLK_SEL_SHIFT)
+#  define CCM_CSCMR1_SAI1_CLK_SEL(n)             ((uint32_t)(n) << CCM_CSCMR1_SAI1_CLK_SEL_SHIFT)
+#  define CCM_CSCMR1_SAI1_CLK_SEL_PLL3_PFD2      ((uint32_t)(0) << CCM_CSCMR1_SAI1_CLK_SEL_SHIFT)
+#  define CCM_CSCMR1_SAI1_CLK_SEL_PLL5           ((uint32_t)(1) << CCM_CSCMR1_SAI1_CLK_SEL_SHIFT)
+#  define CCM_CSCMR1_SAI1_CLK_SEL_PLL4           ((uint32_t)(2) << CCM_CSCMR1_SAI1_CLK_SEL_SHIFT)
+#define CCM_CSCMR1_SAI2_CLK_SEL_SHIFT            (12)      /* Bits 12-13: Selector for sai2 clock multiplexer */
+#define CCM_CSCMR1_SAI2_CLK_SEL_MASK             (0x3 << CCM_CSCMR1_SAI2_CLK_SEL_SHIFT)
+#  define CCM_CSCMR1_SAI2_CLK_SEL(n)             ((uint32_t)(n) << CCM_CSCMR1_SAI2_CLK_SEL_SHIFT)
+#  define CCM_CSCMR1_SAI2_CLK_SEL_PLL3_PFD2      ((uint32_t)(0) << CCM_CSCMR1_SAI2_CLK_SEL_SHIFT)
+#  define CCM_CSCMR1_SAI2_CLK_SEL_PLL5           ((uint32_t)(1) << CCM_CSCMR1_SAI2_CLK_SEL_SHIFT)
+#  define CCM_CSCMR1_SAI2_CLK_SEL_PLL4           ((uint32_t)(2) << CCM_CSCMR1_SAI2_CLK_SEL_SHIFT)
+#define CCM_CSCMR1_SAI3_CLK_SEL_SHIFT            (14)      /* Bits 14-15: Selector for sai3 clock multiplexer */
+#define CCM_CSCMR1_SAI3_CLK_SEL_MASK             (0x3 << CCM_CSCMR1_SAI3_CLK_SEL_SHIFT)
+#  define CCM_CSCMR1_SAI3_CLK_SEL(n)             ((uint32_t)(n) << CCM_CSCMR1_SAI3_CLK_SEL_SHIFT)
+#  define CCM_CSCMR1_SAI3_CLK_SEL_PLL3_PFD2      ((uint32_t)(0) << CCM_CSCMR1_SAI3_CLK_SEL_SHIFT)
+#  define CCM_CSCMR1_SAI3_CLK_SEL_PLL5           ((uint32_t)(1) << CCM_CSCMR1_SAI3_CLK_SEL_SHIFT)
+#  define CCM_CSCMR1_SAI3_CLK_SEL_PLL4           ((uint32_t)(2) << CCM_CSCMR1_SAI3_CLK_SEL_SHIFT)
+#define CCM_CSCMR1_USDHC1_CLK_SEL                (1 << 16) /* Bit 16:     Selector for usdhc1 clock multiplexer */
+#  define CCM_CSCMR1_USDHC1_CLK_SEL_PLL2_PFD2    (0 << 16) /* derive clock from PLL2 PFD2 */
+#  define CCM_CSCMR1_USDHC1_CLK_SEL_PLL2_PFD0    (1 << 16) /* derive clock from PLL2 PFD0 */
+#define CCM_CSCMR1_USDHC2_CLK_SEL                (1 << 17) /* Bit 17:     Selector for usdhc2 clock multiplexer */
+#  define CCM_CSCMR1_USDHC2_CLK_SEL_PLL2_PFD2    (0 << 17) /* derive clock from PLL2 PFD2 */
+#  define CCM_CSCMR1_USDHC2_CLK_SEL_PLL2_PFD0    (1 << 17) /* derive clock from PLL2 PFD0 */
+                                                          /* Bits 18-22: Reserved */
+#define CCM_CSCMR1_FLEXSPI_PODF_SHIFT            (23)     /* Bits 23-25: Divider for flexspi clock root */
+#define CCM_CSCMR1_FLEXSPI_PODF_MASK             (0x7 << CCM_CSCMR1_FLEXSPI_PODF_SHIFT)
+#  define CCM_CSCMR1_FLEXSPI_PODF(n)             ((uint32_t)(n) << CCM_CSCMR1_FLEXSPI_PODF_SHIFT)
+                                                          /* Bits 26-28: Reserved */
+#define CCM_CSCMR1_FLEXSPI_CLK_SEL_SHIFT         (29)     /* Bits 29-30: Selector for flexspi clock multiplexer */
+#define CCM_CSCMR1_FLEXSPI_CLK_SEL_MASK          (0x3 << CCM_CSCMR1_FLEXSPI_CLK_SEL_SHIFT)
+#  define CCM_CSCMR1_FLEXSPI_CLK_SEL(n)          ((uint32_t)(n) << CCM_CSCMR1_FLEXSPI_CLK_SEL_SHIFT)
+#  define CCM_CSCMR1_FLEXSPI_CLK_SEL_SEMC_CLK    ((uint32_t)(0) << CCM_CSCMR1_FLEXSPI_CLK_SEL_SHIFT)
+#  define CCM_CSCMR1_FLEXSPI_CLK_SEL_PLL3_SW     ((uint32_t)(1) << CCM_CSCMR1_FLEXSPI_CLK_SEL_SHIFT)
+#  define CCM_CSCMR1_FLEXSPI_CLK_SEL_PLL2_PFD2   ((uint32_t)(2) << CCM_CSCMR1_FLEXSPI_CLK_SEL_SHIFT)
+#  define CCM_CSCMR1_FLEXSPI_CLK_SEL_PLL3_PFD0   ((uint32_t)(3) << CCM_CSCMR1_FLEXSPI_CLK_SEL_SHIFT)
+                                                          /* Bit 31:     Reserved */
+
+/* Serial Clock Multiplexer Register 2 */
+
+#define CCM_CSCMR2_CAN_CLK_PODF_SHIFT            (2)       /* Bits 2-7:   Divider for can clock podf */
+#define CCM_CSCMR2_CAN_CLK_PODF_MASK             (0x3f << CCM_CSCMR2_CAN_CLK_PODF_SHIFT)
+#  define CCM_CSCMR2_CAN_CLK_PODF(n)             ((uint32_t)(n) << CCM_CSCMR2_CAN_CLK_PODF_SHIFT)
+#define CCM_CSCMR2_CAN_CLK_SEL_SHIFT             (8)       /* Bits 8-9:   Selector for FlexCAN clock multiplexer */
+#define CCM_CSCMR2_CAN_CLK_SEL_MASK              (0x3 << CCM_CSCMR2_CAN_CLK_SEL_SHIFT)
+#  define CCM_CSCMR2_CAN_CLK_SEL(n)              ((uint32_t)(n) << CCM_CSCMR2_CAN_CLK_SEL_SHIFT)
+#  define CCM_CSCMR2_CAN_CLK_SEL_PLL3_SW_60      ((uint32_t)(0) << CCM_CSCMR2_CAN_CLK_SEL_SHIFT)
+#  define CCM_CSCMR2_CAN_CLK_SEL_OSC_CLK         ((uint32_t)(1) << CCM_CSCMR2_CAN_CLK_SEL_SHIFT)
+#  define CCM_CSCMR2_CAN_CLK_SEL_PLL3_SW_80      ((uint32_t)(2) << CCM_CSCMR2_CAN_CLK_SEL_SHIFT)
+                                                           /* Bits 10-18: Reserved */
+#define CCM_CSCMR2_FLEXIO2_CLK_SEL_SHIFT         (19)      /* Bits 19-20: Selector for flexio2 clock multiplexer */
+#define CCM_CSCMR2_FLEXIO2_CLK_SEL_MASK          (0x3 << CCM_CSCMR2_FLEXIO2_CLK_SEL_SHIFT)
+#  define CCM_CSCMR2_FLEXIO2_CLK_SEL(n)          ((uint32_t)(n) << CCM_CSCMR2_FLEXIO2_CLK_SEL_SHIFT)
+#  define CCM_CSCMR2_FLEXIO2_CLK_SEL_PLL4        ((uint32_t)(0) << CCM_CSCMR2_FLEXIO2_CLK_SEL_SHIFT)
+#  define CCM_CSCMR2_FLEXIO2_CLK_SEL_PLL3_PFD2   ((uint32_t)(1) << CCM_CSCMR2_FLEXIO2_CLK_SEL_SHIFT)
+#  define CCM_CSCMR2_FLEXIO2_CLK_SEL_PLL5        ((uint32_t)(2) << CCM_CSCMR2_FLEXIO2_CLK_SEL_SHIFT)
+#  define CCM_CSCMR2_FLEXIO2_CLK_SEL_PLL3_SW     ((uint32_t)(3) << CCM_CSCMR2_FLEXIO2_CLK_SEL_SHIFT)
+                                                           /* Bits 21-31: Reserved */
+
+/* Serial Clock Divider Register 1 */
+
+#define CCM_CSCDS1_UART_CLK_PODF_SHIFT           (0)       /* Bits 0-5:   Divider for uart clock podf */
+#define CCM_CSCDS1_UART_CLK_PODF_MASK            (0x3f << CCM_CSCDS1_UART_CLK_PODF_SHIFT)
+#  define CCM_CSCDS1_UART_CLK_PODF(n)            ((uint32_t)(n) << CCM_CSCDS1_UART_CLK_PODF_SHIFT)
+#define CCM_CSCDS1_UART_CLK_SEL                  (1 << 6)  /* Bit 6:      Selector for the UART clock multiplexer */
+#  define CCM_CSCDS1_UART_CLK_SEL_PLL3_80        (0 << 6)  /* derive clock from pll3_80m */
+#  define CCM_CSCDS1_UART_CLK_SEL_OSC_CLK        (1 << 6)  /* derive clock from osc_clk */
+                                                           /* Bits 7-10:  Reserved */
+#define CCM_CSCDS1_USDHC1_PODF_SHIFT             (11)      /* Bits 11-13: Divider for usdhc1 clock podf */
+#define CCM_CSCDS1_USDHC1_PODF_MASK              (0x7 << CCM_CSCDS1_USDHC1_PODF_SHIFT)
+#  define CCM_CSCDS1_USDHC1_PODF(n)              ((uint32_t)(n) << CCM_CSCDS1_USDHC1_PODF_SHIFT)
+                                                           /* Bits 14-15: Reserved */
+#define CCM_CSCDS1_USDHC2_PODF_SHIFT             (16)      /* Bits 16-18: Divider for usdhc2 clock */
+#define CCM_CSCDS1_USDHC2_PODF_MASK              (0x7 << CCM_CSCDS1_USDHC2_PODF_SHIFT)
+#  define CCM_CSCDS1_USDHC2_PODF(n)              ((uint32_t)(n) << CCM_CSCDS1_USDHC2_PODF_SHIFT)
+                                                           /* Bits 19-24: Reserved */
+#define CCM_CSCDS1_TRACE_PODF_SHIFT              (25)      /* Bits 25-27: Divider for trace clock */
+#define CCM_CSCDS1_TRACE_PODF_MASK               (0x7 << CCM_CSCDS1_TRACE_PODF_SHIFT)
+#  define CCM_CSCDS1_TRACE_PODF(n)               ((uint32_t)(n) << CCM_CSCDS1_TRACE_PODF_SHIFT)
+                                                           /* Bits 28-31: Reserved */
+
+/*  Clock Divider Register 1 */
+
+#define CCM_CS1CDR_SAI1_CLK_PODF_SHIFT           (0)       /* Bits 0-5:   Divider for sai1 clock podf */
+#define CCM_CS1CDR_SAI1_CLK_PODF_MASK            (0x3f << CCM_CS1CDR_SAI1_CLK_PODF_SHIFT)
+#  define CCM_CS1CDR_SAI1_CLK_PODF(n)            ((uint32_t)(n) << CCM_CS1CDR_SAI1_CLK_PODF_SHIFT)
+#define CCM_CS1CDR_SAI1_CLK_PRED_SHIFT           (6)       /* Bits 6-8:   Divider for sai1 clock pred */
+#define CCM_CS1CDR_SAI1_CLK_PRED_MASK            (0x7 << CCM_CS1CDR_SAI1_CLK_PRED_SHIFT)
+#  define CCM_CS1CDR_SAI1_CLK_PRED(n)            ((uint32_t)(n) << CCM_CS1CDR_SAI1_CLK_PRED_SHIFT)
+#define CCM_CS1CDR_FLEXIO2_CLK_PRED_SHIFT        (9)       /* Bits 9-11:  Divider for flexio2 clock */
+#define CCM_CS1CDR_FLEXIO2_CLK_PRED_MASK         (0x7 << CCM_CS1CDR_FLEXIO2_CLK_PRED_SHIFT)
+#  define CCM_CS1CDR_FLEXIO2_CLK_PRED(n)         ((uint32_t)(n) << CCM_CS1CDR_FLEXIO2_CLK_PRED_SHIFT)
+                                                           /* Bits 12-15: Reserved */
+#define CCM_CS1CDR_SAI3_CLK_PODF_SHIFT           (16)      /* Bits 16-21: Divider for sai3 clock podf */
+#define CCM_CS1CDR_SAI3_CLK_PODF_MASK            (0x3f << CCM_CS1CDR_SAI3_CLK_PODF_SHIFT)
+#  define CCM_CS1CDR_SAI3_CLK_PODF(n)            ((uint32_t)(n) << CCM_CS1CDR_SAI3_CLK_PODF_SHIFT)
+#define CCM_CS1CDR_SAI3_CLK_PRED_SHIFT           (22)      /* Bits 22-24:   Divider for sai3 clock pred */
+#define CCM_CS1CDR_SAI3_CLK_PRED_MASK            (0x7 << CCM_CS1CDR_SAI3_CLK_PRED_SHIFT)
+#  define CCM_CS1CDR_SAI3_CLK_PRED(n)            ((uint32_t)(n) << CCM_CS1CDR_SAI3_CLK_PRED_SHIFT)
+#define CCM_CS1CDR_FLEXIO2_CLK_PODF_SHIFT        (25)      /* Bits 25-27:  Divider for flexio2 clock */
+#define CCM_CS1CDR_FLEXIO2_CLK_PODF_MASK         (0x7 << CCM_CS1CDR_FLEXIO2_CLK_PODF_SHIFT)
+#  define CCM_CS1CDR_FLEXIO2_CLK_PODF(n)         ((uint32_t)(n) << CCM_CS1CDR_FLEXIO2_CLK_PODF_SHIFT)
+                                                           /* Bits 28-31: Reserved */
+
+/*  Clock Divider Register 2 */
+
+#define CCM_CS2CDR_SAI2_CLK_PODF_SHIFT           (0)       /* Bits 0-5:   Divider for sai2 clock podf */
+#define CCM_CS2CDR_SAI2_CLK_PODF_MASK            (0x3f << CCM_CS2CDR_SAI2_CLK_PODF_SHIFT)
+#  define CCM_CS2CDR_SAI2_CLK_PODF(n)            ((uint32_t)(n) << CCM_CS2CDR_SAI2_CLK_PODF_SHIFT)
+#define CCM_CS2CDR_SAI2_CLK_PRED_SHIFT           (6)       /* Bits 6-8:   Divider for sai2 clock pred */
+#define CCM_CS2CDR_SAI2_CLK_PRED_MASK            (0x7 << CCM_CS2CDR_SAI2_CLK_PRED_SHIFT)
+#  define CCM_CS2CDR_SAI2_CLK_PRED(n)            ((uint32_t)(n) << CCM_CS2CDR_SAI2_CLK_PRED_SHIFT)
+
+/* D1 Clock Divider Register */
+
+#define CCM_CDCDR_FLEXIO1_CLK_SEL_SHIFT          (7)       /* Bits 7-8:   Selector for flexio1 clock multiplexer */
+#define CCM_CDCDR_FLEXIO1_CLK_SEL_MASK           (0x3 << CCM_CDCDR_FLEXIO1_CLK_SEL_SHIFT)
+#  define CCM_CDCDR_FLEXIO1_CLK_SEL(n)           ((uint32_t)(n) << CCM_CDCDR_FLEXIO1_CLK_SEL_SHIFT)
+#  define CCM_CDCDR_FLEXIO1_CLK_SEL_PLL4         ((uint32_t)(0) << CCM_CDCDR_FLEXIO1_CLK_SEL_SHIFT)
+#  define CCM_CDCDR_FLEXIO1_CLK_SEL_PLL3_PFD2    ((uint32_t)(1) << CCM_CDCDR_FLEXIO1_CLK_SEL_SHIFT)
+#  define CCM_CDCDR_FLEXIO1_CLK_SEL_PLL3_PLL5    ((uint32_t)(2) << CCM_CDCDR_FLEXIO1_CLK_SEL_SHIFT)
+#  define CCM_CDCDR_FLEXIO1_CLK_SEL_PLL3_PLL3_SW ((uint32_t)(3) << CCM_CDCDR_FLEXIO1_CLK_SEL_SHIFT)
+#define CCM_CDCDR_FLEXIO1_CLK_PODF_SHIFT         (9)       /* Bits 9-11:  Divider for flexio1 clock podf */
+#define CCM_CDCDR_FLEXIO1_CLK_PODF_MASK          (0x7 << CCM_CDCDR_FLEXIO1_CLK_PODF_SHIFT)
+#  define CCM_CDCDR_FLEXIO1_CLK_PODF(n)          ((uint32_t)(n) << CCM_CDCDR_FLEXIO1_CLK_PODF_SHIFT)
+#define CCM_CDCDR_FLEXIO1_CLK_PRED_SHIFT         (12)      /* Bits 12-14:  Divider for flexio1 clock pred */
+#define CCM_CDCDR_FLEXIO1_CLK_PRED_MASK          (0x7 << CCM_CDCDR_FLEXIO1_CLK_PRED_SHIFT)
+#  define CCM_CDCDR_FLEXIO1_CLK_PRED(n)          ((uint32_t)(n) << CCM_CDCDR_FLEXIO1_CLK_PRED_SHIFT)
+                                                           /* Bits 15-19: Reserved */
+#define CCM_CDCDR_SPDIF0_CLK_SEL_SHIFT           (20)      /* Bits 20-21: Selector for spdif0 clock multiplexer */
+#define CCM_CDCDR_SPDIF0_CLK_SEL_MASK            (0x3 << CCM_CDCDR_SPDIF0_CLK_SEL_SHIFT)
+#  define CCM_CDCDR_SPDIF0_CLK_SEL(n)            ((uint32_t)(n) << CCM_CDCDR_SPDIF0_CLK_SEL_SHIFT)
+#  define CCM_CDCDR_SPDIF0_CLK_SEL_PLL4          ((uint32_t)(0) << CCM_CDCDR_SPDIF0_CLK_SEL_SHIFT)
+#  define CCM_CDCDR_SPDIF0_CLK_SEL_PLL3_PFD2     ((uint32_t)(1) << CCM_CDCDR_SPDIF0_CLK_SEL_SHIFT)
+#  define CCM_CDCDR_SPDIF0_CLK_SEL_PLL3_PLL5     ((uint32_t)(2) << CCM_CDCDR_SPDIF0_CLK_SEL_SHIFT)
+#  define CCM_CDCDR_SPDIF0_CLK_SEL_PLL3_PLL3_SW  ((uint32_t)(3) << CCM_CDCDR_SPDIF0_CLK_SEL_SHIFT)
+#define CCM_CDCDR_SPDIF0_CLK_PODF_SHIFT          (22)      /* Bits 22-24: Divider for spdif0 clock podf */
+#define CCM_CDCDR_SPDIF0_CLK_PODF_MASK           (0x7 << CCM_CDCDR_SPDIF0_CLK_PODF_SHIFT)
+#  define CCM_CDCDR_SPDIF0_CLK_PODF(n)           ((uint32_t)(n) << CCM_CDCDR_SPDIF0_CLK_PODF_SHIFT)
+#define CCM_CDCDR_SPDIF0_CLK_PRED_SHIFT          (25)      /* Bits 25-27: Divider for spdif0 clock pred */
+#define CCM_CDCDR_SPDIF0_CLK_PRED_MASK           (0x7 << CCM_CDCDR_SPDIF0_CLK_PRED_SHIFT)
+#  define CCM_CDCDR_SPDIF0_CLK_PRED(n)           ((uint32_t)(n) << CCM_CDCDR_SPDIF0_CLK_PRED_SHIFT)
+
+/* Serial Clock Divider Register 2 */
+
+                                                           /* Bits 0-8:   Reserved */
+#define CCM_CSCDR2_LCDIF_CLK_SEL_SHIFT           (9)       /* Bits 9-11:  Selector for LCDIF root clock multiplexer */
+#define CCM_CSCDR2_LCDIF_CLK_SEL_MASK            (0x7 << CCM_CSCDR2_LCDIF_CLK_SEL_SHIFT)
+#  define CCM_CSCDR2_LCDIF_CLK_SEL(n)            ((uint32_t)(n) << CCM_CSCDR2_LCDIF_CLK_SEL_SHIFT)
+#  define CCM_CSCDR2_LCDIF_CLK_SEL_LCDIF         ((uint32_t)(0) << CCM_CSCDR2_LCDIF_CLK_SEL_SHIFT)
+#  define CCM_CSCDR2_LCDIF_CLK_SEL_IPP_DI0_CLK   ((uint32_t)(1) << CCM_CSCDR2_LCDIF_CLK_SEL_SHIFT)
+#  define CCM_CSCDR2_LCDIF_CLK_SEL_IPP_DI1_CLK   ((uint32_t)(2) << CCM_CSCDR2_LCDIF_CLK_SEL_SHIFT)
+#  define CCM_CSCDR2_LCDIF_CLK_SEL_IDB_DI0_CLK   ((uint32_t)(3) << CCM_CSCDR2_LCDIF_CLK_SEL_SHIFT)
+#  define CCM_CSCDR2_LCDIF_CLK_SEL_IDB_DI1_CLK   ((uint32_t)(4) << CCM_CSCDR2_LCDIF_CLK_SEL_SHIFT)
+#define CCM_CSCDR2_LCDIF_PRED_SHIFT              (12)      /* Bits 12-14: Pre-divider for lcdif clock */
+#define CCM_CSCDR2_LCDIF_PRED_MASK               (0x7 << CCM_CSCDR2_LCDIF_PRED_SHIFT)
+#  define CCM_CSCDR2_LCDIF_PRED(n)               ((uint32_t)(n) << CCM_CSCDR2_LCDIF_PRED_SHIFT)
+#define CCM_CSCDR2_LCDIF_PRE_CLK_SEL_SHIFT       (15)      /* Bits 15-17: Selector for lcdif root clock pre-multiplexer */
+#define CCM_CSCDR2_LCDIF_PRE_CLK_SEL_MASK        (0x7 << CCM_CSCDR2_LCDIF_PRE_CLK_SEL_SHIFT)
+#  define CCM_CSCDR2_LCDIF_PRE_CLK_SEL_(n)       ((uint32_t)(n) << CCM_CSCDR2_LCDIF_PRE_CLK_SEL_SHIFT)
+#  define CCM_CSCDR2_LCDIF_PRE_CLK_SEL_PLL2      ((uint32_t)(0) << CCM_CSCDR2_LCDIF_PRE_CLK_SEL_SHIFT)
+#  define CCM_CSCDR2_LCDIF_PRE_CLK_SEL_PLL3_PFD3 ((uint32_t)(1) << CCM_CSCDR2_LCDIF_PRE_CLK_SEL_SHIFT)
+#  define CCM_CSCDR2_LCDIF_PRE_CLK_SEL_PLL5      ((uint32_t)(2) << CCM_CSCDR2_LCDIF_PRE_CLK_SEL_SHIFT)
+#  define CCM_CSCDR2_LCDIF_PRE_CLK_SEL_PLL2_PFD0 ((uint32_t)(3) << CCM_CSCDR2_LCDIF_PRE_CLK_SEL_SHIFT)
+#  define CCM_CSCDR2_LCDIF_PRE_CLK_SEL_PLL2_PFD1 ((uint32_t)(4) << CCM_CSCDR2_LCDIF_PRE_CLK_SEL_SHIFT)
+#  define CCM_CSCDR2_LCDIF_PRE_CLK_SEL_PLL3_PFD1 ((uint32_t)(5) << CCM_CSCDR2_LCDIF_PRE_CLK_SEL_SHIFT)
+#define CCM_CSCDR2_LPI2C_CLK_SEL                 (1 << 18) /* Bit 18:     Selector for the LPI2C clock multiplexer */
+#  define CCM_CSCDR2_LPI2C_CLK_SEL_PLL3_60M      (0 << 18) /*  derive clock from pll3_60m */
+#  define CCM_CSCDR2_LPI2C_CLK_SEL_OSC_CLK       (1 << 18) /*  derive clock from ock_clk */
+#define CCM_CSCDR2_LPI2C_CLK_PODF_SHIFT          (19)      /* Bits 19-24: Divider for lpi2c clock podf */
+#define CCM_CSCDR2_LPI2C_CLK_PODF_MASK           (0x3f << CCM_CSCDR2_LPI2C_CLK_PODF_SHIFT)
+#  define CCM_CSCDR2_LPI2C_CLK_PODF(n)           ((uint32_t)(n) << CCM_CSCDR2_LPI2C_CLK_PODF_SHIFT)
+                                                           /* Bits 25-31: Reserved */
+
+/* Serial Clock Divider Register 3 */
+
+                                                           /* Bits 0-8:   Reserved */
+#define CCM_CSCDR3_CSI_CLK_SEL_SHIFT             (9)       /* Bits 9-10:  Selector for csi_mclk multiplexer */
+#define CCM_CSCDR3_CSI_CLK_SEL_MASK              (0x3 << CCM_CSCDR3_CSI_CLK_SEL_SHIFT)
+#  define CCM_CSCDR3_CSI_CLK_SEL(n)              ((uint32_t)(n) << CCM_CSCDR3_CSI_CLK_SEL_SHIFT)
+#  define CCM_CSCDR3_CSI_CLK_SEL_OSC_CLK         ((uint32_t)(0) << CCM_CSCDR3_CSI_CLK_SEL_SHIFT)
+#  define CCM_CSCDR3_CSI_CLK_SEL_OSC_PLL2_PFD2   ((uint32_t)(1) << CCM_CSCDR3_CSI_CLK_SEL_SHIFT)
+#  define CCM_CSCDR3_CSI_CLK_SEL_OSC_PLL3_120M   ((uint32_t)(2) << CCM_CSCDR3_CSI_CLK_SEL_SHIFT)
+#  define CCM_CSCDR3_CSI_CLK_SEL_OSC_PLL3_PFD1   ((uint32_t)(3) << CCM_CSCDR3_CSI_CLK_SEL_SHIFT)
+#define CCM_CSCDR3_CSI_PODF_SHIFT                (11)      /* Bits 11-13: Post divider for csi_mclk */
+#define CCM_CSCDR3_CSI_PODF_MASK                 (0x3 << CCM_CSCDR3_CSI_PODF_SHIFT)
+#  define CCM_CSCDR3_CSI_PODF(n)                 ((uint32_t)(n) << CCM_CSCDR3_CSI_PODF_SHIFT)
+
+/* Divider Handshake In-Process Register */
+
+#define CCM_CDHIPR_SEMC_PODF_BUSY                (1 << 0)  /* Bit 0:      Busy indicator for semc_podf */
+#define CCM_CDHIPR_AHB_PODF_BUSY                 (1 << 1)  /* Bit 1:      Busy indicator for ahb_podf */
+                                                           /* Bit 2:      Reserved */
+#define CCM_CDHIPR_PERIPH2_CLK_SEL_BUSY          (1 << 3)  /* Bit 3:      Busy indicator for periph2_clk_sel mux control */
+                                                           /* Bit 4:      Reserved */
+#define CCM_CDHIPR_PERIPH_CLK_SEL_BUSY           (1 << 5)  /* Bit 5:      Busy indicator for periph_clk_sel mux control */
+                                                           /* Bits 6-15:  Reserved */
+#define CCM_CDHIPR_ARM_PODF_BUSY                 (1 << 16) /* Bit 16:     Busy indicator for arm_podf */
+                                                           /* Bits 17-31: Reserved */
+
+/* Low Power Control Register */
+
+#define CCM_CLPCR_LPM_SHIFT                      (0)       /* Bits 0-1:   Setting the low power mode */
+#define CCM_CLPCR_LPM_MASK                       (0x3 << CCM_CLPCR_LPM_SHIFT)
+#  define CCM_CLPCR_LPM(n)                       ((uint32_t)(n) << CCM_CLPCR_LPM_SHIFT)
+#  define CCM_CLPCR_LPM_RUN                      ((uint32_t)(0) << CCM_CLPCR_LPM_SHIFT) /* Remain in run mode */
+#  define CCM_CLPCR_LPM_WAIT                     ((uint32_t)(1) << CCM_CLPCR_LPM_SHIFT) /* Transfer to wait mode */
+#  define CCM_CLPCR_LPM_STOP                     ((uint32_t)(2) << CCM_CLPCR_LPM_SHIFT) /* Transfer to stop mode */
+                                                           /* Bits 2-4:   Reserved */
+#define CCM_CLPCR_ARM_CLK_DIS_ON_LPM             (1 << 5)  /* Bit 5:      ARM clocks disabled on wait mode */
+#define CCM_CLPCR_SBYOS                          (1 << 6)  /* Bit 6:      Standby clock oscillator bit */
+#define CCM_CLPCR_DIS_REF_OSC                    (1 << 7)  /* Bit 7:      external high frequency oscillator disable */
+#define CCM_CLPCR_VSTBY                          (1 << 8)  /* Bit 8:      Voltage standby request bit */
+#define CCM_CLPCR_STBY_COUNT_SHIFT               (9)       /* Bits 9-10:  Standby counter definition */
+#define CCM_CLPCR_STBY_COUNT_MASK                (0x3 << CCM_CLPCR_STBY_COUNT_SHIFT)
+#  define CCM_CLPCR_STBY_COUNT(n)                ((uint32_t)(n) << CCM_CLPCR_STBY_COUNT_SHIFT)
+#define CCM_CLPCR_COSC_PWRDOWN                   (1 << 11) /* Bit 11:     On chip oscillator power down */
+                                                           /* Bits 12-18: Reserved */
+#define CCM_CLPCR_BYPASS_LPM_HS1                 (1 << 19) /* Bit 19:     Bypass low power mode handshake */
+                                                           /* Bit 20:     Reserved */
+#define CCM_CLPCR_BYPASS_LPM_HS0                 (1 << 21) /* Bit 21:     Bypass low power mode handshake */
+#define CCM_CLPCR_MASK_CORE0_WFI                 (1 << 22) /* Bit 22:     Mask WFI of core0 for entering low power mode */
+                                                           /* Bits 23-25: Reserved */
+#define CCM_CLPCR_MASK_SCU_IDLE                  (1 << 26) /* Bit 26:     Mask SCU IDLE for entering low power mode */
+#define CCM_CLPCR_MASK_L2CC_IDLE                 (1 << 27) /* Bit 27:     Mask L2CC IDLE for entering low power mode */
+                                                           /* Bits 28-31: Reserved */
+
+/* Interrupt Status Register */
+
+#define CCM_CISR_LRF_PLL                         (1 << 0)  /* Bit 0:      CCM irq2, lock of all enabled and not bypassed PLLs */
+                                                           /* Bits 1-5:   Reserved */
+#define CCM_CISR_COSC_READY                      (1 << 6)  /* Bit 6:      CCM irq2, on board oscillator ready */
+                                                           /* Bits 7-16:  Reserved */
+#define CCM_CISR_SEMC_PODF_LOADED                (1 << 17) /* Bit 17:     CCM irq1, frequency change of semc_podf */
+                                                           /* Bit 18:     Reserved */
+#define CCM_CISR_PERIPH2_CLK_SEL_LOADED          (1 << 19) /* Bit 19:     CCM irq1, frequency change of periph2_clk_sel */
+#define CCM_CISR_AHB_PODF_LOADED                 (1 << 20) /* Bit 20:     CCM irq1, frequency change of ahb_podf */
+                                                           /* Bit 21:     Reserved */
+#define CCM_CISR_PERIPH_CLK_SEL_LOADED           (1 << 22) /* Bit 22:     CCM irq1, update of periph_clk_sel */
+                                                           /* Bits 23-25: Reserved */
+#define CCM_CISR_ARM_PODF_LOADED                 (1 << 26) /* Bit 26:     CCM irq1, frequency change of arm_podf */
+                                                           /* Bits 27-31: Reserved */
+
+/* Interrupt Mask Register */
+
+#define CCM_CIMR_MASK_LRF_PLL                    (1 << 0)  /* Bit 0:      mask interrupt generation due to lrf of PLLs */
+                                                           /* Bits 1-5:   Reserved */
+#define CCM_CIMR_MASK_COSC_READY                 (1 << 6)  /* Bit 6:      mask interrupt generation due to on board oscillator ready */
+                                                           /* Bits 7-16:  Reserved */
+#define CCM_CIMR_MASK_SEMC_PODF_LOADED           (1 << 17) /* Bit 17:     mask interrupt generation due to frequency change of semc_podf */
+                                                           /* Bit 18:     Reserved */
+#define CCM_CIMR_MASK_PERIPH2_CLK_SEL_LOADED     (1 << 19) /* Bit 19:     mask interrupt generation due to update of periph2_clk_sel */
+#define CCM_CIMR_MASK_AHB_PODF_LOADED            (1 << 20) /* Bit 20:     mask interrupt generation due to frequency change of ahb_podf */
+                                                           /* Bit 21:     Reserved */
+#define CCM_CIMR_MASK_PERIPH_CLK_SEL_LOADED      (1 << 22) /* Bit 22:     mask interrupt generation due to update of periph_clk_sel */
+                                                           /* Bits 23-25: Reserved */
+#define CCM_CIMR_MASK_ARM_PODF_LOADED            (1 << 26) /* Bit 26:     mask interrupt generation due to frequency change of arm_podf */
+                                                           /* Bits 27-31: Reserved */
+
+/*  Clock Output Source Register */
+
+#define CCM_CCOSR_CLKO1_SEL_SHIFT                (0)       /* Bits 0-3:   Selection of the clock to be generated on CCM_CLKO1 */
+#define CCM_CCOSR_CLKO1_SEL_MASK                 (0xF << CCM_CCOSR_CLKO1_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO1_SEL_SEMC_CLK           ((uint32_t)(5) << CCM_CCOSR_CLKO1_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO1_SEL_ENC_CLK            ((uint32_t)(6) << CCM_CCOSR_CLKO1_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO1_SEL_LCDIF_PIX_CLK      ((uint32_t)(10) << CCM_CCOSR_CLKO1_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO1_SEL_AHB_CLK            ((uint32_t)(11) << CCM_CCOSR_CLKO1_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO1_SEL_IPG_CLK            ((uint32_t)(12) << CCM_CCOSR_CLKO1_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO1_SEL_PER_CLK            ((uint32_t)(13) << CCM_CCOSR_CLKO1_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO1_SEL_CKIL_SYNC_CLK      ((uint32_t)(14) << CCM_CCOSR_CLKO1_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO1_SEL_PLL4_MAIN_CLK      ((uint32_t)(15) << CCM_CCOSR_CLKO1_SEL_SHIFT)
+#define CCM_CCOSR_CLKO1_DIV_SHIFT                (4)       /* Bits 4-6:   Setting the divider of CCM_CLKO1 */
+#define CCM_CCOSR_CLKO1_DIV_MASK                 (0x7 << CCM_CCOSR_CLKO1_DIV_SHIFT)
+#  define CCM_CCOSR_CLKO1_DIV(n)                 ((uint32_t)(n) << CCM_CCOSR_CLKO1_DIV_SHIFT)
+#define CCM_CCOSR_CLKO1_EN                       (1 << 7)  /* Bit 7:      Enable of CCM_CLKO1 clock */
+#define CCM_CCOSR_CLK_OUT_SEL                    (1 << 8)  /* Bit 8:      CCM_CLKO1 output to reflect CCM_CLKO1 or CCM_CLKO2 clocks */
+                                                           /* Bits 9-15:  Reserved */
+#define CCM_CCOSR_CLKO2_SEL_SHIFT                (16)      /* Bits 16-20: Selection of the clock to be generated on CCM_CLKO2 */
+#define CCM_CCOSR_CLKO2_SEL_MASK                 (0x1F << CCM_CCOSR_CLKO2_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO2_SEL_USDHC1_CLK         ((uint32_t)(3) << CCM_CCOSR_CLKO2_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO2_SEL_WRCK_CLK           ((uint32_t)(5) << CCM_CCOSR_CLKO2_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO2_SEL_LPI2C_CLK          ((uint32_t)(6) << CCM_CCOSR_CLKO2_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO2_SEL_CSI_CORE           ((uint32_t)(11) << CCM_CCOSR_CLKO2_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO2_SEL_OSC_CLK            ((uint32_t)(14) << CCM_CCOSR_CLKO2_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO2_SEL_USDHC2_CLK         ((uint32_t)(17) << CCM_CCOSR_CLKO2_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO2_SEL_SAI1_CLK           ((uint32_t)(18) << CCM_CCOSR_CLKO2_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO2_SEL_SAI2_CLK           ((uint32_t)(19) << CCM_CCOSR_CLKO2_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO2_SEL_SAI3_CLK           ((uint32_t)(20) << CCM_CCOSR_CLKO2_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO2_SEL_CAN_CLK            ((uint32_t)(23) << CCM_CCOSR_CLKO2_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO2_SEL_FLEXSPI_CLK        ((uint32_t)(27) << CCM_CCOSR_CLKO2_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO2_SEL_UART_CLK           ((uint32_t)(28) << CCM_CCOSR_CLKO2_SEL_SHIFT)
+#  define CCM_CCOSR_CLKO2_SEL_SPDIF0_CLK         ((uint32_t)(29) << CCM_CCOSR_CLKO2_SEL_SHIFT)
+#define CCM_CCOSR_CLKO2_DIV_SHIFT                (21)      /* Bits 21-23: Setting the divider of CCM_CLKO2 */
+#define CCM_CCOSR_CLKO2_DIV_MASK                 (0x7 << CCM_CCOSR_CLKO2_DIV_SHIFT)
+#  define CCM_CCOSR_CLKO2_DIV(n)                 ((uint32_t)(n) << CCM_CCOSR_CLKO2_DIV_SHIFT)
+#define CCM_CCOSR_CLKO2_EN                       (1 << 24) /* Bit 24:     Enable of CCM_CLKO2 clock */
+                                                           /* Bits 25-31: Reserved */
+
+/* General Purpose Register */
+
+#define CCM_CGPR_PMIC_DELAY_SCALER               (1 << 0)  /* Bit 0:      Defines clock division of clock for stby_count */
+                                                           /* Bits 1-3:   Reserved */
+#define CCM_CGPR_EFUSE_PROG_SUPPLY_GATE          (1 << 4)  /* Bit 4:      allow fuse programing */
+                                                           /* Bits 5-13:  Reserved */
+#define CCM_CGPR_SYS_MEM_DS_CTRL_SHIFT           (14)      /* Bits 14-15: System memory DS control */
+#define CCM_CGPR_SYS_MEM_DS_CTRL_MASK            (0x7 << CCM_CGPR_SYS_MEM_DS_CTRL_SHIFT)
+#  define CCM_CGPR_SYS_MEM_DS_CTRL(n)            ((uint32_t)(n) << CCM_CGPR_SYS_MEM_DS_CTRL_SHIFT)
+#define CCM_CGPR_FPL                             (1 << 16) /* Bit 16:     Fast PLL enable */
+#define CCM_CGPR_INT_MEM_CLK_LPM                 (1 << 17) /* Bit 17:     Control for the Deep Sleep signal to the ARM Platform memories */
+                                                           /* Bits 18-31: Reserved */
+
+/* Clock Gating Register 0-6 */
+
+#define CCM_CG_OFF                               (0)  /* Clock is off during all modes */
+#define CCM_CG_WAIT                              (1)  /* Clock is on in run mode, but off in WAIT and STOP modes */
+#define CCM_CG_ON                                (3)  /* Clock is on during all modes, except STOP mode. */
+
+#define CCM_CCGRX_CG0_SHIFT                      (0)
+#define CCM_CCGRX_CG0_MASK                       (0x3)
+#  define CCM_CCGRX_CG0(n)                       ((uint32_t)(n) << CCM_CCGRX_CG0_SHIFT)
+#define CCM_CCGRX_CG1_SHIFT                      (2)
+#define CCM_CCGRX_CG1_MASK                       (0x3)
+#  define CCM_CCGRX_CG1(n)                       ((uint32_t)(n) << CCM_CCGRX_CG1_SHIFT)
+#define CCM_CCGRX_CG2_SHIFT                      (4)
+#define CCM_CCGRX_CG2_MASK                       (0x3)
+#  define CCM_CCGRX_CG2(n)                       ((uint32_t)(n) << CCM_CCGRX_CG2_SHIFT)
+#define CCM_CCGRX_CG3_SHIFT                      (6)
+#define CCM_CCGRX_CG3_MASK                       (0x3)
+#  define CCM_CCGRX_CG3(n)                       ((uint32_t)(n) << CCM_CCGRX_CG3_SHIFT)
+#define CCM_CCGRX_CG4_SHIFT                      (8)
+#define CCM_CCGRX_CG4_MASK                       (0x3)
+#  define CCM_CCGRX_CG4(n)                       ((uint32_t)(n) << CCM_CCGRX_CG4_SHIFT)
+#define CCM_CCGRX_CG5_SHIFT                      (10)
+#define CCM_CCGRX_CG5_MASK                       (0x3)
+#  define CCM_CCGRX_CG5(n)                       ((uint32_t)(n) << CCM_CCGRX_CG5_SHIFT)
+#define CCM_CCGRX_CG6_SHIFT                      (12)
+#define CCM_CCGRX_CG6_MASK                       (0x3)
+#  define CCM_CCGRX_CG6(n)                       ((uint32_t)(n) << CCM_CCGRX_CG6_SHIFT)
+#define CCM_CCGRX_CG7_SHIFT                      (14)
+#define CCM_CCGRX_CG7_MASK                       (0x3)
+#  define CCM_CCGRX_CG7(n)                       ((uint32_t)(n) << CCM_CCGRX_CG7_SHIFT)
+#define CCM_CCGRX_CG8_SHIFT                      (16)
+#define CCM_CCGRX_CG8_MASK                       (0x3)
+#  define CCM_CCGRX_CG8(n)                       ((uint32_t)(n) << CCM_CCGRX_CG8_SHIFT)
+#define CCM_CCGRX_CG9_SHIFT                      (18)
+#define CCM_CCGRX_CG9_MASK                       (0x3)
+#  define CCM_CCGRX_CG9(n)                       ((uint32_t)(n) << CCM_CCGRX_CG9_SHIFT)
+#define CCM_CCGRX_CG10_SHIFT                     (20)
+#define CCM_CCGRX_CG10_MASK                      (0x3)
+#  define CCM_CCGRX_CG10(n)                      ((uint32_t)(n) << CCM_CCGRX_CG10_SHIFT)
+#define CCM_CCGRX_CG11_SHIFT                     (22)
+#define CCM_CCGRX_CG11_MASK                      (0x3)
+#  define CCM_CCGRX_CG11(n)                      ((uint32_t)(n) << CCM_CCGRX_CG11_SHIFT)
+#define CCM_CCGRX_CG12_SHIFT                     (24)
+#define CCM_CCGRX_CG12_MASK                      (0x3)
+#  define CCM_CCGRX_CG12(n)                      ((uint32_t)(n) << CCM_CCGRX_CG12_SHIFT)
+#define CCM_CCGRX_CG13_SHIFT                     (26)
+#define CCM_CCGRX_CG13_MASK                      (0x3)
+#  define CCM_CCGRX_CG13(n)                      ((uint32_t)(n) << CCM_CCGRX_CG13_SHIFT)
+#define CCM_CCGRX_CG14_SHIFT                     (28)
+#define CCM_CCGRX_CG14_MASK                      (0x3)
+#  define CCM_CCGRX_CG14(n)                      ((uint32_t)(n) << CCM_CCGRX_CG14_SHIFT)
+#define CCM_CCGRX_CG15_SHIFT                     (30)
+#define CCM_CCGRX_CG15_MASK                      (0x3)
+#  define CCM_CCGRX_CG15(n)                      ((uint32_t)(n) << CCM_CCGRX_CG15_SHIFT)
+
+/* Module Enable Overide Register */
+
+                                                           /* Bits 0-4: Reserved */
+#define CCM_CMEOR_MOD_EN_OV_GPT                  (1 << 5)  /* Bit 5:      Overide clock enable signal from GPT */
+#define CCM_CMEOR_MOD_EN_OV_PIT                  (1 << 6)  /* Bit 6:      Overide clock enable signal from PIT */
+#define CCM_CMEOR_MOD_EN_OV_USDHC                (1 << 7)  /* Bit 7:      Overide clock enable signal from USDHC */
+#define CCM_CMEOR_MOD_EN_OV_TRNG                 (1 << 9)  /* Bit 9:      Overide clock enable signal from TRNG */
+                                                           /* Bits 10-27: Reserved */
+#define CCM_CMEOR_MOD_EN_OV_CAN2_CPI             (1 << 28) /* Bit 28:     Overide clock enable signal from CAN2 */
+#define CCM_CMEOR_MOD_EN_OV_CAN1_CPI             (1 << 30) /* Bit 30:     Overide clock enable signal from CAN1 */
+                                                           /* Bit 31:     Reserved */
 
 #endif /* __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT_CCM_H */
