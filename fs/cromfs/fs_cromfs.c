@@ -74,13 +74,24 @@ struct cromfs_file_s
   FAR uint8_t *ff_buffer;                   /* Decompression buffer */
 };
 
-#if 0 /* Not used */
 /* This is the form of the callback from cromfs_foreach_node(): */
 
-typedefCODE  int (*cromfs_foreach_t)(FAR struct cromfs_volume_s *fs,
+typedef CODE int (*cromfs_foreach_t)(FAR const struct cromfs_volume_s *fs,
                                      FAR const struct cromfs_node_s *node,
                                      FAR void *arg);
-#endif
+
+/* This is the forma of the argument provided to the cromfs_comprenode()
+ * callback.
+ */
+
+struct cromfs_comparenode_s
+{
+  FAR const struct cromfs_node_s **node;   /* Location to return the node */
+  FAR const char *relpath;                 /* Full relative path */
+  FAR const char *segment;                 /* Reference to start of the
+                                            * path segment. */
+  uint16_t seglen;                         /* Length of the next path segment */
+};
 
 /****************************************************************************
  * Private Function Prototypes
@@ -88,14 +99,19 @@ typedefCODE  int (*cromfs_foreach_t)(FAR struct cromfs_volume_s *fs,
 
 /* Helpers */
 
-static FAR void *cromfs_offset2addr(FAR struct cromfs_volume_s *fs,
+static FAR void *cromfs_offset2addr(FAR const struct cromfs_volume_s *fs,
                                     size_t offset);
-static size_t  cromfs_addr2offset(FAR struct cromfs_volume_s *fs,
-                                  FAR void *addr);
-#if 0 /* Not used */
-static int     cromfs_foreach_node(FAR struct cromfs_volume_s *fs,
+static size_t  cromfs_addr2offset(FAR const struct cromfs_volume_s *fs,
+                                  FAR const void *addr);
+static int     cromfs_foreach_node(FAR const struct cromfs_volume_s *fs,
                                    cromfs_foreach_t callback, FAR void *arg);
-#endif
+static uint16_t cromfs_seglen(FAR const char *relpath);
+static int     cromfs_comparenode(FAR const struct cromfs_volume_s *fs,
+                                  FAR const struct cromfs_node_s *node,
+                                  FAR void *arg);
+static int     cromfs_findnode(FAR const struct cromfs_volume_s *fs,
+                               FAR const struct cromfs_node_s **node,
+                               FAR const char *relpath);
 
 /* Common file system methods */
 
@@ -183,7 +199,7 @@ extern const struct cromfs_volume_s g_cromfs_image;
  * Name: cromfs_offset2addr
  ****************************************************************************/
 
-static FAR void *cromfs_offset2addr(FAR struct cromfs_volume_s *fs,
+static FAR void *cromfs_offset2addr(FAR const struct cromfs_volume_s *fs,
                                     size_t offset)
 {
   /* Zero offset is a specials case:  It corresponds to a NULL address */
@@ -206,8 +222,8 @@ static FAR void *cromfs_offset2addr(FAR struct cromfs_volume_s *fs,
  * Name: cromfs_offset2addr
  ****************************************************************************/
 
-static size_t cromfs_addr2offset(FAR struct cromfs_volume_s *fs,
-                                 FAR void *addr)
+static size_t cromfs_addr2offset(FAR const struct cromfs_volume_s *fs,
+                                 FAR const void *addr)
 {
   uintptr_t start;
   uintptr_t target;
@@ -239,8 +255,7 @@ static size_t cromfs_addr2offset(FAR struct cromfs_volume_s *fs,
  * Name: cromfs_foreach_node
  ****************************************************************************/
 
-#if 0 /* Not used */
-static int cromfs_foreach_node(FAR struct cromfs_volume_s *fs,
+static int cromfs_foreach_node(FAR const struct cromfs_volume_s *fs,
                               cromfs_foreach_t callback, FAR void *arg)
 {
   FAR const struct cromfs_node_s *node;
@@ -254,11 +269,183 @@ static int cromfs_foreach_node(FAR struct cromfs_volume_s *fs,
         {
           return ret;
         }
+
+      node = (FAR const struct cromfs_node_s *)
+             cromfs_offset2addr(fs, node->cn_peer);
     }
 
   return ret;
 }
-#endif
+
+/****************************************************************************
+ * Name: cromfs_seglen
+ ****************************************************************************/
+
+static uint16_t cromfs_seglen(FAR const char *relpath)
+{
+  FAR char *delimiter;
+  int len;
+
+  delimiter = strchr(relpath, '/');
+  if (delimiter == NULL)
+    {
+      len = strlen(relpath);
+    }
+  else
+    {
+      len = (int)((uintptr_t)delimiter - (uintptr_t)relpath);
+    }
+
+  DEBUGASSERT((unsigned int)len <= UINT16_MAX);
+  return (uint16_t)len;
+}
+
+/****************************************************************************
+ * Name: cromfs_comparenode
+ ****************************************************************************/
+
+static int cromfs_comparenode(FAR const struct cromfs_volume_s *fs,
+                              FAR const struct cromfs_node_s *node,
+                              FAR void *arg)
+{
+  FAR struct cromfs_comparenode_s *cpnode;
+  FAR char *name;
+  int namlen;
+
+  DEBUGASSERT(fs != NULL && node != NULL && arg != NULL);
+  cpnode = (FAR struct cromfs_comparenode_s *)arg;
+
+  /* Get the name of the node */
+
+  name   = (FAR char *)cromfs_offset2addr(fs, node->cn_name);
+  namlen = strlen(name);
+
+  /* If the lengths of the name does not match the length of the next path
+   * segment, then this is not the node we are looking for.
+   */
+
+  if (namlen != cpnode->seglen)
+    {
+      return 0;  /* Keep looking */
+    }
+
+  /* The are the same length... are they the same? */
+
+  if (strncmp(name, cpnode->segment, namlen) == 0)
+    {
+      FAR const char *segment = cpnode->segment;
+
+      /* Got it!  Was this the last segment of the path?  If so, then
+       * the segment length is equal to the length of the remaining
+       * relpath and we should find a NUL terminator at that location.
+       */
+
+      if (segment[namlen] == '\0')
+        {
+          /* We have it.  Save the terminal node with the final match
+           * and return 1 to stop the traversal.
+           */
+
+          *cpnode->node = node;
+          return 1;
+        }
+
+      /* A specal cas is if the path ends in "/".  In this case I suppose
+       * we need to interpret the as matching as long as it is a directory?
+       */
+
+      if (segment[namlen] == '/' && segment[namlen = 1] == '\0')
+        {
+          *cpnode->node = node;
+          return S_ISDIR(node->cn_mode) ? 1 : -ENOENT;
+        }
+
+      /* If this is a valid, non-terminal segment on the path, then it must
+       * be a directory.
+       */
+
+      if (!S_ISDIR(node->cn_mode))
+        {
+          /* Terminate the traversal with an error */
+
+          return -ENOTDIR;
+        }
+
+      /* Set up to continue the traversal in the sub-directory.  NOTE that
+       * this recurses and could potentially eat up a lot of stack.
+       */
+
+      segment = cpnode->segment + cpnode->seglen;
+
+      /* Skip over any '/' delimiter */
+
+      while (*segment == '/')
+        {
+          segment++;
+        }
+
+      cpnode->segment = segment;
+      cpnode->seglen  = cromfs_seglen(segment);
+      DEBUGASSERT(cpnode->seglen > 0);
+
+      /* Then recurse */
+
+      return cromfs_foreach_node(fs, cromfs_comparenode, cpnode);
+    }
+  else
+    {
+      return 0;  /* Keep looking in this directory */
+    }
+}
+
+/****************************************************************************
+ * Name: cromfs_findnode
+ ****************************************************************************/
+
+static int cromfs_findnode(FAR const struct cromfs_volume_s *fs,
+                           FAR const struct cromfs_node_s **node,
+                           FAR const char *relpath)
+{
+  struct cromfs_comparenode_s cpnode;
+  int ret;
+
+  /* NULL or empty string refers to the root node */
+
+  if (relpath == NULL || relpath[0] == '\0')
+    {
+      *node = (FAR const struct cromfs_node_s *)
+              cromfs_offset2addr(fs, fs->cv_root);
+      return OK;
+    }
+
+  /* Not the root directory.  Relative so it should not begin with '/'. */
+
+  if (relpath[0] == '/')
+    {
+      return -EINVAL;
+    }
+
+  /* Set up for the traversal */
+
+  cpnode.node    = node;
+  cpnode.relpath = relpath;
+  cpnode.segment = relpath;
+  cpnode.seglen  = (uint16_t)cromfs_seglen(relpath);
+
+  ret = cromfs_foreach_node(fs, cromfs_comparenode, &cpnode);
+  if (ret > 0)
+    {
+      return OK;
+    }
+  else if (ret == OK)
+    {
+      return -ENOENT;
+    }
+  else
+    {
+      return ret;
+    }
+}
 
 /****************************************************************************
  * Name: cromfs_open
@@ -268,8 +455,8 @@ static int cromfs_open(FAR struct file *filep, FAR const char *relpath,
                        int oflags, mode_t mode)
 {
   FAR struct inode *inode;
-  FAR struct cromfs_volume_s *fs;
-  FAR struct cromfs_node_s *node;
+  FAR const struct cromfs_volume_s *fs;
+  FAR const struct cromfs_node_s *node;
   FAR struct cromfs_file_s *ff;
   int ret;
 
@@ -521,8 +708,8 @@ static int cromfs_fstat(FAR const struct file *filep, FAR struct stat *buf)
 static int cromfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
                           FAR struct fs_dirent_s *dir)
 {
-  FAR struct cromfs_volume_s *fs;
-  FAR struct cromfs_node_s *node;
+  FAR const struct cromfs_volume_s *fs;
+  FAR const struct cromfs_node_s *node;
   int ret;
 
   finfo("relpath: \"%s\"\n", relpath ? relpath : "NULL");
@@ -571,8 +758,8 @@ static int cromfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
 
 static int cromfs_readdir(struct inode *mountpt, struct fs_dirent_s *dir)
 {
-  FAR struct cromfs_volume_s *fs;
-  FAR struct cromfs_node_s *node;
+  FAR const struct cromfs_volume_s *fs;
+  FAR const struct cromfs_node_s *node;
   FAR char *name;
   size_t offset;
 
@@ -599,9 +786,11 @@ static int cromfs_readdir(struct inode *mountpt, struct fs_dirent_s *dir)
       return -ENOENT;
     }
 
-  /* Convert the offset to a node address (assuming that everything is in-memory) */
+  /* Convert the offset to a node address (assuming that everything is in-
+   * memory)
+   */
 
-  node = (FAR struct cromfs_node_s *)cromfs_offset2addr(fs, offset);
+  node = (FAR const struct cromfs_node_s *)cromfs_offset2addr(fs, offset);
 
   /* Save the filename and file type */
 
@@ -736,8 +925,8 @@ static int cromfs_statfs(struct inode *mountpt, struct statfs *buf)
 static int cromfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
                        FAR struct stat *buf)
 {
-  FAR struct cromfs_volume_s *fs;
-  FAR struct cromfs_node_s *node;
+  FAR const struct cromfs_volume_s *fs;
+  FAR const struct cromfs_node_s *node;
   int ret;
 
   finfo("mountptr: %p relpath: %s buf: %p\n", mountpt, relpath, buf);
