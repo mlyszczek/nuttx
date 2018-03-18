@@ -80,7 +80,7 @@ typedef CODE int (*cromfs_foreach_t)(FAR const struct cromfs_volume_s *fs,
                                      FAR const struct cromfs_node_s *node,
                                      FAR void *arg);
 
-/* This is the forma of the argument provided to the cromfs_comprenode()
+/* This is the form of the argument provided to the cromfs_comparenode()
  * callback.
  */
 
@@ -562,22 +562,184 @@ static int cromfs_close(FAR struct file *filep)
  * Name: cromfs_read
  ****************************************************************************/
 
-static ssize_t cromfs_read(FAR struct file *filep, char *buffer,
+static ssize_t cromfs_read(FAR struct file *filep, FAR char *buffer,
                            size_t buflen)
 {
+  FAR struct inode *inode;
+  FAR const struct cromfs_volume_s *fs;
   FAR struct cromfs_file_s *ff;
+  FAR struct lzf_header_s *currhdr;
+  FAR struct lzf_header_s *nexthdr;
+  FAR uint8_t *dest;
+  FAR const uint8_t *src;
+  off_t fpos;
+  size_t remaining;
+  size_t blkoffs;
+  uint16_t ulen;
+  uint16_t clen;
+  unsigned int copysize;
+  unsigned int copyoffs;
 
   finfo("Read %d bytes from offset %d\n", buflen, filep->f_pos);
   DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
 
+  /* Get the mountpoint inode reference from the file structure and the
+   * volume private data from the inode structure
+   */
+
+  inode = filep->f_inode;
+  fs    = inode->i_private;
+  DEBUGASSERT(fs != NULL);
+
   /* Get the open file instance from the file structure */
 
-  ff = filep->f_priv;
+  ff = (FAR struct cromfs_file_s *)filep->f_priv;
   DEBUGASSERT(ff->ff_node != NULL && ff->ff_buffer != NULL);
 
-  /* Reading is not yet supported.  Just return end-of-file for now */
-#warning Missing logic
-  return 0;
+  /* Check for a read past the end of the file */
+
+  if (filep->f_pos > ff->ff_node->cn_size)
+    {
+      /* Return the end-of-file indication */
+
+      return 0;
+    }
+
+  /* Find the compressed block containing the current offset, f_pos */
+
+  dest      = (FAR uint8_t *)buffer;
+  remaining = buflen;
+  fpos      = filep->f_pos;
+  blkoffs   = 0;
+  ulen      = 0;
+  nexthdr   = (FAR struct lzf_header_s *)
+               cromfs_offset2addr(fs, ff->ff_node->u.cn_blocks);
+
+  /* Look until we find the compressed block containing the start of the
+   * requested data.
+   */
+
+  while (remaining > 0)
+    {
+      /* Search for the next block containing the fpos file offset.  This is
+       * real search on the first time through but the reamining blocks should
+       * be contiguous.
+       */
+
+      do
+        {
+          size_t blksize;
+
+          /* Go to the next block */
+
+          currhdr  = nexthdr;
+          blkoffs += blksize;
+
+          if (currhdr->lzf_type == LZF_TYPE0_HDR)
+            {
+              FAR struct lzf_type0_header_s *hdr0 =
+                (FAR struct lzf_type0_header_s *)currhdr;
+
+              ulen    = (uint16_t)hdr0->lzf_len[0] << 8 |
+                        (uint16_t)hdr0->lzf_len[0];
+              blksize = (size_t)ulen + LZF_TYPE0_HDR_SIZE;
+            }
+          else
+            {
+              FAR struct lzf_type1_header_s * hdr1 =
+                (FAR struct lzf_type1_header_s *)currhdr;
+
+              ulen    = (uint16_t)hdr1->lzf_ulen[0] << 8 |
+                        (uint16_t)hdr1->lzf_ulen[0];
+              clen    = (uint16_t)hdr1->lzf_clen[0] << 8 |
+                        (uint16_t)hdr1->lzf_clen[0];
+              blksize = (size_t)clen + LZF_TYPE1_HDR_SIZE;
+            }
+
+          nexthdr = (FAR struct lzf_header_s *)((FAR uint8_t *)currhdr + blksize);
+        }
+      while (blkoffs <= fpos && (blkoffs + ulen) > fpos);
+
+      /* Check if we need to decompress the next block into the user buffer */
+
+      if (currhdr->lzf_type == LZF_TYPE0_HDR)
+        {
+          /* Just copy the uncompressed data copy data from image to the user buffer */
+
+          copyoffs = blkoffs >= filep->f_pos ? 0 : filep->f_pos - blkoffs;
+          DEBUGASSERT(ulen > copyoffs);
+          copysize = ulen - copyoffs;
+
+          if (copysize > remaining)  /* Clip to the size really needed */
+            {
+              copysize = remaining;
+            }
+
+          src = (FAR const uint8_t *)currhdr + LZF_TYPE0_HDR_SIZE;
+          memcpy(dest, &src[copyoffs], copysize);
+        }
+      else
+        {
+          unsigned int decomplen;
+
+          /* If the source of the data is at the beginning of the compressed
+           * data buffer, then we can decompress directly into the user buffer.
+           */
+
+          if (filep->f_pos <= blkoffs)
+            {
+              copyoffs = 0;
+              copysize = ulen;
+              if (copysize > remaining)
+                {
+                  copysize = remaining;
+                }
+
+                  src = (FAR const uint8_t *)currhdr + LZF_TYPE1_HDR_SIZE;
+              decomplen = lzf_decompress(src, clen, dest, copysize);
+              DEBUGASSERT(decomplen = copysize);
+            }
+          else
+            {
+              unsigned int outsize;
+
+              /* No, we will need to decompress into the our intermediate
+               * decompression buffer.
+               */
+
+              copyoffs = blkoffs >= filep->f_pos ? 0 : filep->f_pos - blkoffs;
+              DEBUGASSERT(ulen > copyoffs);
+              copysize = ulen - copyoffs;
+
+              if (copysize > remaining)  /* Clip to the size really needed */
+                {
+                  copysize = remaining;
+                }
+
+              outsize = copyoffs + copysize;
+              DEBUGASSERT(outsize <=  fs->cv_bsize);
+
+              src = (FAR const uint8_t *)currhdr + LZF_TYPE1_HDR_SIZE;
+              decomplen = lzf_decompress(src, clen, ff->ff_buffer, outsize);
+              DEBUGASSERT(decomplen == outsize);
+
+              /* Then copy to user buffer */
+
+              memcpy(dest, &ff->ff_buffer[copyoffs], copysize);
+            }
+        }
+    }
+
+  /* Adjust pointers counts and offset */
+
+  dest      += copysize;
+  remaining -= copysize;
+  fpos      += copysize;
+
+  /* Update the file pointer */
+
+  filep->f_pos = fpos;
+  return buflen;
 }
 
 /****************************************************************************
@@ -965,4 +1127,3 @@ static int cromfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
  ****************************************************************************/
 
 #endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_CROMFS */
-
