@@ -95,33 +95,7 @@
 #define HEX_PER_LINE      16
 
 /****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static char *g_progname;       /* Name of this program */
-static char *g_dirname;        /* Source directory path */
-static char *g_outname;        /* Output file path */
-
-static FILE *g_outstream;      /* Main output stream */
-static FILE *g_tmpstream;      /* Temporary file output stream */
-
-static const char g_delim[] =
-  "*************************************************************************"
-  "***********************";
-
-static size_t g_offset;        /* Current image offset */
-static size_t g_diroffset;     /* Offset for '.' */
-static size_t g_parent_offset; /* Offset for '..' */
-
-static unsigned int g_nnodes;  /* Number of nodes generated */
-static unsigned int g_nblocks; /* Number of blocks of data generated */
-static unsigned int g_nhex;    /* Number of hex characters on output line */
-#ifndef USE_MKSTEMP
-static unsigned int g_ntmps;   /* Number temporary files */
-#endif
-
-/****************************************************************************
- * Private Tpes
+ * Private Types
  ****************************************************************************/
 
 struct cromfs_volume_s
@@ -148,6 +122,32 @@ struct cromfs_node_s
     size_t cn_blocks;    /* Offset to first block of compressed data (for read) */
   } u;
 };
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static char *g_progname;       /* Name of this program */
+static char *g_dirname;        /* Source directory path */
+static char *g_outname;        /* Output file path */
+
+static FILE *g_outstream;      /* Main output stream */
+static FILE *g_tmpstream;      /* Temporary file output stream */
+
+static const char g_delim[] =
+  "*************************************************************************"
+  "***********************";
+
+static size_t g_offset;        /* Current image offset */
+static size_t g_diroffset;     /* Offset for '.' */
+static size_t g_parent_offset; /* Offset for '..' */
+
+static unsigned int g_nnodes;  /* Number of nodes generated */
+static unsigned int g_nblocks; /* Number of blocks of data generated */
+static unsigned int g_nhex;    /* Number of hex characters on output line */
+#ifndef USE_MKSTEMP
+static unsigned int g_ntmps;   /* Number temporary files */
+#endif
 
 /****************************************************************************
  * Private Function Prototypes
