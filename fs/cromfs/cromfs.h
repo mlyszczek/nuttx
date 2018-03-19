@@ -116,7 +116,7 @@ struct cromfs_node_s
                           * node name string.  NUL-terminated. */
   size_t cn_size;        /* Size of the uncompressed data (in bytes) */
   size_t cn_peer;        /* Offset to next node in this directory (for readdir()) */
-  union                  /* Must be last */
+  union
   {
     size_t cn_child;     /* Offset to first node in sub-directory (directories only) */
     size_t cn_link;      /* Offset to an arbitrary node (for hard link) */

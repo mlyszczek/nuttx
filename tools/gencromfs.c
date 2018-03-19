@@ -39,29 +39,115 @@
 
 #define _GNU_SOURCE 1
 #include <sys/stat.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
+#include <lzf.h>
 #include <errno.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
+#undef USE_MKSTEMP
+
+#define TMP_NAMLEN        32         /* Actually only 22 */
+#ifdef USE_MKSTEMP
+#  define TMP_NAME        "/tmp/gencromfs-XXXXXX"
+#else
+#  define TMP_NAME        "/tmp/gencromfs-%06u"
+#endif
+
+#define NUTTX_IXOTH       (1 << 0)   /* Bits 0-2: Permissions for others: RWX */
+#define NUTTX_IWOTH       (1 << 1)
+#define NUTTX_IROTH       (1 << 2)
+
+#define NUTTX_IRXOTH      (NUTTX_IROTH | NUTTX_IXOTH)
+
+#define NUTTX_IXGRP       (1 << 3)   /* Bits 3-5: Group permissions: RWX */
+#define NUTTX_IWGRP       (1 << 4)
+#define NUTTX_IRGRP       (1 << 5)
+
+#define NUTTX_IRXGRP      (NUTTX_IRGRP | NUTTX_IXGRP)
+
+#define NUTTX_IXUSR       (1 << 6)   /* Bits 6-8: Owner permissions: RWX */
+#define NUTTX_IWUSR       (1 << 7)
+#define NUTTX_IRUSR       (1 << 8)
+
+#define NUTTX_IRWXUSR     (NUTTX_IRUSR | NUTTX_IWUSR | NUTTX_IXUSR)
+#define NUTTX_IRWUSR      (NUTTX_IRUSR | NUTTX_IWUSR)
+
+#define NUTTX_IFDIR       (2 << 12)
+#define NUTTX_IFREG       (4 << 12)
+
+#define NUTTX_IFLNK       (1 << 15)  /* Bit 15: Symbolic link */
+
+#define DIR_MODEFLAGS     (NUTTX_IFDIR | NUTTX_IRWXUSR | NUTTX_IRXGRP | NUTTX_IRXOTH)
+#define DIRLINK_MODEFLAGS (NUTTX_IFLNK | DIR_MODEFLAGS)
+#define FILE_MODEFLAGS    (NUTTX_IFREG | NUTTX_IRWUSR | NUTTX_IRGRP | NUTTX_IROTH)
+
+#define CROMFS_MAGIC      0x4d4f5243
+#define CROMFS_BLOCKSIZE  512
+
+#define HEX_PER_BREAK     8
+#define HEX_PER_LINE      16
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static const char *g_progname;
-static const char *g_dirname;
-static const char *g_outname;
+static char *g_progname;       /* Name of this program */
+static char *g_dirname;        /* Source directory path */
+static char *g_outname;        /* Output file path */
 
-static FILE *g_outstream;
-static FILE *g_nodes;
+static FILE *g_outstream;      /* Main output stream */
+static FILE *g_tmpstream;      /* Temporary file output stream */
 
 static const char g_delim[] =
-"****************************************************************************";
+  "*************************************************************************"
+  "***********************";
+
+static size_t g_offset;        /* Current image offset */
+static size_t g_diroffset;     /* Offset for '.' */
+static size_t g_parent_offset; /* Offset for '..' */
+
+static unsigned int g_nnodes;  /* Number of nodes generated */
+static unsigned int g_nblocks; /* Number of blocks of data generated */
+static unsigned int g_nhex;    /* Number of hex characters on output line */
+#ifndef USE_MKSTEMP
+static unsigned int g_ntmps;   /* Number temporary files */
+#endif
+
+/****************************************************************************
+ * Private Tpes
+ ****************************************************************************/
+
+struct cromfs_volume_s
+{
+  uint32_t cv_magic;     /* Must be first.  Must be CROMFS_MAGIC */
+  uint16_t cv_nnodes;    /* Total number of nodes in-use */
+  uint16_t cv_nblocks;   /* Total number of data blocks in-use */
+  size_t cv_root;        /* Offset to the first node in the root file system */
+  size_t cv_fsize;       /* Size of the compressed file system image */
+  size_t cv_bsize;       /* Optimal block size for transfers */
+};
+
+struct cromfs_node_s
+{
+  mode_t cn_mode;        /* File type, attributes, and access mode bits */
+  size_t cn_name;        /* Offset from the beginning of the volume header to the
+                          * node name string.  NUL-terminated. */
+  size_t cn_size;        /* Size of the uncompressed data (in bytes) */
+  size_t cn_peer;        /* Offset to next node in this directory (for readdir()) */
+  union
+  {
+    size_t cn_child;     /* Offset to first node in sub-directory (directories only) */
+    size_t cn_link;      /* Offset to an arbitrary node (for hard link) */
+    size_t cn_blocks;    /* Offset to first block of compressed data (for read) */
+  } u;
+};
 
 /****************************************************************************
  * Private Function Prototypes
@@ -71,7 +157,16 @@ static void show_usage(void);
 static void verify_directory(void);
 static void verify_outfile(void);
 static void init_outfile(void);
-static void init_nodefile(void);
+static FILE *open_tmpfile(void);
+#ifndef USE_MKSTEMP
+static void unlink_tmpfiles(void);
+#endif
+static void append_tmpfile(FILE *dest, FILE *src);
+static void dump_hexbuffer(FILE *stream, const void *buffer, unsigned int nbytes);
+static void dump_nextline(FILE *stream);
+static void gen_dirlink(const char *name, size_t tgtoffs);
+static void gen_directory(const char *path, const char *name);
+static void gen_file(const char *path, const char *name, struct stat *buf);
 static void process_direntry(const char *dirpath, struct dirent *direntry);
 static void traverse_directory(const char *dirpath, const char *subdir);
 
@@ -88,7 +183,24 @@ static void show_usage(void)
 static void verify_directory(void)
 {
   struct stat buf;
+  int len;
   int ret;
+
+  /* Trim any trailing '/' characters from the directory path. */
+
+  len = strlen(g_dirname);
+  while (len > 1 && g_dirname[len-1] == '/')
+    {
+      g_dirname[len-1] = '\0';
+      len--;
+    }
+
+  if (len < 1)
+    {
+      fprintf(stderr, "ERROR: Source <dir-path> %s is invalid\n",
+              g_dirname);
+      show_usage();
+    }
 
   /* stat the source directory containing the file system image */
 
@@ -191,56 +303,273 @@ static void init_outfile(void)
 
   fprintf(g_outstream, "/%s\n", g_delim);
   fprintf(g_outstream, " * Included Files\n");
-  fprintf(g_outstream, " %s/\n", g_delim);
+  fprintf(g_outstream, " %s/\n\n", g_delim);
 
   fprintf(g_outstream, "#include <nuttx/config.h>\n\n");
-  fprintf(g_outstream, "#include <sys/types.h>\n");
-  fprintf(g_outstream, "#include <stdint.h>\n");
-  fprintf(g_outstream, "#include <lzf.h>\n");
+  fprintf(g_outstream, "#include <stdint.h>\n\n");
 
-  fprintf(g_outstream, "/%s\n", g_delim);
-  fprintf(g_outstream, " * Pre-processor Definitions Types\n");
-  fprintf(g_outstream, " %s/\n\n", g_delim);
-
-  fprintf(g_outstream, "/%s\n", g_delim);
-  fprintf(g_outstream, " * Private Types\n");
-  fprintf(g_outstream, " %s/\n\n", g_delim);
-
-  fprintf(g_outstream, "struct cromfs_volume_s\n");
-  fprintf(g_outstream, "{\n");
-  fprintf(g_outstream, "  uint32_t cv_magic;     /* Must be first.  Must be CROMFS_MAGIC */\n");
-  fprintf(g_outstream, "  uint16_t cv_nnodes;    /* Total number of nodes in-use */\n");
-  fprintf(g_outstream, "  uint16_t cv_nblocks;   /* Total number of data blocks in-use */\n");
-  fprintf(g_outstream, "  size_t cv_root;        /* Offset to the first node in the root file system */\n");
-  fprintf(g_outstream, "  size_t cv_fsize;       /* Size of the compressed file system image */\n");
-  fprintf(g_outstream, "  size_t cv_bsize;       /* Optimal block size for transfers */\n");
-  fprintf(g_outstream, "};\n\n");
-
-  fprintf(g_outstream, "struct cromfs_node_s\n");
-  fprintf(g_outstream, "{\n");
-  fprintf(g_outstream, "  mode_t cn_mode;        /* File type, attributes, and access mode bits */\n");
-  fprintf(g_outstream, "  size_t cn_name;        /* Offset from the beginning of the volume header to the\n");
-  fprintf(g_outstream, "                          * node name string.  NUL-terminated. */\n");
-  fprintf(g_outstream, "  size_t cn_size;        /* Size of the uncompressed data (in bytes) */\n");
-  fprintf(g_outstream, "  size_t cn_peer;        /* Offset to next node in this directory (for readdir()) */\n");
-  fprintf(g_outstream, "  union                  /* Must be last */\n");
-  fprintf(g_outstream, "  {\n");
-  fprintf(g_outstream, "    size_t cn_child;     /* Offset to first node in sub-directory (directories only) */\n");
-  fprintf(g_outstream, "    size_t cn_link;      /* Offset to an arbitrary node (for hard link) */\n");
-  fprintf(g_outstream, "    size_t cn_blocks;    /* Offset to first block of compressed data (for read) */\n");
-  fprintf(g_outstream, "  } u;\n");
-  fprintf(g_outstream, "};\n\n");
-}
-
-static void init_nodefile(void)
-{
   fprintf(g_outstream, "/%s\n", g_delim);
   fprintf(g_outstream, " * Private Data\n");
-  fprintf(g_outstream, " %s/\n", g_delim);
+  fprintf(g_outstream, " %s/\n\n", g_delim);
+}
+
+static FILE *open_tmpfile(void)
+{
+  FILE *tmpstream;
+#ifdef USE_MKSTEMP
+  int fd;
+
+  fd = mkstemp(TMP_NAME);
+  if (fd < 0)
+    {
+      fprintf(stderr, "Failed to create temporary file: %s\n", strerror(errno));
+      exit(1);
+    }
+
+  tmpstream = fdopen(fd, "w+");
+  if (!tmpstream)
+    {
+      fprintf(stderr, "fdopen for tmp file failed: %s\n", strerror(errno));
+      exit(1);
+    }
+
+#else
+  char tmpname[TMP_NAMLEN];
+
+  snprintf(tmpname, TMP_NAMLEN, TMP_NAME, g_ntmps);
+  g_ntmps++;
+
+  tmpstream = fopen(tmpname, "w+");
+  if (!tmpstream)
+    {
+      fprintf(stderr, "fopen for tmp file %s failed: %s\n",
+              tmpname, strerror(errno));
+      exit(1);
+    }
+#endif
+
+  return tmpstream;
+}
+
+#ifndef USE_MKSTEMP
+static void unlink_tmpfiles(void)
+{
+  char tmpname[TMP_NAMLEN];
+  unsigned int i;
+
+  for (i = 0; i < g_ntmps; i++)
+    {
+      snprintf(tmpname, TMP_NAMLEN, TMP_NAME, i);
+      (void)unlink(tmpname);
+    }
+}
+#endif
+
+static void append_tmpfile(FILE *dest, FILE *src)
+{
+  uint8_t iobuffer[1024];
+  size_t nread;
+
+  /* Rewind the source directory to be beginning.  We assume that the dest
+   * is already at the end.
+   */
+
+  rewind(src);
+
+  /* Then append the source to the destination */
+
+  do
+    {
+      nread = fread(iobuffer, 1, 1024, src);
+      if (nread > 0)
+        {
+          (void)fwrite(iobuffer, 1, nread, dest);
+        }
+    }
+  while (nread > 0);
+
+  /* We can now close the src temporary file */
+
+  fclose(src);
+}
+
+static void dump_hexbuffer(FILE *stream, const void *buffer,
+                           unsigned int nbytes)
+{
+  uint8_t *ptr = (uint8_t *)buffer;
+
+  while (nbytes > 0)
+    {
+      if (g_nhex == 0 || g_nhex == HEX_PER_BREAK)
+        {
+          fprintf(stream, " ");
+        }
+
+      fprintf(stream, " 0x%02x,", *ptr++);
+
+      if (++g_nhex >= HEX_PER_LINE)
+        {
+          fprintf(stream, "\n");
+          g_nhex = 0;
+        }
+
+      nbytes--;
+    }
+}
+
+static void dump_nextline(FILE *stream)
+{
+  if (g_nhex > 0)
+    {
+      fprintf(stream, "\n");
+      g_nhex = 0;
+    }
+}
+
+static void gen_dirlink(const char *name, size_t tgtoffs)
+{
+  struct cromfs_node_s node;
+  int namlen;
+
+  namlen          = strlen(name) + 1;
+
+  /* Generate the hardlink node */
+
+  node.cn_mode    = DIRLINK_MODEFLAGS;
+
+  g_offset       += sizeof(struct cromfs_node_s);
+  node.cn_name    = g_offset;
+  node.cn_size    = 0;
+
+  g_offset       += namlen;
+  node.cn_peer    = g_offset;
+  node.u.cn_link  = tgtoffs;
+
+  fprintf(g_tmpstream, "\n  /* %s: Hard link */\n\n", name);
+  dump_nextline(g_tmpstream);
+  dump_hexbuffer(g_tmpstream, &node, sizeof(struct cromfs_node_s));
+  dump_hexbuffer(g_tmpstream, name, namlen);
+
+  g_nnodes++;
+}
+
+static void gen_directory(const char *path, const char *name)
+{
+  struct cromfs_node_s node;
+  size_t save_offset        = g_offset;
+  size_t save_diroffset     = g_diroffset;
+  size_t save_parent_offset = g_parent_offset;
+  FILE *save_tmpstream      = g_tmpstream;
+  FILE *subtree_stream;
+  int namlen;
+
+  namlen          = strlen(name) + 1;
+
+  /* Open a new temporary file */
+
+  subtree_stream  = open_tmpfile();
+  g_tmpstream     = subtree_stream;
+
+  /* Update offsets for the subdirectory */
+
+  g_parent_offset = g_diroffset;  /* New offset for '..' */
+  g_diroffset     = g_offset;     /* New offset for '.' */
+
+  /* Update the offset to account for the file node which we have not yet
+   * written (we can't, we don't have enough information yet)
+   */
+
+  g_offset       += sizeof(struct cromfs_node_s) + namlen;
+
+  /* Generate the '.' and '..' links for the directory (in the new temporary file) */
+
+  gen_dirlink(".", g_diroffset);
+  gen_dirlink("..", g_parent_offset);
+
+  /* Then recurse to generate all of the nodes for the subtree */
+
+  traverse_directory(path, name);
+
+  /* When traverse_directory() returns, all of the nodes in the sub-tree under
+   * 'name' will have been written to the new tmpfile.  g_offset is correct,
+   * but other settings are not.
+   *
+   * Restore the state.
+   */
+
+  g_tmpstream     = save_tmpstream;
+  g_diroffset     = save_diroffset;
+  g_parent_offset = save_parent_offset;
+
+  /* Generate the directory node */
+
+  node.cn_mode    = DIR_MODEFLAGS;
+
+  save_offset    += sizeof(struct cromfs_node_s);
+  node.cn_name    = save_offset;
+  node.cn_size    = 0;
+
+  save_offset    += namlen;
+  node.cn_peer    = g_offset;
+  node.u.cn_child = save_offset;
+
+  fprintf(g_tmpstream, "\n  /* Directory %s */\n\n", path);
+  dump_nextline(g_tmpstream);
+  dump_hexbuffer(g_tmpstream, &node, sizeof(struct cromfs_node_s));
+  dump_hexbuffer(g_tmpstream, name, namlen);
+
+  g_nnodes++;
+
+  /* Now append the sub-tree nodes in the new tmpfile to the previous tmpfile */
+
+  append_tmpfile(g_tmpstream, subtree_stream);
+}
+
+static void gen_file(const char *path, const char *name, struct stat *buf)
+{
 }
 
 static void process_direntry(const char *dirpath, struct dirent *direntry)
 {
+  struct stat buf;
+  char *path;
+  int ret;
+
+  asprintf(&path, "%s/%s", dirpath, direntry->d_name);
+
+  ret = stat(path, &buf);
+  if (ret < 0)
+    {
+      int errcode = errno;
+      if (errcode == ENOENT)
+        {
+          fprintf(stderr, "ERROR: Directory entry %s does not exist\n", path);
+        }
+      else
+        {
+          fprintf(stderr, "ERROR: stat(%s) failed: %s\n",
+                 path, strerror(errcode));
+        }
+
+      show_usage();
+    }
+
+  /* Verify that the source is, indeed, a directory */
+
+  else if (S_ISDIR(buf.st_mode))
+    {
+      gen_directory(path, direntry->d_name);
+    }
+  else if (S_ISREG(buf.st_mode))
+    {
+      gen_file(path, direntry->d_name, &buf);
+    }
+  else
+    {
+      fprintf(stderr, "Omitting entry %s\n", path);
+    }
+
+  free(path);
 }
 
 static void traverse_directory(const char *dirpath, const char *subdir)
@@ -279,12 +608,20 @@ static void traverse_directory(const char *dirpath, const char *subdir)
       direntry = readdir(dirp);
       if (direntry != NULL)
         {
-          process_direntry(dirpath, direntry);
+          /* Skip the '.' and '..' hard links */
+
+          if (strcmp(direntry->d_name, ".") != 0 &&
+              strcmp(direntry->d_name, "..") != 0)
+            {
+              /* Process the directory entry */
+
+              process_direntry(dirptr, direntry);
+            }
         }
     }
   while (direntry != NULL);
 
-  /* Free any allocatin that we made above */
+  /* Free any allocation that we made above */
 
   if (diralloc)
     {
@@ -298,8 +635,8 @@ static void traverse_directory(const char *dirpath, const char *subdir)
 
 int main(int argc, char **argv, char **envp)
 {
+  struct cromfs_volume_s vol;
   char *ptr;
-  int fd;
 
   /* Verify arguments */
 
@@ -325,24 +662,21 @@ int main(int argc, char **argv, char **envp)
       exit(1);
     }
 
-  fd = mkstemp("/tmp/gencromfs-XXXXXX");
-  if (fd < 0)
-    {
-      fprintf(stderr, "Failed to create temporary file: %s\n", strerror(errno));
-      exit(1);
-    }
-
-  g_nodes = fdopen(fd, "w");
-  if (!g_nodes)
-    {
-      fprintf(stderr, "fdopen for tmp file failed: %s\n", strerror(errno));
-      exit(1);
-    }
+  g_tmpstream = open_tmpfile();
 
   /* Set up the initial boilerplate at the beginning of each file */
 
   init_outfile();
-  init_nodefile();
+
+  /* Set up some initial offsets */
+
+  g_offset        = sizeof(struct cromfs_volume_s);  /* Current image offset */
+  g_diroffset     = sizeof(struct cromfs_volume_s);  /* Offset for '.' */
+  g_parent_offset = sizeof(struct cromfs_volume_s);  /* Offset for '..' */
+
+  /* Generate the '.' link for the root directory (it can't have a '..') */
+
+  gen_dirlink(".", g_diroffset);
 
   /* Then traverse each entry in the directory, generating node data for each
    * directory entry encountered.
@@ -352,9 +686,32 @@ int main(int argc, char **argv, char **envp)
 
   /* Now append the volume header to output file */
 
+  fprintf(g_outstream, "/* CROMFS image */\n\n");
+  fprintf(g_outstream, "uint8_t g_cromfs_image[] =\n");
+  fprintf(g_outstream, "{\n");
+  fprintf(g_outstream, "  /* Volume header */\n\n");
+
+  vol.cv_magic    = CROMFS_MAGIC;
+  vol.cv_nnodes   = g_nnodes;
+  vol.cv_nblocks  = g_nblocks;
+  vol.cv_root     = sizeof(struct cromfs_volume_s);
+  vol.cv_fsize    = g_offset;
+  vol.cv_bsize    = CROMFS_BLOCKSIZE;
+
+  g_nhex          = 0;
+  dump_hexbuffer(g_outstream, &vol, sizeof(struct cromfs_volume_s));
+
+  dump_nextline(g_outstream);
+  fprintf(g_outstream, "\n  /* Root directory */\n");
+
   /* Finally append the nodes to the output file */
 
+  append_tmpfile(g_outstream,g_tmpstream);
+  fprintf(g_outstream, "\n};\n");
+
   fclose(g_outstream);
-  fclose(g_nodes);
+#ifndef USE_MKSTEMP
+  unlink_tmpfiles();
+#endif
   return 0;
 }
