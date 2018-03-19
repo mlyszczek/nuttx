@@ -44,7 +44,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
-#include <lzf.h>
 #include <errno.h>
 
 /****************************************************************************
@@ -53,50 +52,68 @@
 
 #undef USE_MKSTEMP
 
-#define TMP_NAMLEN        32         /* Actually only 22 */
+#define TMP_NAMLEN         32         /* Actually only 22 */
 #ifdef USE_MKSTEMP
-#  define TMP_NAME        "/tmp/gencromfs-XXXXXX"
+#  define TMP_NAME         "/tmp/gencromfs-XXXXXX"
 #else
-#  define TMP_NAME        "/tmp/gencromfs-%06u"
+#  define TMP_NAME         "/tmp/gencromfs-%06u"
 #endif
 
-#define NUTTX_IXOTH       (1 << 0)   /* Bits 0-2: Permissions for others: RWX */
-#define NUTTX_IWOTH       (1 << 1)
-#define NUTTX_IROTH       (1 << 2)
+#define NUTTX_IXOTH        (1 << 0)   /* Bits 0-2: Permissions for others: RWX */
+#define NUTTX_IWOTH        (1 << 1)
+#define NUTTX_IROTH        (1 << 2)
 
-#define NUTTX_IRXOTH      (NUTTX_IROTH | NUTTX_IXOTH)
+#define NUTTX_IRXOTH       (NUTTX_IROTH | NUTTX_IXOTH)
 
-#define NUTTX_IXGRP       (1 << 3)   /* Bits 3-5: Group permissions: RWX */
-#define NUTTX_IWGRP       (1 << 4)
-#define NUTTX_IRGRP       (1 << 5)
+#define NUTTX_IXGRP        (1 << 3)   /* Bits 3-5: Group permissions: RWX */
+#define NUTTX_IWGRP        (1 << 4)
+#define NUTTX_IRGRP        (1 << 5)
 
-#define NUTTX_IRXGRP      (NUTTX_IRGRP | NUTTX_IXGRP)
+#define NUTTX_IRXGRP       (NUTTX_IRGRP | NUTTX_IXGRP)
 
-#define NUTTX_IXUSR       (1 << 6)   /* Bits 6-8: Owner permissions: RWX */
-#define NUTTX_IWUSR       (1 << 7)
-#define NUTTX_IRUSR       (1 << 8)
+#define NUTTX_IXUSR        (1 << 6)   /* Bits 6-8: Owner permissions: RWX */
+#define NUTTX_IWUSR        (1 << 7)
+#define NUTTX_IRUSR        (1 << 8)
 
-#define NUTTX_IRWXUSR     (NUTTX_IRUSR | NUTTX_IWUSR | NUTTX_IXUSR)
-#define NUTTX_IRWUSR      (NUTTX_IRUSR | NUTTX_IWUSR)
+#define NUTTX_IRXUSR       (NUTTX_IRUSR | NUTTX_IXUSR)
 
-#define NUTTX_IFDIR       (2 << 12)
-#define NUTTX_IFREG       (4 << 12)
+#define NUTTX_IFDIR        (2 << 12)
+#define NUTTX_IFREG        (4 << 12)
 
-#define NUTTX_IFLNK       (1 << 15)  /* Bit 15: Symbolic link */
+#define NUTTX_IFLNK        (1 << 15)  /* Bit 15: Symbolic link */
 
-#define DIR_MODEFLAGS     (NUTTX_IFDIR | NUTTX_IRWXUSR | NUTTX_IRXGRP | NUTTX_IRXOTH)
-#define DIRLINK_MODEFLAGS (NUTTX_IFLNK | DIR_MODEFLAGS)
-#define FILE_MODEFLAGS    (NUTTX_IFREG | NUTTX_IRWUSR | NUTTX_IRGRP | NUTTX_IROTH)
+#define DIR_MODEFLAGS      (NUTTX_IFDIR | NUTTX_IRXUSR | NUTTX_IRXGRP | NUTTX_IRXOTH)
+#define DIRLINK_MODEFLAGS  (NUTTX_IFLNK | DIR_MODEFLAGS)
+#define FILE_MODEFLAGS     (NUTTX_IFREG | NUTTX_IRUSR | NUTTX_IRGRP | NUTTX_IROTH)
 
-#define CROMFS_MAGIC      0x4d4f5243
-#define CROMFS_BLOCKSIZE  512
+#define CROMFS_MAGIC       0x4d4f5243
+#define CROMFS_BLOCKSIZE   512
 
-#define HEX_PER_BREAK     8
-#define HEX_PER_LINE      16
+#define LZF_BUFSIZE        512
+#define LZF_HLOG           13
+#define LZF_HSIZE          (1 << LZF_HLOG)
+
+#define LZF_TYPE0_HDR      0
+#define LZF_TYPE1_HDR      1
+#define LZF_TYPE0_HDR_SIZE 5
+#define LZF_TYPE1_HDR_SIZE 7
+
+#define LZF_FRST(p)        (((p[0]) << 8) | p[1])
+#define LZF_NEXT(v,p)      (((v) << 8) | p[2])
+#define LZF_NDX(h)         ((((h ^ (h << 5)) >> (3*8 - LZF_HLOG)) - h*5) & (LZF_HSIZE - 1))
+
+#define LZF_MAX_LIT        (1 <<  5)
+#define LZF_MAX_OFF        (1 << LZF_HLOG)
+#define LZF_MAX_REF        ((1 << 8) + (1 << 3))
+
+#define HEX_PER_BREAK      8
+#define HEX_PER_LINE       16
 
 /****************************************************************************
  * Private Types
  ****************************************************************************/
+
+/* CROMFS structures */
 
 struct cromfs_volume_s
 {
@@ -122,6 +139,59 @@ struct cromfs_node_s
     size_t cn_blocks;    /* Offset to first block of compressed data (for read) */
   } u;
 };
+
+/* LZF headers */
+
+struct lzf_header_s         /* Common data header */
+{
+  uint8_t lzf_magic[2];     /* [0]='Z', [1]='V' */
+  uint8_t lzf_type;         /* LZF_TYPE0_HDR or LZF_TYPE1_HDR */
+};
+
+struct lzf_type0_header_s   /* Uncompressed data header */
+{
+  uint8_t lzf_magic[2];     /* [0]='Z', [1]='V' */
+  uint8_t lzf_type;         /* LZF_TYPE0_HDR */
+  uint8_t lzf_len[2];       /* Data length (big-endian) */
+};
+
+struct lzf_type1_header_s   /* Compressed data header */
+{
+  uint8_t lzf_magic[2];     /* [0]='Z', [1]='V' */
+  uint8_t lzf_type;         /* LZF_TYPE1_HDR */
+  uint8_t lzf_clen[2];      /* Compressed data length (big-endian) */
+  uint8_t lzf_ulen[2];      /* Uncompressed data length (big-endian) */
+};
+
+/* LZF data buffer */
+
+union lzf_result_u
+{
+  struct
+  {
+    uint8_t lzf_magic[2];     /* [0]='Z', [1]='V' */
+    uint8_t lzf_type;         /* LZF_TYPE0_HDR or LZF_TYPE1_HDR */
+  } cmn;                      /* Common data header */
+  struct
+  {
+    uint8_t lzf_magic[2];     /* [0]='Z', [1]='V' */
+    uint8_t lzf_type;         /* LZF_TYPE0_HDR */
+    uint8_t lzf_len[2];       /* Data length (big-endian) */
+    uint8_t lzf_buffer[LZF_BUFSIZE];
+  } uncompressed;             /* Uncompressed data header */
+  struct
+  {
+    uint8_t lzf_magic[2];     /* [0]='Z', [1]='V' */
+    uint8_t lzf_type;         /* LZF_TYPE1_HDR */
+    uint8_t lzf_clen[2];      /* Compressed data length (big-endian) */
+    uint8_t lzf_ulen[2];      /* Uncompressed data length (big-endian) */
+    uint8_t lzf_buffer[LZF_BUFSIZE + 16];
+  } compressed;
+};
+
+/* LZF hash table */
+
+static uint8_t *g_lzf_hashtab[LZF_HSIZE];
 
 /****************************************************************************
  * Private Data
@@ -164,6 +234,8 @@ static void unlink_tmpfiles(void);
 static void append_tmpfile(FILE *dest, FILE *src);
 static void dump_hexbuffer(FILE *stream, const void *buffer, unsigned int nbytes);
 static void dump_nextline(FILE *stream);
+static size_t lzf_compress(const uint8_t *inbuffer, unsigned int inlen,
+                           union lzf_result_u *result);
 static void gen_dirlink(const char *name, size_t tgtoffs);
 static void gen_directory(const char *path, const char *name);
 static void gen_file(const char *path, const char *name, struct stat *buf);
@@ -426,6 +498,292 @@ static void dump_nextline(FILE *stream)
     }
 }
 
+static size_t lzf_compress(const uint8_t *inbuffer, unsigned int inlen,
+                           union lzf_result_u *result)
+{
+  const uint8_t *inptr  = inbuffer;
+        uint8_t *outptr = result->compressed.lzf_buffer;
+  const uint8_t *inend  = inptr + inlen;
+        uint8_t *outend = outptr + LZF_BUFSIZE;
+  const uint8_t *ref;
+  uintptr_t off;
+  ssize_t cs;
+  ssize_t retlen;
+  unsigned int hval;
+  int lit;
+
+  if (inlen == 0)
+    {
+      cs = 0;
+      goto genhdr;
+    }
+
+  memset(g_lzf_hashtab, 0, sizeof(g_lzf_hashtab));
+  lit = 0; /* Start run */
+  outptr++;
+
+  hval = LZF_FRST(inptr);
+  while (inptr < inend - 2)
+    {
+      uint8_t **hslot;
+
+      hval   = LZF_NEXT(hval, inptr);
+      hslot  = &g_lzf_hashtab[LZF_NDX(hval)];
+      ref    = *hslot;
+      *hslot = (uint8_t *)inptr;
+
+      if (ref < inptr && /* the next test will actually take care of this, but this is faster */
+          (off = inptr - ref - 1) < LZF_MAX_OFF &&
+          ref > (uint8_t *)inbuffer &&
+          ref[2] == inptr[2] &&
+          ((ref[1] << 8) | ref[0]) == ((inptr[1] << 8) | inptr[0]))
+        {
+          /* Match found at *ref++ */
+
+          unsigned int len = 2;
+          unsigned int maxlen = inend - inptr - len;
+          maxlen = maxlen > LZF_MAX_REF ? LZF_MAX_REF : maxlen;
+
+          /* First a faster conservative test */
+
+          if ((outptr + 3 + 1) >= outend)
+            {
+              /* Second the exact but rare test */
+
+              if (outptr - !lit + 3 + 1 >= outend)
+                {
+                  cs = 0;
+                  goto genhdr;
+                }
+            }
+
+          outptr[- lit - 1] = lit - 1; /* Stop run */
+          outptr -= !lit;              /* Undo run if length is zero */
+
+          for (;;)
+            {
+              if (maxlen > 16)
+                {
+                  len++;
+                  if (ref[len] != inptr[len])
+                    {
+                      break;
+                    }
+
+                  len++;
+                  if (ref[len] != inptr[len])
+                    {
+                      break;
+                    }
+
+                  len++;
+                  if (ref[len] != inptr[len])
+                    {
+                      break;
+                    }
+
+                  len++;
+                  if (ref[len] != inptr[len])
+                    {
+                      break;
+                    }
+
+                  len++;
+                  if (ref[len] != inptr[len])
+                    {
+                      break;
+                    }
+
+                  len++;
+                  if (ref[len] != inptr[len])
+                    {
+                      break;
+                    }
+
+                  len++;
+                  if (ref[len] != inptr[len])
+                    {
+                      break;
+                    }
+
+                  len++;
+                  if (ref[len] != inptr[len])
+                    {
+                      break;
+                    }
+
+                  len++;
+                  if (ref[len] != inptr[len])
+                    {
+                      break;
+                    }
+
+                  len++;
+                  if (ref[len] != inptr[len])
+                    {
+                      break;
+                    }
+
+                  len++;
+                  if (ref[len] != inptr[len])
+                    {
+                      break;
+                    }
+
+                  len++;
+                  if (ref[len] != inptr[len])
+                    {
+                      break;
+                    }
+
+                  len++;
+                  if (ref[len] != inptr[len])
+                    {
+                      break;
+                    }
+
+                  len++;
+                  if (ref[len] != inptr[len])
+                    {
+                      break;
+                    }
+
+                  len++;
+                  if (ref[len] != inptr[len])
+                    {
+                      break;
+                    }
+
+                  len++;
+                  if (ref[len] != inptr[len])
+                    {
+                      break;
+                    }
+                }
+
+              do
+                {
+                  len++;
+                }
+              while (len < maxlen && ref[len] == inptr[len]);
+
+              break;
+            }
+
+          len -= 2; /* len is now #octets - 1 */
+          inptr++;
+
+          if (len < 7)
+            {
+              *outptr++ = (off >> 8) + (len << 5);
+            }
+          else
+            {
+              *outptr++ = (off >> 8) + (  7 << 5);
+              *outptr++ = len - 7;
+            }
+
+          *outptr++ = off;
+
+          lit = 0; outptr++; /* start run */
+
+          inptr += len + 1;
+
+          if (inptr >= inend - 2)
+            {
+              break;
+            }
+
+          inptr -= len + 1;
+
+          do
+            {
+              hval = LZF_NEXT(hval, inptr);
+              g_lzf_hashtab[LZF_NDX(hval)] = (uint8_t *)inptr;
+              inptr++;
+            }
+          while (len--);
+        }
+      else
+        {
+          /* One more literal byte we must copy */
+
+          if (outptr >= outend)
+            {
+              cs = 0;
+              goto genhdr;
+            }
+
+          lit++;
+          *outptr++ = *inptr++;
+
+          if (lit == LZF_MAX_LIT)
+            {
+              outptr[- lit - 1] = lit - 1; /* Stop run */
+              lit = 0;;                /* Start run */
+              outptr++;
+            }
+        }
+    }
+
+  /* At most 3 bytes can be missing here */
+
+  if (outptr + 3 > outend)
+    {
+      cs = 0;
+      goto genhdr;
+    }
+
+  while (inptr < inend)
+    {
+      lit++; *outptr++ = *inptr++;
+
+      if (lit == LZF_MAX_LIT)
+        {
+          outptr[- lit - 1] = lit - 1; /* Stop run */
+          lit = 0;                 /* Start run */
+          outptr++;
+        }
+    }
+
+  outptr[- lit - 1] = lit - 1; /* End run */
+  outptr -= !lit;              /* Undo run if length is zero */
+
+  cs = outptr - (uint8_t *)result->compressed.lzf_buffer;
+
+genhdr:
+  if (cs > 0)
+    {
+      /* Write compressed header */
+
+      result->compressed.lzf_magic[0]   = 'Z';
+      result->compressed.lzf_magic[1]   = 'V';
+      result->compressed.lzf_type       = LZF_TYPE1_HDR;
+      result->compressed.lzf_clen[0]    = cs >> 8;
+      result->compressed.lzf_clen[1]    = cs & 0xff;
+      result->compressed.lzf_ulen[0]    = inlen >> 8;
+      result->compressed.lzf_ulen[1]    = inlen & 0xff;
+      retlen                            = cs + LZF_TYPE1_HDR_SIZE;
+    }
+  else
+    {
+      /* Write uncompressed header*/
+
+      result->uncompressed.lzf_magic[0] = 'Z';
+      result->uncompressed.lzf_magic[1] = 'V';
+      result->uncompressed.lzf_type     = LZF_TYPE0_HDR;
+      result->uncompressed.lzf_len[0]   = inlen >> 8;
+      result->uncompressed.lzf_len[1]   = inlen & 0xff;
+
+      /* Copy uncompressed data into the result buffer */
+
+      memcpy(result->uncompressed.lzf_buffer, inbuffer, inlen);
+      retlen                            = inlen + LZF_TYPE0_HDR_SIZE;
+    }
+
+  return retlen;
+}
+
 static void gen_dirlink(const char *name, size_t tgtoffs)
 {
   struct cromfs_node_s node;
@@ -527,6 +885,117 @@ static void gen_directory(const char *path, const char *name)
 
 static void gen_file(const char *path, const char *name, struct stat *buf)
 {
+  struct cromfs_node_s node;
+  union lzf_result_u result;
+  size_t nodeoffs = g_offset;
+  FILE *save_tmpstream = g_tmpstream;
+  FILE *outstream;
+  FILE *instream;
+  uint8_t iobuffer[LZF_BUFSIZE];
+  size_t nread;
+  size_t ntotal;
+  size_t blklen;
+  size_t blktotal;
+  unsigned int blkno;
+  int namlen;
+
+  namlen      = strlen(name) + 1;
+
+  g_outstream = fopen(g_outname, "w");
+  if (!g_outstream)
+    {
+      fprintf(stderr, "open %s failed: %s\n", g_outname, strerror(errno));
+      exit(1);
+    }
+
+  /* Open a new temporary file */
+
+  outstream   = open_tmpfile();
+  g_tmpstream = outstream;
+  g_offset    = nodeoffs + sizeof(struct cromfs_node_s) + namlen;
+
+  /* Open the source data file */
+
+  instream    = fopen(path, "r");
+  if (!instream)
+    {
+      fprintf(stderr, "fopen for source file %s failed: %s\n",
+              path, strerror(errno));
+      exit(1);
+    }
+
+  /* Then read data from the file, compress it, and write it to the new
+   * temporary file
+   */
+
+  blkno       = 0;
+  ntotal      = 0;
+
+  do
+    {
+      /* Read the next chunk from the file */
+
+      nread = fread(iobuffer, 1, LZF_BUFSIZE, instream);
+      if (nread > 0)
+        {
+          uint16_t clen;
+
+          /* Compress the chunk */
+
+          blklen = lzf_compress(iobuffer, nread, &result);
+          if (result.cmn.lzf_type == LZF_TYPE0_HDR)
+            {
+              clen = nread;
+            }
+          else
+            {
+              clen = (uint16_t)result.compressed.lzf_clen[0] << 8 |
+                     (uint16_t)result.compressed.lzf_clen[1];
+            }
+
+          dump_nextline(g_tmpstream);
+          fprintf(g_tmpstream,
+                  "\n  /* Block %u:  blklen=%lu Uncompressed=%lu Compressed=%u */\n\n",
+                  blkno, (long)blklen, (long)nread, clen);
+          dump_hexbuffer(g_tmpstream, &result, blklen);
+
+          ntotal   += nread;
+          blktotal += blklen;
+          blkno++;
+        }
+    }
+  while (nread > 0);
+
+  /* Restore the old tmpfile context */
+
+  g_tmpstream        = save_tmpstream;
+
+  /* Now we have enough information to generate the file node */
+
+  node.cn_mode       = FILE_MODEFLAGS;
+
+  nodeoffs          += sizeof(struct cromfs_node_s);
+  node.cn_name       = nodeoffs;
+
+  node.cn_size       = ntotal;
+
+  nodeoffs          += namlen;
+  node.u.cn_blocks   = nodeoffs;
+
+  nodeoffs          += blktotal;
+  node.cn_peer       = nodeoffs;
+
+  fprintf(g_tmpstream, "\n  /* File %s/%s:  Uncompressed=%lu Compressed=%lu */\n\n",
+          path, name, (unsigned long)ntotal, (unsigned long)blktotal);
+  dump_nextline(g_tmpstream);
+  dump_hexbuffer(g_tmpstream, &node, sizeof(struct cromfs_node_s));
+  dump_hexbuffer(g_tmpstream, name, namlen);
+
+  g_nnodes++;
+
+  /* Now append the sub-tree nodes in the new tmpfile to the previous tmpfile */
+
+  append_tmpfile(g_tmpstream, outstream);
 }
 
 static void process_direntry(const char *dirpath, struct dirent *direntry)
