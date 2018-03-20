@@ -236,6 +236,7 @@ static void dump_hexbuffer(FILE *stream, const void *buffer, unsigned int nbytes
 static void dump_nextline(FILE *stream);
 static size_t lzf_compress(const uint8_t *inbuffer, unsigned int inlen,
                            union lzf_result_u *result);
+static mode_t get_mode(mode_t mode);
 static void gen_dirlink(const char *name, size_t tgtoffs);
 static void gen_directory(const char *path, const char *name, mode_t mode);
 static void gen_file(const char *path, const char *name, mode_t mode);
@@ -784,6 +785,58 @@ genhdr:
   return retlen;
 }
 
+static mode_t get_mode(mode_t mode)
+{
+  mode_t ret = 0;
+
+  if ((mode & S_IXOTH) != 0)
+    {
+      ret |= NUTTX_IXOTH;
+    }
+
+  if ((mode & S_IWOTH) != 0)
+    {
+      ret |= NUTTX_IWOTH;
+    }
+
+  if ((mode & S_IROTH) != 0)
+    {
+      ret |= NUTTX_IROTH;
+    }
+
+  if ((mode & S_IXGRP) != 0)
+    {
+      ret |= NUTTX_IXGRP;
+    }
+
+  if ((mode & S_IWGRP) != 0)
+    {
+      ret |= NUTTX_IWGRP;
+    }
+
+  if ((mode & S_IRGRP) != 0)
+    {
+      ret |= NUTTX_IRGRP;
+    }
+
+  if ((mode & S_IXUSR) != 0)
+    {
+      ret |= NUTTX_IXUSR;
+    }
+
+  if ((mode & S_IWUSR) != 0)
+    {
+      ret |= NUTTX_IWUSR;
+    }
+
+  if ((mode & S_IRUSR) != 0)
+    {
+      ret |= NUTTX_IRUSR;
+    }
+
+  return ret;
+}
+
 static void gen_dirlink(const char *name, size_t tgtoffs)
 {
   struct cromfs_node_s node;
@@ -861,7 +914,7 @@ static void gen_directory(const char *path, const char *name, mode_t mode)
 
   /* Generate the directory node */
 
-  node.cn_mode    = (NUTTX_IFDIR | (mode & 0x1ff));
+  node.cn_mode    = (NUTTX_IFDIR | get_mode(mode));
 
   save_offset    += sizeof(struct cromfs_node_s);
   node.cn_name    = save_offset;
@@ -972,7 +1025,7 @@ static void gen_file(const char *path, const char *name, mode_t mode)
 
   /* Now we have enough information to generate the file node */
 
-  node.cn_mode       = (NUTTX_IFREG | (mode  & 0x1ff));
+  node.cn_mode       = (NUTTX_IFREG | get_mode(mode));
 
   nodeoffs          += sizeof(struct cromfs_node_s);
   node.cn_name       = nodeoffs;
