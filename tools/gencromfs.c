@@ -237,8 +237,8 @@ static void dump_nextline(FILE *stream);
 static size_t lzf_compress(const uint8_t *inbuffer, unsigned int inlen,
                            union lzf_result_u *result);
 static void gen_dirlink(const char *name, size_t tgtoffs);
-static void gen_directory(const char *path, const char *name);
-static void gen_file(const char *path, const char *name, struct stat *buf);
+static void gen_directory(const char *path, const char *name, mode_t mode);
+static void gen_file(const char *path, const char *name, mode_t mode);
 static void process_direntry(const char *dirpath, struct dirent *direntry);
 static void traverse_directory(const char *dirpath, const char *subdir);
 
@@ -811,7 +811,7 @@ static void gen_dirlink(const char *name, size_t tgtoffs)
   g_nnodes++;
 }
 
-static void gen_directory(const char *path, const char *name)
+static void gen_directory(const char *path, const char *name, mode_t mode)
 {
   struct cromfs_node_s node;
   size_t save_offset        = g_offset;
@@ -861,7 +861,7 @@ static void gen_directory(const char *path, const char *name)
 
   /* Generate the directory node */
 
-  node.cn_mode    = DIR_MODEFLAGS;
+  node.cn_mode    = (NUTTX_IFDIR | (mode & 0x1ff));
 
   save_offset    += sizeof(struct cromfs_node_s);
   node.cn_name    = save_offset;
@@ -883,7 +883,7 @@ static void gen_directory(const char *path, const char *name)
   append_tmpfile(g_tmpstream, subtree_stream);
 }
 
-static void gen_file(const char *path, const char *name, struct stat *buf)
+static void gen_file(const char *path, const char *name, mode_t mode)
 {
   struct cromfs_node_s node;
   union lzf_result_u result;
@@ -972,7 +972,7 @@ static void gen_file(const char *path, const char *name, struct stat *buf)
 
   /* Now we have enough information to generate the file node */
 
-  node.cn_mode       = FILE_MODEFLAGS;
+  node.cn_mode       = (NUTTX_IFREG | (mode  & 0x1ff));
 
   nodeoffs          += sizeof(struct cromfs_node_s);
   node.cn_name       = nodeoffs;
@@ -1027,11 +1027,11 @@ static void process_direntry(const char *dirpath, struct dirent *direntry)
 
   else if (S_ISDIR(buf.st_mode))
     {
-      gen_directory(path, direntry->d_name);
+      gen_directory(path, direntry->d_name, buf.st_mode);
     }
   else if (S_ISREG(buf.st_mode))
     {
-      gen_file(path, direntry->d_name, &buf);
+      gen_file(path, direntry->d_name, buf.st_mode);
     }
   else
     {
