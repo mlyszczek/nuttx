@@ -1,7 +1,7 @@
 /****************************************************************************
- * arch/arm/src/imx6/imx_iomuxc.h
+ * arch/arm/src/imxrt/imxrt_iomuxc.h
  *
- *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,11 +44,12 @@
 
 #include <stdint.h>
 
-#include "chip/imx_iomuxc.h"
+#include "chip/imxrt_iomuxc.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
 /* 16-bit Encoding:
  *
  *   .... RRRR ODDD LSST
@@ -145,7 +146,7 @@ typedef uint16_t iomux_pinset_t;
  ****************************************************************************/
 
 /****************************************************************************
- * Name: imx_padmux_map
+ * Name: imxrt_padmux_map
  *
  * Description:
  *   This function map a Pad Mux register index to the corresponding Pad
@@ -153,10 +154,10 @@ typedef uint16_t iomux_pinset_t;
  *
  ****************************************************************************/
 
-unsigned int imx_padmux_map(unsigned int padmux);
+unsigned int imxrt_padmux_map(unsigned int padmux);
 
 /****************************************************************************
- * Name: imx_iomux_configure
+ * Name: imxrt_iomux_configure
  *
  * Description:
  *   This function writes the encoded pad configuration to the Pad Control
@@ -164,6 +165,6 @@ unsigned int imx_padmux_map(unsigned int padmux);
  *
  ****************************************************************************/
 
-int imx_iomux_configure(uintptr_t padctl, iomux_pinset_t ioset);
+int imxrt_iomux_configure(uintptr_t padctl, iomux_pinset_t ioset);
 
 #endif /* __ARCH_ARM_SRC_IMX6_IMX_IOMUXC_H */
