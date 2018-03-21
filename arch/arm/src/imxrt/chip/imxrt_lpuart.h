@@ -175,7 +175,7 @@
 #define LPUART_VERID_FEATURE_SHIFT     (0)        /* Bits 0-15: Feature Identification Number */
 #define LPUART_VERID_FEATURE_MASK      (0xffff << LPUART_VERID_FEATURE_SHIFT)
 #  define LPUART_VERID_FEATURE_STD     (1 << LPUART_VERID_FEATURE_SHIFT) /* Standard feature set */
-#  define LPUART_VERID_FEATURE_STD     (3 << LPUART_VERID_FEATURE_SHIFT) /* MODEM/IrDA support */
+#  define LPUART_VERID_FEATURE_MODEM   (3 << LPUART_VERID_FEATURE_SHIFT) /* MODEM/IrDA support */
 #define LPUART_VERID_MINOR_SHIFT       (16)       /* Bits 16-23: Minor Version Number */
 #define LPUART_VERID_MINOR_MASK        (0xff << LPUART_VERID_MINOR_SHIFT)
 #define LPUART_VERID_MAJOR_SHIFT       (24)       /* Bits 24-31: Major Version Number */
