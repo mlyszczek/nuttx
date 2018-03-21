@@ -47,6 +47,14 @@
  * Pre-processor Definitions
  ********************************************************************************************/
 
+#define GPIO1                     0      /* Port 1 index */
+#define GPIO2                     1      /* Port 2 index */
+#define GPIO3                     2      /* Port 3 index */
+#define GPIO4                     3      /* Port 4 index */
+
+#define IMXRT_GPIO_NPORTS         4      /* Four total ports */
+#define IMXRT_GPIO_NPINS         32      /* Up to 32 pins per port */
+
 /* Register offsets *************************************************************************/
 
 #define IMXRT_GPIO_DR_OFFSET     0x0000  /* GPIO data register */
