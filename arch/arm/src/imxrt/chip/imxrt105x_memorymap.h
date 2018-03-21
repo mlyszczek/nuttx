@@ -130,39 +130,40 @@
 
                                /* 0x40100000     256KB Reserved */
                                /* 0x40140000     240KB Reserved */
-#define IMXRT_AIPS2CNF_BASE       0x4017c000  /* 116KB AIPS-2 Configuration */
-#define IMXRT_ROMCPC_BASE         0x40180000  /* 116KB ROMCP controller*/
-#define IMXRT_LPUART1_BASE        0x40184000  /* 116KB LPUART1 */
-#define IMXRT_LPUART2_BASE        0x40188000  /* 116KB LPUART2 */
-#define IMXRT_LPUART3_BASE        0x4018c000  /* 116KB LPUART3 */
-#define IMXRT_LPUART4_BASE        0x40190000  /* 116KB LPUART4 */
-#define IMXRT_LPUART5_BASE        0x40194000  /* 116KB LPUART5 */
-#define IMXRT_LPUART6_BASE        0x40198000  /* 116KB LPUART6 */
-#define IMXRT_LPUART7_BASE        0x4019c000  /* 116KB LPUART7 */
-#define IMXRT_LPUART8_BASE        0x401a0000  /* 116KB LPUART8 */
+#define IMXRT_AIPS2CNF_BASE       0x4017c000  /* 16KB AIPS-2 Configuration */
+#define IMXRT_ROMCPC_BASE         0x40180000  /* 16KB ROMCP controller*/
+#define IMXRT_LPUART1_BASE        0x40184000  /* 16KB LPUART1 */
+#define IMXRT_LPUART2_BASE        0x40188000  /* 16KB LPUART2 */
+#define IMXRT_LPUART3_BASE        0x4018c000  /* 16KB LPUART3 */
+#define IMXRT_LPUART4_BASE        0x40190000  /* 16KB LPUART4 */
+#define IMXRT_LPUART5_BASE        0x40194000  /* 16KB LPUART5 */
+#define IMXRT_LPUART6_BASE        0x40198000  /* 16KB LPUART6 */
+#define IMXRT_LPUART7_BASE        0x4019c000  /* 16KB LPUART7 */
+#define IMXRT_LPUART8_BASE        0x401a0000  /* 16KB LPUART8 */
                                /* 0x401a4000     16KB Reserved */
                                /* 0x401a8000     16KB Reserved */
-#define IMXRT_FLEXIO1_BASE        0x401ac000  /* 116KB FlexIO1 */
-#define IMXRT_FLEXIO2_BASE        0x401b0000  /* 116KB FlexIO2 */
+#define IMXRT_FLEXIO1_BASE        0x401ac000  /* 16KB FlexIO1 */
+#define IMXRT_FLEXIO2_BASE        0x401b0000  /* 16KB FlexIO2 */
                                /* 0x401b4000     16KB Reserved */
-#define IMXRT_GPIO1_BASE          0x401b8000  /* 116KB GPIO1 */
-#define IMXRT_GPIO2_BASE          0x401bc000  /* 116KB GPIO2 */
-#define IMXRT_GPIO3_BASE          0x401c0000  /* 116KB GPIO3 */
-#define IMXRT_GPIO4_BASE          0x401c4000  /* 116KB GPIO4 */
+#define IMXRT_GPIO_BASE(n)        (0x401b8000 + ((n) << 14))
+#define IMXRT_GPIO1_BASE          0x401b8000  /* 16KB GPIO1 */
+#define IMXRT_GPIO2_BASE          0x401bc000  /* 16KB GPIO2 */
+#define IMXRT_GPIO3_BASE          0x401c0000  /* 16KB GPIO3 */
+#define IMXRT_GPIO4_BASE          0x401c4000  /* 16KB GPIO4 */
                                /* 0x401c8000     16KB Reserved */
                                /* 0x401cc000     16KB Reserved */
-#define IMXRT_CAN1_BASE           0x401d0000  /* 116KB CAN1 */
-#define IMXRT_CAN2_BASE           0x401d4000  /* 116KB CAN2 */
-                               /* 0x401d8000 1   6KB Reserved */
-#define IMXRT_QTIMER1_BASE        0x401dc000  /* 116KB QTimer1 */
-#define IMXRT_QTIMER2_BASE        0x401e0000  /* 116KB QTimer2 */
-#define IMXRT_QTIMER3_BASE        0x401e4000  /* 116KB QTimer3 */
-#define IMXRT_QTIMER4_BASE        0x401e8000  /* 116KB QTimer4 */
-#define IMXRT_GPT1_BASE           0x401ec000  /* 116KB GPT1 */
-#define IMXRT_GPT2_BASE           0x401f0000  /* 116KB GPT2 */
-#define IMXRT_OCOTP_BASE          0x401f4000  /* 116KB OCOTP */
-#define IMXRT_IOMUXC_BASE         0x401f8000  /* 116KB IOMUXC */
-#define IMXRT_KPP_BASE            0x401fc000  /* 116KB KPP */
+#define IMXRT_CAN1_BASE           0x401d0000  /* 16KB CAN1 */
+#define IMXRT_CAN2_BASE           0x401d4000  /* 16KB CAN2 */
+                               /* 0x401d8000     16KB Reserved */
+#define IMXRT_QTIMER1_BASE        0x401dc000  /* 16KB QTimer1 */
+#define IMXRT_QTIMER2_BASE        0x401e0000  /* 16KB QTimer2 */
+#define IMXRT_QTIMER3_BASE        0x401e4000  /* 16KB QTimer3 */
+#define IMXRT_QTIMER4_BASE        0x401e8000  /* 16KB QTimer4 */
+#define IMXRT_GPT1_BASE           0x401ec000  /* 16KB GPT1 */
+#define IMXRT_GPT2_BASE           0x401f0000  /* 16KB GPT2 */
+#define IMXRT_OCOTP_BASE          0x401f4000  /* 16KB OCOTP */
+#define IMXRT_IOMUXC_BASE         0x401f8000  /* 16KB IOMUXC */
+#define IMXRT_KPP_BASE            0x401fc000  /* 16KB KPP */
 
 /* AIPS-3 memory map */
 
