@@ -1,8 +1,8 @@
 /****************************************************************************
- * fs/mount/fs_mount.c
+ * arch/arm/src/stm32l4/stm32l4_1wire.h
  *
- *   Copyright (C) 2017-2018 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ *   Copyright (C) 2016 Aleksandr Vyhovanec. All rights reserved.
+ *   Author: Aleksandr Vyhovanec <www.desh@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,123 +33,55 @@
  *
  ****************************************************************************/
 
+#ifndef __ARCH_ARM_SRC_STM32L4_STM32L4_1WIRE_H
+#define __ARCH_ARM_SRC_STM32L4_STM32L4_1WIRE_H
+
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <nuttx/config.h>
 
-#include <sys/statfs.h>
-
-#include "mount/mount.h"
-
-#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS)
+#include "stm32l4_uart.h"
 
 /****************************************************************************
- * Public Functions
+ * Public Function Prototypes
  ****************************************************************************/
 
 /****************************************************************************
- * Name: fs_gettype
+ * Name: stm32l4_1wireinitialize
  *
  * Description:
- *   Given the result of statfs(), return a string representing the type of
- *   the file system.
+ *   Initialize the selected 1-Wire port. And return a unique instance of struct
+ *   struct onewire_dev_s.  This function may be called to obtain multiple
+ *   instances of the interface, each of which may be set up with a
+ *   different frequency and slave address.
  *
  * Input Parameters:
- *   statbuf - The result of a previouis statbuf statfs on the file system.
+ *   Port number (for hardware that has multiple 1-Wire interfaces)
  *
  * Returned Value:
- *   A reference to a string representing the type of the file system.
+ *   Valid 1-Wire device structure reference on succcess; a NULL on failure
  *
  ****************************************************************************/
 
-FAR const char *fs_gettype(FAR struct statfs *statbuf)
-{
-  FAR const char *fstype;
+FAR struct onewire_dev_s *stm32l4_1wireinitialize(int port);
 
-  /* Get the file system type */
+/****************************************************************************
+ * Name: stm32l4_1wireuninitialize
+ *
+ * Description:
+ *   De-initialize the selected 1-Wire port, and power down the device.
+ *
+ * Input Parameters:
+ *   Device structure as returned by the stm32l4_1wireinitialize()
+ *
+ * Returned Value:
+ *   OK on success, ERROR when internal reference count mismatch or dev
+ *   points to invalid hardware device.
+ *
+ ****************************************************************************/
 
-  switch (statbuf->f_type)
-    {
-#ifdef CONFIG_FS_FAT
-      case MSDOS_SUPER_MAGIC:
-        fstype = "vfat";
-        break;
-#endif
+int stm32l4_1wireuninitialize(FAR struct onewire_dev_s *dev);
 
-#ifdef CONFIG_FS_ROMFS
-      case ROMFS_MAGIC:
-        fstype = "romfs";
-        break;
-#endif
-
-#ifdef CONFIG_FS_CROMFS
-      case CROMFS_MAGIC:
-        fstype = "cromfs";
-        break;
-#endif
-
-#ifdef CONFIG_FS_TMPFS
-      case TMPFS_MAGIC:
-        fstype = "tmpfs";
-        break;
-#endif
-
-#ifdef CONFIG_FS_BINFS
-      case BINFS_MAGIC:
-        fstype = "binfs";
-        break;
-#endif
-
-#ifdef CONFIG_FS_NXFFS
-      case NXFFS_MAGIC:
-        fstype = "nxffs";
-        break;
-#endif
-
-#ifdef CONFIG_NFS
-      case NFS_SUPER_MAGIC:
-        fstype = "nfs";
-        break;
-#endif
-
-#ifdef CONFIG_FS_SMARTFS
-      case SMARTFS_MAGIC:
-        fstype = "smartfs";
-        break;
-#endif
-
-#ifdef CONFIG_FS_PROCFS
-      case PROCFS_MAGIC:
-        fstype = "procfs";
-        break;
-#endif
-
-#ifdef CONFIG_FS_UNIONFS
-      case UNIONFS_MAGIC:
-        fstype = "unionfs";
-        break;
-#endif
-
-#ifdef CONFIG_FS_HOSTFS
-      case HOSTFS_MAGIC:
-        fstype = "hostfs";
-        break;
-#endif
-
-#ifdef CONFIG_FS_USERFS
-      case USERFS_MAGIC:
-        fstype = "userfs";
-        break;
-#endif
-
-      default:
-        fstype = "Unrecognized";
-        break;
-    }
-
-  return fstype;
-}
-
-#endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS */
+#endif /* __ARCH_ARM_SRC_STM32L4_STM32L4_1WIRE_H */
