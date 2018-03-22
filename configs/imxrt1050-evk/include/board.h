@@ -47,7 +47,27 @@
  ************************************************************************************/
 /* Clocking *************************************************************************/
 
-/* FLASH wait states. */
+/* Set VDD_SOC to 1.5V */
+
+#define IMXRT_VDD_SOC (0x12)
+
+/*
+ * Set Arm PLL (PLL1) to 1200Mhz = (24Mhz * 100) / 2
+ * Set Sys PLL (PLL2) to 528Mhz = 1
+ *   (0 = 20 * 24Mhz = 480Mhz
+ *    1 = 22 * 24Mhz = 528Mhz)
+ *
+ * Arm clock divider = 2 -> Arm Clock = 600Mhz
+ * AHB clock divider = 1
+ * IPG clock divider = 4
+ *
+ */
+
+#define IMXRT_ARM_PLL_SELECT    (100)
+#define IMXRT_SYS_PLL_SELECT    (1)
+#define IMXRT_ARM_CLOCK_DIVIDER (1)
+#define IMXRT_AHB_CLOCK_DIVIDER (0)
+#define IMXRT_IPG_CLOCK_DIVIDER (3)
 
 /* LED definitions ******************************************************************/
 /* There are four LED status indicators located on the EVK Board.  The functions of
