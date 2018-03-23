@@ -53,7 +53,7 @@
 /* 32-bit Encoding:
  *
  *   ENCODING    IIXX XXXX XXXX XXXX  MMMM MMMM MMMM MMMM
- *   GPIO INPUT  00.. .... .GGP PPPP  MMMM MMMM MMMM MMMM
+ *   GPIO INPUT  00.. ..EE .GGP PPPP  MMMM MMMM MMMM MMMM
  *   GPIO OUTPUT 01V. .... .GGP PPPP  MMMM MMMM MMMM MMMM
  *   PERIPHERAL  10AA A... IIII IIII  MMMM MMMM MMMM MMMM
  */
@@ -68,6 +68,7 @@
 #  define GPIO_INPUT           (0 << GPIO_MODE_SHIFT) /* GPIO input */
 #  define GPIO_OUTPUT          (1 << GPIO_MODE_SHIFT) /* GPIO output */
 #  define GPIO_PERIPH          (2 << GPIO_MODE_SHIFT) /* Peripheral */
+#  define GPIO_INTERRUPT       (3 << GPIO_MODE_SHIFT) /* Interrupt input */
 
 /* Initial Ouptut Value:
  *
@@ -147,9 +148,21 @@
 #  define GPIO_ALT6            (6 << GPIO_ALT_SHIFT)  /* Alternate function 1 */
 #  define GPIO_ALT7            (7 << GPIO_ALT_SHIFT)  /* Alternate function 1 */
 
+/* Interrupt edge/level configuration
+ *
+ *   GPIO INPUT  ... ..EE .... ....  .... .... .... ....
+ */
+
+#define GPIO_INTCFG_SHIFT      (24)      /* Bits 24-25: Interrupt edge/level configuration */
+#define GPIO_INTCFG_MASK       (3 << GPIO_INTCFG_SHIFT)
+#  define GPIO_INT_LOWLEVEL    (GPIO_ICR_LOWLEVEL << GPIO_INTCFG_SHIFT)
+#  define GPIO_INT_HIGHLEVEL   (GPIO_ICR_HIGHLEVEL << GPIO_INTCFG_SHIFT)
+#  define GPIO_INT_RISINGEDGE  (GPIO_ICR_RISINGEDGE << GPIO_INTCFG_SHIFT)
+#  define GPIO_INT_FALLINGEDGE (GPIO_ICR_FALLINGEDGE << GPIO_INTCFG_SHIFT)
+
 /* Pad Mux Register Index:
  *
- *   PERIPHERAL  10.. .... IIII IIII  MMMM MMMM MMMM MMMM
+ *   PERIPHERAL  .... .... IIII IIII  .... .... .... ....
  */
 
 #define GPIO_PADMUX_SHIFT      (16)      /* Bits 16-23: Peripheral alternate function */
@@ -199,10 +212,10 @@ extern "C"
  *
  ************************************************************************************/
 
-#ifdef CONFIG_IMX6_GPIO_IRQ
+#ifdef CONFIG_IMXRT_GPIO_IRQ
 void imxrt_gpioirq_initialize(void);
 #else
-#  define imxrt_gpio_irqinitialize()
+#  define imxrt_gpioirq_initialize()
 #endif
 
 /************************************************************************************
@@ -236,17 +249,17 @@ void imxrt_gpio_write(gpio_pinset_t pinset, bool value);
 bool imxrt_gpio_read(gpio_pinset_t pinset);
 
 /************************************************************************************
- * Name: imxrt_gpioirq
+ * Name: imxrt_gpioirq_configure
  *
  * Description:
  *   Configure an interrupt for the specified GPIO pin.
  *
  ************************************************************************************/
 
-#ifdef CONFIG_IMX6_GPIO_IRQ
-void imxrt_gpioirq(gpio_pinset_t pinset);
+#ifdef CONFIG_IMXRT_GPIO_IRQ
+int imxrt_gpioirq_configure(gpio_pinset_t pinset);
 #else
-#  define imxrt_gpioirq(pinset)
+#  define imxrt_gpioirq_configure(pinset)
 #endif
 
 /************************************************************************************
@@ -257,8 +270,8 @@ void imxrt_gpioirq(gpio_pinset_t pinset);
  *
  ************************************************************************************/
 
-#ifdef CONFIG_IMX6_GPIO_IRQ
-void imxrt_gpioirq_enable(int irq);
+#ifdef CONFIG_IMXRT_GPIO_IRQ
+int imxrt_gpioirq_enable(int irq);
 #else
 #  define imxrt_gpioirq_enable(irq)
 #endif
@@ -271,8 +284,8 @@ void imxrt_gpioirq_enable(int irq);
  *
  ************************************************************************************/
 
-#ifdef CONFIG_IMX6_GPIO_IRQ
-void imxrt_gpioirq_disable(int irq);
+#ifdef CONFIG_IMXRT_GPIO_IRQ
+int imxrt_gpioirq_disable(int irq);
 #else
 #  define imxrt_gpioirq_disable(irq)
 #endif

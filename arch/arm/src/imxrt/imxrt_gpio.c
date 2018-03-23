@@ -310,6 +310,20 @@ int imxrt_config_gpio(gpio_pinset_t pinset)
         }
         break;
 
+#ifdef CONFIG_IMXRT_GPIO_IRQ
+      case GPIO_INTERRUPT:
+        {
+          /* Configure the pin as a GPIO input */
+
+          ret = imxrt_gpio_configinput(pinset);
+          if (ret == OK)
+            {
+              ret = imxrt_gpioirq_configure(pinset);
+            }
+        }
+        break;
+#endif
+
       default:
         ret = -EINVAL;
         break;

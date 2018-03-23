@@ -214,21 +214,33 @@
 
 /* GPIO second level interrupt **********************************************************/
 
-#define _IMXRT_GPIO1_0_15_BASE (IMXRT_IRQ_EXTINT + IMXRT_IRQ_NEXTINT)
+#define IMXRT_GPIO_IRQ_FIRST   (IMXRT_IRQ_EXTINT + IMXRT_IRQ_NEXTINT)
+#define _IMXRT_GPIO1_0_15_BASE IMXRT_GPIO_IRQ_FIRST
 
 #ifdef CONFIG_IMXRT_GPIO1_0_15_IRQ
-  /* GPIO1 has dedicated interrupts for pins 0-7 */
+  /* GPIO1 has dedicated interrupts for pins 0-7
+   * REVISIT:  I am assuming that you really cannot use the dedicated and the multiplex
+   * interrupts concurrently.
+   */
 
-#  define IMXRT_IRQ_GPIO1_8    (_IMXRT_GPIO1_0_15_BASE + 0)   /* GPIO1 pin 8 interrupt */
-#  define IMXRT_IRQ_GPIO1_9    (_IMXRT_GPIO1_0_15_BASE + 1)   /* GPIO1 pin 9 interrupt */
-#  define IMXRT_IRQ_GPIO1_10   (_IMXRT_GPIO1_0_15_BASE + 2)   /* GPIO1 pin 10 interrupt */
-#  define IMXRT_IRQ_GPIO1_11   (_IMXRT_GPIO1_0_15_BASE + 3)   /* GPIO1 pin 11 interrupt */
-#  define IMXRT_IRQ_GPIO1_12   (_IMXRT_GPIO1_0_15_BASE + 4)   /* GPIO1 pin 12 interrupt */
-#  define IMXRT_IRQ_GPIO1_13   (_IMXRT_GPIO1_0_15_BASE + 5)   /* GPIO1 pin 13 interrupt */
-#  define IMXRT_IRQ_GPIO1_14   (_IMXRT_GPIO1_0_15_BASE + 6)   /* GPIO1 pin 14 interrupt */
-#  define IMXRT_IRQ_GPIO1_15   (_IMXRT_GPIO1_0_15_BASE + 7)   /* GPIO1 pin 15 interrupt */
+#  define IMXRT_IRQ_GPIO1_0    (_IMXRT_GPIO1_0_15_BASE + 0)   /* GPIO1 pin 8 interrupt */
+#  define IMXRT_IRQ_GPIO1_1    (_IMXRT_GPIO1_0_15_BASE + 1)   /* GPIO1 pin 8 interrupt */
+#  define IMXRT_IRQ_GPIO1_2    (_IMXRT_GPIO1_0_15_BASE + 2)   /* GPIO1 pin 8 interrupt */
+#  define IMXRT_IRQ_GPIO1_3    (_IMXRT_GPIO1_0_15_BASE + 3)   /* GPIO1 pin 8 interrupt */
+#  define IMXRT_IRQ_GPIO1_4    (_IMXRT_GPIO1_0_15_BASE + 4)   /* GPIO1 pin 8 interrupt */
+#  define IMXRT_IRQ_GPIO1_5    (_IMXRT_GPIO1_0_15_BASE + 5)   /* GPIO1 pin 8 interrupt */
+#  define IMXRT_IRQ_GPIO1_6    (_IMXRT_GPIO1_0_15_BASE + 6)   /* GPIO1 pin 8 interrupt */
+#  define IMXRT_IRQ_GPIO1_7    (_IMXRT_GPIO1_0_15_BASE + 7)   /* GPIO1 pin 8 interrupt */
+#  define IMXRT_IRQ_GPIO1_8    (_IMXRT_GPIO1_0_15_BASE + 8)   /* GPIO1 pin 8 interrupt */
+#  define IMXRT_IRQ_GPIO1_9    (_IMXRT_GPIO1_0_15_BASE + 9)   /* GPIO1 pin 9 interrupt */
+#  define IMXRT_IRQ_GPIO1_10   (_IMXRT_GPIO1_0_15_BASE + 10)  /* GPIO1 pin 10 interrupt */
+#  define IMXRT_IRQ_GPIO1_11   (_IMXRT_GPIO1_0_15_BASE + 11)  /* GPIO1 pin 11 interrupt */
+#  define IMXRT_IRQ_GPIO1_12   (_IMXRT_GPIO1_0_15_BASE + 12)  /* GPIO1 pin 12 interrupt */
+#  define IMXRT_IRQ_GPIO1_13   (_IMXRT_GPIO1_0_15_BASE + 13)  /* GPIO1 pin 13 interrupt */
+#  define IMXRT_IRQ_GPIO1_14   (_IMXRT_GPIO1_0_15_BASE + 14)  /* GPIO1 pin 14 interrupt */
+#  define IMXRT_IRQ_GPIO1_15   (_IMXRT_GPIO1_0_15_BASE + 15)  /* GPIO1 pin 15 interrupt */
 
-#  define _IMXRT_GPIO1_8_15_NIRQS 8
+#  define _IMXRT_GPIO1_8_15_NIRQS 16
 #  define _IMXRT_GPIO1_16_31_BASE (_IMXRT_GPIO1_0_15_BASE + _IMXRT_GPIO1_8_15_NIRQS)
 #else
 #  define _IMXRT_GPIO1_8_15_NIRQS 0
@@ -414,6 +426,7 @@
 
 #define IMXRT_GPIO_NIRQS       (IMXRT_GPIO1_NIRQS + IMXRT_GPIO2_NIRQS + \
                                 IMXRT_GPIO3_NIRQS + IMXRT_GPIO4_NIRQS)
+#define IMXRT_GPIO_IRQ_LAST    (_IMXRT_GPIO1_0_15_BASE + IMXRT_GPIO_NIRQS)
 
 /* Total number of IRQ numbers **********************************************************/
 
