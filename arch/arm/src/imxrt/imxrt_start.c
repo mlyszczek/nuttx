@@ -65,7 +65,7 @@
  ****************************************************************************/
 
 /* Memory Map ***************************************************************/
-/* 0x2000:0000 - Start of on-chip RAM (OCRAM) and start of .data (_sdata)
+/* 0x2020:0000 - Start of on-chip RAM (OCRAM) and start of .data (_sdata)
  *             - End of .data (_edata) and start of .bss (_sbss)
  *             - End of .bss (_ebss) and bottom of idle stack
  *             - _ebss + CONFIG_IDLETHREAD_STACKSIZE = end of idle stack,
@@ -73,6 +73,12 @@
  *               store stack so that the correct initial value is the end of
  *               the stack + 4;
  * 0x2027:ffff - End of OCRAM and end of heap (assuming 512Kb OCRAM)
+ *
+ * NOTE:  This assumes that all internal RAM is configured for OCRAM (vs.
+ * ITCM or DTCM).  The RAM that holds .data and .bss is called the "Primary
+ * RAM".  Many other configurations are possible, including configurations
+ * where the primary ram is in external memory.  Those are not considered
+ * here.
  */
 
 #define IDLE_STACK ((uintptr_t)&_ebss + CONFIG_IDLETHREAD_STACKSIZE - 4)
