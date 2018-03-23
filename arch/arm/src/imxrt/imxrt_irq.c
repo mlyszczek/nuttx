@@ -51,7 +51,7 @@
 #include "up_arch.h"
 #include "up_internal.h"
 
-#ifdef CONFIG_SAMV7_GPIO_IRQ
+#ifdef CONFIG_IMXRT_GPIO_IRQ
 #  include "imxrt_gpio.h"
 #endif
 
@@ -123,36 +123,66 @@ static void imxrt_dumpnvic(const char *msg, int irq)
           getreg32(NVIC_SYSHCON_MEMFAULTENA), getreg32(NVIC_SYSHCON_BUSFAULTENA),
           getreg32(NVIC_SYSHCON_USGFAULTENA), getreg32(NVIC_SYSTICK_CTRL_ENABLE));
 #endif
-  irqinfo("  IRQ ENABLE: %08x %08x %08x\n",
+  irqinfo("  IRQ ENABLE: %08x %08x %08x %08x\n",
           getreg32(NVIC_IRQ0_31_ENABLE), getreg32(NVIC_IRQ32_63_ENABLE),
-          getreg32(NVIC_IRQ64_95_ENABLE));
+          getreg32(NVIC_IRQ64_95_ENABLE), getreg32(NVIC_IRQ96_127_ENABLE));
+#if IMXRT_IRQ_NEXTINT > 128
+  irqinfo("              %08x %08x %08x %08x\n",
+          getreg32(NVIC_IRQ128_159_ENABLE), getreg32(NVIC_IRQ160_191_ENABLE),
+          getreg32(NVIC_IRQ192_223_ENABLE), getreg32(NVIC_IRQ224_239_ENABLE));
+#endif
   irqinfo("  SYSH_PRIO:  %08x %08x %08x\n",
           getreg32(NVIC_SYSH4_7_PRIORITY), getreg32(NVIC_SYSH8_11_PRIORITY),
           getreg32(NVIC_SYSH12_15_PRIORITY));
   irqinfo("  IRQ PRIO:   %08x %08x %08x %08x\n",
           getreg32(NVIC_IRQ0_3_PRIORITY), getreg32(NVIC_IRQ4_7_PRIORITY),
           getreg32(NVIC_IRQ8_11_PRIORITY), getreg32(NVIC_IRQ12_15_PRIORITY));
-#if IMXRT_IRQ_NEXTINT > 15
+#if IMXRT_IRQ_NEXTINT > 16
   irqinfo("              %08x %08x %08x %08x\n",
           getreg32(NVIC_IRQ16_19_PRIORITY), getreg32(NVIC_IRQ20_23_PRIORITY),
           getreg32(NVIC_IRQ24_27_PRIORITY), getreg32(NVIC_IRQ28_31_PRIORITY));
 #endif
-#if IMXRT_IRQ_NEXTINT > 31
+#if IMXRT_IRQ_NEXTINT > 32
   irqinfo("              %08x %08x %08x %08x\n",
           getreg32(NVIC_IRQ32_35_PRIORITY), getreg32(NVIC_IRQ36_39_PRIORITY),
           getreg32(NVIC_IRQ40_43_PRIORITY), getreg32(NVIC_IRQ44_47_PRIORITY));
 #endif
-#if IMXRT_IRQ_NEXTINT > 47
+#if IMXRT_IRQ_NEXTINT > 48
   irqinfo("              %08x %08x %08x %08x\n",
           getreg32(NVIC_IRQ48_51_PRIORITY), getreg32(NVIC_IRQ52_55_PRIORITY),
           getreg32(NVIC_IRQ56_59_PRIORITY), getreg32(NVIC_IRQ60_63_PRIORITY));
 #endif
-#if IMXRT_IRQ_NEXTINT > 63
+#if IMXRT_IRQ_NEXTINT > 64
   irqinfo("              %08x %08x %08x %08x\n",
           getreg32(NVIC_IRQ64_67_PRIORITY), getreg32(NVIC_IRQ68_71_PRIORITY),
           getreg32(NVIC_IRQ72_75_PRIORITY), getreg32(NVIC_IRQ76_79_PRIORITY));
 #endif
-#if IMXRT_IRQ_NEXTINT > 79
+#if IMXRT_IRQ_NEXTINT > 80
+  irqinfo("              %08x %08x %08x %08x\n",
+          getreg32(NVIC_IRQ80_83_PRIORITY), getreg32(NVIC_IRQ84_87_PRIORITY),
+          getreg32(NVIC_IRQ88_91_PRIORITY), getreg32(NVIC_IRQ92_95_PRIORITY));
+#endif
+#if IMXRT_IRQ_NEXTINT > 96
+  irqinfo("              %08x %08x %08x %08x\n",
+          getreg32(NVIC_IRQ96_99_PRIORITY), getreg32(NVIC_IRQ100_103_PRIORITY),
+          getreg32(NVIC_IRQ104_107_PRIORITY), getreg32(NVIC_IRQ108_111_PRIORITY));
+#endif
+#if IMXRT_IRQ_NEXTINT > 112
+  irqinfo("              %08x %08x %08x %08x\n",
+          getreg32(NVIC_IRQ112_115_PRIORITY), getreg32(NVIC_IRQ116_119_PRIORITY),
+          getreg32(NVIC_IRQ120_123_PRIORITY), getreg32(NVIC_IRQ124_127_PRIORITY));
+#endif
+#if IMXRT_IRQ_NEXTINT > 128
+  irqinfo("              %08x %08x %08x %08x\n",
+          getreg32(NVIC_IRQ128_131_PRIORITY), getreg32(NVIC_IRQ132_135_PRIORITY),
+          getreg32(NVIC_IRQ136_139_PRIORITY), getreg32(NVIC_IRQ140_143_PRIORITY));
+#endif
+#if IMXRT_IRQ_NEXTINT > 144
+  irqinfo("              %08x %08x %08x %08x\n",
+          getreg32(NVIC_IRQ144_147_PRIORITY), getreg32(NVIC_IRQ148_151_PRIORITY),
+          getreg32(NVIC_IRQ152_155_PRIORITY), getreg32(NVIC_IRQ156_159_PRIORITY));
+#endif
+#if IMXRT_IRQ_NEXTINT > 160
 #  warning Missing logic
 #endif
 
@@ -163,8 +193,8 @@ static void imxrt_dumpnvic(const char *msg, int irq)
 #endif
 
 /****************************************************************************
- * Name: imxrt_nmi, imxrt_busfault, imxrt_usagefault, imxrt_pendsv, imxrt_dbgmonitor,
- *       imxrt_pendsv, imxrt_reserved
+ * Name: imxrt_nmi, imxrt_busfault, imxrt_usagefault, imxrt_pendsv,
+ *       imxrt_dbgmonitor, imxrt_pendsv, imxrt_reserved
  *
  * Description:
  *   Handlers for various exceptions.  None are handled and all are fatal
@@ -266,44 +296,46 @@ static int imxrt_irqinfo(int irq, uintptr_t *regaddr, uint32_t *bit,
 
   if (irq >= IMXRT_IRQ_EXTINT)
     {
-#if IMXRT_IRQ_NEXTINT <= 32
       if (extint < IMXRT_IRQ_NEXTINT)
         {
            *regaddr = (NVIC_IRQ0_31_ENABLE + offset);
            *bit     = 1 << extint;
         }
       else
-#elif IMXRT_IRQ_NEXTINT <= 64
+#if IMXRT_IRQ_NEXTINT > 32
       if (extint < 32)
-        {
-           *regaddr = (NVIC_IRQ0_31_ENABLE + offset);
-           *bit     = 1 << extint;
-        }
-      else if (extint < IMXRT_IRQ_NEXTINT)
         {
            *regaddr = (NVIC_IRQ32_63_ENABLE + offset);
            *bit     = 1 << (extint - 32);
         }
       else
-#elif IMXRT_IRQ_NEXTINT <= 96
-      if (extint < 32)
-        {
-           *regaddr = (NVIC_IRQ0_31_ENABLE + offset);
-           *bit     = 1 << extint;
-        }
-      else if (extint < 64)
-        {
-           *regaddr = (NVIC_IRQ32_63_ENABLE + offset);
-           *bit     = 1 << (extint - 32);
-        }
-      else if (extint < IMXRT_IRQ_NEXTINT)
+#endif
+#if IMXRT_IRQ_NEXTINT > 64
+      if (extint < 96)
         {
            *regaddr = (NVIC_IRQ64_95_ENABLE + offset);
            *bit     = 1 << (extint - 64);
         }
       else
-#else
-#  warning Missing logic
+#endif
+#if IMXRT_IRQ_NEXTINT > 96
+      if (extint < 96)
+        {
+           *regaddr = (NVIC_IRQ96_127_ENABLE + offset);
+           *bit     = 1 << (extint - 96);
+        }
+      else
+#endif
+#if IMXRT_IRQ_NEXTINT > 128
+      if (extint < 160)
+        {
+           *regaddr = (NVIC_IRQ128_159_ENABLE + offset);
+           *bit     = 1 << (extint - 128);
+        }
+      else
+#endif
+#if IMXRT_IRQ_NEXTINT > 160
+#  error Missing logic
 #endif
         {
           return ERROR; /* Invalid interrupt */
@@ -364,7 +396,7 @@ void up_irqinitialize(void)
    *
    *  0 -> 32 interrupt lines, 1 enable register,   8 priority registers
    *  1 -> 64 "       " "   ", 2 enable registers, 16 priority registers
-   *  2 -> 96 "       " "   ", 3 enable regsiters, 24 priority registers
+   *  2 -> 96 "       " "   ", 3 enable registers, 24 priority registers
    *  ...
    */
 
@@ -478,8 +510,8 @@ void up_irqinitialize(void)
    * GPIO pins.
    */
 
-#ifdef CONFIG_SAMV7_GPIO_IRQ
-  imxrt_gpioirqinitialize();
+#ifdef CONFIG_IMXRT_GPIO_IRQ
+  imxrt_gpioirq_initialize();
 #endif
 
   /* And finally, enable interrupts */
@@ -521,12 +553,12 @@ void up_disable_irq(int irq)
           putreg32(regval, regaddr);
         }
     }
-#ifdef CONFIG_SAMV7_GPIO_IRQ
+#ifdef CONFIG_IMXRT_GPIO_IRQ
   else
     {
       /* Maybe it is a (derived) GPIO IRQ */
 
-      imxrt_gpioirqdisable(irq);
+      imxrt_gpioirq_disable(irq);
     }
 #endif
 
@@ -568,12 +600,12 @@ void up_enable_irq(int irq)
           putreg32(regval, regaddr);
         }
     }
-#ifdef CONFIG_SAMV7_GPIO_IRQ
+#ifdef CONFIG_IMXRT_GPIO_IRQ
   else
     {
       /* Maybe it is a (derived) GPIO IRQ */
 
-      imxrt_gpioirqenable(irq);
+      imxrt_gpioirq_enable(irq);
     }
 #endif
 
