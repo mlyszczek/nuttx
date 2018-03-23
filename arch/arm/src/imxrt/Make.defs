@@ -86,7 +86,8 @@ endif
 # Required i.MX RT files
 
 CHIP_ASRCS  =
-CHIP_CSRCS  = imxrt_start.c imxrt_clockconfig.c imxrt_clrpend.c imxrt_gpio.c
+CHIP_CSRCS  = imxrt_start.c imxrt_clockconfig.c imxrt_irq.c imxrt_clrpend.c
+CHIP_CSRCS += imxrt_gpio.c
 
 # Configuration-dependent i.MX RT files
 
