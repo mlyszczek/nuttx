@@ -64,23 +64,19 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#warning REVISIT:  This came from the SAMv7
 /* Memory Map ***************************************************************/
-/* 0x0400:0000 - Beginning of the internal FLASH.   Address of vectors.
- *               Mapped as boot memory address 0x0000:0000 at reset.
- * 0x041f:ffff - End of flash region (assuming the max of 2MiB of FLASH).
- * 0x2000:0000 - Start of internal SRAM and start of .data (_sdata)
+/* 0x2000:0000 - Start of on-chip RAM (OCRAM) and start of .data (_sdata)
  *             - End of .data (_edata) and start of .bss (_sbss)
  *             - End of .bss (_ebss) and bottom of idle stack
  *             - _ebss + CONFIG_IDLETHREAD_STACKSIZE = end of idle stack,
  *               start of heap. NOTE that the ARM uses a decrement before
  *               store stack so that the correct initial value is the end of
  *               the stack + 4;
- * 0x2005:ffff - End of internal SRAM and end of heap (a
+ * 0x2027:ffff - End of OCRAM and end of heap (assuming 512Kb OCRAM)
  */
 
-#define IDLE_STACK ((uintptr_t)&_ebss+CONFIG_IDLETHREAD_STACKSIZE-4)
-#define HEAP_BASE  ((uintptr_t)&_ebss+CONFIG_IDLETHREAD_STACKSIZE)
+#define IDLE_STACK ((uintptr_t)&_ebss + CONFIG_IDLETHREAD_STACKSIZE - 4)
+#define HEAP_BASE  ((uintptr_t)&_ebss + CONFIG_IDLETHREAD_STACKSIZE)
 
 /****************************************************************************
  * Public Data
@@ -136,7 +132,9 @@ void __start(void) __attribute__ ((no_instrument_function));
  *       done, the processor reserves space on the stack for the FP state,
  *       but does not save that state information to the stack.
  *
- *  Software must not change the value of the ASPEN bit or LSPEN bit while either:
+ *  Software must not change the value of the ASPEN bit or LSPEN bit while
+ *  either:
+ *
  *   - the CPACR permits access to CP10 and CP11, that give access to the FP
  *     extension, or
  *   - the CONTROL.FPCA bit is set to 1
@@ -159,7 +157,7 @@ static inline void imxrt_fpuconfig(void)
   setcontrol(regval);
 
   /* Ensure that FPCCR.LSPEN is disabled, so that we don't have to contend
-   * with the lazy FP context save behaviour.  Clear FPCCR.ASPEN since we
+   * with the lazy FP context save behavior.  Clear FPCCR.ASPEN since we
    * are going to turn on CONTROL.FPCA for all contexts.
    */
 
@@ -189,7 +187,7 @@ static inline void imxrt_fpuconfig(void)
   setcontrol(regval);
 
   /* Ensure that FPCCR.LSPEN is disabled, so that we don't have to contend
-   * with the lazy FP context save behaviour.  Clear FPCCR.ASPEN since we
+   * with the lazy FP context save behavior.  Clear FPCCR.ASPEN since we
    * are going to keep CONTROL.FPCA off for all contexts.
    */
 
@@ -225,9 +223,6 @@ static inline void imxrt_tcmenable(void)
 
   ARM_DSB();
   ARM_ISB();
-
-  /* Assure that GPNVM 7-8 settings are as expected */
-#warning Missing logic
 
   /* Enabled/disabled ITCM */
 
@@ -332,7 +327,7 @@ void __start(void)
     }
 
   /* Move the initialized data section from his temporary holding spot in
-   * FLASH into the correct place in SRAM.  The correct place in SRAM is
+   * FLASH into the correct place in OCRAM.  The correct place in OCRAM is
    * give by _sdata and _edata.  The temporary location is in FLASH at the
    * end of all of the other read-only data (.text, .rodata) at _eronly.
    */
@@ -343,7 +338,7 @@ void __start(void)
     }
 
   /* Copy any necessary code sections from FLASH to RAM.  The correct
-   * destination in SRAM is geive by _sramfuncs and _eramfuncs.  The
+   * destination in OCRAM is given by _sramfuncs and _eramfuncs.  The
    * temporary location is in flash after the data initialization code
    * at _framfuncs.  This should be done before imxrt_clockconfig() is
    * called (in case it has some dependency on initialized C variables).
@@ -375,7 +370,7 @@ void __start(void)
   /* For the case of the separate user-/kernel-space build, perform whatever
    * platform specific initialization of the user memory is required.
    * Normally this just means initializing the user space .data and .bss
-   * segements.
+   * segments.
    */
 
 #ifdef CONFIG_BUILD_PROTECTED
@@ -383,8 +378,8 @@ void __start(void)
 #endif
 
   /* Configure the MPU to permit user-space access to its FLASH and RAM (for
-   * CONFIG_BUILD_PROTECTED) or to manage cache properties (for
-   * CONFIG_SAMV7_QSPI).
+   * CONFIG_BUILD_PROTECTED) or to manage cache properties in external
+   * memory regions.
    */
 
   imxrt_mpu_initialize();
