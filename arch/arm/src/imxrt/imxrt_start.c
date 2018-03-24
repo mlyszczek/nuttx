@@ -361,7 +361,6 @@ void __start(void)
 
   imxrt_clockconfig();
   imxrt_fpuconfig();
-  imxrt_gpioinit();
   imxrt_lowsetup();
 
   /* Enable/disable tightly coupled memories */
