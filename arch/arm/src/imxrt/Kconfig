@@ -3,6 +3,8 @@
 # see the file kconfig-language.txt in the NuttX tools repository.
 #
 
+if ARCH_CHIP_IMXRT
+
 comment "i.MX RT Configuration Options"
 
 choice
@@ -152,3 +154,39 @@ config IMXRT_GPIO4_16_31_IRQ
 	default n
 
 endif # IMXRT_GPIO_IRQ
+
+menu "Memory Configuration"
+
+config IMXRT_DDR_SIZE
+	int "Installed DRAM size (bytes)"
+	default 268435456
+
+choice
+	prompt "i.MX RT Boot Configuration"
+	default IMXRT_BOOT_NOR
+	---help---
+		The startup code needs to know if the code is running from internal
+		OCRAM, external SDRAM, external NOR, or external SDRAM in order to
+		initialize properly.  Note that the boot device is not known for
+		cases where the code is copied into RAM by a bootloader.
+
+config IMXRT_BOOT_OCRAM
+	bool "Running from internal OCRAM"
+	select BOOT_RUNFROMISRAM
+
+config IMXRT_BOOT_SDRAM
+	bool "Running from external SDRAM"
+	select BOOT_RUNFROMSDRAM
+
+config IMXRT_BOOT_NOR
+	bool "Running from external NOR FLASH"
+	select BOOT_RUNFROMFLASH
+
+config IMXRT_BOOT_SRAM
+	bool "Running from external SRAM"
+	select BOOT_RUNFROMEXTSRAM
+
+endchoice # i.MX RT Boot Configuration
+endmenu # Memory Configuration
+
+endif # ARCH_CHIP_IMXRT

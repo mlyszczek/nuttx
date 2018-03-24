@@ -62,6 +62,13 @@
 
 void imxrt_clockconfig(void)
 {
+  /* Don't change the current basic clock configuration if we are running
+   * from SDRAM.  In this case, some bootloader logic has already configured
+   * clocking and SDRAM.  We are pretty much committed to using things the
+   * way that the bootloader has left them.
+   */
+
+#ifndef CONFIG_IMXRT_BOOT_SDRAM
   uint32_t reg;
 
   /* Set clock mux and dividers */
@@ -148,6 +155,5 @@ void imxrt_clockconfig(void)
   reg &= CCM_CSCDS1_UART_CLK_PODF_MASK;
   reg |= CCM_CSCDS1_UART_CLK_PODF(0);
   putreg32(reg, IMXRT_CCM_CBCDR);
-
+#endif
 }
-
