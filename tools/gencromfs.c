@@ -160,6 +160,7 @@ struct cromfs_volume_s
 struct cromfs_node_s
 {
   uint16_t cn_mode;       /* File type, attributes, and access mode bits */
+  uint16_t cn_pad;        /* Not used */
   uint32_t cn_name;       /* Offset from the beginning of the volume header to the
                            * node name string.  NUL-terminated. */
   uint32_t cn_size;       /* Size of the uncompressed data (in bytes) */
@@ -841,14 +842,11 @@ static uint16_t get_mode(mode_t mode)
 {
   uint16_t ret = 0;
 
+  /* Convert mode to CROMFS NuttX read-only mode */
+
   if ((mode & S_IXOTH) != 0)
     {
       ret |= NUTTX_IXOTH;
-    }
-
-  if ((mode & S_IWOTH) != 0)
-    {
-      ret |= NUTTX_IWOTH;
     }
 
   if ((mode & S_IROTH) != 0)
@@ -861,11 +859,6 @@ static uint16_t get_mode(mode_t mode)
       ret |= NUTTX_IXGRP;
     }
 
-  if ((mode & S_IWGRP) != 0)
-    {
-      ret |= NUTTX_IWGRP;
-    }
-
   if ((mode & S_IRGRP) != 0)
     {
       ret |= NUTTX_IRGRP;
@@ -874,11 +867,6 @@ static uint16_t get_mode(mode_t mode)
   if ((mode & S_IXUSR) != 0)
     {
       ret |= NUTTX_IXUSR;
-    }
-
-  if ((mode & S_IWUSR) != 0)
-    {
-      ret |= NUTTX_IWUSR;
     }
 
   if ((mode & S_IRUSR) != 0)
@@ -916,10 +904,11 @@ static void gen_dirlink(const char *name, uint32_t tgtoffs, bool dirempty)
   /* Generate the hardlink node */
 
   dump_nextline(g_tmpstream);
-  fprintf(g_tmpstream, "\n  /* Offset %6lu:  Hard link %s*/\n\n",
+  fprintf(g_tmpstream, "\n  /* Offset %6lu:  Hard link %s */\n\n",
           (unsigned long)g_offset, name);
 
   node.cn_mode    = TGT_UINT16(DIRLINK_MODEFLAGS);
+  node.cn_pad     = 0;
 
   g_offset       += sizeof(struct cromfs_node_s);
   node.cn_name    = TGT_UINT32(g_offset);
@@ -954,16 +943,16 @@ static void gen_directory(const char *path, const char *name, mode_t mode,
   subtree_stream  = open_tmpfile();
   g_tmpstream     = subtree_stream;
 
-  /* Update offsets for the subdirectory */
-
-  g_parent_offset = g_diroffset;  /* New offset for '..' */
-  g_diroffset     = g_offset;     /* New offset for '.' */
-
   /* Update the offset to account for the file node which we have not yet
    * written (we can't, we don't have enough information yet)
    */
 
   g_offset       += sizeof(struct cromfs_node_s) + namlen;
+
+  /* Update offsets for the subdirectory */
+
+  g_parent_offset = g_diroffset;  /* New offset for '..' */
+  g_diroffset     = g_offset;     /* New offset for '.' */
 
   /* We are going to traverse the new directory twice; the first time just
    * see if the directory is empty.  The second time is the real thing.
@@ -1002,6 +991,7 @@ static void gen_directory(const char *path, const char *name, mode_t mode,
           (unsigned long)save_offset, path);
 
   node.cn_mode    = TGT_UINT16(NUTTX_IFDIR | get_mode(mode));
+  node.cn_pad     = 0;
 
   save_offset    += sizeof(struct cromfs_node_s);
   node.cn_name    = TGT_UINT32(save_offset);
@@ -1118,6 +1108,7 @@ static void gen_file(const char *path, const char *name, mode_t mode,
           (unsigned long)blktotal);
 
   node.cn_mode       = TGT_UINT16(NUTTX_IFREG | get_mode(mode));
+  node.cn_pad        = 0;
 
   nodeoffs          += sizeof(struct cromfs_node_s);
   node.cn_name       = TGT_UINT32(nodeoffs);
@@ -1335,7 +1326,7 @@ int main(int argc, char **argv, char **envp)
   /* Now append the volume header to output file */
 
   fprintf(g_outstream, "/* CROMFS image */\n\n");
-  fprintf(g_outstream, "uint8_t g_cromfs_image[] =\n");
+  fprintf(g_outstream, "const uint8_t g_cromfs_image[] =\n");
   fprintf(g_outstream, "{\n");
   fprintf(g_outstream, "\n  /* Offset %6lu:  Volume header */\n\n", 0ul);
 
