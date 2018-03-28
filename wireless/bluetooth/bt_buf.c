@@ -80,7 +80,7 @@ static struct nano_fifo_s g_avail_aclout;
  * Private Functions
  ****************************************************************************/
 
-static FAR struct nano_fifo_s *get_avail(enum bt_buf_s_type_e type)
+static FAR struct nano_fifo_s *get_avail(enum bt_buf_type_e type)
 {
   switch (type)
     {
@@ -103,8 +103,7 @@ static FAR struct nano_fifo_s *get_avail(enum bt_buf_s_type_e type)
  * Public Functions
  ****************************************************************************/
 
-FAR struct bt_buf_s *bt_buf_s_get(enum bt_buf_s_type_e type,
-                                  size_t reserve_head)
+FAR struct bt_buf_s *bt_buf_get(enum bt_buf_type_e type, size_t reserve_head)
 {
   FAR struct nano_fifo_s *avail = get_avail(type);
   FAR struct bt_buf_s *buf;
@@ -134,7 +133,7 @@ FAR struct bt_buf_s *bt_buf_s_get(enum bt_buf_s_type_e type,
   return buf;
 }
 
-void bt_buf_s_put(FAR struct bt_buf_s *buf)
+void bt_buf_put(FAR struct bt_buf_s *buf)
 {
   FAR struct bt_hci_cp_host_num_completed_packets_s *cp;
   FAR struct bt_hci_handle_count_s *hc;
@@ -166,55 +165,55 @@ void bt_buf_s_put(FAR struct bt_buf_s *buf)
       return;
     }
 
-  cp              = bt_buf_s_add(buf, sizeof(*cp));
+  cp              = bt_buf_add(buf, sizeof(*cp));
   cp->num_handles = sys_cpu_to_le16(1);
 
-  hc              = bt_buf_s_add(buf, sizeof(*hc));
+  hc              = bt_buf_add(buf, sizeof(*hc));
   hc->handle      = sys_cpu_to_le16(handle);
   hc->count       = sys_cpu_to_le16(1);
 
   bt_hci_cmd_send(BT_HCI_OP_HOST_NUM_COMPLETED_PACKETS, buf);
 }
 
-FAR struct bt_buf_s *bt_buf_s_hold(FAR struct bt_buf_s *buf)
+FAR struct bt_buf_s *bt_buf_hold(FAR struct bt_buf_s *buf)
 {
   winfo("buf %p (old) ref %u type %d\n", buf, buf->ref, buf->type);
   buf->ref++;
   return buf;
 }
 
-FAR void *bt_buf_s_add(FAR struct bt_buf_s *buf, size_t len)
+FAR void *bt_buf_add(FAR struct bt_buf_s *buf, size_t len)
 {
-  FAR uint8_t *tail = bt_buf_s_tail(buf);
+  FAR uint8_t *tail = bt_buf_tail(buf);
 
   winfo("buf %p len %u\n", buf, len);
 
-  DEBUGASSERT(bt_buf_s_tailroom(buf) >= len);
+  DEBUGASSERT(bt_buf_tailroom(buf) >= len);
 
   buf->len += len;
   return tail;
 }
 
-void bt_buf_s_add_le16(FAR struct bt_buf_s *buf, uint16_t value)
+void bt_buf_add_le16(FAR struct bt_buf_s *buf, uint16_t value)
 {
   winfo("buf %p value %u\n", buf, value);
 
   value = sys_cpu_to_le16(value);
-  memcpy(bt_buf_s_add(buf, sizeof(value)), &value, sizeof(value));
+  memcpy(bt_buf_add(buf, sizeof(value)), &value, sizeof(value));
 }
 
-FAR void *bt_buf_s_push(FAR struct bt_buf_s *buf, size_t len)
+FAR void *bt_buf_push(FAR struct bt_buf_s *buf, size_t len)
 {
   winfo("buf %p len %u\n", buf, len);
 
-  DEBUGASSERT(bt_buf_s_headroom(buf) >= len);
+  DEBUGASSERT(bt_buf_headroom(buf) >= len);
 
   buf->data -= len;
   buf->len  += len;
   return buf->data;
 }
 
-FAR void *bt_buf_s_pull(FAR struct bt_buf_s *buf, size_t len)
+FAR void *bt_buf_pull(FAR struct bt_buf_s *buf, size_t len)
 {
   winfo("buf %p len %u\n", buf, len);
 
@@ -224,27 +223,27 @@ FAR void *bt_buf_s_pull(FAR struct bt_buf_s *buf, size_t len)
   return buf->data += len;
 }
 
-uint16_t bt_buf_s_pull_le16(FAR struct bt_buf_s * buf)
+uint16_t bt_buf_pull_le16(FAR struct bt_buf_s * buf)
 {
   uint16_t value;
 
   value = UNALIGNED_GET((FAR uint16_t *)buf->data);
-  bt_buf_s_pull(buf, sizeof(value));
+  bt_buf_pull(buf, sizeof(value));
 
   return sys_le16_to_cpu(value);
 }
 
-size_t bt_buf_s_headroom(FAR struct bt_buf_s * buf)
+size_t bt_buf_headroom(FAR struct bt_buf_s * buf)
 {
   return buf->data - buf->buf;
 }
 
-size_t bt_buf_s_tailroom(FAR struct bt_buf_s * buf)
+size_t bt_buf_tailroom(FAR struct bt_buf_s * buf)
 {
-  return BT_BUF_MAX_DATA - bt_buf_s_headroom(buf) - buf->len;
+  return BT_BUF_MAX_DATA - bt_buf_headroom(buf) - buf->len;
 }
 
-int bt_buf_s_init(int acl_in, int acl_out)
+int bt_buf_init(int acl_in, int acl_out)
 {
   int i;
 
