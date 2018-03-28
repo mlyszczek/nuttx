@@ -56,9 +56,9 @@
 #include <bluetooth/uuid.h>
 #include <bluetooth/gatt.h>
 
-#include "hci_core.h"
-#include "conn_internal.h"
-#include "l2cap.h"
+#include "bt_hci_core.h"
+#include "bt_conn_internal.h"
+#include "bt_l2cap.h"
 #include "bt_att.h"
 
 /****************************************************************************
