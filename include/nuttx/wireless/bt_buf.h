@@ -91,7 +91,7 @@ struct bt_buf_hci_data_s
 
   FAR void *sync;
 
-  /* The command OpCode that the buffer contains */
+  /* The command opcode that the buffer contains */
 
   uint16_t opcode;
 };
@@ -105,25 +105,16 @@ struct bt_buf_acl_data_s
 
 struct bt_buf_s
 {
-  /* FIFO uses first 4 bytes itself, reserve space */
-
-  uint32_t unused;
-
   union
   {
     struct bt_buf_hci_data_s hci;
     struct bt_buf_acl_data_s acl;
-  };
+  } u;
 
-  /* Pointer to the start of data in the buffer. */
-
-  FAR uint8_t *data;
-
-  /* Length of the data behind the data pointer. */
-
-  uint8_t len;
-  uint8_t ref:5;   /* Reference count */
-  uint8_t type:3;  /* Type of data contained in the buffer */
+  FAR uint8_t *data;  /* Start of data in the buffer */
+  uint8_t len;        /* Length of data in the buffer */
+  uint8_t ref  : 5;   /* Reference count */
+  uint8_t type : 3;   /* Type of data contained in the buffer */
 
   /* The full available buffer. */
 

@@ -284,7 +284,7 @@ static void hci_acl(FAR struct bt_buf_s *buf)
 
   bt_buf_pull(buf, sizeof(*hdr));
 
-  winfo("handle %u len %u flags %u\n", buf->acl.handle, len, flags);
+  winfo("handle %u len %u flags %u\n", buf->u.acl.handle, len, flags);
 
   if (buf->len != len)
     {
@@ -293,10 +293,10 @@ static void hci_acl(FAR struct bt_buf_s *buf)
       return;
     }
 
-  conn = bt_conn_lookup_handle(buf->acl.handle);
+  conn = bt_conn_lookup_handle(buf->u.acl.handle);
   if (!conn)
     {
-      wlerr("ERROR: Unable to find conn for handle %u\n", buf->acl.handle);
+      wlerr("ERROR: Unable to find conn for handle %u\n", buf->u.acl.handle);
       bt_buf_put(buf);
       return;
     }
