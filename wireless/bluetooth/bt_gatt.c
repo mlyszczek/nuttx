@@ -100,8 +100,8 @@ struct notify_data_s
  * Private Data
  ****************************************************************************/
 
-static FAR const struct bt_gatt_attr_s *db = NULL;
-static size_t attr_count = 0;
+static FAR const struct bt_gatt_attr_s *g_db = NULL;
+static size_t g_attr_count = 0;
 
 /****************************************************************************
  * Public Functions
@@ -109,8 +109,8 @@ static size_t attr_count = 0;
 
 void bt_gatt_register(FAR const struct bt_gatt_attr_s *attrs, size_t count)
 {
-  db = attrs;
-  attr_count = count;
+  g_db         = attrs;
+  g_attr_count = count;
 }
 
 int bt_gatt_attr_read(FAR struct bt_conn_s *conn,
@@ -208,9 +208,9 @@ void bt_gatt_foreach_attr(uint16_t start_handle, uint16_t end_handle,
 {
   size_t i;
 
-  for (i = 0; i < attr_count; i++)
+  for (i = 0; i < g_attr_count; i++)
     {
-      FAR const struct bt_gatt_attr_s *attr = &db[i];
+      FAR const struct bt_gatt_attr_s *attr = &g_db[i];
 
       /* Check if attribute handle is within range */
 

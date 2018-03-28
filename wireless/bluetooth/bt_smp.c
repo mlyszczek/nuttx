@@ -130,7 +130,7 @@ struct uint128_s
  * Private Data
  ****************************************************************************/
 
-static struct bt_smp_s bt_smp_pool[CONFIG_BLUETOOTH_MAX_CONN];
+static struct bt_smp_s g_smp_pool[CONFIG_BLUETOOTH_MAX_CONN];
 
 /****************************************************************************
  * Private Functions
@@ -1054,9 +1054,9 @@ static void bt_smp_connected(struct bt_conn *conn)
 
   winfo("conn %p handle %u\n", conn, conn->handle);
 
-  for (i = 0; i < ARRAY_SIZE(bt_smp_pool); i++)
+  for (i = 0; i < ARRAY_SIZE(g_smp_pool); i++)
     {
-      struct bt_smp_s *smp = &bt_smp_pool[i];
+      struct bt_smp_s *smp = &g_smp_pool[i];
 
       if (smp->conn)
         {

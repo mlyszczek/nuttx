@@ -56,7 +56,7 @@
 
 /* TODO: Decide whether to continue using BLE format or switch to RFC 4122 */
 
-static const struct bt_uuid_s uuid128_base =
+static const struct bt_uuid_s g_uuid128_base =
 {
   .type = BT_UUID_128,
   .u128 =
@@ -76,7 +76,7 @@ static void uuid_to_uuid128(FAR const struct bt_uuid_s *src,
   switch (src->type)
     {
     case BT_UUID_16:
-      *dst = uuid128_base;
+      *dst = g_uuid128_base;
       memcpy(&dst->u128[2], &src->u16, sizeof(src->u16));
       return;
 

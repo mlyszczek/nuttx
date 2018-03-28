@@ -67,13 +67,13 @@
  * Private Data
  ****************************************************************************/
 
-static struct bt_keys_s key_pool[CONFIG_BLUETOOTH_MAX_PAIRED];
+static struct bt_keys_s g_key_pool[CONFIG_BLUETOOTH_MAX_PAIRED];
 
-static FAR struct bt_keys_s *ltks;
-static FAR struct bt_keys_s *slave_ltks;
-static FAR struct bt_keys_s *irks;
-static FAR struct bt_keys_s *local_csrks;
-static FAR struct bt_keys_s *remote_csrks;
+static FAR struct bt_keys_s *g_ltks;
+static FAR struct bt_keys_s *g_slave_ltks;
+static FAR struct bt_keys_s *g_irks;
+static FAR struct bt_keys_s *g_local_csrks;
+static FAR struct bt_keys_s *g_remote_csrks;
 
 /****************************************************************************
  * Public Functions
@@ -86,9 +86,9 @@ FAR struct bt_keys_s *bt_keys_get_addr(FAR const bt_addr_le_t *addr)
 
   winfo("%s\n", bt_addr_le_str(addr));
 
-  for (i = 0; i < ARRAY_SIZE(key_pool); i++)
+  for (i = 0; i < ARRAY_SIZE(g_key_pool); i++)
     {
-      keys = &key_pool[i];
+      keys = &g_key_pool[i];
 
       if (!bt_addr_le_cmp(&keys->addr, addr))
         {
@@ -116,7 +116,7 @@ void bt_keys_clear(FAR struct bt_keys_s *keys, int type)
 
   if (((type & keys->keys) & BT_KEYS_SLAVE_LTK))
     {
-      bt_keys_foreach(&slave_ltks, cur, slave_ltk.next)
+      bt_keys_foreach(&g_slave_ltks, cur, slave_ltk.next)
         {
           if (*cur == keys)
             {
@@ -130,7 +130,7 @@ void bt_keys_clear(FAR struct bt_keys_s *keys, int type)
 
   if (((type & keys->keys) & BT_KEYS_LTK))
     {
-      bt_keys_foreach(&ltks, cur, ltk.next)
+      bt_keys_foreach(&g_ltks, cur, ltk.next)
         {
           if (*cur == keys)
             {
@@ -144,7 +144,7 @@ void bt_keys_clear(FAR struct bt_keys_s *keys, int type)
 
   if (((type & keys->keys) & BT_KEYS_IRK))
     {
-      bt_keys_foreach(&irks, cur, irk.next)
+      bt_keys_foreach(&g_irks, cur, irk.next)
         {
           if (*cur == keys)
             {
@@ -158,7 +158,7 @@ void bt_keys_clear(FAR struct bt_keys_s *keys, int type)
 
   if (((type & keys->keys) & BT_KEYS_LOCAL_CSRK))
     {
-      bt_keys_foreach(&local_csrks, cur, local_csrk.next)
+      bt_keys_foreach(&g_local_csrks, cur, local_csrk.next)
         {
           if (*cur == keys)
             {
@@ -172,7 +172,7 @@ void bt_keys_clear(FAR struct bt_keys_s *keys, int type)
 
   if (((type & keys->keys) & BT_KEYS_REMOTE_CSRK))
     {
-      bt_keys_foreach(&remote_csrks, cur, remote_csrk.next)
+      bt_keys_foreach(&g_remote_csrks, cur, remote_csrk.next)
         {
           if (*cur == keys)
             {
@@ -199,7 +199,7 @@ FAR struct bt_keys_s *bt_keys_find(int type, FAR const bt_addr_le_t *addr)
   switch (type)
     {
     case BT_KEYS_SLAVE_LTK:
-      bt_keys_foreach(&slave_ltks, cur, slave_ltk.next)
+      bt_keys_foreach(&g_slave_ltks, cur, slave_ltk.next)
         {
           if (!bt_addr_le_cmp(&(*cur)->addr, addr))
             {
@@ -210,7 +210,7 @@ FAR struct bt_keys_s *bt_keys_find(int type, FAR const bt_addr_le_t *addr)
       return *cur;
 
     case BT_KEYS_LTK:
-      bt_keys_foreach(&ltks, cur, ltk.next)
+      bt_keys_foreach(&g_ltks, cur, ltk.next)
         {
           if (!bt_addr_le_cmp(&(*cur)->addr, addr))
             {
@@ -221,7 +221,7 @@ FAR struct bt_keys_s *bt_keys_find(int type, FAR const bt_addr_le_t *addr)
       return *cur;
 
     case BT_KEYS_IRK:
-      bt_keys_foreach(&irks, cur, irk.next)
+      bt_keys_foreach(&g_irks, cur, irk.next)
         {
           if (!bt_addr_le_cmp(&(*cur)->addr, addr))
             {
@@ -232,7 +232,7 @@ FAR struct bt_keys_s *bt_keys_find(int type, FAR const bt_addr_le_t *addr)
       return *cur;
 
     case BT_KEYS_LOCAL_CSRK:
-      bt_keys_foreach(&local_csrks, cur, local_csrk.next)
+      bt_keys_foreach(&g_local_csrks, cur, local_csrk.next)
         {
           if (!bt_addr_le_cmp(&(*cur)->addr, addr))
             {
@@ -243,7 +243,7 @@ FAR struct bt_keys_s *bt_keys_find(int type, FAR const bt_addr_le_t *addr)
       return *cur;
 
     case BT_KEYS_REMOTE_CSRK:
-      bt_keys_foreach(&remote_csrks, cur, remote_csrk.next)
+      bt_keys_foreach(&g_remote_csrks, cur, remote_csrk.next)
         {
           if (!bt_addr_le_cmp(&(*cur)->addr, addr))
             {
@@ -268,28 +268,28 @@ void bt_keys_add_type(FAR struct bt_keys_s *keys, int type)
   switch (type)
     {
     case BT_KEYS_SLAVE_LTK:
-      keys->slave_ltk.next   = slave_ltks;
-      slave_ltks             = keys;
+      keys->slave_ltk.next   = g_slave_ltks;
+      g_slave_ltks           = keys;
       break;
 
     case BT_KEYS_LTK:
-      keys->ltk.next         = ltks;
-      ltks                   = keys;
+      keys->ltk.next         = g_ltks;
+      g_ltks                 = keys;
       break;
 
     case BT_KEYS_IRK:
-      keys->irk.next         = irks;
-      irks                   = keys;
+      keys->irk.next         = g_irks;
+      g_irks                 = keys;
       break;
 
     case BT_KEYS_LOCAL_CSRK:
-      keys->local_csrk.next  = local_csrks;
-      local_csrks            = keys;
+      keys->local_csrk.next  = g_local_csrks;
+      g_local_csrks          = keys;
       break;
 
     case BT_KEYS_REMOTE_CSRK:
-      keys->remote_csrk.next = remote_csrks;
-      remote_csrks           = keys;
+      keys->remote_csrk.next = g_remote_csrks;
+      g_remote_csrks         = keys;
       break;
 
     default:
@@ -334,7 +334,7 @@ FAR struct bt_keys_s *bt_keys_find_irk(FAR const bt_addr_le_t * addr)
       return NULL;
     }
 
-  bt_keys_foreach(&irks, cur, irk.next)
+  bt_keys_foreach(&g_irks, cur, irk.next)
   {
     FAR struct bt_irk *irk = &(*cur)->irk;
 
@@ -356,7 +356,7 @@ FAR struct bt_keys_s *bt_keys_find_irk(FAR const bt_addr_le_t * addr)
 
         /* Move to the beginning of the list for faster future lookups. */
 
-        if (match != irks)
+        if (match != g_irks)
           {
             /* Remove match from list */
 
@@ -364,8 +364,8 @@ FAR struct bt_keys_s *bt_keys_find_irk(FAR const bt_addr_le_t * addr)
 
             /* Add match to the beginning */
 
-            irk->next = irks;
-            irks = match;
+            irk->next = g_irks;
+            g_irks    = match;
           }
 
         return match;

@@ -68,14 +68,14 @@
 #define LE_CONN_LATENCY              0x0000
 #define LE_CONN_TIMEOUT              0x002a
 
+#define BT_L2CAP_CONN_PARAM_ACCEPTED 0
+#define BT_L2CAP_CONN_PARAM_REJECTED 1
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-#define BT_L2CAP_CONN_PARAM_ACCEPTED 0
-#define BT_L2CAP_CONN_PARAM_REJECTED 1
-
-static FAR struct bt_l2cap_chan_s *channels;
+static FAR struct bt_l2cap_chan_s *g_channels;
 
 /****************************************************************************
  * Private Functions
@@ -99,15 +99,15 @@ void bt_l2cap_chan_register(FAR struct bt_l2cap_chan_s *chan)
 {
   winfo("CID 0x%04x\n", chan->cid);
 
-  chan->_next = channels;
-  channels = chan;
+  chan->_next = g_channels;
+  g_channels  = chan;
 }
 
 void bt_l2cap_connected(FAR struct bt_conn_s *conn)
 {
   FAR struct bt_l2cap_chan_s *chan;
 
-  for (chan = channels; chan; chan = chan->_next)
+  for (chan = g_channels; chan; chan = chan->_next)
     {
       if (chan->connected)
         {
@@ -120,7 +120,7 @@ void bt_l2cap_disconnected(FAR struct bt_conn_s *conn)
 {
   FAR struct bt_l2cap_chan_s *chan;
 
-  for (chan = channels; chan; chan = chan->_next)
+  for (chan = g_channels; chan; chan = chan->_next)
     {
       if (chan->disconnected)
         {
@@ -133,7 +133,7 @@ void bt_l2cap_encrypt_change(FAR struct bt_conn_s *conn)
 {
   FAR struct bt_l2cap_chan_s *chan;
 
-  for (chan = channels; chan; chan = chan->_next)
+  for (chan = g_channels; chan; chan = chan->_next)
     {
       if (chan->encrypt_change)
         {
@@ -352,7 +352,7 @@ void bt_l2cap_recv(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf)
 
   winfo("Packet for CID %u len %u\n", cid, buf->len);
 
-  for (chan = channels; chan; chan = chan->_next)
+  for (chan = g_channels; chan; chan = chan->_next)
     {
       if (chan->cid == cid)
         {

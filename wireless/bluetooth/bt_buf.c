@@ -69,13 +69,13 @@
  * Private Data
  ****************************************************************************/
 
-static struct bt_buf_s buffers[NUM_BUFS];
+static struct bt_buf_s g_buffers[NUM_BUFS];
 
 /* Available (free) buffers queues */
 
-static struct nano_fifo_s avail_hci;
-static struct nano_fifo_s avail_acl_in;
-static struct nano_fifo_s avail_acl_out;
+static struct nano_fifo_s g_avail_hci;
+static struct nano_fifo_s g_avail_aclin;
+static struct nano_fifo_s g_avail_aclout;
 
 /****************************************************************************
  * Private Functions
@@ -87,13 +87,13 @@ static FAR struct nano_fifo_s *get_avail(enum bt_buf_s_type_e type)
     {
     case BT_CMD:
     case BT_EVT:
-      return &avail_hci;
+      return &g_avail_hci;
 
     case BT_ACL_IN:
-      return &avail_acl_in;
+      return &g_avail_aclin;
 
     case BT_ACL_OUT:
-      return &avail_acl_out;
+      return &g_avail_aclout;
 
     default:
       return NULL;
@@ -152,7 +152,7 @@ void bt_buf_s_put(FAR struct bt_buf_s *buf)
   handle = buf->acl.handle;
   nano_fifo_s_put(avail, buf);
 
-  if (avail != &avail_acl_in)
+  if (avail != &g_avail_aclin)
     {
       return;
     }
@@ -260,25 +260,25 @@ int bt_buf_s_init(int acl_in, int acl_out)
   winfo("Available bufs: ACL in: %d, ACL out: %d, cmds/evts: %d\n",
          acl_in, acl_out, NUM_BUFS - (acl_in + acl_out));
 
-  nano_fifo_s_init(&avail_acl_in);
+  nano_fifo_s_init(&g_avail_aclin);
   for (i = 0; acl_in > 0; i++, acl_in--)
     {
-      nano_fifo_s_put(&avail_acl_in, &buffers[i]);
+      nano_fifo_s_put(&g_avail_aclin, &g_buffers[i]);
     }
 
-  nano_fifo_s_init(&avail_acl_out);
+  nano_fifo_s_init(&g_avail_aclout);
   for (; acl_out > 0; i++, acl_out--)
     {
-      nano_fifo_s_put(&avail_acl_out, &buffers[i]);
+      nano_fifo_s_put(&g_avail_aclout, &g_buffers[i]);
     }
 
-  nano_fifo_s_init(&avail_hci);
+  nano_fifo_s_init(&g_avail_hci);
   for (; i < NUM_BUFS; i++)
     {
-      nano_fifo_s_put(&avail_hci, &buffers[i]);
+      nano_fifo_s_put(&g_avail_hci, &g_buffers[i]);
     }
 
   winfo("%u buffers * %u bytes = %u bytes\n", NUM_BUFS,
-         sizeof(buffers[0]), sizeof(buffers));
+         sizeof(g_buffers[0]), sizeof(g_buffers));
   return 0;
 }

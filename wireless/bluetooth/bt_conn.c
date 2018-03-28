@@ -65,7 +65,7 @@
  * Private Data
  ****************************************************************************/
 
-static struct bt_conn_s conns[CONFIG_BLUETOOTH_MAX_CONN];
+static struct bt_conn_s g_conns[CONFIG_BLUETOOTH_MAX_CONN];
 
 /****************************************************************************
  * Private Functions
@@ -326,11 +326,11 @@ FAR struct bt_conn_s *bt_conn_add(FAR const bt_addr_le_t *peer,
   FAR struct bt_conn_s *conn = NULL;
   int i;
 
-  for (i = 0; i < ARRAY_SIZE(conns); i++)
+  for (i = 0; i < ARRAY_SIZE(g_conns); i++)
     {
-      if (!bt_addr_le_cmp(&conns[i].dst, BT_ADDR_LE_ANY))
+      if (!bt_addr_le_cmp(&g_conns[i].dst, BT_ADDR_LE_ANY))
         {
-          conn = &conns[i];
+          conn = &g_conns[i];
           break;
         }
     }
@@ -412,19 +412,19 @@ FAR struct bt_conn_s *bt_conn_lookup_handle(uint16_t handle)
 {
   int i;
 
-  for (i = 0; i < ARRAY_SIZE(conns); i++)
+  for (i = 0; i < ARRAY_SIZE(g_conns); i++)
     {
       /* We only care about connections with a valid handle */
 
-      if (conns[i].state != BT_CONN_CONNECTED &&
-          conns[i].state != BT_CONN_DISCONNECT)
+      if (g_conns[i].state != BT_CONN_CONNECTED &&
+          g_conns[i].state != BT_CONN_DISCONNECT)
         {
           continue;
         }
 
-      if (conns[i].handle == handle)
+      if (g_conns[i].handle == handle)
         {
-          return bt_conn_get(&conns[i]);
+          return bt_conn_get(&g_conns[i]);
         }
     }
 
@@ -435,11 +435,11 @@ FAR struct bt_conn_s *bt_conn_lookup_addr_le(FAR const bt_addr_le_t * peer)
 {
   int i;
 
-  for (i = 0; i < ARRAY_SIZE(conns); i++)
+  for (i = 0; i < ARRAY_SIZE(g_conns); i++)
     {
-      if (!bt_addr_le_cmp(peer, &conns[i].dst))
+      if (!bt_addr_le_cmp(peer, &g_conns[i].dst))
         {
-          return bt_conn_get(&conns[i]);
+          return bt_conn_get(&g_conns[i]);
         }
     }
 
@@ -451,22 +451,22 @@ FAR struct bt_conn_s *bt_conn_lookup_state(FAR const bt_addr_le_t * peer,
 {
   int i;
 
-  for (i = 0; i < ARRAY_SIZE(conns); i++)
+  for (i = 0; i < ARRAY_SIZE(g_conns); i++)
     {
-      if (!bt_addr_le_cmp(&conns[i].dst, BT_ADDR_LE_ANY))
+      if (!bt_addr_le_cmp(&g_conns[i].dst, BT_ADDR_LE_ANY))
         {
           continue;
         }
 
       if (bt_addr_le_cmp(peer, BT_ADDR_LE_ANY) &&
-          bt_addr_le_cmp(peer, &conns[i].dst))
+          bt_addr_le_cmp(peer, &g_conns[i].dst))
         {
           continue;
         }
 
-      if (conns[i].state == state)
+      if (g_conns[i].state == state)
         {
-          return bt_conn_get(&conns[i]);
+          return bt_conn_get(&g_conns[i]);
         }
     }
 

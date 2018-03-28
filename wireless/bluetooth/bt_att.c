@@ -202,7 +202,7 @@ static const struct
     uint8_t op;
     CODE uint8_t(*func)(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf);
     uint8_t expect_len;
-  } handlers[] =
+  } g_handlers[] =
 {
   {
     BT_ATT_OP_ERROR_RSP,
@@ -1609,14 +1609,14 @@ static void bt_att_recv(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf)
 
   bt_buf_pull(buf, sizeof(*hdr));
 
-  for (i = 0; i < ARRAY_SIZE(handlers); i++)
+  for (i = 0; i < ARRAY_SIZE(g_handlers); i++)
     {
-      if (hdr->code != handlers[i].op)
+      if (hdr->code != g_handlers[i].op)
         {
           continue;
         }
 
-      if (buf->len < handlers[i].expect_len)
+      if (buf->len < g_handlers[i].expect_len)
         {
           wlerr("ERROR: Invalid len %u for code 0x%02x\n",
                 buf->len, hdr->code);
@@ -1624,7 +1624,7 @@ static void bt_att_recv(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf)
           break;
         }
 
-      err = handlers[i].func(conn, buf);
+      err = g_handlers[i].func(conn, buf);
       break;
     }
 
