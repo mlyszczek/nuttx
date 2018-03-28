@@ -111,8 +111,8 @@ struct bt_buf_s
 
   union
   {
-    struct bt_buf_hci_data hci;
-    struct bt_buf_acl_data acl;
+    struct bt_buf_hci_data_s hci;
+    struct bt_buf_acl_data_s acl;
   };
 
   /* Pointer to the start of data in the buffer. */

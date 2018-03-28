@@ -50,6 +50,7 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <nuttx/semaphore.h>
 #include <nuttx/wireless/bt_core.h>
 #include <nuttx/wireless/bt_hci.h>
 
@@ -84,11 +85,11 @@ enum bt_stackdir_e
 /* Stacks for the fibers */
 
 static BT_STACK_NOINIT(g_rx_fiber_stack, 1024);
-static BT_STACK_NOINIT(g_rx_prio_fiber_stack, 256);
+static BT_STACK_NOINIT(g_rx_prio_kthread_stack, 256);
 static BT_STACK_NOINIT(g_cmd_tx_fiber_stack, 256);
 
 #if defined(CONFIG_DEBUG_WIRELESS_INFO)
-static nano_context_id_t g_rx_prio_fiber_id;
+static nano_context_id_t g_rx_prio_kthread_id;
 #endif
 
 struct bt_dev_s g_btdev;
@@ -217,8 +218,8 @@ int bt_hci_cmd_send(uint16_t opcode, FAR struct bt_buf_s *buf)
 int bt_hci_cmd_send_sync(uint16_t opcode, FAR struct bt_buf_s *buf,
                          FAR struct bt_buf_s **rsp)
 {
-  struct nano_sem sync_sem;
-  int err;
+  sem_t sync_sem;
+  int ret;
 
   /* This function cannot be called from the rx fiber since it relies on the
    * very same fiber in processing the cmd_complete event and giving back the
@@ -226,7 +227,7 @@ int bt_hci_cmd_send_sync(uint16_t opcode, FAR struct bt_buf_s *buf,
    */
 
 #if defined(CONFIG_DEBUG_WIRELESS_INFO)
-  if (context_self_get() == g_rx_prio_fiber_id)
+  if (context_self_get() == g_rx_prio_kthread_id)
     {
       wlerr("ERROR: called from invalid context!\n");
       return -EDEADLK;
@@ -244,22 +245,27 @@ int bt_hci_cmd_send_sync(uint16_t opcode, FAR struct bt_buf_s *buf,
 
   winfo("opcode %x len %u\n", opcode, buf->len);
 
-  nano_sem_init(&sync_sem);
+  nxsem_init(&sync_sem, 0, 0);
+  nxsem_setprotocol(&sync_sem);
   buf->hci.sync = &sync_sem;
 
   nano_fifo_put(&g_btdev.cmd_tx_queue, buf);
 
-  nano_sem_take_wait(&sync_sem);
+  do
+    {
+      ret = nxsem_wait(&sync_sem);
+    }
+  while (ret == -EINTR);
 
   /* Indicate failure if we failed to get the return parameters */
 
   if (!buf->hci.sync)
     {
-      err = -EIO;
+      ret = -EIO;
     }
   else
     {
-      err = 0;
+      ret = 0;
     }
 
   if (rsp)
@@ -272,7 +278,7 @@ int bt_hci_cmd_send_sync(uint16_t opcode, FAR struct bt_buf_s *buf,
     }
 
   bt_buf_put(buf);
-  return err;
+  return ret;
 }
 
 static void hci_acl(FAR struct bt_buf_s *buf)
@@ -386,8 +392,8 @@ static void analyze_stacks(FAR struct bt_conn_s *conn,
 
   analyze_stack("rx stack", g_rx_fiber_stack, sizeof(g_rx_fiber_stack),
                 stack_growth);
-  analyze_stack("cmd rx stack", g_rx_prio_fiber_stack,
-                sizeof(g_rx_prio_fiber_stack), stack_growth);
+  analyze_stack("cmd rx stack", g_rx_prio_kthread_stack,
+                sizeof(g_rx_prio_kthread_stack), stack_growth);
   analyze_stack("cmd tx stack", g_cmd_tx_fiber_stack,
                 sizeof(g_cmd_tx_fiber_stack), stack_growth);
   analyze_stack("conn tx stack", conn->tx_stack, sizeof(conn->tx_stack),
@@ -464,7 +470,7 @@ static void hci_cmd_done(uint16_t opcode, uint8_t status,
 
   if (sent->hci.sync)
     {
-      FAR struct nano_sem_s *sem = sent->hci.sync;
+      FAR sem_t *sem = sent->hci.sync;
 
       if (status)
         {
@@ -475,7 +481,7 @@ static void hci_cmd_done(uint16_t opcode, uint8_t status,
           sent->hci.sync = bt_buf_hold(buf);
         }
 
-      nano_fiber_sem_give(sem);
+      nxsem_post(sem);
     }
   else
     {
@@ -517,7 +523,7 @@ static void hci_cmd_complete(FAR struct bt_buf_s *buf)
       /* Allow next command to be sent */
 
       g_btdev.ncmd = 1;
-      nano_fiber_sem_give(&g_btdev.ncmd_sem);
+      nxsem_post(&g_btdev.ncmd_sem);
     }
 }
 
@@ -544,7 +550,7 @@ static void hci_cmd_status(FAR struct bt_buf_s *buf)
       /* Allow next command to be sent */
 
       g_btdev.ncmd = 1;
-      nano_fiber_sem_give(&g_btdev.ncmd_sem);
+      nxsem_post(&g_btdev.ncmd_sem);
     }
 }
 
@@ -1114,9 +1120,10 @@ static void hci_event(FAR struct bt_buf_s *buf)
   bt_buf_put(buf);
 }
 
-static void hci_cmd_tx_fiber(void)
+static void hci_cmd_tx_kthread(void)
 {
   FAR struct bt_driver_s *drv = g_btdev.drv;
+  int ret;
 
   winfo("started\n");
 
@@ -1126,8 +1133,8 @@ static void hci_cmd_tx_fiber(void)
 
       /* Wait until ncmd > 0 */
 
-      winfo("calling sem_take_wait\n");
-      nano_fiber_sem_take_wait(&g_btdev.ncmd_sem);
+      winfo("calling sem_wait\n");
+      ret = nxsem_wait(&g_btdev.ncmd_sem);
 
       /* Get next command - wait if necessary */
 
@@ -1152,7 +1159,7 @@ static void hci_cmd_tx_fiber(void)
     }
 }
 
-static void hci_rx_fiber(void)
+static void hci_rx_kthread(void)
 {
   FAR struct bt_buf_s *buf;
 
@@ -1184,7 +1191,7 @@ static void hci_rx_fiber(void)
     }
 }
 
-static void rx_prio_fiber(void)
+static void rx_prio_kthread(void)
 {
   FAR struct bt_buf_s *buf;
 
@@ -1193,7 +1200,7 @@ static void rx_prio_fiber(void)
   /* So we can avoid bt_hci_cmd_send_sync deadlocks */
 
 #if defined(CONFIG_DEBUG_WIRELESS_INFO)
-  g_rx_prio_fiber_id = context_self_get();
+  g_rx_prio_kthread_id = context_self_get();
 #endif
 
   while (1)
@@ -1479,12 +1486,7 @@ static int hci_init(void)
    * ACL packet buffers.
    */
 
-  nano_sem_init(&g_btdev.le_pkts_sem);
-  for (i = 0; i < g_btdev.le_pkts; i++)
-    {
-      nano_sem_give(&g_btdev.le_pkts_sem);
-    }
-
+  nxsem_init(&g_btdev.le_pkts_sem, 0, g_btdev.le_pkts);
   return 0;
 }
 
@@ -1493,26 +1495,24 @@ static int hci_init(void)
 static void cmd_queue_init(void)
 {
   nano_fifo_init(&g_btdev.cmd_tx_queue);
-  nano_sem_init(&g_btdev.ncmd_sem);
-
-  /* Give cmd_sem allowing to send first HCI_Reset cmd */
+  nxsem_init(&g_btdev.ncmd_sem, 0, 1);
+  nxsem_setprotocol(&g_btdev.ncmd_sem, SEM_PRIO_NONE);
 
   g_btdev.ncmd = 1;
-  nano_task_sem_give(&g_btdev.ncmd_sem);
 
   fiber_start(g_cmd_tx_fiber_stack, sizeof(g_cmd_tx_fiber_stack),
-              (nano_fiber_entry_t) hci_cmd_tx_fiber, 0, 0, 7, 0);
+              (nano_fiber_entry_t) hci_cmd_tx_kthread, 0, 0, 7, 0);
 }
 
 static void rx_queue_init(void)
 {
   nano_fifo_init(&g_btdev.rx_queue);
   fiber_start(g_rx_fiber_stack, sizeof(g_rx_fiber_stack),
-              (nano_fiber_entry_t) hci_rx_fiber, 0, 0, 7, 0);
+              (nano_fiber_entry_t) hci_rx_kthread, 0, 0, 7, 0);
 
   nano_fifo_init(&g_btdev.rx_prio_queue);
-  fiber_start(g_rx_prio_fiber_stack, sizeof(g_rx_prio_fiber_stack),
-              (nano_fiber_entry_t) rx_prio_fiber, 0, 0, 7, 0);
+  fiber_start(g_rx_prio_kthread_stack, sizeof(g_rx_prio_kthread_stack),
+              (nano_fiber_entry_t) rx_prio_kthread, 0, 0, 7, 0);
 }
 
 /****************************************************************************

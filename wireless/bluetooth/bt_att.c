@@ -179,6 +179,102 @@ struct flush_data_s
 };
 
 /****************************************************************************
+ * Private Function Prototypes
+ ****************************************************************************/
+
+static void    att_req_destroy(FAR struct bt_att_req_s *req);
+static void    send_err_rsp(struct bt_conn_s *conn, uint8_t req,
+                 uint16_t handle, uint8_t err);
+static uint8_t att_mtu_req(struct bt_conn_s *conn, struct bt_buf_s *data);
+static uint8_t att_handle_rsp(struct bt_conn_s *conn, void *pdu,
+                 uint16_t len, uint8_t err);
+static uint8_t att_mtu_rsp(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *buf);
+static bool    range_is_valid(uint16_t start, uint16_t end,
+                 FAR uint16_t *err);
+static uint8_t find_info_cb(FAR const struct bt_gatt_attr *attr,
+                 FAR void *user_data);
+static uint8_t att_find_info_rsp(FAR struct bt_conn_s *conn,
+                 uint16_t start_handle, uint16_t end_handle);
+static uint8_t att_find_info_req(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *data);
+static uint8_t find_type_cb(FAR const struct bt_gatt_attr *attr,
+                 FAR void *user_data);
+static uint8_t att_find_type_rsp(FAR struct bt_conn_s *conn,
+                 FAR uint16_t start_handle, uint16_t end_handle,
+                 FAR const void *value, uint8_t value_len);
+static uint8_t att_find_type_req(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *data);
+static bool uuid_create(FAR struct bt_uuid_s *uuid,
+                 FAR struct bt_buf_s *data);
+static uint8_t read_type_cb(FAR const struct bt_gatt_attr *attr,
+                 FAR void *user_data);
+static uint8_t att_read_type_rsp(FAR struct bt_conn_s *conn,
+                 FAR struct bt_uuid_s *uuid, uint16_t start_handle,
+                 uint16_t end_handle);
+static uint8_t att_read_type_req(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *data);
+static uint8_t err_to_att(int err);
+static uint8_t check_perm(FAR struct bt_conn_s *conn,
+                 FAR const struct bt_gatt_attr *attr, uint8_t mask);
+static uint8_t read_cb(FAR const struct bt_gatt_attr *attr,
+                 FAR void *user_data);
+static uint8_t att_read_rsp(FAR struct bt_conn_s *conn, uint8_t op,
+                 uint8_t rsp, uint16_t handle, uint16_t offset);
+static uint8_t att_read_req(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *data);
+static uint8_t att_read_blob_req(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *data);
+static uint8_t att_read_mult_req(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *buf);
+static uint8_t read_group_cb(FAR const struct bt_gatt_attr *attr,
+                 FAR void *user_data);
+static uint8_t att_read_group_rsp(FAR struct bt_conn_s *conn,
+                 FAR struct bt_uuid_s *uuid, uint16_t start_handle,
+                 uint16_t end_handle);
+static uint8_t att_read_group_req(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *data);
+static uint8_t write_cb(FAR const struct bt_gatt_attr *attr,
+                 FAR void *user_data);
+static uint8_t att_write_rsp(FAR struct bt_conn_s *conn, uint8_t op,
+                 uint8_t rsp, uint16_t handle, uint16_t offset,
+                 FAR const void *value, uint8_t len);
+static uint8_t att_write_req(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *data);
+static uint8_t att_prepare_write_req(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *data);
+static uint8_t flush_cb(FAR const struct bt_gatt_attr *attr,
+                 FAR void *user_data);
+static uint8_t att_exec_write_rsp(FAR struct bt_conn_s *conn,
+                 uint8_t flags);
+static uint8_t att_exec_write_req(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *data);
+static uint8_t att_write_cmd(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *data);
+static uint8_t att_signed_write_cmd(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *data);
+static uint8_t att_error_rsp(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *data);
+static uint8_t att_handle_find_info_rsp(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *buf);
+static uint8_t att_handle_find_type_rsp(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *buf);
+static uint8_t att_handle_read_type_rsp(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *buf);
+static uint8_t att_handle_read_rsp(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *buf);
+static uint8_t att_handle_read_blob_rsp(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *buf);
+static uint8_t att_handle_read_mult_rsp(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *buf);
+static uint8_t att_handle_write_rsp(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *buf);
+static void bt_att_recv(FAR struct bt_conn_s *conn,
+                 FAR struct bt_buf_s *buf);
+static void bt_att_connected(FAR struct bt_conn_s *conn);
+static void bt_att_disconnected(FAR struct bt_conn_s *conn);
+
+/****************************************************************************
  * Private Data
  ****************************************************************************/
 
@@ -377,7 +473,9 @@ static uint8_t att_mtu_req(struct bt_conn_s *conn, struct bt_buf_s *data)
     }
 
   /* Select MTU based on the amount of room we have in bt_buf_s including one
-   * extra byte for ATT header. */
+   * extra byte for ATT header.
+   */
+
   mtu = min(mtu, bt_buf_tailroom(buf) + 1);
 
   wlinfo("Server MTU %u\n", mtu);
@@ -588,7 +686,8 @@ static uint8_t att_find_info_req(FAR struct bt_conn_s *conn,
   return att_find_info_rsp(conn, start_handle, end_handle);
 }
 
-static uint8_t find_type_cb(const struct bt_gatt_attr *attr, void *user_data)
+static uint8_t find_type_cb(FAR const struct bt_gatt_attr *attr,
+                            FAR void *user_data)
 {
   FAR struct find_type_data_s *data = user_data;
   FAR struct bt_att_s *att = data->conn->att;

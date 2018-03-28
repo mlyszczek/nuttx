@@ -49,6 +49,7 @@
 #include <nuttx/config.h>
 
 #include <stdbool.h>
+#include <semaphore.h>
 
 #include <nuttx/wireless/bt_driver.h>
 
@@ -113,12 +114,12 @@ struct bt_dev_s
 
   uint8_t le_pkts;
   uint16_t le_mtu;
-  struct nano_sem le_pkts_sem;
+  sem_t le_pkts_sem;
 
   /* Number of commands controller can accept */
 
   uint8_t ncmd;
-  struct nano_sem ncmd_sem;
+  sem_t ncmd_sem;
 
   /* Last sent HCI command */
 

@@ -58,7 +58,7 @@ typedef uint8_t bt_atomic_t;
  ****************************************************************************/
 
 #ifndef CONFIG_HAVE_INLINE
-  /* These operations are inherently atomic */
+/* These operations are inherently atomic */
 
 static inline void bt_atomic_set(FAR bt_atomic_t *ptr, bt_atomic_t value)
 {

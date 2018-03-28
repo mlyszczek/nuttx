@@ -34,9 +34,6 @@
  *
  ****************************************************************************/
 
-#ifndef __WIRELESS_BLUETOOTH_BT_ATOMIC_H
-#define __WIRELESS_BLUETOOTH_BT_ATOMIC_H 1
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
@@ -61,8 +58,8 @@ void bt_atomic_incr(FAR bt_atomic_t *ptr)
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave;
-  *ptr++;
+  flags = spin_lock_irqsave();
+  (*ptr)++;
   spin_unlock_irqrestore(flags);
 }
 
@@ -70,8 +67,8 @@ void bt_atomic_decr(FAR bt_atomic_t *ptr)
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave;
-  *ptr--;
+  flags = spin_lock_irqsave();
+  (*ptr)--;
   spin_unlock_irqrestore(flags);
 }
 
@@ -79,7 +76,7 @@ void bt_atomic_setbit(FAR bt_atomic_t *ptr, bt_atomic_t bitno)
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave;
+  flags = spin_lock_irqsave();
   *ptr |= (1 << bitno);
   spin_unlock_irqrestore(flags);
 }
@@ -88,7 +85,7 @@ void bt_atomic_clrbit(FAR bt_atomic_t *ptr, bt_atomic_t bitno)
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave;
+  flags = spin_lock_irqsave();
   *ptr &= ~(1 << bitno);
   spin_unlock_irqrestore(flags);
 }
@@ -98,6 +95,7 @@ bt_atomic_t bt_atomic_get(FAR bt_atomic_t *ptr)
 {
   return *ptr;
 }
+#endif
 
 #ifndef CONFIG_HAVE_INLINE
 bool bt_atomic_testbit(FAR bt_atomic_t *ptr, bt_atomic_t bitno)
@@ -111,7 +109,7 @@ bool bt_atomic_testsetbit(FAR bt_atomic_t *ptr, bt_atomic_t bitno)
   irqstate_t flags;
   bt_atomic_t value;
 
-  flags = spin_lock_irqsave;
+  flags = spin_lock_irqsave();
   value = *ptr;
   *ptr  = value | (1 << bitno);
   spin_unlock_irqrestore(flags);
@@ -122,15 +120,12 @@ bool bt_atomic_testsetbit(FAR bt_atomic_t *ptr, bt_atomic_t bitno)
 bool bt_atomic_testclrbit(FAR bt_atomic_t *ptr, bt_atomic_t bitno)
 {
   irqstate_t flags;
-  bt_atomic_t before;
   bt_atomic_t value;
 
-  flags = spin_lock_irqsave;
+  flags = spin_lock_irqsave();
   value = *ptr;
   *ptr  = value & ~(1 << bitno);
   spin_unlock_irqrestore(flags);
 
   return (value & (1 << bitno)) != 0;
 }
-
-#endif /* __WIRELESS_BLUETOOTH_BT_ATOMIC_H */

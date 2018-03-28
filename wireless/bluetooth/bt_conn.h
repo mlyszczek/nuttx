@@ -1,7 +1,15 @@
-
-/*
- * Copyright (c) 2016, Intel Corporation
- * All rights reserved.
+/****************************************************************************
+ * wireless/bluetooth/bt_conn.h
+ * Bluetooth connection handling.
+ *
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
+ *
+ * Ported from the Intel/Zephyr arduino101_firmware_source-v1.tar package
+ * where the code was released with a compatible 3-clause BSD license:
+ *
+ *   Copyright (c) 2016, Intel Corporation
+ *   All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -100,10 +108,6 @@ struct bt_conn_s
   uint8_t le_conn_interval;
   bt_atomic_t ref;
   enum bt_conn_state_e state;
-
-  /* TX fiber stack */
-
-  BT_STACK(tx_stack, 256);
 };
 
 /****************************************************************************

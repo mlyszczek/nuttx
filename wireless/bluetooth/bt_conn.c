@@ -267,10 +267,11 @@ void bt_conn_send(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf)
     }
 }
 
-static void conn_tx_fiber(int arg1, int arg2)
+static void conn_tx_thread(int arg1, int arg2)
 {
   FAR struct bt_conn_s *conn = (FAR struct bt_conn_s *)arg1;
   FAR struct bt_buf_s *buf;
+  int ret;
 
   winfo("Started for handle %u\n", conn->handle);
 
@@ -278,14 +279,21 @@ static void conn_tx_fiber(int arg1, int arg2)
     {
       /* Wait until the controller can accept ACL packets */
 
-      winfo("calling sem_take_wait\n");
-      nano_fiber_sem_take_wait(&bt_dev.le_pkts_sem);
+      winfo("calling nxsem_wait\n");
+
+      do
+        {
+          ret = nxsem_wait(&bt_dev.le_pkts_sem);
+        }
+      while (ret == -EINTR);
+
+      DEBUGASSERT(ret == OK);
 
       /* Check for disconnection */
 
       if (conn->state != BT_CONN_CONNECTED)
         {
-          nano_fiber_sem_give(&bt_dev.le_pkts_sem);
+          nxsem_post(&bt_dev.le_pkts_sem);
           break;
         }
 
@@ -294,7 +302,7 @@ static void conn_tx_fiber(int arg1, int arg2)
       buf = nano_fifo_get_wait(&conn->tx_queue);
       if (conn->state != BT_CONN_CONNECTED)
         {
-          nano_fiber_sem_give(&bt_dev.le_pkts_sem);
+          nxsem_post(&bt_dev.le_pkts_sem);
           bt_buf_put(buf);
           break;
         }
@@ -378,7 +386,7 @@ void bt_conn_set_state(FAR struct bt_conn_s *conn,
       case BT_CONN_CONNECTED:
         nano_fifo_init(&conn->tx_queue);
         fiber_start(conn->tx_stack, sizeof(conn->tx_stack),
-                    conn_tx_fiber, (int)bt_conn_get(conn), 0, 7, 0);
+                    conn_tx_thread, (int)bt_conn_get(conn), 0, 7, 0);
         break;
 
       case BT_CONN_DISCONNECTED:

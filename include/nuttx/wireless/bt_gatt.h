@@ -409,6 +409,43 @@ enum bt_gatt_iter_e
   BT_GATT_ITER_CONTINUE,
 };
 
+/* Attribute iterator callback.
+ *
+ * Input Parameters:
+ *   attr      - Attribute found.
+ *   user_data - Data given.
+ *
+ * Returned Value:
+ *   BT_GATT_ITER_CONTINUE if should continue to the next attribute
+ *   or BT_GATT_ITER_STOP to stop.
+ */
+
+typedef CODE uint8_t
+  (*bt_gatt_attr_func_t)(FAR const struct bt_gatt_attr *attr,
+                         FAR void *user_data);
+
+/* Response callback function
+ *
+ * Input Parameters:
+ *   conn - Connection object.
+ *   err  - Error code.
+ */
+
+typedef void (*bt_gatt_rsp_func_t)(FAR struct bt_conn_s *conn, uint8_t err);
+
+/* Read callback function
+ *
+ * Input Parameters:
+ *   conn   - Connection object.
+ *   err    - Error code.
+ *   data   - Attribute value data.
+ *   length - Attribute value length.
+ */
+
+typedef CODE void (*bt_gatt_read_func_t)(FAR struct bt_conn_s *conn,
+                                         int err, FAR const void *data,
+                                         uint16_t length);
+
 /* GATT Attribute structure. */
 
 struct bt_gatt_attr_s
@@ -570,42 +607,6 @@ struct bt_gatt_discover_params_s
 
   uint16_t end_handle;
 };
-
-/* Attribute iterator callback.
- *
- * Input Parameters:
- *   attr      - Attribute found.
- *   user_data - Data given.
- *
- * Returned Value:
- *   BT_GATT_ITER_CONTINUE if should continue to the next attribute
- *   or BT_GATT_ITER_STOP to stop.
- */
-
-typedef CODE uint8_t
-  (*bt_gatt_attr_func_t)(FAR const struct bt_gatt_attr *attr,
-                         FAR void *user_data);
-/* Response callback function
- *
- * Input Parameters:
- *   conn - Connection object.
- *   err  - Error code.
- */
-
-typedef void (*bt_gatt_rsp_func_t)(FAR struct bt_conn_s *conn, uint8_t err);
-
-/* Read callback function
- *
- * Input Parameters:
- *   conn   - Connection object.
- *   err    - Error code.
- *   data   - Attribute value data.
- *   length - Attribute value length.
- */
-
-typedef CODE void (*bt_gatt_read_func_t)(FAR struct bt_conn_s *conn,
-                                         int err, FAR const void *data,
-                                         uint16_t length);
 
 /****************************************************************************
  * Public Function Prototypes
