@@ -191,7 +191,6 @@ begin_packed_struct struct bt_att_hdr_s
   uint8_t code;
 } end_packed_struct;
 
-
 begin_packed_struct struct bt_att_error_rsp_s
 {
   uint8_t request;

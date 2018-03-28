@@ -54,6 +54,7 @@
 #include <nuttx/wireless/bt_hci.h>
 #include <nuttx/wireless/bt_bluetooth.h>
 
+#include "bt_atomic.h"
 #include "bt_hcicore.h"
 #include "bt_conn.h"
 #include "bt_l2cap.h"
@@ -341,7 +342,7 @@ FAR struct bt_conn_s *bt_conn_add(FAR const bt_addr_le_t *peer,
 
   memset(conn, 0, sizeof(*conn));
 
-  atomic_set(&conn->ref, 1);
+  bt_atomic_set(&conn->ref, 1);
   conn->role = role;
   bt_addr_le_copy(&conn->dst, peer);
 
@@ -474,20 +475,20 @@ FAR struct bt_conn_s *bt_conn_lookup_state(FAR const bt_addr_le_t * peer,
 
 FAR struct bt_conn_s *bt_conn_get(FAR struct bt_conn_s *conn)
 {
-  atomic_inc(&conn->ref);
+  bt_atomic_incr(&conn->ref);
 
-  winfo("handle %u ref %u\n", conn->handle, atomic_get(&conn->ref));
+  winfo("handle %u ref %u\n", conn->handle, bt_atomic_get(&conn->ref));
 
   return conn;
 }
 
 void bt_conn_put(FAR struct bt_conn_s *conn)
 {
-  atomic_val_t old_ref;
+  bt_atomic_t old_ref;
 
-  old_ref = atomic_dec(&conn->ref);
+  old_ref = bt_atomic_decr(&conn->ref);
 
-  winfo("handle %u ref %u\n", conn->handle, atomic_get(&conn->ref));
+  winfo("handle %u ref %u\n", conn->handle, bt_atomic_get(&conn->ref));
 
   if (old_ref > 1)
     {
@@ -549,11 +550,11 @@ void bt_conn_set_auto_conn(FAR struct bt_conn_s *conn, bool auto_conn)
 {
   if (auto_conn)
     {
-      atomic_set_bit(conn->flags, BT_CONN_AUTO_CONNECT);
+      bt_atomic_set_bit(conn->flags, BT_CONN_AUTO_CONNECT);
     }
   else
     {
-      atomic_clear_bit(conn->flags, BT_CONN_AUTO_CONNECT);
+      bt_atomic_clrbit(conn->flags, BT_CONN_AUTO_CONNECT);
     }
 }
 

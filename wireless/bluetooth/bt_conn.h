@@ -42,6 +42,12 @@
 
 #include <nuttx/wireless/bt_conn.h>
 
+#include "bt_atomic.h"
+
+/****************************************************************************
+ * Public Types
+ ****************************************************************************/
+
 enum bt_conn_state_e
 {
   BT_CONN_DISCONNECTED,
@@ -69,7 +75,7 @@ struct bt_conn_s
 {
   uint16_t handle;
   uint8_t role;
-  uint8_t flags[1];
+  bt_atomic_t flags[1];
 
   bt_addr_le_t src;
   bt_addr_le_t dst;
@@ -92,7 +98,7 @@ struct bt_conn_s
   FAR void *smp;
 
   uint8_t le_conn_interval;
-  uint8_t ref;
+  bt_atomic_t ref;
   enum bt_conn_state_e state;
 
   /* TX fiber stack */
