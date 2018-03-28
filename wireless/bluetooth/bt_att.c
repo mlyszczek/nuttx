@@ -541,7 +541,7 @@ static uint8_t att_mtu_rsp(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf)
 
   att->mtu = min(mtu, BT_BUF_MAX_DATA - (sizeof(struct bt_l2cap_hdr) +
                                          sizeof(struct bt_hci_acl_hdr) +
-                                         bt_dev.drv->head_reserve));
+                                         g_btdev.drv->head_reserve));
 
   return att_handle_rsp(conn, rsp, buf->len, 0);
 }
@@ -1788,11 +1788,11 @@ static void bt_att_disconnected(FAR struct bt_conn_s *conn)
 
 void bt_att_init(void)
 {
-  static struct bt_l2cap_chan chan =
+  static struct bt_l2cap_chan_s chan =
   {
     .cid          = BT_L2CAP_CID_ATT,
     .recv         = bt_att_recv,
-    .connected     = bt_att_connected,
+    .connected    = bt_att_connected,
     .disconnected = bt_att_disconnected,
   };
 

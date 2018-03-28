@@ -66,6 +66,46 @@ config BLUETOOTH_MAX_PAIRED
 		Maximum number of paired Bluetooth devices. The minimum (and
 		default) number is 1.
 
+menu "Kernel Thread Configuration"
+
+config BLUETOOTH_RXTHREAD_STACKSIZE
+	int "Rx thread stack size"
+	default 1024
+
+config BLUETOOTH_RXTHREAD_PRIORITY
+	int "Rx thread priority"
+	default 100
+	range 1 255
+
+config BLUETOOTH_RXPRIO_STACKSIZE
+	int "Rx prio thread stack size"
+	default 1024
+
+config BLUETOOTH_RXPRIO_PRIORITY
+	int "Rx prio thread priority"
+	default 100
+	range 1 255
+
+config BLUETOOTH_TXCMD_STACKSIZE
+	int "Tx command thread stack size"
+	default 1024
+
+config BLUETOOTH_TXCMD_PRIORITY
+	int "Tx command thread priority"
+	default 100
+	range 1 255
+
+config BLUETOOTH_TXCONN_STACKSIZE
+	int "Tx connection thread stack size"
+	default 1024
+
+config BLUETOOTH_TXCONN_PRIORITY
+	int "Tx connection thread priority"
+	default 100
+	range 1 255
+
+endmenu # Kernel Thread Configuration
+
 config BLUETOOTH_SMP_SELFTEST
 	bool
 	prompt "Bluetooth SMP self tests executed on init"

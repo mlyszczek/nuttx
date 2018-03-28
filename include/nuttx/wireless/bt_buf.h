@@ -77,7 +77,7 @@ enum bt_buf_type_e
   BT_EVT,             /* HCI event */
   BT_ACL_OUT,         /* Outgoing ACL data */
   BT_ACL_IN,          /* Incoming ACL data */
-  BT_DUMMY = BT_CMD   /* Only used for waking up fibers */
+  BT_DUMMY = BT_CMD   /* Only used for waking up kernel threads */
 };
 
 /* HCI command specific information */
@@ -149,7 +149,7 @@ struct bt_buf_s
  *   New buffer or NULL if out of buffers.
  *
  *   WARNING: If there are no available buffers and the function is
- *   called from a task or fiber the call will block until a buffer
+ *   called from a task or thread the call will block until a buffer
  *   becomes available in the pool.
  *
  ****************************************************************************/

@@ -50,6 +50,7 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <nuttx/kthread.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/wireless/bt_core.h>
 #include <nuttx/wireless/bt_hci.h>
@@ -82,20 +83,12 @@ enum bt_stackdir_e
  * Private Data
  ****************************************************************************/
 
-/* Stacks for the fibers */
-
-static BT_STACK_NOINIT(g_rx_fiber_stack, 1024);
-static BT_STACK_NOINIT(g_rx_prio_kthread_stack, 256);
-static BT_STACK_NOINIT(g_cmd_tx_fiber_stack, 256);
-
-#if defined(CONFIG_DEBUG_WIRELESS_INFO)
-static nano_context_id_t g_rx_prio_kthread_id;
-#endif
-
 struct bt_dev_s g_btdev;
-
 static FAR struct bt_conn_cb_s *g_callback_list;
 static bt_le_scan_cb_t *g_scan_dev_found_cb;
+#ifdef CONFIG_DEBUG_ASSERTIONS
+static int g_rx_prio_kthread_pid;
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -221,18 +214,12 @@ int bt_hci_cmd_send_sync(uint16_t opcode, FAR struct bt_buf_s *buf,
   sem_t sync_sem;
   int ret;
 
-  /* This function cannot be called from the rx fiber since it relies on the
-   * very same fiber in processing the cmd_complete event and giving back the
+  /* This function cannot be called from the rx thread since it relies on the
+   * very same thread in processing the cmd_complete event and giving back the
    * blocking semaphore.
    */
 
-#if defined(CONFIG_DEBUG_WIRELESS_INFO)
-  if (context_self_get() == g_rx_prio_kthread_id)
-    {
-      wlerr("ERROR: called from invalid context!\n");
-      return -EDEADLK;
-    }
-#endif
+  DEBUGASSERT(getpid() != g_rx_prio_kthread_pid);
 
   if (!buf)
     {
@@ -317,91 +304,6 @@ static void hci_acl(FAR struct bt_buf_s *buf)
   bt_conn_recv(conn, buf, flags);
   bt_conn_put(conn);
 }
-
-#if defined(CONFIG_DEBUG_WIRELESS_INFO)
-static void analyze_stack(FAR const char *name, FAR const char *stack,
-                          unsigned size, int stack_growth)
-{
-  unsigned stack_offset, pcnt, unused = 0;
-  unsigned pcnt;
-  unsigned unused = 0;
-  unsigned i;
-
-  /* The CCS is always placed on a 4-byte aligned boundary - if the stack
-   * beginning doesn't match that there will be some unused bytes in the
-   * beginning.
-   */
-
-  stack_offset = __tCCS_SIZEOF + ((4 - ((unsigned)stack % 4)) % 4);
-
-  if (stack_growth == STACK_DIRECTION_DOWN)
-    {
-      for (i = stack_offset; i < size; i++)
-        {
-          if ((unsigned char)stack[i] == 0xaa)
-            {
-              unused++;
-            }
-          else
-            {
-              break;
-            }
-        }
-    }
-  else
-    {
-      for (i = size - 1; i >= stack_offset; i--)
-        {
-          if ((unsigned char)stack[i] == 0xaa)
-            {
-              unused++;
-            }
-          else
-            {
-              break;
-            }
-        }
-    }
-
-  /* Calculate the real size reserved for the stack */
-
-  size -= stack_offset;
-  pcnt  = ((size - unused) * 100) / size;
-
-  wlinfo("%s (real size %u):\tunused %u\tusage %u / %u (%u %%)\n",
-         name, size + stack_offset, unused, size - unused, size, pcnt);
-}
-
-static void analyze_stacks(FAR struct bt_conn_s *conn,
-                           FAR struct bt_conn_s **ref)
-{
-  int stack_growth;
-
-  wlinfo("sizeof(tCCS) = %u\n", __tCCS_SIZEOF);
-
-  if (conn > *ref)
-    {
-      wlinfo("stack grows up\n");
-      stack_growth = STACK_DIRECTION_UP;
-    }
-  else
-    {
-      wlinfo("stack grows down\n");
-      stack_growth = STACK_DIRECTION_DOWN;
-    }
-
-  analyze_stack("rx stack", g_rx_fiber_stack, sizeof(g_rx_fiber_stack),
-                stack_growth);
-  analyze_stack("cmd rx stack", g_rx_prio_kthread_stack,
-                sizeof(g_rx_prio_kthread_stack), stack_growth);
-  analyze_stack("cmd tx stack", g_cmd_tx_fiber_stack,
-                sizeof(g_cmd_tx_fiber_stack), stack_growth);
-  analyze_stack("conn tx stack", conn->tx_stack, sizeof(conn->tx_stack),
-                stack_growth);
-}
-#else
-#  define analyze_stacks(...)
-#endif
 
 /* HCI event processing */
 
@@ -572,7 +474,7 @@ static void hci_num_completed_packets(FAR struct bt_buf_s *buf)
 
       while (count--)
         {
-          nano_fiber_sem_give(&g_btdev.le_pkts_sem);
+          sem_post(&g_btdev.le_pkts_sem);
         }
     }
 }
@@ -808,10 +710,6 @@ static void hci_disconn_complete(FAR struct bt_buf_s *buf)
 
   bt_l2cap_disconnected(conn);
   bt_disconnected(conn);
-
-  /* Check stack usage (no-op if not enabled) */
-
-  analyze_stacks(conn, &conn);
 
   bt_conn_set_state(conn, BT_CONN_DISCONNECTED);
   conn->handle = 0;
@@ -1120,7 +1018,7 @@ static void hci_event(FAR struct bt_buf_s *buf)
   bt_buf_put(buf);
 }
 
-static void hci_cmd_tx_kthread(void)
+static int hci_cmd_tx_kthread(int argc, FAR char *argv[])
 {
   FAR struct bt_driver_s *drv = g_btdev.drv;
   int ret;
@@ -1159,7 +1057,7 @@ static void hci_cmd_tx_kthread(void)
     }
 }
 
-static void hci_rx_kthread(void)
+static int hci_rx_kthread(int argc, FAR char *argv[])
 {
   FAR struct bt_buf_s *buf;
 
@@ -1191,17 +1089,13 @@ static void hci_rx_kthread(void)
     }
 }
 
-static void rx_prio_kthread(void)
+static int rx_prio_kthread(int argc, FAR char *argv[])
 {
   FAR struct bt_buf_s *buf;
 
   winfo("started\n");
 
   /* So we can avoid bt_hci_cmd_send_sync deadlocks */
-
-#if defined(CONFIG_DEBUG_WIRELESS_INFO)
-  g_rx_prio_kthread_id = context_self_get();
-#endif
 
   while (1)
     {
@@ -1490,29 +1384,42 @@ static int hci_init(void)
   return 0;
 }
 
-/* fibers, fifos and semaphores initialization */
+/* threads, fifos and semaphores initialization */
 
 static void cmd_queue_init(void)
 {
+  pid_t pid;
+
   nano_fifo_init(&g_btdev.cmd_tx_queue);
   nxsem_init(&g_btdev.ncmd_sem, 0, 1);
   nxsem_setprotocol(&g_btdev.ncmd_sem, SEM_PRIO_NONE);
 
   g_btdev.ncmd = 1;
-
-  fiber_start(g_cmd_tx_fiber_stack, sizeof(g_cmd_tx_fiber_stack),
-              (nano_fiber_entry_t) hci_cmd_tx_kthread, 0, 0, 7, 0);
+  pid = kthread_create("BT HCI Tx Cmd", CONFIG_BLUETOOTH_TXCMD_PRIORITY,
+                       CONFIG_BLUETOOTH_TXCMD_STACKSIZE,
+                       hci_cmd_tx_kthread, NULL);
+  DEBUGASSERT(pid > 0);
 }
 
 static void rx_queue_init(void)
 {
+  pid_t pid;
+
   nano_fifo_init(&g_btdev.rx_queue);
-  fiber_start(g_rx_fiber_stack, sizeof(g_rx_fiber_stack),
-              (nano_fiber_entry_t) hci_rx_kthread, 0, 0, 7, 0);
+  pid = kthread_create("BT HCI Rx", CONFIG_BLUETOOTH_RXTHREAD_PRIORITY,
+                       CONFIG_BLUETOOTH_RXTHREAD_STACKSIZE,
+                       hci_rx_kthread, NULL);
+  DEBUGASSERT(pid > 0);
 
   nano_fifo_init(&g_btdev.rx_prio_queue);
-  fiber_start(g_rx_prio_kthread_stack, sizeof(g_rx_prio_kthread_stack),
-              (nano_fiber_entry_t) rx_prio_kthread, 0, 0, 7, 0);
+  pid = kthread_create("BT HCI Rx Prio", CONFIG_BLUETOOTH_RXPRIO_PRIORITY,
+                       CONFIG_BLUETOOTH_RXPRIO_STACKSIZE,
+                       rx_prio_kthread, NULL);
+  DEBUGASSERT(pid > 0);
+
+#ifdef CONFIG_DEBUG_ASSERTIONS
+  g_rx_prio_kthread_pid = pid;
+#endif
 }
 
 /****************************************************************************

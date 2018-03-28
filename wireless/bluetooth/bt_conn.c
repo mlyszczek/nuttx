@@ -50,6 +50,7 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <nuttx/kthread.h>
 #include <nuttx/wireless/bt_hci.h>
 #include <nuttx/wireless/bt_core.h>
 
@@ -61,10 +62,25 @@
 #include "bt_smp.h"
 
 /****************************************************************************
+ * Private Types
+ ****************************************************************************/
+
+struct bt_conn_handoff_s
+{
+  sem_t sync_sem;
+  FAR struct bt_conn_s *conn;
+};
+
+/****************************************************************************
  * Private Data
  ****************************************************************************/
 
 static struct bt_conn_s g_conns[CONFIG_BLUETOOTH_MAX_CONN];
+static struct bt_conn_handoff_s g_conn_handoff =
+{
+  SEM_INITIALIZER(1),
+  NULL
+};
 
 /****************************************************************************
  * Private Functions
@@ -230,7 +246,7 @@ void bt_conn_send(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf)
 
   nano_fifo_init(&frags);
 
-  len         = min(remaining, bt_dev.le_mtu);
+  len         = min(remaining, g_btdev.le_mtu);
 
   hdr         = bt_buf_push(buf, sizeof(*hdr));
   hdr->handle = sys_cpu_to_le16(conn->handle);
@@ -246,7 +262,7 @@ void bt_conn_send(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf)
     {
       buf = bt_l2cap_create_pdu(conn);
 
-      len = min(remaining, bt_dev.le_mtu);
+      len = min(remaining, g_btdev.le_mtu);
 
       /* Copy from original buffer */
 
@@ -267,11 +283,17 @@ void bt_conn_send(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf)
     }
 }
 
-static void conn_tx_thread(int arg1, int arg2)
+static int conn_tx_kthread(int argc, FAR char *argv[])
 {
   FAR struct bt_conn_s *conn = (FAR struct bt_conn_s *)arg1;
   FAR struct bt_buf_s *buf;
   int ret;
+
+  /* Get the connection instance */
+
+  conn = g_conn_handoff.conn;
+  DEBUGASSERT(conn != NULL);
+  nxsem_post(&g_conn_handoff.sync_sem);
 
   winfo("Started for handle %u\n", conn->handle);
 
@@ -283,7 +305,7 @@ static void conn_tx_thread(int arg1, int arg2)
 
       do
         {
-          ret = nxsem_wait(&bt_dev.le_pkts_sem);
+          ret = nxsem_wait(&g_btdev.le_pkts_sem);
         }
       while (ret == -EINTR);
 
@@ -293,7 +315,7 @@ static void conn_tx_thread(int arg1, int arg2)
 
       if (conn->state != BT_CONN_CONNECTED)
         {
-          nxsem_post(&bt_dev.le_pkts_sem);
+          nxsem_post(&g_btdev.le_pkts_sem);
           break;
         }
 
@@ -302,13 +324,13 @@ static void conn_tx_thread(int arg1, int arg2)
       buf = nano_fifo_get_wait(&conn->tx_queue);
       if (conn->state != BT_CONN_CONNECTED)
         {
-          nxsem_post(&bt_dev.le_pkts_sem);
+          nxsem_post(&g_btdev.le_pkts_sem);
           bt_buf_put(buf);
           break;
         }
 
       winfo("passing buf %p len %u to driver\n", buf, buf->len);
-      bt_dev.drv->send(buf);
+      g_btdev.drv->send(buf);
       bt_buf_put(buf);
     }
 
@@ -384,13 +406,49 @@ void bt_conn_set_state(FAR struct bt_conn_s *conn,
   switch (conn->state)
     {
       case BT_CONN_CONNECTED:
-        nano_fifo_init(&conn->tx_queue);
-        fiber_start(conn->tx_stack, sizeof(conn->tx_stack),
-                    conn_tx_thread, (int)bt_conn_get(conn), 0, 7, 0);
+        {
+          pid_t pid;
+          int ret;
+
+          nano_fifo_init(&conn->tx_queue);
+
+          /* Get exclusive access to the handoff structure.  The count will be
+           * zero when we complete this.
+           */
+
+          do
+            {
+              ret = nxsem_wait(&g_conn_handoff.sync_sem);
+            }
+          while (ret == -EINTR);
+
+          DEBUGASSERT(ret == OK);
+
+          /* Start the Tx connection kernel thread */
+
+          g_conn_handoff.conn = bt_conn_get(conn);
+          pid = kthread_create("BT Conn Tx", CONFIG_BLUETOOTH_TXCONN_PRIORITY,
+                               CONFIG_BLUETOOTH_TXCONN_STACKSIZE,
+                               conn_tx_kthread, NULL);
+          DEBUGASSERT(pid > 0);
+
+          /* Take the semaphore again.  This will force us to wait with the
+           * sem_count at -1.  It will be zero again when we continue.
+           */
+
+          do
+            {
+              ret = nxsem_wait(&g_conn_handoff.sync_sem);
+            }
+          while (ret == -EINTR);
+
+          DEBUGASSERT(ret == OK);
+          nxsem_post(g_conn_handoff.sync_sem);
+        }
         break;
 
       case BT_CONN_DISCONNECTED:
-        /* Send dummy buffer to wake up and stop the tx fiber for states where it
+        /* Send dummy buffer to wake up and stop the Tx thread for states where it
          * was running.
          */
 

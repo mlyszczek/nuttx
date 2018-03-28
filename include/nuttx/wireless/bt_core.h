@@ -202,7 +202,6 @@ static inline int bt_addr_le_to_str(const bt_addr_le_t *addr, char *str,
  *
  * Description:
  *   Initialize Bluetooth. Must be the called before anything else.
- *   Caller shall be either task or a fiber.
  *
  * Returned Value:
  *    Zero on success or (negative) error code otherwise.

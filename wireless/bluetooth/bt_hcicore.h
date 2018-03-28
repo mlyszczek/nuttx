@@ -130,7 +130,7 @@ struct bt_dev_s
   struct nano_fifo_s rx_queue;
 
   /* Queue for high priority HCI events which may unlock waiters in other
-   * fibers. Such events include Number of Completed Packets, as well as the
+   * thread. Such events include Number of Completed Packets, as well as the
    * Command Complete/Status events.
    */
 
@@ -216,7 +216,7 @@ int bt_hci_cmd_send(uint16_t opcode, FAR struct bt_buf_s *buf);
 int bt_hci_cmd_send_sync(uint16_t opcode, FAR struct bt_buf_s *buf,
                          FAR struct bt_buf_s **rsp);
 
-/* The helper is only safe to be called from internal fibers as it's
+/* The helper is only safe to be called from internal kernel threads as it's
  * not multi-threading safe
  */
 
