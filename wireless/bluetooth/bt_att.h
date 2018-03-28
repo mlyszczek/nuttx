@@ -450,4 +450,3 @@ int bt_att_send(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf,
 void bt_att_cancel(FAR struct bt_conn_s *conn);
 
 #endif /* __WIRELESS_BLUETOOTH_BT_ATTR_H */
-

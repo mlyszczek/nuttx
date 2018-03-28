@@ -48,11 +48,11 @@
 #include <string.h>
 #include <debug.h>
 
-#include <bluetooth/log.h>
-#include <bluetooth/bluetooth.h>
-#include <bluetooth/hci.h>
+#include <nuttx/wireless/bt_log.h>
+#include <nuttx/wireless/bt_bluetooth.h>
+#include <nuttx/wireless/bt_hci.h>
 
-#include "bt_hci_core.h"
+#include "bt_hcicore.h"
 #include "bt_smp.h"
 #include "bt_keys.h"
 

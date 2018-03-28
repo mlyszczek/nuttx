@@ -50,14 +50,14 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <bluetooth/log.h>
-#include <bluetooth/hci.h>
-#include <bluetooth/bluetooth.h>
-#include <bluetooth/uuid.h>
-#include <bluetooth/gatt.h>
+#include <nuttx/wireless/bt_log.h>
+#include <nuttx/wireless/bt_hci.h>
+#include <nuttx/wireless/bt_bluetooth.h>
+#include <nuttx/wireless/bt_uuid.h>
+#include <nuttx/wireless/bt_gatt.h>
 
-#include "bt_hci_core.h"
-#include "bt_conn_internal.h"
+#include "bt_hcicore.h"
+#include "bt_conn.h"
 #include "bt_l2cap.h"
 #include "bt_att.h"
 

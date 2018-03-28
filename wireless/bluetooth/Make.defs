@@ -35,9 +35,9 @@
 
 ifeq ($(CONFIG_WIRELESS_BLUETOOTH),y)
 
-# Include packet radio support
+# Include Bluetooth support
 
-CSRCS += bt_att.c bt_buf.c bt_keys.c
+CSRCS += bt_att.c bt_buf.c bt_conn.c bt_keys.c bt_l2cap.c bt_uuid.c
 
 DEPPATH += --dep-path bluetooth
 VPATH += :bluetooth
