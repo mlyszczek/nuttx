@@ -107,7 +107,7 @@ struct bt_l2cap_chan_s
   CODE void (*encrypt_change)(FAR struct bt_conn_s *conn);
   CODE void (*recv)(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf);
 
-  FAR struct bt_l2cap_chan_s *_next;
+  FAR struct bt_l2cap_chan_s *next;
 };
 
 /****************************************************************************

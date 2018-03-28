@@ -49,9 +49,8 @@
 #include <errno.h>
 #include <string.h>
 
-#include <nuttx/wireless/bt_log.h>
 #include <nuttx/wireless/bt_hci.h>
-#include <nuttx/wireless/bt_bluetooth.h>
+#include <nuttx/wireless/bt_core.h>
 
 #include "bt_atomic.h"
 #include "bt_hcicore.h"

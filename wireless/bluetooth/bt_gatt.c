@@ -50,9 +50,8 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/wireless/bt_log.h>
 #include <nuttx/wireless/bt_hci.h>
-#include <nuttx/wireless/bt_bluetooth.h>
+#include <nuttx/wireless/bt_core.h>
 #include <nuttx/wireless/bt_buf.h>
 #include <nuttx/wireless/bt_uuid.h>
 #include <nuttx/wireless/bt_gatt.h>
@@ -165,12 +164,12 @@ int bt_gatt_attr_read_include(FAR struct bt_conn_s *conn,
 
   if (incl->uuid->type == BT_UUID_16)
     {
-      pdu.uuid16 = sys_cpu_to_le16(incl->uuid->u16);
-      value_len += sizeof(pdu.uuid16);
+      pdu.u.uuid16 = sys_cpu_to_le16(incl->uuid->u16);
+      value_len += sizeof(pdu.u.uuid16);
     }
   else
     {
-      memcpy(pdu.uuid, incl->uuid->u128, sizeof(incl->uuid->u128));
+      memcpy(pdu.u.uuid, incl->uuid->u128, sizeof(incl->uuid->u128));
       value_len += sizeof(incl->uuid->u128);
     }
 
@@ -191,12 +190,12 @@ int bt_gatt_attr_read_chrc(FAR struct bt_conn_s *conn,
 
   if (chrc->uuid->type == BT_UUID_16)
     {
-      pdu.uuid16 = sys_cpu_to_le16(chrc->uuid->u16);
-      value_len += sizeof(pdu.uuid16);
+      pdu.u.uuid16 = sys_cpu_to_le16(chrc->uuid->u16);
+      value_len += sizeof(pdu.u.uuid16);
     }
   else
     {
-      memcpy(pdu.uuid, chrc->uuid->u128, sizeof(chrc->uuid->u128));
+      memcpy(pdu.u.uuid, chrc->uuid->u128, sizeof(chrc->uuid->u128));
       value_len += sizeof(chrc->uuid->u128);
     }
 
@@ -804,7 +803,7 @@ static void att_read_type_rsp(FAR struct bt_conn_s *conn, uint8_t err,
       switch (uuid.type)
         {
           case BT_UUID_16:
-            uuid.u16 = sys_le16_to_cpu(chrc->uuid16);
+            uuid.u16 = sys_le16_to_cpu(chrc->u.uuid16);
             break;
 
           case BT_UUID_128:

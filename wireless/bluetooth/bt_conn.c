@@ -50,9 +50,8 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/wireless/bt_log.h>
 #include <nuttx/wireless/bt_hci.h>
-#include <nuttx/wireless/bt_bluetooth.h>
+#include <nuttx/wireless/bt_core.h>
 
 #include "bt_atomic.h"
 #include "bt_hcicore.h"
@@ -503,7 +502,7 @@ const bt_addr_le_t *bt_conn_get_dst(FAR const struct bt_conn_s *conn)
   return &conn->dst;
 }
 
-int bt_conn_security(FAR struct bt_conn_s *conn, bt_security_t sec)
+int bt_conn_security(FAR struct bt_conn_s *conn, enum bt_security_e sec)
 {
   FAR struct bt_keys_s *keys;
 

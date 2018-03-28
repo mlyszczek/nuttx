@@ -50,9 +50,8 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/wireless/bt_log.h>
 #include <nuttx/wireless/bt_hci.h>
-#include <nuttx/wireless/bt_bluetooth.h>
+#include <nuttx/wireless/bt_core.h>
 #include <nuttx/wireless/bt_uuid.h>
 #include <nuttx/wireless/bt_gatt.h>
 
@@ -121,7 +120,7 @@ struct find_info_data_s
   {
     FAR struct bt_att_info_16_s *info16;
     FAR struct bt_att_info_128_s *info128;
-  };
+  } u;
 };
 
 struct find_type_data_s
@@ -505,11 +504,11 @@ static uint8_t find_info_cb(FAR const struct bt_gatt_attr *attr,
 
         /* Fast foward to next item position */
 
-        data->info16 = bt_buf_add(data->buf, sizeof(*data->info16));
-        data->info16->handle = sys_cpu_to_le16(attr->handle);
-        data->info16->uuid = sys_cpu_to_le16(attr->uuid->u16);
+        data->u.info16 = bt_buf_add(data->buf, sizeof(*data->u.info16));
+        data->u.info16->handle = sys_cpu_to_le16(attr->handle);
+        data->u.info16->uuid = sys_cpu_to_le16(attr->uuid->u16);
 
-        return att->mtu - data->buf->len > sizeof(*data->info16) ?
+        return att->mtu - data->buf->len > sizeof(*data->u.info16) ?
           BT_GATT_ITER_CONTINUE : BT_GATT_ITER_STOP;
 
       case BT_ATT_INFO_128:
@@ -520,12 +519,12 @@ static uint8_t find_info_cb(FAR const struct bt_gatt_attr *attr,
 
         /* Fast foward to next item position */
 
-        data->info128 = bt_buf_add(data->buf, sizeof(*data->info128));
-        data->info128->handle = sys_cpu_to_le16(attr->handle);
-        memcpy(data->info128->uuid, attr->uuid->u128,
-               sizeof(data->info128->uuid));
+        data->u.info128 = bt_buf_add(data->buf, sizeof(*data->u.info128));
+        data->u.info128->handle = sys_cpu_to_le16(attr->handle);
+        memcpy(data->u.info128->uuid, attr->uuid->u128,
+               sizeof(data->u.info128->uuid));
 
-        return att->mtu - data->buf->len > sizeof(*data->info128) ?
+        return att->mtu - data->buf->len > sizeof(*data->u.info128) ?
           BT_GATT_ITER_CONTINUE : BT_GATT_ITER_STOP;
     }
 
@@ -1597,7 +1596,7 @@ static void bt_att_recv(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf)
   uint8_t err = BT_ATT_ERR_NOT_SUPPORTED;
   size_t i;
 
-  BT_ASSERT(conn->att);
+  DEBUGASSERT(conn->att);
 
   if (buf->len < sizeof(*hdr))
     {
@@ -1710,7 +1709,7 @@ FAR struct bt_buf_s *bt_att_create_pdu(FAR struct bt_conn_s *conn, uint8_t op,
 
   if (len + sizeof(op) > att->mtu)
     {
-      BT_WARN("ATT MTU exceeded, max %u, wanted %u\n", att->mtu, len);
+      wlwarn("ATT MTU exceeded, max %u, wanted %u\n", att->mtu, len);
       return NULL;
     }
 

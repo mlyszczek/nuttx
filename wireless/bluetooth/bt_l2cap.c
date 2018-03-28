@@ -49,9 +49,8 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/wireless/bt_log.h>
 #include <nuttx/wireless/bt_hci.h>
-#include <nuttx/wireless/bt_bluetooth.h>
+#include <nuttx/wireless/bt_core.h>
 
 #include "bt_hcicore.h"
 #include "bt_conn.h"
@@ -99,7 +98,7 @@ void bt_l2cap_chan_register(FAR struct bt_l2cap_chan_s *chan)
 {
   winfo("CID 0x%04x\n", chan->cid);
 
-  chan->_next = g_channels;
+  chan->next  = g_channels;
   g_channels  = chan;
 }
 
@@ -107,7 +106,7 @@ void bt_l2cap_connected(FAR struct bt_conn_s *conn)
 {
   FAR struct bt_l2cap_chan_s *chan;
 
-  for (chan = g_channels; chan; chan = chan->_next)
+  for (chan = g_channels; chan; chan = chan->next)
     {
       if (chan->connected)
         {
@@ -120,7 +119,7 @@ void bt_l2cap_disconnected(FAR struct bt_conn_s *conn)
 {
   FAR struct bt_l2cap_chan_s *chan;
 
-  for (chan = g_channels; chan; chan = chan->_next)
+  for (chan = g_channels; chan; chan = chan->next)
     {
       if (chan->disconnected)
         {
@@ -133,7 +132,7 @@ void bt_l2cap_encrypt_change(FAR struct bt_conn_s *conn)
 {
   FAR struct bt_l2cap_chan_s *chan;
 
-  for (chan = g_channels; chan; chan = chan->_next)
+  for (chan = g_channels; chan; chan = chan->next)
     {
       if (chan->encrypt_change)
         {
@@ -352,7 +351,7 @@ void bt_l2cap_recv(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf)
 
   winfo("Packet for CID %u len %u\n", cid, buf->len);
 
-  for (chan = g_channels; chan; chan = chan->_next)
+  for (chan = g_channels; chan; chan = chan->next)
     {
       if (chan->cid == cid)
         {

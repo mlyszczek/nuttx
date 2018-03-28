@@ -50,8 +50,7 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/wireless/bt_log.h>
-#include <nuttx/wireless/bt_bluetooth.h>
+#include <nuttx/wireless/bt_core.h>
 #include <nuttx/wireless/bt_hci.h>
 
 #include "bt_hcicore.h"
@@ -133,7 +132,7 @@ static void bt_connected(FAR struct bt_conn_s *conn)
 {
   FAR struct bt_conn_s_cb_s *cb;
 
-  for (cb = g_callback_list; cb; cb = cb->_next)
+  for (cb = g_callback_list; cb; cb = cb->next)
     {
       if (cb->connected)
         {
@@ -146,7 +145,7 @@ static void bt_disconnected(FAR struct bt_conn_s *conn)
 {
   FAR struct bt_conn_s_cb_s *cb;
 
-  for (cb = g_callback_list; cb; cb = cb->_next)
+  for (cb = g_callback_list; cb; cb = cb->next)
     {
       if (cb->disconnected)
         {
@@ -157,7 +156,7 @@ static void bt_disconnected(FAR struct bt_conn_s *conn)
 
 void bt_conn_cb_register(FAR struct bt_conn_s_cb_s *cb)
 {
-  cb->_next       = g_callback_list;
+  cb->next        = g_callback_list;
   g_callback_list = cb;
 }
 
