@@ -78,15 +78,6 @@ config BLUETOOTH_RXTHREAD_PRIORITY
 	default 100
 	range 1 255
 
-config BLUETOOTH_RXPRIO_STACKSIZE
-	int "Rx prio thread stack size"
-	default 1024
-
-config BLUETOOTH_RXPRIO_PRIORITY
-	int "Rx prio thread priority"
-	default 100
-	range 1 255
-
 config BLUETOOTH_TXCMD_STACKSIZE
 	int "Tx command thread stack size"
 	default 1024
