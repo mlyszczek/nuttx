@@ -279,7 +279,7 @@ void bt_conn_send(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf)
 
   while ((buf = nano_fifo_get(&frags)))
     {
-      nano_fifo_put(&conn->tx_queue, buf);
+      bt_queue_send(conn->tx_queue, buf, BT_NORMAL_PRIO);
     }
 }
 
@@ -321,7 +321,10 @@ static int conn_tx_kthread(int argc, FAR char *argv[])
 
       /* Get next ACL packet for connection */
 
-      buf = nano_fifo_get_wait(&conn->tx_queue);
+      ret = bt_queue_recv(conn->tx_queue, &buf);
+      DEBUGASSERT(ret >= 0 && buf != NULL);
+      UNUSED(ret);
+
       if (conn->state != BT_CONN_CONNECTED)
         {
           nxsem_post(&g_btdev.le_pkts_sem);
@@ -330,7 +333,7 @@ static int conn_tx_kthread(int argc, FAR char *argv[])
         }
 
       winfo("passing buf %p len %u to driver\n", buf, buf->len);
-      g_btdev.drv->send(buf);
+      g_btdev.dev->send(buf);
       bt_buf_put(buf);
     }
 
@@ -338,10 +341,17 @@ static int conn_tx_kthread(int argc, FAR char *argv[])
 
   /* Give back any allocated buffers */
 
-  while ((buf = nano_fifo_get(&conn->tx_queue)))
+  do
     {
-      bt_buf_put(buf);
+      buf = NULL;
+      ret = bt_queue_recv(conn->tx_queue, &buf);
+      if (ret >= 0)
+        {
+          DEBUGASSERT(buf != NULL;)
+          bt_buf_put(buf);
+        }
     }
+  while (ret >= OK);
 
   bt_conn_reset_rx_state(conn);
 
@@ -410,7 +420,9 @@ void bt_conn_set_state(FAR struct bt_conn_s *conn,
           pid_t pid;
           int ret;
 
-          nano_fifo_init(&conn->tx_queue);
+          ret = bt_queue_open(BT_CONN_TX, O_RDWR | O_CREAT, &conn->tx_queue);
+          DEBUGASSERT(ret >= 0 &&  g_btdev.tx_queue != 0);
+          UNUSED(ret);
 
           /* Get exclusive access to the handoff structure.  The count will be
            * zero when we complete this.
@@ -454,7 +466,7 @@ void bt_conn_set_state(FAR struct bt_conn_s *conn,
 
         if (old_state == BT_CONN_CONNECTED || old_state == BT_CONN_DISCONNECT)
           {
-            nano_fifo_put(&conn->tx_queue, bt_buf_get(BT_DUMMY, 0));
+            bt_queue_send(&conn->tx_queue, bt_buf_get(BT_DUMMY, 0), BT_NORMAL_PRIO);
           }
 
         /* Release the reference we took for the very first state transition. */

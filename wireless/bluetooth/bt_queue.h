@@ -57,7 +57,7 @@
 
 #define BT_DRIVER_MQNAME "btdrvr"
 #define BT_CONN_TX       "btconntx"
-#define BT_HCICMD_TX     "bthcitx"
+#define BT_HCI_TX        "bthcitx"
 #define BT_HCI_RX        "bthcitx"
 
 /* All messages are sent FIFO at the mid-message priorities except for high-
@@ -75,14 +75,15 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: bt_open_rxqueue and bt_open_txqueue
+ * Name: bt_queue_open
  *
  * Description:
- *   Open a messasge queue for read or write access.
+ *   Open a message queue for read or write access.
  *
  * Input Parameters:
- *   name - The name of the message queue to open
- *   mqd  - The location in which to return the message queue descriptor
+ *   name   - The name of the message queue to open
+ *   oflags - Open flags with access mode
+ *   mqd    - The location in which to return the message queue descriptor
  *
  * Returned Value:
  *   Zero is returned on success; a negated errno value is returned on any
@@ -90,14 +91,13 @@
  *
  ****************************************************************************/
 
-int bt_open_rxqueue(FAR const char *name, FAR mqd_t *mqd);
-int bt_open_txqueue(FAR const char *name, FAR mqd_t *mqd);
+int bt_queue_open(FAR const char *name, int oflags, FAR mqd_t *mqd);
 
 /****************************************************************************
- * Name: bt_get_buffer
+ * Name: bt_queue_recv
  *
  * Description:
- *   Block until the next buffer is received.
+ *   Block until the next buffer is received on the queue.
  *
  * Input Parameters:
  *   mqd - The message queue descriptor previously returned by bt_open_*queue.
@@ -109,17 +109,21 @@ int bt_open_txqueue(FAR const char *name, FAR mqd_t *mqd);
  *
  ****************************************************************************/
 
-int bt_get_buffer(mqd_t mqd, FAR struct bt_buf_s **buf);
+int bt_queue_recv(mqd_t mqd, FAR struct bt_buf_s **buf);
 
 /****************************************************************************
- * Name: bt_put_buffer
+ * Name: bt_queue_send
  *
  * Description:
  *   Send the buffer to the specified message queue
  *
  * Input Parameters:
- *   mqd - The message queue descriptor previously returned by bt_open_*queue.
- *   buf - A reference to the buffer to be sent
+ *   mqd      - The message queue descriptor previously returned by
+ *              bt_open_*queue.
+ *   buf      - A reference to the buffer to be sent
+ *   priority - Either BT_NORMAL_PRIO or BT_NORMAL_HIGH.  NOTE:
+ *              BT_NORMAL_HIGHis only for use within the stack.  Drivers
+ *              should always use BT_NORMAL_PRIO.
  *
  * Returned Value:
  *   Zero is returned on success; a negated errno value is returned on any
@@ -127,6 +131,6 @@ int bt_get_buffer(mqd_t mqd, FAR struct bt_buf_s **buf);
  *
  ****************************************************************************/
 
-int bt_put_buffer(mqd_t mqd, FAR struct bt_buf_s *buf);
+int bt_queue_send(mqd_t mqd, FAR struct bt_buf_s *buf, int priority);
 
 #endif /* __WIRELESS_BLUETOOTH_BT_QUEUE_H */

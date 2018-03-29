@@ -50,6 +50,7 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <nuttx/mm/iob.h>
 #include <nuttx/wireless/bt_hci.h>
 #include <nuttx/wireless/bt_core.h>
 #include <nuttx/wireless/bt_buf.h>
@@ -57,61 +58,19 @@
 #include "bt_hcicore.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/* Total number of all types of buffers */
-
-#define NUM_BUFS    22
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static struct bt_buf_s g_buffers[NUM_BUFS];
-
-/* Available (free) buffers queues */
-
-static struct nano_fifo_s g_avail_hci;
-static struct nano_fifo_s g_avail_aclin;
-static struct nano_fifo_s g_avail_aclout;
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-static FAR struct nano_fifo_s *get_avail(enum bt_buf_type_e type)
-{
-  switch (type)
-    {
-    case BT_CMD:
-    case BT_EVT:
-      return &g_avail_hci;
-
-    case BT_ACL_IN:
-      return &g_avail_aclin;
-
-    case BT_ACL_OUT:
-      return &g_avail_aclout;
-
-    default:
-      return NULL;
-    }
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 FAR struct bt_buf_s *bt_buf_get(enum bt_buf_type_e type, size_t reserve_head)
 {
-  FAR struct nano_fifo_s *avail = get_avail(type);
+  FAR struct sq_queue_s *avail = get_avail(type);
   FAR struct bt_buf_s *buf;
+  FAR struct iob_s *iob;
 
   winfo("type %d reserve %u\n", type, reserve_head);
 
-  buf = nano_fifo_s_get(avail);
-  if (!buf)
+  iob = iob_alloc(false);
+  if (iob == NULL)
     {
       if (context_type_get() == NANO_CTX_ISR)
         {
@@ -120,14 +79,20 @@ FAR struct bt_buf_s *bt_buf_get(enum bt_buf_type_e type, size_t reserve_head)
         }
 
       wlwarn("WARNING: Low on buffers. Waiting (type %d)\n", type);
-      buf = nano_fifo_s_get_wait(avail);
+      iob = iob_alloc(avail);
     }
 
-  memset(buf, 0, sizeof(*buf));
+  iob->io_len    = sizeof(struct bt_buf_s);
+  iob->io_offset = 0;
+  iob->io_pktlen = sizeof(struct bt_buf_s);
 
-  buf->ref  = 1;
-  buf->type = type;
-  buf->data = buf->buf + reserve_head;
+  buf            = iob->io_data;
+  memset(buf, 0, sizeof(struct bt_buf_s));
+
+  buf->iob       = iob;
+  buf->ref       = 1;
+  buf->type      = type;
+  buf->data      = buf->buf + reserve_head;
 
   winfo("buf %p type %d reserve %u\n", buf, buf->type, reserve_head);
   return buf;
@@ -137,20 +102,23 @@ void bt_buf_put(FAR struct bt_buf_s *buf)
 {
   FAR struct bt_hci_cp_host_num_completed_packets_s *cp;
   FAR struct bt_hci_handle_count_s *hc;
-  FAR struct nano_fifo_s *avail = get_avail(buf->type);
+  enum bt_buf_type_e type;
   uint16_t handle;
 
   winfo("buf %p ref %u type %d\n", buf, buf->ref, buf->type);
 
-  if (--buf->ref)
+  if (--buf->ref > 0)
     {
       return;
     }
 
   handle = buf->acl.handle;
-  nano_fifo_s_put(avail, buf);
+  type   = buf->type;
 
-  if (avail != &g_avail_aclin)
+  DEBUGASSERT(buf->iob != NULL);
+  iob_free(buf->iob);
+
+  if (type != BT_ACL_IN)
     {
       return;
     }
@@ -243,40 +211,14 @@ size_t bt_buf_tailroom(FAR struct bt_buf_s * buf)
   return BT_BUF_MAX_DATA - bt_buf_headroom(buf) - buf->len;
 }
 
-int bt_buf_init(int acl_in, int acl_out)
+int bt_buf_init(void)
 {
-  int i;
+  winfo("Configured buffers: ACL in: %d ACL out: %d size: %u\n",
+         acl_in, acl_out, sizeof(struct bt_buf_s));
+  winfo("Configured IOBs: IOBs: %u size: %u\n",
+         CONFIG_IOB_NBUFFERS, CONFIG_IOB_BUFSIZE);
 
-  /* Check that we have enough buffers configured */
-
-  if (acl_out + acl_in >= NUM_BUFS - 2)
-    {
-      wlerr("ERROR: Too many ACL buffers requested\n");
-      return -EINVAL;
-    }
-
-  winfo("Available bufs: ACL in: %d, ACL out: %d, cmds/evts: %d\n",
-         acl_in, acl_out, NUM_BUFS - (acl_in + acl_out));
-
-  nano_fifo_s_init(&g_avail_aclin);
-  for (i = 0; acl_in > 0; i++, acl_in--)
-    {
-      nano_fifo_s_put(&g_avail_aclin, &g_buffers[i]);
-    }
-
-  nano_fifo_s_init(&g_avail_aclout);
-  for (; acl_out > 0; i++, acl_out--)
-    {
-      nano_fifo_s_put(&g_avail_aclout, &g_buffers[i]);
-    }
-
-  nano_fifo_s_init(&g_avail_hci);
-  for (; i < NUM_BUFS; i++)
-    {
-      nano_fifo_s_put(&g_avail_hci, &g_buffers[i]);
-    }
-
-  winfo("%u buffers * %u bytes = %u bytes\n", NUM_BUFS,
-         sizeof(g_buffers[0]), sizeof(g_buffers));
+  DEBUGASSERT(CONFIG_IOB_NBUFFERS > (acl_out + acl_in));
+  DEBUGASSERT(sizeof(struct bt_fifo_s) <= CONFIG_IOB_BUFSIZE);
   return 0;
 }

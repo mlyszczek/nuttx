@@ -55,6 +55,7 @@
 #include <nuttx/wireless/bt_core.h>
 #include <nuttx/wireless/bt_hci.h>
 
+#include "bt_queue.h"
 #include "bt_hcicore.h"
 #include "bt_keys.h"
 #include "bt_conn.h"
@@ -86,9 +87,6 @@ enum bt_stackdir_e
 struct bt_dev_s g_btdev;
 static FAR struct bt_conn_cb_s *g_callback_list;
 static bt_le_scan_cb_t *g_scan_dev_found_cb;
-#ifdef CONFIG_DEBUG_ASSERTIONS
-static int g_rx_prio_kthread_pid;
-#endif
 
 /****************************************************************************
  * Private Functions
@@ -161,7 +159,7 @@ FAR struct bt_buf_s *bt_hci_cmd_create(uint16_t opcode, uint8_t param_len)
 
   winfo("opcode %x param_len %u\n", opcode, param_len);
 
-  buf = bt_buf_get(BT_CMD, g_btdev.drv->head_reserve);
+  buf = bt_buf_get(BT_CMD, g_btdev.dev->head_reserve);
   if (!buf)
     {
       wlerr("ERROR: Cannot get free buffer\n");
@@ -182,6 +180,7 @@ FAR struct bt_buf_s *bt_hci_cmd_create(uint16_t opcode, uint8_t param_len)
 
 int bt_hci_cmd_send(uint16_t opcode, FAR struct bt_buf_s *buf)
 {
+  int ret;
   if (!buf)
     {
       buf = bt_hci_cmd_create(opcode, 0);
@@ -199,13 +198,18 @@ int bt_hci_cmd_send(uint16_t opcode, FAR struct bt_buf_s *buf)
 
   if (opcode == BT_HCI_OP_HOST_NUM_COMPLETED_PACKETS)
     {
-      g_btdev.drv->send(buf);
+      g_btdev.dev->send(buf);
       bt_buf_put(buf);
       return 0;
     }
 
-  nano_fifo_put(&g_btdev.cmd_tx_queue, buf);
-  return 0;
+  ret = bt_queue_send(&g_btdev.tx_queue, buf, BT_NORMAL_PRIO);
+  if (ret < 0)
+    {
+      wlerr("ERROR: bt_queue_send() failed: %d\n", ret);
+    }
+
+  return ret;
 }
 
 int bt_hci_cmd_send_sync(uint16_t opcode, FAR struct bt_buf_s *buf,
@@ -214,12 +218,10 @@ int bt_hci_cmd_send_sync(uint16_t opcode, FAR struct bt_buf_s *buf,
   sem_t sync_sem;
   int ret;
 
-  /* This function cannot be called from the rx thread since it relies on the
-   * very same thread in processing the cmd_complete event and giving back the
-   * blocking semaphore.
+  /* NOTE: This function cannot be called from the rx thread since it relies
+   * on the very same thread in processing the cmd_complete event and giving
+   * back the blocking semaphore.
    */
-
-  DEBUGASSERT(getpid() != g_rx_prio_kthread_pid);
 
   if (!buf)
     {
@@ -236,23 +238,33 @@ int bt_hci_cmd_send_sync(uint16_t opcode, FAR struct bt_buf_s *buf,
   nxsem_setprotocol(&sync_sem);
   buf->hci.sync = &sync_sem;
 
-  nano_fifo_put(&g_btdev.cmd_tx_queue, buf);
-
-  do
+  ret = bt_queue_send(&g_btdev.tx_queue, buf, BT_NORMAL_PRIO);
+  if (ret < 0)
     {
-      ret = nxsem_wait(&sync_sem);
+      wlerr("ERROR: bt_queue_send() failed: %d\n", ret);
     }
-  while (ret == -EINTR);
+
+  if (ret >= 0)
+    {
+      do
+        {
+          ret = nxsem_wait(&sync_sem);
+        }
+      while (ret == -EINTR);
+    }
 
   /* Indicate failure if we failed to get the return parameters */
 
-  if (!buf->hci.sync)
+  if (ret >= 0)
     {
-      ret = -EIO;
-    }
-  else
-    {
-      ret = 0;
+      if (!buf->hci.sync)
+        {
+          ret = -EIO;
+        }
+      else
+        {
+          ret = 0;
+        }
     }
 
   if (rsp)
@@ -1002,6 +1014,18 @@ static void hci_event(FAR struct bt_buf_s *buf)
         hci_encrypt_change(buf);
         break;
 
+      case BT_HCI_EVT_CMD_COMPLETE:
+        hci_cmd_complete(buf);
+        break;
+
+      case BT_HCI_EVT_CMD_STATUS:
+        hci_cmd_status(buf);
+       break;
+
+      case BT_HCI_EVT_NUM_COMPLETED_PACKETS:
+        hci_num_completed_packets(buf);
+        break;
+
       case BT_HCI_EVT_ENCRYPT_KEY_REFRESH_COMPLETE:
         hci_encrypt_key_refresh_complete(buf);
         break;
@@ -1018,9 +1042,9 @@ static void hci_event(FAR struct bt_buf_s *buf)
   bt_buf_put(buf);
 }
 
-static int hci_cmd_tx_kthread(int argc, FAR char *argv[])
+static int hci_tx_thread(int argc, FAR char *argv[])
 {
-  FAR struct bt_driver_s *drv = g_btdev.drv;
+  FAR struct bt_driver_s *dev = g_btdev.dev;
   int ret;
 
   winfo("started\n");
@@ -1031,18 +1055,26 @@ static int hci_cmd_tx_kthread(int argc, FAR char *argv[])
 
       /* Wait until ncmd > 0 */
 
-      winfo("calling sem_wait\n");
-      ret = nxsem_wait(&g_btdev.ncmd_sem);
+      do
+        {
+          ret = nxsem_wait(&g_btdev.ncmd_sem);
+        }
+      while (ret == -EINTR);
+
+      DEBUGASSERT(ret >= 0);
 
       /* Get next command - wait if necessary */
 
-      winfo("calling fifo_get_wait\n");
-      buf = nano_fifo_get_wait(&g_btdev.cmd_tx_queue);
+      buf = NULL;
+      ret = bt_queue_recv(&g_btdev.tx_queue, &buf);
+      DEBUGASSERT(ret >= 0 && buf != NULL);
+      UNUSED(ret);
+
       g_btdev.ncmd = 0;
 
       winfo("Sending command %x (buf %p) to driver\n", buf->hci.opcode, buf);
 
-      drv->send(buf);
+      dev->send(buf);
 
       /* Clear out any existing sent command */
 
@@ -1060,13 +1092,18 @@ static int hci_cmd_tx_kthread(int argc, FAR char *argv[])
 static int hci_rx_kthread(int argc, FAR char *argv[])
 {
   FAR struct bt_buf_s *buf;
+  int ret;
 
   winfo("started\n");
 
   while (1)
     {
-      winfo("calling fifo_get_wait\n");
-      buf = nano_fifo_get_wait(&g_btdev.rx_queue);
+      ret = bt_queue_recv(g_btdev.rx_queue, &buf)
+      if (ret < 0)
+        {
+          wlerr("ERROR: bt_queue_recv() failed: %d\n", ret);
+          continue;
+        }
 
       winfo("buf %p type %u len %u\n", buf, buf->type, buf->len);
 
@@ -1086,56 +1123,6 @@ static int hci_rx_kthread(int argc, FAR char *argv[])
             break;
         }
 
-    }
-}
-
-static int rx_prio_kthread(int argc, FAR char *argv[])
-{
-  FAR struct bt_buf_s *buf;
-
-  winfo("started\n");
-
-  /* So we can avoid bt_hci_cmd_send_sync deadlocks */
-
-  while (1)
-    {
-      struct bt_hci_evt_hdr_s *hdr;
-
-      winfo("calling fifo_get_wait\n");
-      buf = nano_fifo_get_wait(&g_btdev.rx_prio_queue);
-
-      winfo("buf %p type %u len %u\n", buf, buf->type, buf->len);
-
-      if (buf->type != BT_EVT)
-        {
-          wlerr("ERROR: Unknown buf type %u\n", buf->type);
-          bt_buf_put(buf);
-          continue;
-        }
-
-      hdr = (FAR void *)buf->data;
-      bt_buf_pull(buf, sizeof(*hdr));
-
-      switch (hdr->evt)
-        {
-          case BT_HCI_EVT_CMD_COMPLETE:
-            hci_cmd_complete(buf);
-            break;
-
-          case BT_HCI_EVT_CMD_STATUS:
-            hci_cmd_status(buf);
-           break;
-
-          case BT_HCI_EVT_NUM_COMPLETED_PACKETS:
-            hci_num_completed_packets(buf);
-            break;
-
-          default:
-            wlerr("ERROR: Unknown event 0x%02x\n", hdr->evt);
-            break;
-        }
-
-      bt_buf_put(buf);
     }
 }
 
@@ -1315,7 +1302,7 @@ static int hci_init(void)
   memset(hbs, 0, sizeof(*hbs));
   hbs->acl_mtu = sys_cpu_to_le16(BT_BUF_MAX_DATA -
                                  sizeof(struct bt_hci_acl_hdr) -
-                                 g_btdev.drv->head_reserve);
+                                 g_btdev.dev->head_reserve);
   hbs->acl_pkts = sys_cpu_to_le16(ACL_IN_MAX);
 
   err = bt_hci_cmd_send(BT_HCI_OP_HOST_BUFFER_SIZE, buf);
@@ -1389,37 +1376,47 @@ static int hci_init(void)
 static void cmd_queue_init(void)
 {
   pid_t pid;
+  int ret;
 
-  nano_fifo_init(&g_btdev.cmd_tx_queue);
+  /* When there is a command to be sent to the Bluetooth driver, it queued on
+   * the Tx queue and received by logic on the Tx kernel thread.
+   */
+
+  g_btdev.tx_queue = NULL;
+  ret = bt_queue_open(BT_HCI_RX, O_RDWR | O_CREAT, &g_btdev.tx_queue);
+  DEBUGASSERT(ret >= 0 &&  g_btdev.tx_queue != NULL);
+  UNUSED(ret);
+
   nxsem_init(&g_btdev.ncmd_sem, 0, 1);
   nxsem_setprotocol(&g_btdev.ncmd_sem, SEM_PRIO_NONE);
 
   g_btdev.ncmd = 1;
-  pid = kthread_create("BT HCI Tx Cmd", CONFIG_BLUETOOTH_TXCMD_PRIORITY,
+  pid = kthread_create("BT HCI Tx", CONFIG_BLUETOOTH_TXCMD_PRIORITY,
                        CONFIG_BLUETOOTH_TXCMD_STACKSIZE,
-                       hci_cmd_tx_kthread, NULL);
+                       hci_tx_thread, NULL);
   DEBUGASSERT(pid > 0);
+  UNUSED(pid);
 }
 
 static void rx_queue_init(void)
 {
   pid_t pid;
+  int ret;
 
-  nano_fifo_init(&g_btdev.rx_queue);
+  /* When a buffer is received from the Bluetooth driver via bt_recv() on
+   * the Rx queue and received by logic on the Rx kernel thread.
+   */
+
+  g_btdev.rx_queue = NULL;
+  ret = bt_queue_open(BT_HCI_RX, O_RDWR | O_CREAT, &g_btdev.rx_queue);
+  DEBUGASSERT(ret >= 0 &&  g_btdev.rx_queue != NULL);
+  UNUSED(ret);
+
   pid = kthread_create("BT HCI Rx", CONFIG_BLUETOOTH_RXTHREAD_PRIORITY,
                        CONFIG_BLUETOOTH_RXTHREAD_STACKSIZE,
                        hci_rx_kthread, NULL);
   DEBUGASSERT(pid > 0);
-
-  nano_fifo_init(&g_btdev.rx_prio_queue);
-  pid = kthread_create("BT HCI Rx Prio", CONFIG_BLUETOOTH_RXPRIO_PRIORITY,
-                       CONFIG_BLUETOOTH_RXPRIO_STACKSIZE,
-                       rx_prio_kthread, NULL);
-  DEBUGASSERT(pid > 0);
-
-#ifdef CONFIG_DEBUG_ASSERTIONS
-  g_rx_prio_kthread_pid = pid;
-#endif
+  UNUSED(pid);
 }
 
 /****************************************************************************
@@ -1431,65 +1428,64 @@ static void rx_queue_init(void)
 void bt_recv(FAR struct bt_buf_s *buf)
 {
   FAR struct bt_hci_evt_hdr_s *hdr;
+  int prio = BT_NORMAL_PRIO;
 
   winfo("buf %p len %u\n", buf, buf->len);
 
-  if (buf->type == BT_ACL_IN)
+  if (buf->type != BT_ACL_IN)
     {
-      nano_fifo_put(&g_btdev.rx_queue, buf);
-      return;
+      if (buf->type != BT_EVT)
+        {
+          wlerr("ERROR: Invalid buf type %u\n", buf->type);
+          bt_buf_put(buf);
+          return;
+        }
+
+      /* Command Complete/Status events use high priority messages. */
+
+      hdr = (FAR void *)buf->data;
+      if (hdr->evt == BT_HCI_EVT_CMD_COMPLETE ||
+          hdr->evt == BT_HCI_EVT_CMD_STATUS ||
+          hdr->evt == BT_HCI_EVT_NUM_COMPLETED_PACKETS)
+        {
+          prio = BT_HIGH_PRIO;
+        }
     }
 
-  if (buf->type != BT_EVT)
+  ret = bt_queue_send(&g_btdev.rx_queue, buf, prio);
+  if (ret < 0)
     {
-      wlerr("ERROR: Invalid buf type %u\n", buf->type);
-      bt_buf_put(buf);
-      return;
+      wlerr("ERROR: bt_queue_send() failed: %d\n", ret);
     }
-
-  /* Command Complete/Status events have their own cmd_rx queue, all other
-   * events go through rx queue.
-   */
-
-  hdr = (FAR void *)buf->data;
-  if (hdr->evt == BT_HCI_EVT_CMD_COMPLETE ||
-      hdr->evt == BT_HCI_EVT_CMD_STATUS ||
-      hdr->evt == BT_HCI_EVT_NUM_COMPLETED_PACKETS)
-    {
-      nano_fifo_put(&g_btdev.rx_prio_queue, buf);
-      return;
-    }
-
-  nano_fifo_put(&g_btdev.rx_queue, buf);
 }
 
-int bt_driver_register(FAR struct bt_driver_s *drv)
+int bt_driver_register(FAR struct bt_driver_s *dev)
 {
-  if (g_btdev.drv)
+  if (g_btdev.dev)
     {
       return -EALREADY;
     }
 
-  if (!drv->open || !drv->send)
+  if (!dev->open || !dev->send)
     {
       return -EINVAL;
     }
 
-  g_btdev.drv = drv;
+  g_btdev.dev = dev;
   return 0;
 }
 
-void bt_driver_unregister(FAR struct bt_driver_s *drv)
+void bt_driver_unregister(FAR struct bt_driver_s *dev)
 {
-  g_btdev.drv = NULL;
+  g_btdev.dev = NULL;
 }
 
 int bt_init(void)
 {
-  FAR struct bt_driver_s *drv = g_btdev.drv;
+  FAR struct bt_driver_s *dev = g_btdev.dev;
   int err;
 
-  if (!drv)
+  if (!dev)
     {
       wlerr("ERROR: No HCI driver registered\n");
       return -ENODEV;
@@ -1500,7 +1496,7 @@ int bt_init(void)
   cmd_queue_init();
   rx_queue_init();
 
-  err = drv->open();
+  err = dev->open();
   if (err)
     {
       wlerr("ERROR: HCI driver open failed (%d)\n", err);

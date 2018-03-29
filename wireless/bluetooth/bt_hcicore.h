@@ -50,6 +50,7 @@
 
 #include <stdbool.h>
 #include <semaphore.h>
+#include <mqueue.h>
 
 #include <nuttx/wireless/bt_driver.h>
 
@@ -125,24 +126,19 @@ struct bt_dev_s
 
   FAR struct bt_buf_s *sent_cmd;
 
-  /* Queue for incoming HCI events & ACL data */
+  /* Queue for incoming HCI events and ACL data */
 
-  struct nano_fifo_s rx_queue;
-
-  /* Queue for high priority HCI events which may unlock waiters in other
-   * thread. Such events include Number of Completed Packets, as well as the
-   * Command Complete/Status events.
-   */
-
-  struct nano_fifo rx_prio_queue;
+  mqd_t rx_sink;
+  mqd_t rx_source;
 
   /* Queue for outgoing HCI commands */
 
-  struct nano_fifo cmd_tx_queue;
+  mqd_t tx_sink;
+  mqd_t tx_source;
 
   /* Registered HCI driver */
 
-  FAR struct bt_driver_s *drv;
+  FAR struct bt_driver_s *dev;
 };
 
 /****************************************************************************

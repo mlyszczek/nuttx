@@ -48,6 +48,8 @@
 
 #include <nuttx/config.h>
 
+#include <mqueue.h>
+
 #include <nuttx/wireless/bt_conn.h>
 
 #include "bt_atomic.h"
@@ -95,7 +97,7 @@ struct bt_conn_s
 
   /* Queue for outgoing ACL data */
 
-  struct nano_fifo_s tx_queue;
+  mqd_t tx_queue;
 
   FAR struct bt_keys *keys;
 

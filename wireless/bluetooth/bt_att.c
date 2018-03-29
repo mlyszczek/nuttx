@@ -541,7 +541,7 @@ static uint8_t att_mtu_rsp(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf)
 
   att->mtu = min(mtu, BT_BUF_MAX_DATA - (sizeof(struct bt_l2cap_hdr) +
                                          sizeof(struct bt_hci_acl_hdr) +
-                                         g_btdev.drv->head_reserve));
+                                         g_btdev.dev->head_reserve));
 
   return att_handle_rsp(conn, rsp, buf->len, 0);
 }

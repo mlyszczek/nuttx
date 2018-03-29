@@ -105,16 +105,17 @@ struct bt_buf_acl_data_s
 
 struct bt_buf_s
 {
+  FAR struct iob_s *iob; /* IOB container of the buffer */
   union
   {
     struct bt_buf_hci_data_s hci;
     struct bt_buf_acl_data_s acl;
   } u;
 
-  FAR uint8_t *data;  /* Start of data in the buffer */
-  uint8_t len;        /* Length of data in the buffer */
-  uint8_t ref  : 5;   /* Reference count */
-  uint8_t type : 3;   /* Type of data contained in the buffer */
+  FAR uint8_t *data;     /* Start of data in the buffer */
+  uint8_t len;           /* Length of data in the buffer */
+  uint8_t ref  : 5;      /* Reference count */
+  uint8_t type : 3;      /* Type of data contained in the buffer */
 
   /* The full available buffer. */
 
@@ -314,14 +315,13 @@ size_t bt_buf_headroom(FAR struct bt_buf_s *buf);
  *   whatever is left over.
  *
  * Input Parameters:
- *   acl_in  - Number of incoming ACL data buffers.
- *   acl_out - Number of outgoing ACL data buffers.
+ *   None.
  *
  * Returned Value:
  *   Zero on success or (negative) error code on failure.
  *
  ****************************************************************************/
 
-int bt_buf_init(int acl_in, int acl_out);
+int bt_buf_init(void);
 
 #endif /* __INCLUDE_NUTTX_WIRELESS_BT_BUF_H */
