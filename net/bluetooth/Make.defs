@@ -1,7 +1,7 @@
 ############################################################################
-# net/Makefile
+# net/bluetooth/Make.defs
 #
-#   Copyright (C) 2007, 2008, 2011-2018 Gregory Nutt. All rights reserved.
+#   Copyright (C) 2017 Gregory Nutt. All rights reserved.
 #   Author: Gregory Nutt <gnutt@nuttx.org>
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,89 +33,32 @@
 #
 ############################################################################
 
--include $(TOPDIR)/Make.defs
+# Packet socket support
 
-ifeq ($(CONFIG_NET),y)
+ifeq ($(CONFIG_NET_BLUETOOTH),y)
 
-# Basic networking support
+# Initialization / resource managment
 
-NET_ASRCS   =
-NET_CSRCS   = net_initialize.c
+NET_CSRCS  += bluetooth_initialize.c
+NET_CSRCS  += bluetooth_conn.c
+NET_CSRCS  += bluetooth_container.c
 
-# Socket support
+# Socket layer
 
-SOCK_ASRCS  =
-SOCK_CSRCS  =
+SOCK_CSRCS += bluetooth_sockif.c
+SOCK_CSRCS += bluetooth_sendto.c
+SOCK_CSRCS += bluetooth_recvfrom.c
 
-# Support for operations on network devices
+# Device interface
 
-NETDEV_ASRCS =
-NETDEV_CSRCS =
+NET_CSRCS  += bluetooth_input.c
+NET_CSRCS  += bluetooth_callback.c
+NET_CSRCS  += bluetooth_poll.c
+NET_CSRCS  += bluetooth_finddev.c
 
-VPATH =
-DEPPATH = --dep-path .
+# Include packet socket build support
 
-include socket/Make.defs
-include inet/Make.defs
-include netdev/Make.defs
-include arp/Make.defs
-include icmp/Make.defs
-include icmpv6/Make.defs
-include neighbor/Make.defs
-include igmp/Make.defs
-include pkt/Make.defs
-include local/Make.defs
-include tcp/Make.defs
-include udp/Make.defs
-include sixlowpan/Make.defs
-include bluetooth/Make.defs
-include ieee802154/Make.defs
-include devif/Make.defs
-include ipforward/Make.defs
-include loopback/Make.defs
-include route/Make.defs
-include procfs/Make.defs
-include usrsock/Make.defs
-include utils/Make.defs
-endif
+DEPPATH += --dep-path bluetooth
+VPATH += :bluetooth
 
-ASRCS = $(SOCK_ASRCS) $(NETDEV_ASRCS) $(NET_ASRCS)
-AOBJS = $(ASRCS:.S=$(OBJEXT))
-
-CSRCS = $(SOCK_CSRCS) $(NETDEV_CSRCS) $(NET_CSRCS)
-COBJS = $(CSRCS:.c=$(OBJEXT))
-
-SRCS = $(ASRCS) $(CSRCS)
-OBJS = $(AOBJS) $(COBJS)
-
-BIN = libnet$(LIBEXT)
-
-all: $(BIN)
-.PHONY: depend clean distclean
-
-$(AOBJS): %$(OBJEXT): %.S
-	$(call ASSEMBLE, $<, $@)
-
-$(COBJS): %$(OBJEXT): %.c
-	$(call COMPILE, $<, $@)
-
-$(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
-
-.depend: Makefile $(SRCS)
-ifeq ($(CONFIG_NET),y)
-	$(Q) $(MKDEP) $(DEPPATH) "$(CC)" -- $(CFLAGS) -- $(SRCS) >Make.dep
-endif
-	$(Q) touch $@
-
-depend: .depend
-
-clean:
-	$(call DELFILE, $(BIN))
-	$(call CLEAN)
-
-distclean: clean
-	$(call DELFILE, Make.dep)
-	$(call DELFILE, .depend)
-
--include Make.dep
+endif # CONFIG_NET_BLUETOOTH

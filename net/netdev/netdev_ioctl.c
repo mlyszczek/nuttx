@@ -1,7 +1,7 @@
 /****************************************************************************
  * net/netdev/netdev_ioctl.c
  *
- *   Copyright (C) 2007-2012, 2015-2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007-2012, 2015-2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -73,6 +73,10 @@
 #endif
 
 #if defined(CONFIG_NETDEV_IOCTL) && defined(CONFIG_NET_6LOWPAN)
+#  ifdef CONFIG_WIRELESS_BLUETOOTH
+#    include <nuttx/wireless/bt_ioctl.h>
+#  endif
+
 #  ifdef CONFIG_WIRELESS_IEEE802154
 #    include <nuttx/wireless/ieee802154/ieee802154_mac.h>
 #  endif
@@ -356,7 +360,7 @@ static void ioctl_set_ipv4addr(FAR in_addr_t *outaddr,
  *
  * Input Parameters:
  *   outaddr - Pointer to the source IP address in the device structure.
- *   inaddr - Pointer to the user-provided memory to containing the new IP
+ *   inaddr  - Pointer to the user-provided memory to containing the new IP
  *     address.
  *
  ****************************************************************************/
@@ -374,13 +378,75 @@ static void ioctl_set_ipv6addr(FAR net_ipv6addr_t outaddr,
  * Name: netdev_iee802154_ioctl
  *
  * Description:
+ *   Perform Bluetooth network device specific operations.
+ *
+ * Input Parameters:
+ *   psock  - Socket structure
+ *   dev    - Ethernet driver device structure
+ *   cmd    - The ioctl command
+ *   req    - The argument of the ioctl cmd
+ *
+ * Returned Value:
+ *   >=0 on success (positive non-zero values are cmd-specific)
+ *   Negated errno returned on failure.
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_NETDEV_IOCTL) && defined(CONFIG_NET_6LOWPAN) && \
+    defined(CONFIG_WIRELESS_BLUETOOTH)
+static int netdev_iee802154_ioctl(FAR struct socket *psock, int cmd,
+                                  unsigned long arg)
+{
+  FAR struct net_driver_s *dev;
+  FAR char *ifname;
+  int ret = -ENOTTY;
+
+  if (arg != 0ul)
+    {
+      if (WL_IBLUETOOTHCMD(cmd))
+        {
+          /* Get the name of the Bluetooth device to receive the IOCTL
+           * command
+           */
+
+          FAR struct bluetooth_ifreq_s *cmddata =
+            (FAR struct bluetooth_ifreq_s *)((uintptr_t)arg);
+
+          ifname = cmddata->ifr_name;
+        }
+      else
+        {
+          /* Not a Bluetooth IOCTL command */
+
+          return -ENOTTY;
+        }
+
+      /* Find the device with this name */
+
+      dev = netdev_findbyname(ifname);
+      if (dev != NULL && dev->d_lltype == NET_LL_BLUETOOTH)
+        {
+          /* Perform the device IOCTL */
+
+          ret = dev->d_ioctl(dev, cmd, arg);
+        }
+    }
+
+  return ret;
+}
+#endif
+
+/****************************************************************************
+ * Name: netdev_iee802154_ioctl
+ *
+ * Description:
  *   Perform IEEE802.15.4 network device specific operations.
  *
  * Input Parameters:
- *   psock    Socket structure
- *   dev      Ethernet driver device structure
- *   cmd      The ioctl command
- *   req      The argument of the ioctl cmd
+ *   psock  - Socket structure
+ *   dev    - Ethernet driver device structure
+ *   cmd    - The ioctl command
+ *   req    - The argument of the ioctl cmd
  *
  * Returned Value:
  *   >=0 on success (positive non-zero values are cmd-specific)
@@ -439,10 +505,10 @@ static int netdev_iee802154_ioctl(FAR struct socket *psock, int cmd,
  *   Perform non-IEEE802.15.4 packet radio network device specific operations.
  *
  * Input Parameters:
- *   psock    Socket structure
- *   dev      Ethernet driver device structure
- *   cmd      The ioctl command
- *   req      The argument of the ioctl cmd
+ *   psock  - Socket structure
+ *   dev    - Ethernet driver device structure
+ *   cmd    - The ioctl command
+ *   req    - The argument of the ioctl cmd
  *
  * Returned Value:
  *   >=0 on success (positive non-zero values are cmd-specific)
