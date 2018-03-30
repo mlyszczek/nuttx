@@ -47,6 +47,12 @@ ifeq ($(CONFIG_DRIVERS_IEEE80211),y)
 include wireless$(DELIM)ieee80211$(DELIM)Make.defs
 endif
 
+# Include Bluetooth support
+
+ifeq ($(CONFIG_DRIVERS_BLUETOOTH),y)
+include wireless$(DELIM)bluetooth$(DELIM)Make.defs
+endif
+
 # Include wireless drivers
 
 ifeq ($(CONFIG_WL_CC1101),y)
