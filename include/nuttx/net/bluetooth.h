@@ -40,6 +40,20 @@
  * Public Function Prototypes
  ****************************************************************************/
 
+/* REVISIT:  Is there any header on the Bluetooth data as received by the
+ * network stack?
+ */
+
+#warning REVISIT
+
+#define BLUETOOTH_HDRLEN        0
+#define BLUETOOTH_ADDRSIZE      6
+#define BLUETOOTH_ADDRCOPY(d,s) memcpy((d),(s),BLUETOOTH_ADDRSIZE);
+
+/****************************************************************************
+ * Public Function Prototypes
+ ****************************************************************************/
+
 /****************************************************************************
  * Name: bluetooth_input
  *
