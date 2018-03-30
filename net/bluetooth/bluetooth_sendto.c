@@ -1,8 +1,7 @@
 /****************************************************************************
  * net/bluetooth/bluetooth_sendto.c
  *
- *   Copyright (C) 2014, 2016 Gregory Nutt. All rights reserved.
- *   Copyright (C) 2014, 2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -50,6 +49,7 @@
 #include <assert.h>
 #include <debug.h>
 
+#include <netpacket/bluetooth.h>
 #include <arch/irq.h>
 
 #include <nuttx/clock.h>
@@ -58,6 +58,7 @@
 #include <nuttx/net/radiodev.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/ip.h>
+#include <nuttx/wireless/bt_hci.h>
 
 #include "netdev/netdev.h"
 #include "devif/devif.h"
@@ -78,7 +79,7 @@ struct bluetooth_sendto_s
 {
   FAR struct socket *is_sock;            /* Points to the parent socket structure */
   FAR struct devif_callback_s *is_cb;    /* Reference to callback instance */
-  struct bluetooth_saddr_s is_destaddr; /* Frame destinatin address */
+  bt_addr_t is_destaddr;                 /* Frame destination address */
   sem_t is_sem;                          /* Used to wake up the waiting thread */
   FAR const uint8_t *is_buffer;          /* User buffer of data to send */
   size_t is_buflen;                      /* Number of bytes in the is_buffer */
@@ -88,75 +89,6 @@ struct bluetooth_sendto_s
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: bluetooth_anyaddrnull
- *
- * Description:
- *   If the destination address is all zero in the MAC header buf, then it is
- *   broadcast on the 802.15.4 network.
- *
- * Input Parameters:
- *   addr    - The address to check
- *   addrlen - The length of the address in bytes
- *
- * Returned Value:
- *   True if the address is all zero.
- *
- ****************************************************************************/
-
-static bool bluetooth_anyaddrnull(FAR const uint8_t *addr, uint8_t addrlen)
-{
-  while (addrlen-- > 0)
-    {
-      if (addr[addrlen] != 0x00)
-        {
-          return false;
-        }
-    }
-
-  return true;
-}
-
-/****************************************************************************
- * Name: bluetooth_saddrnull
- *
- * Description:
- *   If the destination address is all zero in the MAC header buf, then it is
- *   broadcast on the 802.15.4 network.
- *
- * Input Parameters:
- *   eaddr - The short address to check
- *
- * Returned Value:
- *   The address length associated with the address mode.
- *
- ****************************************************************************/
-
-static inline bool bluetooth_saddrnull(FAR const uint8_t *saddr)
-{
-  return bluetooth_anyaddrnull(saddr, BLUETOOTH_SADDRSIZE);
-}
-
-/****************************************************************************
- * Name: bluetooth_eaddrnull
- *
- * Description:
- *   If the destination address is all zero in the MAC header buf, then it is
- *   broadcast on the 802.15.4 network.
- *
- * Input Parameters:
- *   eaddr - The extended address to check
- *
- * Returned Value:
- *   The address length associated with the address mode.
- *
- ****************************************************************************/
-
-static inline bool bluetooth_eaddrnull(FAR const uint8_t *eaddr)
-{
-  return bluetooth_anyaddrnull(eaddr, BLUETOOTH_EADDRSIZE);
-}
 
 /****************************************************************************
  * Name: bluetooth_meta_data
@@ -183,11 +115,10 @@ void bluetooth_meta_data(FAR struct radio_driver_s *radio,
                           FAR struct bluetooth_sendto_s *pstate,
                           FAR struct bluetooth_frame_meta_s *meta)
 {
-  FAR struct bluetooth_saddr_s *destaddr;
-  FAR struct bluetooth_saddr_s *srcaddr;
+  FAR bt_addr_t *destaddr;
+  FAR bt_addr_t *srcaddr;
   FAR struct bluetooth_conn_s *conn;
   FAR struct socket *psock;
-  bool rcvrnull;
 
   DEBUGASSERT(radio != NULL && pstate != NULL && pstate->is_sock != NULL &&
               meta != NULL);
@@ -199,70 +130,14 @@ void bluetooth_meta_data(FAR struct radio_driver_s *radio,
   srcaddr  = &conn->laddr;
   destaddr = &pstate->is_destaddr;
 
-  DEBUGASSERT(srcaddr->s_mode != BLUETOOTH_ADDRMODE_NONE &&
-              destaddr->s_mode != BLUETOOTH_ADDRMODE_NONE);
-
   /* Initialize all settings to all zero */
 
   memset(meta, 0, sizeof(struct bluetooth_frame_meta_s));
 
-  /* Source address mode */
-
-  meta->srcmode = srcaddr->s_mode;
-
-  /* Check for a broadcast destination address (all zero) */
-
-  if (destaddr->s_mode == BLUETOOTH_ADDRMODE_EXTENDED)
-    {
-      /* Extended destination address mode */
-
-      rcvrnull = bluetooth_eaddrnull(destaddr->s_eaddr);
-    }
-  else
-    {
-      /* Short destination address mode */
-
-      rcvrnull = bluetooth_saddrnull(destaddr->s_saddr);
-    }
-
-  if (rcvrnull)
-    {
-      meta->flags.ackreq = TRUE;
-    }
-
   /* Destination address */
-  /* If the output address is NULL, then it is broadcast on the 802.15.4
-   * network.
-   */
 
-  if (rcvrnull)
-    {
-      /* Broadcast requires short address mode. */
-
-      meta->destaddr.mode     = BLUETOOTH_ADDRMODE_SHORT;
-      BLUETOOTH_PANIDCOPY(meta->destaddr.panid, destaddr->s_panid);
-      meta->destaddr.saddr[0] = 0xff;
-      meta->destaddr.saddr[1] = 0xff;
-      memset(meta->destaddr.eaddr, 0, BLUETOOTH_EADDRSIZE);
-    }
-  else
-    {
-      /* Destination address. */
-
-      meta->destaddr.mode     = destaddr->s_mode;
-      BLUETOOTH_PANIDCOPY(meta->destaddr.panid, destaddr->s_panid);
-
-      if (destaddr->s_mode == BLUETOOTH_ADDRMODE_SHORT)
-        {
-          BLUETOOTH_SADDRCOPY(meta->destaddr.saddr, destaddr->s_eaddr);
-          memset(meta->destaddr.eaddr, 0, BLUETOOTH_EADDRSIZE);
-        }
-      else
-        {
-          BLUETOOTH_EADDRCOPY(meta->destaddr.eaddr, destaddr->s_eaddr);
-          memset(meta->destaddr.saddr, 0, BLUETOOTH_SADDRSIZE);
-        }
-    }
+  meta->destaddr.rc_channel = destaddr->rc_channel;
+  BLUETOOTH_ADDRCOPY(meta->destaddr.rc_bdaddr, destaddr->rc_bdaddr);
 
   /* Handle associated with MSDU.  Will increment once per packet, not
    * necesarily per frame:  The same MSDU handle will be used for each
@@ -436,7 +311,7 @@ ssize_t psock_bluetooth_sendto(FAR struct socket *psock, FAR const void *buf,
                                 size_t len, int flags,
                                 FAR const struct sockaddr *to, socklen_t tolen)
 {
-  FAR struct sockaddr_bluetooth_s *destaddr;
+  FAR struct sockaddr_rc_s *destaddr;
   FAR struct radio_driver_s *radio;
   FAR struct bluetooth_conn_s *conn;
   struct bluetooth_sendto_s state;
@@ -456,7 +331,7 @@ ssize_t psock_bluetooth_sendto(FAR struct socket *psock, FAR const void *buf,
    * address.
    */
 
-  if (tolen < sizeof(struct bluetooth_saddr_s))
+  if (tolen < sizeof(bt_addr_t))
     {
       return -EDESTADDRREQ;
     }
@@ -496,9 +371,9 @@ ssize_t psock_bluetooth_sendto(FAR struct socket *psock, FAR const void *buf,
 
   /* Copy the destination address */
 
-  destaddr = (FAR struct sockaddr_bluetooth_s *)to;
-  memcpy(&state.is_destaddr, &destaddr->sa_addr,
-         sizeof(struct bluetooth_saddr_s));
+  destaddr = (FAR struct sockaddr_rc_s *)to;
+  memcpy(&state.is_destaddr, &destaddr->rc_bdaddr,
+         sizeof(bt_addr_t));
 
   if (len > 0)
     {

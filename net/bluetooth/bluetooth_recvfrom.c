@@ -1,7 +1,7 @@
 /****************************************************************************
  * net/socket/bluetooth_recvfrom.c
  *
- *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -47,6 +47,7 @@
 #include <debug.h>
 #include <assert.h>
 
+#include <netpacket/bluetooth.h>
 #include <arch/irq.h>
 
 #include <nuttx/clock.h>
@@ -54,7 +55,7 @@
 #include <nuttx/mm/iob.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/radiodev.h>
-#include <netpacket/bluetooth.h>
+#include <nuttx/wireless/bt_hci.h>
 
 #include "netdev/netdev.h"
 #include "devif/devif.h"
@@ -132,7 +133,7 @@ static ssize_t bluetooth_recvfrom_rxqueue(FAR struct radio_driver_s *radio,
                                            FAR struct bluetooth_recvfrom_s *pstate)
 {
   FAR struct bluetooth_container_s *container;
-  FAR struct sockaddr_bluetooth_s *iaddr;
+  FAR struct sockaddr_rc_s *iaddr;
   FAR struct bluetooth_conn_s *conn;
   FAR struct iob_s *iob;
   size_t copylen;
@@ -188,9 +189,9 @@ static ssize_t bluetooth_recvfrom_rxqueue(FAR struct radio_driver_s *radio,
 
       if (pstate->ir_from != NULL)
         {
-          iaddr            = (FAR struct sockaddr_bluetooth_s *)pstate->ir_from;
-          iaddr->sa_family = AF_BLUETOOTH;
-          memcpy(&iaddr->sa_addr, &container->ic_src, sizeof(struct bluetooth_saddr_s));
+          iaddr            = (FAR struct sockaddr_rc_s *)pstate->ir_from;
+          iaddr->rc_family = AF_BLUETOOTH;
+          memcpy(&iaddr->rc_bdaddr, &container->ic_src, sizeof(bt_addr_t));
         }
 
       /* Free both the IOB and the container */
@@ -329,7 +330,7 @@ ssize_t bluetooth_recvfrom(FAR struct socket *psock, FAR void *buf,
    * enough to hold this address family.
    */
 
-  if (from != NULL && *fromlen < sizeof(struct sockaddr_bluetooth_s))
+  if (from != NULL && *fromlen < sizeof(struct sockaddr_rc_s))
     {
       return -EINVAL;
     }

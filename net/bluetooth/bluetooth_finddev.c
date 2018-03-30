@@ -1,7 +1,7 @@
 /****************************************************************************
  * net/bluetooth/bluetooth_finddev.c
  *
- *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,6 +44,7 @@
 #include <nuttx/net/net.h>
 #include <nuttx/net/radiodev.h>
 #include <nuttx/net/bluetooth.h>
+#include <nuttx/wireless/bt_hci.h>
 
 #include "netdev/netdev.h"
 #include "bluetooth/bluetooth.h"
@@ -56,8 +57,8 @@
 
 struct bluetooth_finddev_s
 {
-    FAR const struct bluetooth_saddr_s *addr;
-    FAR struct radio_driver_s *radio;
+  FAR const bt_addr_t       *addr;
+  FAR struct radio_driver_s *radio;
 };
 
 /****************************************************************************
@@ -65,7 +66,7 @@ struct bluetooth_finddev_s
  ****************************************************************************/
 
 /****************************************************************************
- * Name: bluetooth5_dev_callback
+ * Name: bluetooth_dev_callback
  *
  * Description:
  *   Check if this device matches the connections local address.
@@ -79,7 +80,7 @@ struct bluetooth_finddev_s
  *
  ****************************************************************************/
 
-static int bluetooth5_dev_callback(FAR struct net_driver_s *dev, FAR void *arg)
+static int bluetooth_dev_callback(FAR struct net_driver_s *dev, FAR void *arg)
 {
   FAR struct bluetooth_finddev_s *match =
     (FAR struct bluetooth_finddev_s *)arg;
@@ -97,27 +98,12 @@ static int bluetooth5_dev_callback(FAR struct net_driver_s *dev, FAR void *arg)
 
       /* Does the address mode match? */
 
-      if (match->addr->s_mode == BLUETOOTH_ADDRMODE_SHORT &&
-          dev->d_mac.radio.nv_addrlen == 2)
+      if (dev->d_mac.radio.nv_addrlen == 6)
         {
           /* Does the device address match */
 
-          if (BLUETOOTH_SADDRCMP(dev->d_mac.radio.nv_addr,
-                                  match->addr->s_saddr))
-            {
-              /* Yes.. save the match and return 1 to stop the search */
-
-              match->radio = (FAR struct radio_driver_s *)dev;
-              return 1;
-            }
-        }
-      else if (match->addr->s_mode == BLUETOOTH_ADDRMODE_EXTENDED &&
-               dev->d_mac.radio.nv_addrlen == 8)
-        {
-          /* Does the device address match */
-
-          if (BLUETOOTH_EADDRCMP(dev->d_mac.radio.nv_addr,
-                                  match->addr->s_eaddr))
+          if (BLUETOOTH_ADDRCMP(dev->d_mac.radio.nv_addr,
+                                 match->addr->rc_bdaddr))
             {
               /* Yes.. save the match and return 1 to stop the search */
 
@@ -154,7 +140,7 @@ static int bluetooth5_dev_callback(FAR struct net_driver_s *dev, FAR void *arg)
 
 FAR struct radio_driver_s *
   bluetooth_find_device(FAR struct bluetooth_conn_s *conn,
-                         FAR const struct bluetooth_saddr_s *addr)
+                        FAR const bt_addr_t *addr)
 {
   struct bluetooth_finddev_s match;
   int ret;
@@ -163,21 +149,11 @@ FAR struct radio_driver_s *
   match.addr  = addr;
   match.radio = NULL;
 
-  /* If the socket is not bound to a local address, then return a failure */
-
-  if (addr->s_mode == BLUETOOTH_ADDRMODE_NONE)
-    {
-      return NULL;
-    }
-
-  DEBUGASSERT(addr->s_mode == BLUETOOTH_ADDRMODE_SHORT ||
-              addr->s_mode == BLUETOOTH_ADDRMODE_EXTENDED);
-
-  /* Other, search for the Bluetooth network device whose MAC is equal to
-   * the sockets bount local address.
+  /* Search for the Bluetooth network device whose MAC is equal to the
+   * sockets bound local address.
    */
 
-  ret = netdev_foreach(bluetooth5_dev_callback, (FAR void *)&match);
+  ret = netdev_foreach(bluetooth_dev_callback, (FAR void *)&match);
   if (ret == 1)
     {
       DEBUGASSERT(match.radio != NULL);

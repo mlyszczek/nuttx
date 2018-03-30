@@ -2,7 +2,7 @@
  * net/bluetooth/bluetooth_poll.c
  * Poll for the availability of ougoing Bluetooth frames
  *
- *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without

@@ -1,7 +1,7 @@
 /****************************************************************************
  * net/socket/bluetooth_sockif.c
  *
- *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -47,10 +47,12 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <socket/socket.h>
+#include <netpacket/bluetooth.h>
+
 #include <nuttx/net/net.h>
 #include <nuttx/net/radiodev.h>
-#include <netpacket/packet.h>
-#include <socket/socket.h>
+#include <nuttx/wireless/bt_hci.h>
 
 #include "bluetooth/bluetooth.h"
 
@@ -256,7 +258,7 @@ static void bluetooth_addref(FAR struct socket *psock)
  *   bluetooth_connect() only once; connectionless protocol sockets may use
  *   bluetooth_connect() multiple times to change their association.
  *   Connectionless sockets may dissolve the association by connecting to
- *   an address with the sa_family member of sockaddr set to AF_UNSPEC.
+ *   an address with the rc_family member of sockaddr set to AF_UNSPEC.
  *
  * Input Parameters:
  *   psock     Pointer to a socket structure initialized by psock_socket()
@@ -350,7 +352,7 @@ static int bluetooth_accept(FAR struct socket *psock,
 static int bluetooth_bind(FAR struct socket *psock,
                            FAR const struct sockaddr *addr, socklen_t addrlen)
 {
-  FAR const struct sockaddr_bluetooth_s *iaddr;
+  FAR const struct sockaddr_rc_s *iaddr;
   FAR struct radio_driver_s *radio;
   FAR struct bluetooth_conn_s *conn;
 
@@ -359,7 +361,7 @@ static int bluetooth_bind(FAR struct socket *psock,
   /* Verify that a valid address has been provided */
 
   if (addr->sa_family != AF_BLUETOOTH ||
-      addrlen < sizeof(struct sockaddr_bluetooth_s))
+      addrlen < sizeof(struct sockaddr_rc_s))
     {
       nerr("ERROR: Invalid family: %u or address length: %d < %d\n",
            addr->sa_family, addrlen, sizeof(struct sockaddr_ll));
@@ -382,24 +384,18 @@ static int bluetooth_bind(FAR struct socket *psock,
       return -EINVAL;
     }
 
-  iaddr = (FAR const struct sockaddr_bluetooth_s *)addr;
+  iaddr = (FAR const struct sockaddr_rc_s *)addr;
 
   /* Very that some address was provided */
   /* REVISIT: Currently and explict address must be assigned.  Should we
    * support some moral equivalent to INADDR_ANY?
    */
 
-  if (iaddr->sa_addr.s_mode == BLUETOOTH_ADDRMODE_NONE)
-    {
-      nerr("ERROR: No address provided\n");
-      return -EADDRNOTAVAIL;
-    }
-
   conn = (FAR struct bluetooth_conn_s *)psock->s_conn;
 
   /* Find the device associated with the requested address */
 
-  radio = bluetooth_find_device(conn, &iaddr->sa_addr);
+  radio = bluetooth_find_device(conn, &iaddr->rc_bdaddr);
   if (radio == NULL)
     {
       nerr("ERROR: No radio at this address\n");
@@ -408,7 +404,7 @@ static int bluetooth_bind(FAR struct socket *psock,
 
   /* Save the address as the socket's local address */
 
-  memcpy(&conn->laddr, &iaddr->sa_addr, sizeof(struct bluetooth_saddr_s));
+  memcpy(&conn->laddr, &iaddr->rc_bdaddr, sizeof(bt_addr_t));
 
   /* Mark the socket bound */
 
@@ -449,7 +445,7 @@ static int bluetooth_getsockname(FAR struct socket *psock,
                                   socklen_t *addrlen)
 {
   FAR struct bluetooth_conn_s *conn;
-  FAR struct sockaddr_bluetooth_s tmp;
+  FAR struct sockaddr_rc_s tmp;
   socklen_t copylen;
 
   DEBUGASSERT(psock != NULL && addr != NULL && addrlen != NULL);
@@ -459,12 +455,12 @@ static int bluetooth_getsockname(FAR struct socket *psock,
 
   /* Create a copy of the full address on the stack */
 
-  tmp.sa_family = PF_BLUETOOTH;
-  memcpy(&tmp.sa_addr, &conn->laddr, sizeof(struct bluetooth_saddr_s));
+  tmp.rc_family = PF_BLUETOOTH;
+  memcpy(&tmp.rc_bdaddr, &conn->laddr, sizeof(bt_addr_t));
 
   /* Copy to the user buffer, truncating if necessary */
 
-  copylen = sizeof(struct sockaddr_bluetooth_s);
+  copylen = sizeof(struct sockaddr_rc_s);
   if (copylen > *addrlen)
     {
       copylen = *addrlen;
@@ -561,7 +557,7 @@ static int bluetooth_poll_local(FAR struct socket *psock,
 static ssize_t bluetooth_send(FAR struct socket *psock, FAR const void *buf,
                                size_t len, int flags)
 {
-  struct sockaddr_bluetooth_s to;
+  struct sockaddr_rc_s to;
   FAR struct bluetooth_conn_s *conn;
   ssize_t ret;
 
@@ -575,22 +571,20 @@ static ssize_t bluetooth_send(FAR struct socket *psock, FAR const void *buf,
     {
       /* send() may be used only if the socket is has been connected. */
 
-      if (!_SS_ISCONNECTED( psock->s_flags) ||
-          conn->raddr.s_mode == BLUETOOTH_ADDRMODE_NONE)
+      if (!_SS_ISCONNECTED( psock->s_flags))
         {
           ret = -ENOTCONN;
         }
       else
         {
-          to.sa_family = PF_BLUETOOTH;
-          memcpy(&to.sa_addr, &conn->raddr,
-                 sizeof(struct bluetooth_saddr_s));
+          to.rc_family = PF_BLUETOOTH;
+          memcpy(&to.rc_bdaddr, &conn->raddr, sizeof(bt_addr_t));
 
           /* Then perform the send() as sendto() */
 
           ret = psock_bluetooth_sendto(psock, buf, len, flags,
                                         (FAR const struct sockaddr *)&to,
-                                        sizeof(struct sockaddr_bluetooth_s));
+                                        sizeof(struct sockaddr_rc_s));
         }
     }
   else

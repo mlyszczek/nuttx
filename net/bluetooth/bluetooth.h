@@ -1,7 +1,7 @@
 /****************************************************************************
  * net/bluetooth/bluetooth.h
  *
- *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,6 +44,8 @@
 
 #include <sys/types.h>
 #include <queue.h>
+
+#include <nuttx/wireless/bt_hci.h>
 
 #ifdef CONFIG_NET_BLUETOOTH
 
@@ -98,7 +100,7 @@ struct iob_s;  /* Forward reference */
 struct bluetooth_container_s
 {
   FAR struct bluetooth_container_s *ic_flink; /* Supports a singly linked list */
-  struct bluetooth_saddr_s ic_src;            /* Source of the packet */
+  bt_addr_t ic_src;                           /* Source of the packet */
   FAR struct iob_s *ic_iob;                   /* Contained IOB */
   uint8_t ic_pool;                            /* See BLUETOOTH_POOL_* definitions */
 };
@@ -110,8 +112,8 @@ struct devif_callback_s;                      /* Forward reference */
 struct bluetooth_conn_s
 {
   dq_entry_t node;                            /* Supports a double linked list */
-  struct bluetooth_saddr_s laddr;             /* Locally bound / source address */
-  struct bluetooth_saddr_s raddr;             /* Connected remote address */
+  bt_addr_t laddr;                            /* Locally bound / source address */
+  bt_addr_t raddr;                            /* Connected remote address */
   uint8_t crefs;                              /* Reference counts on this instance */
 #if CONFIG_NET_BLUETOOTH_BACKLOG > 0
   uint8_t backlog;                            /* Number of frames in RX queue */
@@ -351,7 +353,7 @@ ssize_t bluetooth_recvfrom(FAR struct socket *psock, FAR void *buf,
 
 FAR struct radio_driver_s *
   bluetooth_find_device(FAR struct bluetooth_conn_s *conn,
-                         FAR const struct bluetooth_saddr_s *addr);
+                        FAR const bt_addr_t *addr);
 
 /****************************************************************************
  * Name: bluetooth_poll

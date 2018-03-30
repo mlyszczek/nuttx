@@ -1,7 +1,7 @@
 /****************************************************************************
  * net/bluetooth/bluetooth_conn.c
  *
- *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -222,49 +222,9 @@ FAR struct bluetooth_conn_s *
        * support some moral equivalent to INADDR_ANY?
        */
 
-      if (meta->dest.mode != conn->laddr.s_mode)
+      if (!BLUETOOTH_ADDRCMP(meta->dest.saddr, conn->laddr.rc_bdaddr))
         {
           continue;
-        }
-
-      if (meta->dest.mode == BLUETOOTH_ADDRMODE_SHORT &&
-          !BLUETOOTH_SADDRCMP(meta->dest.saddr, conn->laddr.s_saddr))
-        {
-          continue;
-        }
-
-      if (meta->dest.mode == BLUETOOTH_ADDRMODE_EXTENDED &&
-          !BLUETOOTH_EADDRCMP(meta->dest.saddr, conn->laddr.s_eaddr))
-        {
-          continue;
-        }
-
-      /* Is the socket "connected?" to a remote peer?  If so, check if the
-       * source address matches the connected remote adress.
-       */
-
-      switch (conn->raddr.s_mode)
-        {
-          case BLUETOOTH_ADDRMODE_NONE:
-            return conn;  /* No.. accept the connection */
-
-          case BLUETOOTH_ADDRMODE_SHORT:
-            if (BLUETOOTH_SADDRCMP(meta->dest.saddr, conn->raddr.s_saddr))
-              {
-                return conn;
-              }
-            break;
-
-          case BLUETOOTH_ADDRMODE_EXTENDED:
-            if (BLUETOOTH_EADDRCMP(meta->dest.eaddr, conn->raddr.s_eaddr))
-              {
-                return conn;
-              }
-            break;
-
-           default:
-             nerr("ERROR: Invalid address mode: %u\n", conn->raddr.s_mode);
-             return NULL;
         }
     }
 

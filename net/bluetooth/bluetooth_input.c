@@ -2,7 +2,7 @@
  * net/bluetooth/bluetooth_input.c
  * Handle incoming Bluetooth frame input
  *
- *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,6 +45,7 @@
 #include <nuttx/mm/iob.h>
 #include <nuttx/net/radiodev.h>
 #include <nuttx/net/bluetooth.h>
+#include <nuttx/wireless/bt_hci.h>
 
 #include "devif/devif.h"
 #include "bluetooth/bluetooth.h"
@@ -119,20 +120,9 @@ static int bluetooth_queue_frame(FAR struct bluetooth_conn_s *conn,
 
   /* Initialize the container */
 
-  memset(&container->ic_src, 0, sizeof(struct bluetooth_saddr_s));
-
-  DEBUGASSERT(meta->src.mode != BLUETOOTH_ADDRMODE_NONE);
-  container->ic_src.s_mode = meta->src.mode;
-  BLUETOOTH_PANIDCOPY(container->ic_src.s_panid, meta->src.panid);
-
-  if (meta->src.mode == BLUETOOTH_ADDRMODE_SHORT)
-    {
-      BLUETOOTH_SADDRCOPY(container->ic_src.s_saddr, meta->src.saddr);
-    }
-  else if (meta->src.mode == BLUETOOTH_ADDRMODE_EXTENDED)
-    {
-      BLUETOOTH_EADDRCOPY(container->ic_src.s_eaddr, meta->src.eaddr);
-    }
+  memset(&container->ic_src, 0, sizeof(bt_addr_t));
+  container->ic_src.rc_channel = meta->src.rc_channel;
+  BLUETOOTH_SADDRCOPY(container->ic_src.rc_bdaddr, meta->src.saddr);
 
   DEBUGASSERT(frame != NULL);
   container->ic_iob = frame;
