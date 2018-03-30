@@ -44,7 +44,6 @@
 
 #include <sys/types.h>
 #include <queue.h>
-#include <netpacket/bluetooth.h>
 
 #ifdef CONFIG_NET_BLUETOOTH
 
@@ -100,22 +99,22 @@ struct bluetooth_container_s
 {
   FAR struct bluetooth_container_s *ic_flink; /* Supports a singly linked list */
   struct bluetooth_saddr_s ic_src;            /* Source of the packet */
-  FAR struct iob_s *ic_iob;                    /* Contained IOB */
-  uint8_t ic_pool;                             /* See BLUETOOTH_POOL_* definitions */
+  FAR struct iob_s *ic_iob;                   /* Contained IOB */
+  uint8_t ic_pool;                            /* See BLUETOOTH_POOL_* definitions */
 };
 
 /* Representation of a Bluetooth socket connection */
 
-struct devif_callback_s;                       /* Forward reference */
+struct devif_callback_s;                      /* Forward reference */
 
 struct bluetooth_conn_s
 {
-  dq_entry_t node;                             /* Supports a double linked list */
+  dq_entry_t node;                            /* Supports a double linked list */
   struct bluetooth_saddr_s laddr;             /* Locally bound / source address */
   struct bluetooth_saddr_s raddr;             /* Connected remote address */
-  uint8_t crefs;                               /* Reference counts on this instance */
+  uint8_t crefs;                              /* Reference counts on this instance */
 #if CONFIG_NET_BLUETOOTH_BACKLOG > 0
-  uint8_t backlog;                             /* Number of frames in RX queue */
+  uint8_t backlog;                            /* Number of frames in RX queue */
 #endif
 
   /* Queue of incoming packets */
@@ -150,7 +149,7 @@ EXTERN const struct sock_intf_s g_bluetooth_sockif;
  * Public Function Prototypes
  ****************************************************************************/
 
-struct bluetooth_data_ind_s; /* Forward reference */
+struct bluetooth_data_ind_s;  /* Forward reference */
 struct radio_driver_s;        /* Forward reference */
 struct net_driver_s;          /* Forward reference */
 struct eth_hdr_s;             /* Forward reference */
@@ -265,7 +264,7 @@ FAR struct bluetooth_conn_s *
  *               appropriate, however.
  *   meta      - Meta data characterizing the received frame.
  *
- *               If there are multilple frames in the list, this metadata
+ *               If there are multiple frames in the list, this metadata
  *               must apply to all of the frames in the list.
  *
  * Returned Value:
@@ -331,8 +330,8 @@ uint16_t bluetooth_callback(FAR struct radio_driver_s *radio,
  ****************************************************************************/
 
 ssize_t bluetooth_recvfrom(FAR struct socket *psock, FAR void *buf,
-                            size_t len, int flags, FAR struct sockaddr *from,
-                            FAR socklen_t *fromlen);
+                           size_t len, int flags, FAR struct sockaddr *from,
+                           FAR socklen_t *fromlen);
 
 /****************************************************************************
  * Name: bluetooth_find_device
