@@ -96,6 +96,40 @@ config BLUETOOTH_MAXSCANRESULT
 		This contributes to a static memory allocation that will be greater
 		than CONFIG_BLUETOOTH_MAXSCANDATA * CONFIG_BLUETOOTH_MAXSCANRESULT
 
+config BLUETOOTH_BUFFER_PREALLOC
+	int "Number of pre-allocated buffer structures"
+	default 20
+	---help---
+		This specifies the total number of preallocated buffer structures.
+		This is for performance optimization.  If additional buffer structures
+		are needed, they will be allocated dynamically at some loss of
+		performance.
+
+config BLUETOOTH_BUFFER_IRQRESERVE
+	int "Reserved pre-allocated primitive structures"
+	default 0
+	---help---
+		If buffer structures can be allocated from interrupt handlers, then
+		this specifies the number of pre-allocated structures that are
+		reserved for for use only by interrupt handlers.  This may be set
+		zero to reserve no buffers for interrupt handlers. In that case,
+		the allocation will fail if tasking logic has allocated them all.
+
+		Interrupt logic will first attempt to allocate from the general,
+		pre-allocated buffer pool that will contain up to (size
+		CONFIG_BLUETOOTH_BUFFER_PREALLOC - BLUETOOTH_BUFFER_IRQRESERVE)
+		entries.  If that fails, then it will try to take a buffer from
+		the reserve (size CONFIG_BLUETOOTH_BUFFER_IRQRESERVE).
+
+		Non-interrupt logic will also first attempt to allocate from the
+		general, pre-allocated buffer pool.  If that fails, it will
+		dynamically allocate the buffer with an additional cost in
+		performance.
+
+		NOTE:  The Bluetooth stack never allocates buffers from the
+		interrupt level.  This setting only needs to be non-zero if your
+		low-level Bluetooth driver needs to do such allocations.
+
 menu "Kernel Thread Configuration"
 
 config BLUETOOTH_RXTHREAD_STACKSIZE

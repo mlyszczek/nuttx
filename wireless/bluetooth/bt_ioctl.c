@@ -52,6 +52,7 @@
 #include <nuttx/wireless/bt_ioctl.h>
 
 #include "bt_hcicore.h"
+#include "bt_conn.h"
 #include "bt_ioctl.h"
 
 #ifdef CONFIG_NETDEV_IOCTL  /* Not optional! */
@@ -62,7 +63,7 @@
 
 /* This structure encapsulates all globals used by the IOCTL logic */
 
-struct bt_scanstate_s
+struct btnet_scanstate_s
 {
   sem_t bs_exclsem;                 /* Manages exclusive access */
   bool bs_scanning;                 /* True:  Scanning in progress */
@@ -80,14 +81,14 @@ struct bt_scanstate_s
  * maintain the scan state as a global.
  */
 
-static struct bt_scanstate_s g_scanstate;
+static struct btnet_scanstate_s g_scanstate;
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: bt_scan_callback
+ * Name: btnet_scan_callback
  *
  * Description:
  *   This is an HCI callback function.  HCI provides scan result data via
@@ -102,9 +103,9 @@ static struct bt_scanstate_s g_scanstate;
  *
  ****************************************************************************/
 
-static void bt_scan_callback(FAR const bt_addr_le_t *addr, int8_t rssi,
-                             uint8_t adv_type, FAR const uint8_t *adv_data,
-                             uint8_t len)
+static void btnet_scan_callback(FAR const bt_addr_le_t *addr, int8_t rssi,
+                                uint8_t adv_type, FAR const uint8_t *adv_data,
+                                uint8_t len)
 {
   FAR struct bt_scanresponse_s *rsp;
   uint8_t nexttail;
@@ -174,7 +175,7 @@ static void bt_scan_callback(FAR const bt_addr_le_t *addr, int8_t rssi,
 }
 
 /****************************************************************************
- * Name: bt_scan_result
+ * Name: btnet_scan_result
  *
  * Description:
  *   This is an HCI callback function.  HCI provides scan result data via
@@ -189,7 +190,7 @@ static void bt_scan_callback(FAR const bt_addr_le_t *addr, int8_t rssi,
  *
  ****************************************************************************/
 
-static int bt_scan_result(FAR struct bt_scanresult_s *result)
+static int btnet_scan_result(FAR struct bt_scanresult_s *result)
 {
   uint8_t head;
   uint8_t tail;
@@ -216,7 +217,7 @@ static int bt_scan_result(FAR struct bt_scanresult_s *result)
 
   head   = g_scanstate.bs_head;
   tail   = g_scanstate.bs_tail;
-  maxrsp = result->sc_nrsp;
+  maxrsp = result->sr_nrsp;
 
   for (nrsp = 0; nrsp < maxrsp && head != tail; nrsp++)
     {
@@ -226,7 +227,7 @@ static int bt_scan_result(FAR struct bt_scanresult_s *result)
       /* Copy data from the head index into the user buffer */
 
       src  = (FAR const uint8_t *)&g_scanstate.bs_rsp[head];
-      dest = (FAR uint8_t *)&result->sc_rsp[nrsp];
+      dest = (FAR uint8_t *)&result->sr_rsp[nrsp];
       memcpy(dest, src, sizeof(struct bt_scanresponse_s));
 
       /* Increment the head index */
@@ -238,7 +239,7 @@ static int bt_scan_result(FAR struct bt_scanresult_s *result)
     }
 
   g_scanstate.bs_head = head;
-  result->sc_nrsp     = nrsp;
+  result->sr_nrsp     = nrsp;
   nxsem_post(&g_scanstate.bs_exclsem);
   return OK;
 }
@@ -248,7 +249,7 @@ static int bt_scan_result(FAR struct bt_scanresult_s *result)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: bt_ioctl
+ * Name: btnet_ioctl
  *
  * Description:
  *   Handle network IOCTL commands directed to this device.
@@ -263,7 +264,7 @@ static int bt_scan_result(FAR struct bt_scanresult_s *result)
  *
  ****************************************************************************/
 
-int bt_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
+int btnet_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
 {
   int ret;
 
@@ -300,7 +301,8 @@ int bt_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
 
       /* SIOCBT_ADVERTISESTOP
        *   Description:   Stop advertising.
-       *   Input:         None
+       *   Input:         A reference to a write-able instance of struct
+       *                  bt_scanstop_s.
        *   Output:        None
        */
 
@@ -315,17 +317,23 @@ int bt_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
       /* SIOCBT_SCANSTART
        *   Description:   Start LE scanning.  Buffered scan results may be
        *                  obtained via SIOCBT_SCANGET
-       *   Input:         1=Duplicate filtering enabled
+       *   Input:         A read-only referent to struct bt_scanstart_s.
        *   Output:        None
        */
 
       case SIOCBT_SCANSTART:
         {
-          uint8_t dup_enable = (arg == 0) ? 0 : BT_LE_SCAN_FILTER_DUP_ENABLE;
+          FAR struct bt_scanstart_s *start =
+            (FAR struct bt_scanstart_s *)((uintptr_t)arg);
+
+          if (start == NULL)
+            {
+              ret = -EINVAL;
+            }
 
           /* Are we already scanning? */
 
-          if (g_scanstate.bs_scanning)
+          else if (g_scanstate.bs_scanning)
             {
               ret = -EBUSY;
             }
@@ -338,7 +346,8 @@ int bt_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
               g_scanstate.bs_head     = 0;
               g_scanstate.bs_tail     = 0;
 
-              ret = bt_start_scanning(dup_enable, bt_scan_callback);
+              ret = bt_start_scanning(start->ss_dupenable,
+                                      btnet_scan_callback);
               wlinfo("Start scan: %d\n", ret);
 
               if (ret < 0)
@@ -370,7 +379,7 @@ int bt_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
             }
           else
             {
-              ret = bt_scan_result(result);
+              ret = btnet_scan_result(result);
               wlinfo("Get scan results: %d\n", ret);
             }
         }
@@ -378,7 +387,8 @@ int bt_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
 
       /* SIOCBT_SCANSTOP
        *   Description:   Stop LE scanning and discard any buffered results.
-       *   Input:         None
+       *   Input:         A reference to a write-able instance of struct
+       *                  bt_scanstop_s.
        *   Output:        None
        */
 
@@ -391,6 +401,48 @@ int bt_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
 
           nxsem_destroy(&g_scanstate.bs_exclsem);
           g_scanstate.bs_scanning = false;
+        }
+        break;
+
+      /* SIOCBT_SECURITY
+       *   Description:   Enable security for a connection.
+       *   Input:         A reference to a write-able instance of struct
+       *                  bt_security_s.
+       *   Output:        None
+       */
+
+      case SIOCBT_SECURITY:
+        {
+          FAR struct bt_security_s *sec =
+            (FAR struct bt_security_s *)((uintptr_t)arg);
+
+          if (sec == NULL)
+            {
+              ret = -EINVAL;
+            }
+          else
+            {
+              FAR struct bt_conn_s *conn;
+
+              /* Get the connection associated with the provided LE address */
+
+              conn = bt_conn_lookup_addr_le(&sec->se_addr);
+              if (conn == NULL)
+                {
+                  wlwarn("WARNING:  Peer not connected\n");
+                  ret = -ENOTCONN;
+                }
+              else
+                {
+                  ret = bt_conn_security(conn, sec->se_level);
+                  if (ret < 0)
+                    {
+                      wlerr("ERROR:  Security setting failed: %d\n", ret);
+                    }
+
+                  bt_conn_release(conn);
+                }
+            }
         }
         break;
 

@@ -1,7 +1,8 @@
 /****************************************************************************
  * net/netdev/netdev_register.c
  *
- *   Copyright (C) 2007-2012, 2014-2015, 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007-2012, 2014-2015, 2017-2018 Gregory Nutt. All rights
+ *     reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -53,6 +54,7 @@
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/arp.h>
+#include <nuttx/net/bluetooth.h>
 
 #include "utils/utils.h"
 #include "igmp/igmp.h"
@@ -66,6 +68,8 @@
 #define NETDEV_LO_FORMAT    "lo"
 #define NETDEV_SLIP_FORMAT  "sl%d"
 #define NETDEV_TUN_FORMAT   "tun%d"
+#define NETDEV_BNEP_FORMAT  "bnep%d"
+#define NETDEV_PAN_FORMAT   "pan%d"
 #define NETDEV_WLAN_FORMAT  "wlan%d"
 #define NETDEV_WPAN_FORMAT  "wpan%d"
 
@@ -212,6 +216,21 @@ int netdev_register(FAR struct net_driver_s *dev, enum net_lltype_e lltype)
             dev->d_recvwndo = CONFIG_NET_ETH_TCP_RECVWNDO;
 #endif
             devfmt          = NETDEV_WLAN_FORMAT;
+            break;
+#endif
+
+#ifdef CONFIG_NET_BLUETOOTH
+          case NET_LL_BLUETOOTH:  /* Bluetooth */
+            dev->d_llhdrlen = BLUETOOTH_FRAME_HDRLEN;
+#ifdef CONFIG_NET_6LOWPAN
+#  warning Missing logic
+            dev->d_mtu      = CONFIG_NET_6LOWPAN_MTU;
+#ifdef CONFIG_NET_TCP
+#  warning Missing logic
+            dev->d_recvwndo = CONFIG_NET_6LOWPAN_TCP_RECVWNDO;
+#endif
+#endif
+            devfmt          = NETDEV_BNEP_FORMAT;
             break;
 #endif
 

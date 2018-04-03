@@ -1,8 +1,7 @@
 /****************************************************************************
  * net/ieee802154/ieee802154_sendto.c
  *
- *   Copyright (C) 2014, 2016 Gregory Nutt. All rights reserved.
- *   Copyright (C) 2014, 2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -57,7 +56,6 @@
 #include <nuttx/mm/iob.h>
 #include <nuttx/net/radiodev.h>
 #include <nuttx/net/net.h>
-#include <nuttx/net/ip.h>
 
 #include "netdev/netdev.h"
 #include "devif/devif.h"
@@ -78,7 +76,7 @@ struct ieee802154_sendto_s
 {
   FAR struct socket *is_sock;            /* Points to the parent socket structure */
   FAR struct devif_callback_s *is_cb;    /* Reference to callback instance */
-  struct ieee802154_saddr_s is_destaddr; /* Frame destinatin address */
+  struct ieee802154_saddr_s is_destaddr; /* Frame destination address */
   sem_t is_sem;                          /* Used to wake up the waiting thread */
   FAR const uint8_t *is_buffer;          /* User buffer of data to send */
   size_t is_buflen;                      /* Number of bytes in the is_buffer */
@@ -179,9 +177,9 @@ static inline bool ieee802154_eaddrnull(FAR const uint8_t *eaddr)
  *
  ****************************************************************************/
 
-void ieee802154_meta_data(FAR struct radio_driver_s *radio,
-                          FAR struct ieee802154_sendto_s *pstate,
-                          FAR struct ieee802154_frame_meta_s *meta)
+static void ieee802154_meta_data(FAR struct radio_driver_s *radio,
+                                 FAR struct ieee802154_sendto_s *pstate,
+                                 FAR struct ieee802154_frame_meta_s *meta)
 {
   FAR struct ieee802154_saddr_s *destaddr;
   FAR struct ieee802154_saddr_s *srcaddr;
@@ -538,7 +536,7 @@ ssize_t psock_ieee802154_sendto(FAR struct socket *psock, FAR const void *buf,
 
   psock->s_flags = _SS_SETSTATE(psock->s_flags, _SF_IDLE);
 
-  /* Check for a errors, Errors are signalled by negative errno values
+  /* Check for a errors, Errors are signaled by negative errno values
    * for the send length
    */
 

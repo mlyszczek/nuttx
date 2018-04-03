@@ -52,7 +52,7 @@
  ****************************************************************************/
 
  /****************************************************************************
- * Name: bt_ioctl
+ * Name: btnet_ioctl
  *
  * Description:
  *   Handle network IOCTL commands directed to this device.
@@ -68,6 +68,6 @@
  ****************************************************************************/
 
 struct net_driver_s;  /* Forward reference */
-int bt_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg);
+int btnet_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg);
 
 #endif /* __WIRELESS_BLUETOOTH_BT_IOCTL_H */

@@ -1,5 +1,5 @@
 /****************************************************************************
- * wireless/bluetooth/bt_att.c
+ * wireless/bluetooth/bt_hdicore.c
  * HCI core Bluetooth handling.
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
@@ -54,14 +54,16 @@
 
 #include <nuttx/kthread.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/net/bluetooth.h>
 #include <nuttx/wireless/bt_core.h>
 #include <nuttx/wireless/bt_hci.h>
 
 #include "bt_queue.h"
-#include "bt_hcicore.h"
+#include "bt_buf.h"
 #include "bt_keys.h"
 #include "bt_conn.h"
 #include "bt_l2cap.h"
+#include "bt_hcicore.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -95,11 +97,11 @@ static void bt_connected(FAR struct bt_conn_s *conn)
 {
   FAR struct bt_conn_cb_s *cb;
 
-  for (cb = g_callback_list; cb; cb = cb->next)
+  for (cb = g_callback_list; cb; cb = cb->flink)
     {
       if (cb->connected)
         {
-          cb->connected(conn);
+          cb->connected(conn, cb->context);
         }
     }
 }
@@ -108,147 +110,13 @@ static void bt_disconnected(FAR struct bt_conn_s *conn)
 {
   FAR struct bt_conn_cb_s *cb;
 
-  for (cb = g_callback_list; cb; cb = cb->next)
+  for (cb = g_callback_list; cb; cb = cb->flink)
     {
       if (cb->disconnected)
         {
-          cb->disconnected(conn);
+          cb->disconnected(conn, cb->context);
         }
     }
-}
-
-void bt_conn_cb_register(FAR struct bt_conn_cb_s *cb)
-{
-  cb->next        = g_callback_list;
-  g_callback_list = cb;
-}
-
-FAR struct bt_buf_s *bt_hci_cmd_create(uint16_t opcode, uint8_t param_len)
-{
-  FAR struct bt_hci_cmd_hdr_s *hdr;
-  FAR struct bt_buf_s *buf;
-
-  wlinfo("opcode %x param_len %u\n", opcode, param_len);
-
-  buf = bt_buf_get(BT_CMD, g_btdev.dev->head_reserve);
-  if (!buf)
-    {
-      wlerr("ERROR: Cannot get free buffer\n");
-      return NULL;
-    }
-
-  wlinfo("buf %p\n", buf);
-
-  buf->u.hci.opcode = opcode;
-  buf->u.hci.sync   = NULL;
-
-  hdr              = bt_buf_add(buf, sizeof(*hdr));
-  hdr->opcode      = BT_HOST2LE16(opcode);
-  hdr->param_len   = param_len;
-
-  return buf;
-}
-
-int bt_hci_cmd_send(uint16_t opcode, FAR struct bt_buf_s *buf)
-{
-  int ret;
-  if (!buf)
-    {
-      buf = bt_hci_cmd_create(opcode, 0);
-      if (!buf)
-        {
-          return -ENOBUFS;
-        }
-    }
-
-  wlinfo("opcode %x len %u\n", opcode, buf->len);
-
-  /* Host Number of Completed Packets can ignore the ncmd value and does not
-   * generate any cmd complete/status events.
-   */
-
-  if (opcode == BT_HCI_OP_HOST_NUM_COMPLETED_PACKETS)
-    {
-      g_btdev.dev->send(g_btdev.dev, buf);
-      bt_buf_put(buf);
-      return 0;
-    }
-
-  ret = bt_queue_send(g_btdev.tx_queue, buf, BT_NORMAL_PRIO);
-  if (ret < 0)
-    {
-      wlerr("ERROR: bt_queue_send() failed: %d\n", ret);
-    }
-
-  return ret;
-}
-
-int bt_hci_cmd_send_sync(uint16_t opcode, FAR struct bt_buf_s *buf,
-                         FAR struct bt_buf_s **rsp)
-{
-  sem_t sync_sem;
-  int ret;
-
-  /* NOTE: This function cannot be called from the rx thread since it relies
-   * on the very same thread in processing the cmd_complete event and giving
-   * back the blocking semaphore.
-   */
-
-  if (!buf)
-    {
-      buf = bt_hci_cmd_create(opcode, 0);
-      if (!buf)
-        {
-          return -ENOBUFS;
-        }
-    }
-
-  wlinfo("opcode %x len %u\n", opcode, buf->len);
-
-  nxsem_init(&sync_sem, 0, 0);
-  nxsem_setprotocol(&sync_sem, SEM_PRIO_NONE);
-  buf->u.hci.sync = &sync_sem;
-
-  ret = bt_queue_send(g_btdev.tx_queue, buf, BT_NORMAL_PRIO);
-  if (ret < 0)
-    {
-      wlerr("ERROR: bt_queue_send() failed: %d\n", ret);
-    }
-
-  if (ret >= 0)
-    {
-      do
-        {
-          ret = nxsem_wait(&sync_sem);
-        }
-      while (ret == -EINTR);
-    }
-
-  /* Indicate failure if we failed to get the return parameters */
-
-  if (ret >= 0)
-    {
-      if (!buf->u.hci.sync)
-        {
-          ret = -EIO;
-        }
-      else
-        {
-          ret = 0;
-        }
-    }
-
-  if (rsp)
-    {
-      *rsp = buf->u.hci.sync;
-    }
-  else if (buf->u.hci.sync)
-    {
-      bt_buf_put(buf->u.hci.sync);
-    }
-
-  bt_buf_put(buf);
-  return ret;
 }
 
 static void hci_acl(FAR struct bt_buf_s *buf)
@@ -265,14 +133,14 @@ static void hci_acl(FAR struct bt_buf_s *buf)
   flags             = (handle >> 12);
   buf->u.acl.handle = bt_acl_handle(handle);
 
-  bt_buf_pull(buf, sizeof(*hdr));
+  bt_buf_consume(buf, sizeof(*hdr));
 
   wlinfo("handle %u len %u flags %u\n", buf->u.acl.handle, len, flags);
 
   if (buf->len != len)
     {
       wlerr("ERROR: ACL data length mismatch (%u != %u)\n", buf->len, len);
-      bt_buf_put(buf);
+      bt_buf_release(buf);
       return;
     }
 
@@ -280,12 +148,12 @@ static void hci_acl(FAR struct bt_buf_s *buf)
   if (!conn)
     {
       wlerr("ERROR: Unable to find conn for handle %u\n", buf->u.acl.handle);
-      bt_buf_put(buf);
+      bt_buf_release(buf);
       return;
     }
 
-  bt_conn_recv(conn, buf, flags);
-  bt_conn_put(conn);
+  bt_conn_receive(conn, buf, flags);
+  bt_conn_release(conn);
 }
 
 /* HCI event processing */
@@ -314,7 +182,7 @@ static void hci_encrypt_change(FAR struct bt_buf_s *buf)
   conn->encrypt = evt->encrypt;
 
   bt_l2cap_encrypt_change(conn);
-  bt_conn_put(conn);
+  bt_conn_release(conn);
 }
 
 static void hci_reset_complete(FAR struct bt_buf_s *buf)
@@ -363,14 +231,14 @@ static void hci_cmd_done(uint16_t opcode, uint8_t status,
         }
       else
         {
-          sent->u.hci.sync = bt_buf_hold(buf);
+          sent->u.hci.sync = bt_buf_addref(buf);
         }
 
       nxsem_post(sem);
     }
   else
     {
-      bt_buf_put(sent);
+      bt_buf_release(sent);
     }
 }
 
@@ -382,7 +250,7 @@ static void hci_cmd_complete(FAR struct bt_buf_s *buf)
 
   wlinfo("opcode %x\n", opcode);
 
-  bt_buf_pull(buf, sizeof(*evt));
+  bt_buf_consume(buf, sizeof(*evt));
 
   /* All command return parameters have a 1-byte status in the beginning, so we
    * can safely make this generalization.
@@ -419,7 +287,7 @@ static void hci_cmd_status(FAR struct bt_buf_s *buf)
 
   wlinfo("opcode %x\n", opcode);
 
-  bt_buf_pull(buf, sizeof(*evt));
+  bt_buf_consume(buf, sizeof(*evt));
 
   switch (opcode)
     {
@@ -485,7 +353,7 @@ static void hci_encrypt_key_refresh_complete(FAR struct bt_buf_s *buf)
     }
 
   bt_l2cap_encrypt_change(conn);
-  bt_conn_put(conn);
+  bt_conn_release(conn);
 }
 
 static void copy_id_addr(FAR struct bt_conn_s *conn,
@@ -526,7 +394,7 @@ static int bt_hci_start_scanning(uint8_t scan_type, uint8_t scan_filter)
       return -ENOBUFS;
     }
 
-  set_param = bt_buf_add(buf, sizeof(*set_param));
+  set_param = bt_buf_extend(buf, sizeof(*set_param));
   memset(set_param, 0, sizeof(*set_param));
   set_param->scan_type = scan_type;
 
@@ -546,7 +414,7 @@ static int bt_hci_start_scanning(uint8_t scan_type, uint8_t scan_filter)
       return -ENOBUFS;
     }
 
-  scan_enable             = bt_buf_add(buf, sizeof(*scan_enable));
+  scan_enable             = bt_buf_extend(buf, sizeof(*scan_enable));
   memset(scan_enable, 0, sizeof(*scan_enable));
   scan_enable->filter_dup = scan_filter;
   scan_enable->enable     = BT_LE_SCAN_ENABLE;
@@ -565,7 +433,7 @@ static int bt_hci_start_scanning(uint8_t scan_type, uint8_t scan_filter)
       g_btdev.scan_enable = BT_LE_SCAN_ENABLE;
     }
 
-  bt_buf_put(rsp);
+  bt_buf_release(rsp);
   return err;
 }
 
@@ -587,7 +455,7 @@ static int bt_hci_stop_scanning(void)
       return -ENOBUFS;
     }
 
-  scan_enable             = bt_buf_add(buf, sizeof(*scan_enable));
+  scan_enable             = bt_buf_extend(buf, sizeof(*scan_enable));
   memset(scan_enable, 0x0, sizeof(*scan_enable));
   scan_enable->filter_dup = 0x00;
   scan_enable->enable     = BT_LE_SCAN_DISABLE;
@@ -606,7 +474,7 @@ static int bt_hci_stop_scanning(void)
       g_btdev.scan_enable = BT_LE_SCAN_DISABLE;
     }
 
-  bt_buf_put(rsp);
+  bt_buf_release(rsp);
   return err;
 }
 
@@ -621,7 +489,7 @@ static int hci_le_create_conn(FAR const bt_addr_le_t *addr)
       return -ENOBUFS;
     }
 
-  cp                      = bt_buf_add(buf, sizeof(*cp));
+  cp                      = bt_buf_extend(buf, sizeof(*cp));
   memset(cp, 0x0, sizeof(*cp));
   bt_addr_le_copy(&cp->peer_addr, addr);
   cp->conn_interval_max   = BT_HOST2LE16(0x0028);
@@ -665,14 +533,14 @@ static void hci_disconn_complete(FAR struct bt_buf_s *buf)
       bt_le_scan_update();
     }
 
-  bt_conn_put(conn);
+  bt_conn_release(conn);
 
   if (g_btdev.adv_enable)
     {
       buf = bt_hci_cmd_create(BT_HCI_OP_LE_SET_ADV_ENABLE, 1);
       if (buf)
         {
-          memcpy(bt_buf_add(buf, 1), &g_btdev.adv_enable, 1);
+          memcpy(bt_buf_extend(buf, 1), &g_btdev.adv_enable, 1);
           bt_hci_cmd_send(BT_HCI_OP_LE_SET_ADV_ENABLE, buf);
         }
     }
@@ -715,7 +583,7 @@ static void le_conn_complete(FAR struct bt_buf_s *buf)
        * DISCONNECTED state since no successful LE link been made.
        */
 
-      bt_conn_put(conn);
+      bt_conn_release(conn);
       return;
     }
 
@@ -746,7 +614,7 @@ static void le_conn_complete(FAR struct bt_buf_s *buf)
     }
 
   bt_connected(conn);
-  bt_conn_put(conn);
+  bt_conn_release(conn);
   bt_le_scan_update();
 }
 
@@ -789,7 +657,7 @@ static void check_pending_conn(FAR const bt_addr_le_t *addr, uint8_t evtype,
   bt_conn_set_state(conn, BT_CONN_CONNECT);
 
 done:
-  bt_conn_put(conn);
+  bt_conn_release(conn);
 }
 
 static void le_adv_report(FAR struct bt_buf_s *buf)
@@ -799,7 +667,7 @@ static void le_adv_report(FAR struct bt_buf_s *buf)
 
   wlinfo("Adv number of reports %u\n", num_reports);
 
-  info = bt_buf_pull(buf, sizeof(num_reports));
+  info = bt_buf_consume(buf, sizeof(num_reports));
 
   while (num_reports--)
     {
@@ -835,7 +703,7 @@ static void le_adv_report(FAR struct bt_buf_s *buf)
        * according to spec 4.2, Vol 2, Part E, 7.7.65.2.
        */
 
-      info = bt_buf_pull(buf, sizeof(*info) + info->length + sizeof(rssi));
+      info = bt_buf_consume(buf, sizeof(*info) + info->length + sizeof(rssi));
     }
 }
 
@@ -874,7 +742,7 @@ static void le_ltk_request(FAR struct bt_buf_s *buf)
           goto done;
         }
 
-      cp         = bt_buf_add(buf, sizeof(*cp));
+      cp         = bt_buf_extend(buf, sizeof(*cp));
       cp->handle = evt->handle;
       memcpy(cp->ltk, conn->keys->slave_ltk.val, 16);
 
@@ -891,21 +759,21 @@ static void le_ltk_request(FAR struct bt_buf_s *buf)
           goto done;
         }
 
-      cp         = bt_buf_add(buf, sizeof(*cp));
+      cp         = bt_buf_extend(buf, sizeof(*cp));
       cp->handle = evt->handle;
 
       bt_hci_cmd_send(BT_HCI_OP_LE_LTK_REQ_NEG_REPLY, buf);
     }
 
 done:
-  bt_conn_put(conn);
+  bt_conn_release(conn);
 }
 
 static void hci_le_meta_event(FAR struct bt_buf_s *buf)
 {
   FAR struct bt_hci_evt_le_meta_event_s *evt = (FAR void *)buf->data;
 
-  bt_buf_pull(buf, sizeof(*evt));
+  bt_buf_consume(buf, sizeof(*evt));
 
   switch (evt->subevent)
     {
@@ -933,7 +801,7 @@ static void hci_event(FAR struct bt_buf_s *buf)
 
   wlinfo("event %u\n", hdr->evt);
 
-  bt_buf_pull(buf, sizeof(*hdr));
+  bt_buf_consume(buf, sizeof(*hdr));
 
   switch (hdr->evt)
     {
@@ -970,7 +838,7 @@ static void hci_event(FAR struct bt_buf_s *buf)
         break;
     }
 
-  bt_buf_put(buf);
+  bt_buf_release(buf);
 }
 
 static int hci_tx_kthread(int argc, FAR char *argv[])
@@ -997,7 +865,7 @@ static int hci_tx_kthread(int argc, FAR char *argv[])
       /* Get next command - wait if necessary */
 
       buf = NULL;
-      ret = bt_queue_recv(g_btdev.tx_queue, &buf);
+      ret = bt_queue_receive(g_btdev.tx_queue, &buf);
       DEBUGASSERT(ret >= 0 && buf != NULL);
       UNUSED(ret);
 
@@ -1013,7 +881,7 @@ static int hci_tx_kthread(int argc, FAR char *argv[])
       if (g_btdev.sent_cmd)
         {
           wlerr("ERROR: Uncleared pending sent_cmd\n");
-          bt_buf_put(g_btdev.sent_cmd);
+          bt_buf_release(g_btdev.sent_cmd);
           g_btdev.sent_cmd = NULL;
         }
 
@@ -1032,10 +900,10 @@ static int hci_rx_kthread(int argc, FAR char *argv[])
 
   while (1)
     {
-      ret = bt_queue_recv(g_btdev.rx_queue, &buf);
+      ret = bt_queue_receive(g_btdev.rx_queue, &buf);
       if (ret < 0)
         {
-          wlerr("ERROR: bt_queue_recv() failed: %d\n", ret);
+          wlerr("ERROR: bt_queue_receive() failed: %d\n", ret);
           continue;
         }
 
@@ -1053,7 +921,7 @@ static int hci_rx_kthread(int argc, FAR char *argv[])
 
           default:
             wlerr("ERROR: Unknown buf type %u\n", buf->type);
-            bt_buf_put(buf);
+            bt_buf_release(buf);
             break;
         }
     }
@@ -1148,7 +1016,7 @@ static int hci_init(void)
     }
 
   read_local_features_complete(rsp);
-  bt_buf_put(rsp);
+  bt_buf_release(rsp);
 
   /* Read Local Version Information */
 
@@ -1159,7 +1027,7 @@ static int hci_init(void)
     }
 
   read_local_ver_complete(rsp);
-  bt_buf_put(rsp);
+  bt_buf_release(rsp);
 
   /* Read Bluetooth Address */
 
@@ -1170,7 +1038,7 @@ static int hci_init(void)
     }
 
   read_bdaddr_complete(rsp);
-  bt_buf_put(rsp);
+  bt_buf_release(rsp);
 
   /* For now we only support LE capable controllers */
 
@@ -1189,7 +1057,7 @@ static int hci_init(void)
     }
 
   read_le_features_complete(rsp);
-  bt_buf_put(rsp);
+  bt_buf_release(rsp);
 
   /* Read LE Buffer Size */
 
@@ -1200,7 +1068,7 @@ static int hci_init(void)
     }
 
   le_read_buffer_size_complete(rsp);
-  bt_buf_put(rsp);
+  bt_buf_release(rsp);
 
   buf = bt_hci_cmd_create(BT_HCI_OP_SET_EVENT_MASK, sizeof(*ev));
   if (!buf)
@@ -1208,7 +1076,7 @@ static int hci_init(void)
       return -ENOBUFS;
     }
 
-  ev = bt_buf_add(buf, sizeof(*ev));
+  ev = bt_buf_extend(buf, sizeof(*ev));
   memset(ev, 0, sizeof(*ev));
   ev->events[0] |= 0x10;        /* Disconnection Complete */
   ev->events[1] |= 0x08;        /* Read Remote Version Information Complete */
@@ -1233,9 +1101,9 @@ static int hci_init(void)
       return -ENOBUFS;
     }
 
-  hbs = bt_buf_add(buf, sizeof(*hbs));
+  hbs = bt_buf_extend(buf, sizeof(*hbs));
   memset(hbs, 0, sizeof(*hbs));
-  hbs->acl_mtu = BT_HOST2LE16(BT_BUF_MAX_DATA -
+  hbs->acl_mtu = BT_HOST2LE16(BLUETOOTH_MAX_FRAMELEN -
                                  sizeof(struct bt_hci_acl_hdr_s) -
                                  g_btdev.dev->head_reserve);
   hbs->acl_pkts = BT_HOST2LE16(CONFIG_BLUETOOTH_RXTHREAD_NMSGS);
@@ -1252,7 +1120,7 @@ static int hci_init(void)
       return -ENOBUFS;
     }
 
-  enable  = bt_buf_add(buf, sizeof(*enable));
+  enable  = bt_buf_extend(buf, sizeof(*enable));
   *enable = 0x01;
 
   err = bt_hci_cmd_send_sync(BT_HCI_OP_SET_CTL_TO_HOST_FLOW, buf, NULL);
@@ -1276,7 +1144,7 @@ static int hci_init(void)
             }
 
           read_buffer_size_complete(rsp);
-          bt_buf_put(rsp);
+          bt_buf_release(rsp);
         }
 
       buf = bt_hci_cmd_create(BT_HCI_OP_LE_WRITE_LE_HOST_SUPP, sizeof(*cp));
@@ -1287,7 +1155,7 @@ static int hci_init(void)
 
       /* Explicitly enable LE for dual-mode controllers */
 
-      cp        = bt_buf_add(buf, sizeof *cp);
+      cp        = bt_buf_extend(buf, sizeof *cp);
       cp->le    = 0x01;
       cp->simul = 0x00;
 
@@ -1339,8 +1207,8 @@ static void rx_queue_init(void)
   pid_t pid;
   int ret;
 
-  /* When a buffer is received from the Bluetooth driver via bt_recv() on
-   * the Rx queue and received by logic on the Rx kernel thread.
+  /* When a buffer is received from the Bluetooth driver via bt_hci_receive()
+   * on the Rx queue and received by logic on the Rx kernel thread.
    */
 
   g_btdev.rx_queue = NULL;
@@ -1360,9 +1228,113 @@ static void rx_queue_init(void)
  * Public Functions
  ****************************************************************************/
 
-/* Interface to HCI driver layer */
+/****************************************************************************
+ * Name: bt_initialize
+ *
+ * Description:
+ *   Initialize Bluetooth. Must be the called before anything else.
+ *
+ * Returned Value:
+ *    Zero on success or (negative) error code otherwise.
+ *
+ ****************************************************************************/
 
-void bt_recv(FAR struct bt_buf_s *buf)
+int bt_initialize(void)
+{
+  FAR const struct bt_driver_s *dev = g_btdev.dev;
+  int err;
+
+  DEBUGASSERT(dev != NULL);
+  bt_buf_initialize();
+
+  cmd_queue_init();
+  rx_queue_init();
+
+  err = dev->open(dev);
+  if (err)
+    {
+      wlerr("ERROR: HCI driver open failed (%d)\n", err);
+      return err;
+    }
+
+  err = hci_init();
+  if (err)
+    {
+      return err;
+    }
+
+  return bt_l2cap_init();
+}
+
+/****************************************************************************
+ * Name: bt_driver_register
+ *
+ * Description:
+ *   Register the Bluetooth low-level driver with the Bluetooth stack.
+ *   This is called from the low-level driver and is part of the driver
+ *   interface prototyped in include/nuttx/wireless/bt_driver.h
+ *
+ * Input Parameters:
+ *   dev - An instance of the low-level drivers interface structure.
+ *
+ * Returned Value:
+ *  Zero is returned on success; a negated errno value is returned on any
+ *  failure.
+ *
+ ****************************************************************************/
+
+int bt_driver_register(FAR const struct bt_driver_s *dev)
+{
+  DEBUGASSERT(dev != NULL && dev->open != NULL && dev->send != NULL);
+
+  if (g_btdev.dev != NULL)
+    {
+      return -EALREADY;
+    }
+
+  g_btdev.dev = dev;
+  return 0;
+}
+
+/****************************************************************************
+ * Name: bt_driver_unregister
+ *
+ * Description:
+ *   Unregister a Bluetooth low-level driver previously registered with
+ *   bt_driver_register.  This may be called from the low-level driver and
+ *   is part of the driver interface prototyped in
+ *   include/nuttx/wireless/bt_driver.h
+ *
+ * Input Parameters:
+ *   dev - An instance of the low-level drivers interface structure.
+ *
+ * Returned Value:
+ *  None
+ *
+ ****************************************************************************/
+
+void bt_driver_unregister(FAR const struct bt_driver_s *dev)
+{
+  g_btdev.dev = NULL;
+}
+
+/****************************************************************************
+ * Name: bt_hci_receive
+ *
+ * Description:
+ *   Called by the Bluetooth low-level driver when new data is received from
+ *   the radio.  This may be called from the low-level driver and is part of
+ *   the driver interface prototyped in include/nuttx/wireless/bt_driver.h
+ *
+ * Input Parameters:
+ *   buf - An instance of the buffer structure providing the received frame.
+ *
+ * Returned Value:
+ *  None
+ *
+ ****************************************************************************/
+
+void bt_hci_receive(FAR struct bt_buf_s *buf)
 {
   FAR struct bt_hci_evt_hdr_s *hdr;
   int prio = BT_NORMAL_PRIO;
@@ -1375,7 +1347,7 @@ void bt_recv(FAR struct bt_buf_s *buf)
       if (buf->type != BT_EVT)
         {
           wlerr("ERROR: Invalid buf type %u\n", buf->type);
-          bt_buf_put(buf);
+          bt_buf_release(buf);
           return;
         }
 
@@ -1397,49 +1369,144 @@ void bt_recv(FAR struct bt_buf_s *buf)
     }
 }
 
-int bt_driver_register(FAR const struct bt_driver_s *dev)
-{
-  DEBUGASSERT(dev != NULL && dev->open != NULL && dev->send != NULL);
+/****************************************************************************
+ * Name: bt_hci_cmd_create
+ *
+ * Description:
+ *   Allocate and initialize a buffer for a command
+ *
+ * Returned Value:
+ *   A reference to the allocated buffer.  NULL could possibly be returned
+ *   on any failure to allocate.
+ *
+ ****************************************************************************/
 
-  if (g_btdev.dev != NULL)
+FAR struct bt_buf_s *bt_hci_cmd_create(uint16_t opcode, uint8_t param_len)
+{
+  FAR struct bt_hci_cmd_hdr_s *hdr;
+  FAR struct bt_buf_s *buf;
+
+  wlinfo("opcode %x param_len %u\n", opcode, param_len);
+
+  buf = bt_buf_alloc(BT_CMD, NULL, g_btdev.dev->head_reserve);
+  if (!buf)
     {
-      return -EALREADY;
+      wlerr("ERROR: Cannot get free buffer\n");
+      return NULL;
     }
 
-  g_btdev.dev = dev;
-  return 0;
+  wlinfo("buf %p\n", buf);
+
+  buf->u.hci.opcode = opcode;
+  buf->u.hci.sync   = NULL;
+
+  hdr              = bt_buf_extend(buf, sizeof(*hdr));
+  hdr->opcode      = BT_HOST2LE16(opcode);
+  hdr->param_len   = param_len;
+
+  return buf;
 }
 
-void bt_driver_unregister(FAR const struct bt_driver_s *dev)
+int bt_hci_cmd_send(uint16_t opcode, FAR struct bt_buf_s *buf)
 {
-  g_btdev.dev = NULL;
+  int ret;
+  if (!buf)
+    {
+      buf = bt_hci_cmd_create(opcode, 0);
+      if (!buf)
+        {
+          return -ENOBUFS;
+        }
+    }
+
+  wlinfo("opcode %x len %u\n", opcode, buf->len);
+
+  /* Host Number of Completed Packets can ignore the ncmd value and does not
+   * generate any cmd complete/status events.
+   */
+
+  if (opcode == BT_HCI_OP_HOST_NUM_COMPLETED_PACKETS)
+    {
+      g_btdev.dev->send(g_btdev.dev, buf);
+      bt_buf_release(buf);
+      return 0;
+    }
+
+  ret = bt_queue_send(g_btdev.tx_queue, buf, BT_NORMAL_PRIO);
+  if (ret < 0)
+    {
+      wlerr("ERROR: bt_queue_send() failed: %d\n", ret);
+    }
+
+  return ret;
 }
 
-int bt_init(void)
+int bt_hci_cmd_send_sync(uint16_t opcode, FAR struct bt_buf_s *buf,
+                         FAR struct bt_buf_s **rsp)
 {
-  FAR const struct bt_driver_s *dev = g_btdev.dev;
-  int err;
+  sem_t sync_sem;
+  int ret;
 
-  DEBUGASSERT(dev != NULL);
-  bt_buf_init();
+  /* NOTE: This function cannot be called from the rx thread since it relies
+   * on the very same thread in processing the cmd_complete event and giving
+   * back the blocking semaphore.
+   */
 
-  cmd_queue_init();
-  rx_queue_init();
-
-  err = dev->open(dev);
-  if (err)
+  if (!buf)
     {
-      wlerr("ERROR: HCI driver open failed (%d)\n", err);
-      return err;
+      buf = bt_hci_cmd_create(opcode, 0);
+      if (!buf)
+        {
+          return -ENOBUFS;
+        }
     }
 
-  err = hci_init();
-  if (err)
+  wlinfo("opcode %x len %u\n", opcode, buf->len);
+
+  nxsem_init(&sync_sem, 0, 0);
+  nxsem_setprotocol(&sync_sem, SEM_PRIO_NONE);
+  buf->u.hci.sync = &sync_sem;
+
+  ret = bt_queue_send(g_btdev.tx_queue, buf, BT_NORMAL_PRIO);
+  if (ret < 0)
     {
-      return err;
+      wlerr("ERROR: bt_queue_send() failed: %d\n", ret);
     }
 
-  return bt_l2cap_init();
+  if (ret >= 0)
+    {
+      do
+        {
+          ret = nxsem_wait(&sync_sem);
+        }
+      while (ret == -EINTR);
+    }
+
+  /* Indicate failure if we failed to get the return parameters */
+
+  if (ret >= 0)
+    {
+      if (!buf->u.hci.sync)
+        {
+          ret = -EIO;
+        }
+      else
+        {
+          ret = 0;
+        }
+    }
+
+  if (rsp)
+    {
+      *rsp = buf->u.hci.sync;
+    }
+  else if (buf->u.hci.sync)
+    {
+      bt_buf_release(buf->u.hci.sync);
+    }
+
+  bt_buf_release(buf);
+  return ret;
 }
 
 /****************************************************************************
@@ -1479,7 +1546,7 @@ int bt_start_advertising(uint8_t type, FAR const struct bt_eir_s *ad,
       return -ENOBUFS;
     }
 
-  set_data = bt_buf_add(buf, sizeof(*set_data));
+  set_data = bt_buf_extend(buf, sizeof(*set_data));
 
   memset(set_data, 0, sizeof(*set_data));
 
@@ -1511,7 +1578,7 @@ send_scan_rsp:
       return -ENOBUFS;
     }
 
-  scan_rsp = bt_buf_add(buf, sizeof(*scan_rsp));
+  scan_rsp = bt_buf_extend(buf, sizeof(*scan_rsp));
 
   memset(scan_rsp, 0, sizeof(*scan_rsp));
 
@@ -1538,7 +1605,7 @@ send_set_param:
       return -ENOBUFS;
     }
 
-  set_param = bt_buf_add(buf, sizeof(*set_param));
+  set_param = bt_buf_extend(buf, sizeof(*set_param));
 
   memset(set_param, 0, sizeof(*set_param));
   set_param->min_interval = BT_HOST2LE16(0x0800);
@@ -1555,7 +1622,7 @@ send_set_param:
     }
 
   g_btdev.adv_enable = 0x01;
-  memcpy(bt_buf_add(buf, 1), &g_btdev.adv_enable, 1);
+  memcpy(bt_buf_extend(buf, 1), &g_btdev.adv_enable, 1);
 
   return bt_hci_cmd_send_sync(BT_HCI_OP_LE_SET_ADV_ENABLE, buf, NULL);
 }
@@ -1587,7 +1654,7 @@ int bt_stop_advertising(void)
     }
 
   g_btdev.adv_enable = 0x00;
-  memcpy(bt_buf_add(buf, 1), &g_btdev.adv_enable, 1);
+  memcpy(bt_buf_extend(buf, 1), &g_btdev.adv_enable, 1);
 
   return bt_hci_cmd_send_sync(BT_HCI_OP_LE_SET_ADV_ENABLE, buf, NULL);
 }
@@ -1651,25 +1718,35 @@ int bt_stop_scanning(void)
   return bt_le_scan_update();
 }
 
-/* Used to determine whether to start scan and which scan type should be used */
+/****************************************************************************
+ * Name: bt_le_scan_update
+ *
+ * Description:
+ *   Used to determine whether to start scan and which scan type should be
+ *   used.
+ *
+ * Returned Value:
+ *   Zero on success or error code otherwise, positive in case
+ *   of protocol error or negative (POSIX) in case of stack internal error
+ *
+ ****************************************************************************/
 
 int bt_le_scan_update(void)
 {
   FAR struct bt_conn_s *conn;
+  int ret;
 
   if (g_btdev.scan_enable)
     {
-      int err;
-
       if (g_scan_dev_found_cb)
         {
           return 0;
         }
 
-      err = bt_hci_stop_scanning();
-      if (err)
+      ret = bt_hci_stop_scanning();
+      if (ret)
         {
-          return err;
+          return ret;
         }
     }
 
@@ -1684,9 +1761,25 @@ int bt_le_scan_update(void)
       return 0;
     }
 
-  bt_conn_put(conn);
-
+  bt_conn_release(conn);
   return bt_hci_start_scanning(BT_LE_SCAN_PASSIVE, g_btdev.scan_filter);
+}
+
+/****************************************************************************
+ * Name: bt_conn_cb_register
+ *
+ * Description:
+ *   Register callbacks to monitor the state of connections.
+ *
+ * Input Parameters:
+ *   cb - Instance of the callback structure.
+ *
+ ****************************************************************************/
+
+void bt_conn_cb_register(FAR struct bt_conn_cb_s *cb)
+{
+  cb->flink       = g_callback_list;
+  g_callback_list = cb;
 }
 
 #ifdef CONFIG_DEBUG_WIRELESS_INFO
