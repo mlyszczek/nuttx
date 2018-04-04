@@ -322,6 +322,7 @@ FAR struct bt_buf_s *bt_buf_alloc(enum bt_buf_type_e type,
    * allocated buffer structure.
    */
 
+  memset(buf, 0, sizeof(struct bt_buf_s));
   buf->pool = pool;
   buf->ref  = 1;
   buf->type = type;
@@ -347,7 +348,6 @@ FAR struct bt_buf_s *bt_buf_alloc(enum bt_buf_type_e type,
        * available buffers.
        */
 
-      memset(buf, 0, sizeof(struct bt_buf_s));
       buf->frame = iob_alloc(false);
       if (!buf->frame)
         {
@@ -363,11 +363,10 @@ FAR struct bt_buf_s *bt_buf_alloc(enum bt_buf_type_e type,
       buf->data = buf->frame->io_data + reserve_head;
     }
 
-
   wlinfo("buf %p type %d reserve %u\n", buf, buf->type, reserve_head);
-
   return buf;
 }
+
 /****************************************************************************
  * Name: bt_buf_release
  *

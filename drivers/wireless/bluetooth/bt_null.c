@@ -39,13 +39,23 @@
 
 #include <nuttx/wireless/bt_driver.h>
 
+#include <string.h>
+#include <assert.h>
+#include <debug.h>
+
+#include <nuttx/wireless/bt_hci.h>
+#include <nuttx/wireless/bt_null.h>
+
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
-static int btnull_open(FAR const struct bt_driver_s *dev);
-static int btnull_send(FAR const struct bt_driver_s *dev,
-                       FAR struct bt_buf_s *buf);
+static void btnull_send_cmdcomplete(FAR const struct bt_driver_s *dev,
+                                    uint16_t opcode);
+
+static int  btnull_open(FAR const struct bt_driver_s *dev);
+static int  btnull_send(FAR const struct bt_driver_s *dev,
+                        FAR struct bt_buf_s *buf);
 
 /****************************************************************************
  * Private Data
@@ -56,16 +66,58 @@ static const struct bt_driver_s g_bt_null =
   0,            /* head_reserve */
   btnull_open,  /* open */
   btnull_send   /* send */
-}
+};
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
+static void btnull_send_cmdcomplete(FAR const struct bt_driver_s *dev,
+                                    uint16_t opcode)
+{
+  FAR struct bt_buf_s *buf;
+
+  buf = bt_buf_alloc(BT_EVT, NULL, 0);
+  if (buf != NULL)
+    {
+      struct bt_hci_evt_hdr_s evt;
+      struct hci_evt_cmd_complete_s cmd;
+
+      /* Minimal setup for the command complete event */
+
+      evt.evt    = BT_HCI_EVT_CMD_COMPLETE;
+      evt.len    = sizeof(struct bt_hci_evt_hdr_s) +
+                   sizeof(struct hci_evt_cmd_complete_s);
+      memcpy(bt_buf_extend(buf, sizeof(struct bt_hci_evt_hdr_s)), &evt,
+                           sizeof(struct bt_hci_evt_hdr_s));
+
+      cmd.ncmd   = 1;
+      cmd.opcode = opcode;
+      memcpy(bt_buf_extend(buf, sizeof(struct hci_evt_cmd_complete_s)),
+                           &cmd, sizeof(struct hci_evt_cmd_complete_s));
+
+      wlinfo("Send CMD complete event\n");
+
+      bt_hci_receive(buf);
+    }
+}
+
 static int btnull_send(FAR const struct bt_driver_s *dev,
                        FAR struct bt_buf_s *buf)
 {
-  return OK;
+  wlinfo("Bit buffer: length %d\n", (int)buf->len);
+
+  /* Is the Bluetooth stack waiting for an event? */
+
+  if (buf->type == BT_CMD)
+    {
+      FAR struct bt_hci_cmd_hdr_s *hdr = (FAR void *)buf->data;
+
+      wlinfo("CMD: %04x\n", hdr->opcode);
+      btnull_send_cmdcomplete(dev, hdr->opcode);
+    }
+
+  return buf->len;
 }
 
 static int btnull_open(FAR const struct bt_driver_s *dev)
