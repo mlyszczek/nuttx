@@ -1,9 +1,8 @@
 ############################################################################
-# configs/spark/src/Makefile
+# drivers/1wire/Make.defs
 #
-#   Copyright (C) 2013, 2016 Gregory Nutt. All rights reserved.
+#   Copyright (C) 2018 Gregory Nutt. All rights reserved.
 #   Author: Gregory Nutt <gnutt@nuttx.org>
-#           Librae <librae8226@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -34,43 +33,17 @@
 #
 ############################################################################
 
--include $(TOPDIR)/Make.defs
+ifeq ($(CONFIG_1WIRE),y)
 
-ASRCS =
-CSRCS = stm32_boot.c stm32_spi.c
+CSRCS += 1wire.c 1wire_crc.c
 
-ifeq ($(CONFIG_ARCH_LEDS),y)
-CSRCS += stm32_autoleds.c
-else
-CSRCS += stm32_userleds.c
+ifeq ($(CONFIG_1WIRE_DS28E17),y)
+CSRCS += ds28e17.c
 endif
 
-ifeq ($(CONFIG_ARCH_BUTTONS),y)
-CSRCS +=  stm32_buttons.c
-endif
+# Include 1wire device driver build support
 
-ifeq ($(CONFIG_LIB_BOARDCTL),y)
-CSRCS += stm32_appinit.c
+DEPPATH += --dep-path 1wire
+VPATH += :1wire
+CFLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" $(TOPDIR)$(DELIM)drivers$(DELIM)1wire}
 endif
-
-ifeq ($(CONFIG_USBDEV),y)
-CSRCS += stm32_usbdev.c
-endif
-
-ifeq ($(CONFIG_BOARDCTL_USBDEVCTRL),y)
-CSRCS += stm32_usbmsc.c
-endif
-
-ifeq ($(CONFIG_USBDEV_COMPOSITE),y)
-CSRCS += stm32_composite.c
-endif
-
-ifeq ($(CONFIG_WL_CC3000),y)
-CSRCS += stm32_cc3000.c
-endif
-
-ifeq ($(CONFIG_CC3000_PROBES),)
-CSRCS += stm32_io.c
-endif
-
-include $(TOPDIR)/configs/Board.mk

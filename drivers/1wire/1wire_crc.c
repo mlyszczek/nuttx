@@ -1,8 +1,8 @@
 /****************************************************************************
- * configs/spark/src/stm32_userleds.c
+ * drivers/1wire/1wire_crc.c
  *
- *   Copyright (C) 2011, 2013, 2015 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ *   Copyright (C) 2018 Haltian Ltd. All rights reserved.
+ *   Author: Juha Niskanen <juha.niskanen@haltian.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,99 +37,123 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 #include <stdint.h>
 #include <stdbool.h>
-#include <debug.h>
+#include <string.h>
 
-#include <arch/board/board.h>
-#include <nuttx/power/pm.h>
-
-#include "chip.h"
-#include "up_arch.h"
-#include "up_internal.h"
-#include "stm32.h"
-#include "spark.h"
-
-#ifndef CONFIG_ARCH_LEDS
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-/* This array maps an LED number to GPIO pin configuration */
-
-static uint32_t g_ledcfg[BOARD_NLEDS] =
-{
-  GPIO_LED1, GPIO_LED2, GPIO_LED3, GPIO_LED4
-};
+#include "1wire_internal.h"
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-/****************************************************************************
- * Name: board_userled_initialize
- ****************************************************************************/
+/* Compute a Dallas Semiconductor 8 bit CRC. */
 
-void board_userled_initialize(void)
+uint8_t onewire_crc8(FAR const uint8_t *input, uint8_t len)
 {
-  /* Configure LED1-4 GPIOs for output */
+  uint8_t crc = 0;
 
-  stm32_configgpio(GPIO_LED1);
-  stm32_configgpio(GPIO_LED2);
-  stm32_configgpio(GPIO_LED3);
-  stm32_configgpio(GPIO_LED4);
-}
-
-/****************************************************************************
- * Name: board_userled
- ****************************************************************************/
-
-void board_userled(int led, bool ledon)
-{
-  if ((unsigned)led < BOARD_NLEDS)
+  while (len-- > 0)
     {
-      bool active_low = (LED_ACTIVE_LOW & (1 << ledon)) != 0;
-      stm32_gpiowrite(g_ledcfg[led], active_low ? !ledon : ledon);
+      int i;
+      uint8_t inbyte = *input++;
+
+      for (i = 0; i < 8; i++)
+        {
+          uint8_t mix = (crc ^ inbyte) & 0x01;
+          crc >>= 1;
+          if (mix)
+            crc ^= 0x8c;
+
+          inbyte >>= 1;
+        }
     }
+
+  return crc;
+}
+
+/* Compute a Dallas Semiconductor 16 bit CRC. This is used to check
+ * the integrity of received data from many 1-wire devices.
+ *
+ * Note: the CRC-16 computed here is not what you'll get from the 1-wire
+ * network, because:
+ * - The CRC-16 is transmitted bitwise inverted.
+ * - The binary representation of the return value may have a different
+ *   byte order than the two bytes you get from 1-wire due to endian-ness.
+ */
+
+uint16_t onewire_crc16(FAR const uint8_t *input, uint16_t len,
+                       uint16_t initial_crc)
+{
+  uint16_t crc = initial_crc;
+
+  while (len-- > 0)
+    {
+      int i;
+      uint8_t inbyte = *input++;
+
+      for (i = 0; i < 8; i++)
+        {
+          uint8_t mix = ((crc & 0xff) ^ inbyte) & 0x01;
+
+          crc >>= 1;
+          if (mix)
+            {
+              crc ^= 0xa001;
+            }
+
+          inbyte >>= 1;
+        }
+    }
+
+  return crc;
 }
 
 /****************************************************************************
- * Name: board_userled_all
+ * Name: onewire_valid_rom
+ *
  * Description:
- *   This function will be called to set the state of the Leds on the board
+ *   Check CRC-8 of received input
  *
  * Input Parameters:
- *   ledset: is a bit set of 1s for the LEDs to effect
- *   led_states_set: a bit set of 1 for on 0 for off
- *     N.B. The led_states_set terms are in true logic, the led polarity is
- *     dealt herein
+ *   rom   - 64-bit rom code
+ *
+ * Returned Value:
+ *   true if CRC-8 of rom matches
  *
  ****************************************************************************/
 
-void board_userled_all(uint8_t ledset, uint8_t led_states_set)
+bool onewire_valid_rom(uint64_t rom)
 {
-  led_states_set ^= LED_ACTIVE_LOW;
-  if ((ledset & BOARD_USR_LED_BIT) == 0)
-    {
-      stm32_gpiowrite(GPIO_LED1, (led_states_set & BOARD_USR_LED_BIT) == 0);
-    }
+  uint8_t crc;
+  uint8_t buf[8];
 
-  if ((ledset & BOARD_RED_LED_BIT) == 0)
-    {
-      stm32_gpiowrite(GPIO_LED2, (led_states_set & BOARD_RED_LED_BIT) == 0);
-    }
-
-  if ((ledset & BOARD_BLUE_LED_BIT) == 0)
-    {
-      stm32_gpiowrite(GPIO_LED3, (led_states_set & BOARD_BLUE_LED_BIT) == 0);
-    }
-
-  if ((ledset & BOARD_GREEN_LED_BIT) == 0)
-    {
-      stm32_gpiowrite(GPIO_LED4, (led_states_set & BOARD_GREEN_LED_BIT) == 0);
-    }
+  memcpy(buf, &rom, sizeof(buf));
+  crc = onewire_crc8(buf, 7);
+  return crc == buf[7];
 }
 
-#endif /* !CONFIG_ARCH_LEDS */
+/****************************************************************************
+ * Name: onewire_check_crc16
+ *
+ * Description:
+ *   Check CRC-16 of received input
+ *
+ * Input Parameters:
+ *   input         - Array of bytes to checksum
+ *   len           - Length of input
+ *   inverted_crc  - The two CRC16 bytes in the received data
+ *
+ * Returned Value:
+ *   true if CRC-16 matches
+ *
+ ****************************************************************************/
+
+bool onewire_check_crc16(FAR const uint8_t *input, uint16_t len,
+                         FAR const uint8_t *inverted_crc)
+{
+  uint16_t crc;
+
+  crc = ~onewire_crc16(input, len, 0);
+  return (crc & 0xff) == inverted_crc[0] && (crc >> 8) == inverted_crc[1];
+}
