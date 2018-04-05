@@ -63,6 +63,8 @@
  *
  */
 
+#define BOARD_CPU_FREQUENCY     600000000
+
 #define IMXRT_ARM_PLL_SELECT    (100)
 #define IMXRT_SYS_PLL_SELECT    (1)
 #define IMXRT_ARM_CLOCK_DIVIDER (1)
