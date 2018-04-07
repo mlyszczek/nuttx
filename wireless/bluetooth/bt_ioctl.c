@@ -47,6 +47,7 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/net/netdev.h>
+#include <nuttx/net/bluetooth.h>
 #include <nuttx/wireless/bt_core.h>
 #include <nuttx/wireless/bt_hci.h>
 #include <nuttx/wireless/bt_ioctl.h>
@@ -183,18 +184,20 @@ static void btnet_scan_callback(FAR const bt_addr_le_t *addr, int8_t rssi,
  *   cached scan results.
  *
  * Input Parameters:
- *   Scan result data
+ *   result - Location to return the scan result data
+ *   maxrsp - The maximum number of responses that can be returned.
  *
  * Returned Value:
- *   None
+ *   On success, the actual number of scan results obtain is returned.  A
+ *   negated errno value is returned on any failure.
  *
  ****************************************************************************/
 
-static int btnet_scan_result(FAR struct bt_scanresult_s *result)
+static int btnet_scan_result(FAR struct bt_scanresponse_s *result,
+                             uint8_t maxrsp)
 {
   uint8_t head;
   uint8_t tail;
-  uint8_t maxrsp;
   uint8_t nrsp;
   int ret;
 
@@ -217,7 +220,6 @@ static int btnet_scan_result(FAR struct bt_scanresult_s *result)
 
   head   = g_scanstate.bs_head;
   tail   = g_scanstate.bs_tail;
-  maxrsp = result->sr_nrsp;
 
   for (nrsp = 0; nrsp < maxrsp && head != tail; nrsp++)
     {
@@ -227,7 +229,7 @@ static int btnet_scan_result(FAR struct bt_scanresult_s *result)
       /* Copy data from the head index into the user buffer */
 
       src  = (FAR const uint8_t *)&g_scanstate.bs_rsp[head];
-      dest = (FAR uint8_t *)&result->sr_rsp[nrsp];
+      dest = (FAR uint8_t *)&result[nrsp];
       memcpy(dest, src, sizeof(struct bt_scanresponse_s));
 
       /* Increment the head index */
@@ -239,9 +241,8 @@ static int btnet_scan_result(FAR struct bt_scanresult_s *result)
     }
 
   g_scanstate.bs_head = head;
-  result->sr_nrsp     = nrsp;
   nxsem_post(&g_scanstate.bs_exclsem);
-  return OK;
+  return nrsp;
 }
 
 /****************************************************************************
@@ -266,47 +267,89 @@ static int btnet_scan_result(FAR struct bt_scanresult_s *result)
 
 int btnet_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
 {
+  FAR struct btreq_s *btreq = (FAR struct btreq_s *)((uintptr_t)arg);
   int ret;
 
   wlinfo("cmd=%04x arg=%ul\n", cmd, arg);
   DEBUGASSERT(dev != NULL && dev->d_private != NULL);
 
+  if (btreq == NULL)
+    {
+      return -EINVAL;
+    }
+
+  wlinfo("ifname: %s\n", btreq->btr_name);
+
+  /* Process the command */
+
   switch (cmd)
     {
-      /* SIOCBT_ADVERTISESTART
-       *   Description:   Set advertisement data, scan response data,
-       *                  advertisement parameters and start advertising.
-       *   Input:         Pointer to read-write instance of struct
-       *                  bt_advertisestart_s.
-       *   Output:        None
+       /* SIOCGBTINFO:  Get Bluetooth device Info.  Given the device name,
+        * fill in the btreq_s structure.
+        *
+        * REVISIT:  Little more than a stub at present.  It does return the
+        * device address associated with the device name which in itself is
+        * important.
+        */
+
+       case SIOCGBTINFO:
+         {
+           memset(&btreq->btru.btri, 0, sizeof(btreq->btru.btri));
+           BLUETOOTH_ADDRCOPY(btreq->btr_bdaddr.val, g_btdev.bdaddr.val);
+           btreq->btr_num_cmd = CONFIG_BLUETOOTH_BUFFER_PREALLOC;
+           btreq->btr_num_acl = CONFIG_BLUETOOTH_BUFFER_PREALLOC;
+           btreq->btr_acl_mtu = BLUETOOTH_MAX_MTU;
+           btreq->btr_sco_mtu = BLUETOOTH_MAX_MTU;
+           btreq->btr_max_acl = CONFIG_IOB_NBUFFERS;
+           ret                = OK;
+         }
+         break;
+
+       /* SIOCGBTFEAT
+        *   Get Bluetooth BR/BDR device Features.  This returns the cached
+        *   basic (page 0) and extended (page 1 & 2) features.  Only page 0
+        *   is valid.
+        * SIOCGBTLEFEAT
+        *   Get Bluetooth LE device Features.  This returns the cached page
+        *   0-2  features.  Only page 0 is value.
+        */
+
+       case SIOCGBTFEAT:
+       case SIOCGBTLEFEAT:
+         {
+           FAR const uint8_t *src;
+
+           memset(&btreq->btru.btrf, 0, sizeof(btreq->btru.btrf));
+           if (cmd == SIOCGBTFEAT)
+             {
+               src = g_btdev.features;
+             }
+           else
+             {
+               src = g_btdev.le_features;
+             }
+
+           memcpy(btreq->btr_features0, src, 8);
+           ret = OK;
+         }
+         break;
+
+      /* SIOCBTADVSTART:  Set advertisement data, scan response data,
+       * advertisement parameters and start advertising.
        */
 
-      case SIOCBT_ADVERTISESTART:
+      case SIOCBTADVSTART:
         {
-          FAR struct bt_advertisestart_s *adv =
-            (FAR struct bt_advertisestart_s *)((uintptr_t)arg);
-
-          if (adv == NULL)
-            {
-              ret = -EINVAL;
-            }
-          else
-            {
-              ret = bt_start_advertising(adv->as_type, &adv->as_ad,
-                                         &adv->as_sd);
-              wlinfo("Start advertising: %d\n", ret);
-            }
+          ret = bt_start_advertising(btreq->btr_advtype,
+                                     btreq->btr_advad,
+                                     btreq->btr_advad);
+          wlinfo("Start advertising: %d\n", ret);
         }
         break;
 
-      /* SIOCBT_ADVERTISESTOP
-       *   Description:   Stop advertising.
-       *   Input:         A reference to a write-able instance of struct
-       *                  bt_scanstop_s.
-       *   Output:        None
-       */
+      /* SIOCBTADVSTOP:   Stop advertising. */
 
-      case SIOCBT_ADVERTISESTOP:
+      case SIOCBTADVSTOP:
         {
           wlinfo("Stop advertising\n");
           bt_stop_advertising();
@@ -314,26 +357,15 @@ int btnet_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
         }
         break;
 
-      /* SIOCBT_SCANSTART
-       *   Description:   Start LE scanning.  Buffered scan results may be
-       *                  obtained via SIOCBT_SCANGET
-       *   Input:         A read-only referent to struct bt_scanstart_s.
-       *   Output:        None
+      /* SIOCBTSCANSTART:  Start LE scanning.  Buffered scan results may be
+       * obtained via SIOCBTSCANGET
        */
 
-      case SIOCBT_SCANSTART:
+      case SIOCBTSCANSTART:
         {
-          FAR struct bt_scanstart_s *start =
-            (FAR struct bt_scanstart_s *)((uintptr_t)arg);
-
-          if (start == NULL)
-            {
-              ret = -EINVAL;
-            }
-
           /* Are we already scanning? */
 
-          else if (g_scanstate.bs_scanning)
+          if (g_scanstate.bs_scanning)
             {
               ret = -EBUSY;
             }
@@ -346,7 +378,7 @@ int btnet_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
               g_scanstate.bs_head     = 0;
               g_scanstate.bs_tail     = 0;
 
-              ret = bt_start_scanning(start->ss_dupenable,
+              ret = bt_start_scanning(btreq->btr_dupenable,
                                       btnet_scan_callback);
               wlinfo("Start scan: %d\n", ret);
 
@@ -359,40 +391,26 @@ int btnet_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
         }
         break;
 
-      /* SIOCBT_SCANGET
-       *   Description:   Return scan results buffered since the call time
-       *                  that the SIOCBT_SCANGET command was invoked.
-       *   Input:         A reference to a write-able instance of struct
-       *                  bt_scanresult_s.
-       *   Output:        Buffered scan result results are returned in the
-       *                  user-provided buffer space.
+      /* SIOCBTSCANGET:  Return scan results buffered since the call time
+       * that the SIOCBTSCANGET command was invoked.
        */
 
-      case SIOCBT_SCANGET:
+      case SIOCBTSCANGET:
         {
-          FAR struct bt_scanresult_s *result =
-            (FAR struct bt_scanresult_s *)((uintptr_t)arg);
+          ret = btnet_scan_result(btreq->btr_rsp, btreq->btr_nrsp);
+          wlinfo("Get scan results: %d\n", ret);
 
-          if (result == NULL)
+          if (ret >= 0)
             {
-              ret = -EINVAL;
-            }
-          else
-            {
-              ret = btnet_scan_result(result);
-              wlinfo("Get scan results: %d\n", ret);
+              btreq->btr_nrsp = ret;
+              ret = OK;
             }
         }
         break;
 
-      /* SIOCBT_SCANSTOP
-       *   Description:   Stop LE scanning and discard any buffered results.
-       *   Input:         A reference to a write-able instance of struct
-       *                  bt_scanstop_s.
-       *   Output:        None
-       */
+      /* SIOCBTSCANSTOP:  Stop LE scanning and discard any buffered results. */
 
-      case SIOCBT_SCANSTOP:
+      case SIOCBTSCANSTOP:
         {
           /* Stop scanning */
 
@@ -404,44 +422,29 @@ int btnet_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
         }
         break;
 
-      /* SIOCBT_SECURITY
-       *   Description:   Enable security for a connection.
-       *   Input:         A reference to a write-able instance of struct
-       *                  bt_security_s.
-       *   Output:        None
-       */
+      /* SIOCBTSECURITY:  Enable security for a connection. */
 
-      case SIOCBT_SECURITY:
+      case SIOCBTSECURITY:
         {
-          FAR struct bt_security_s *sec =
-            (FAR struct bt_security_s *)((uintptr_t)arg);
+          FAR struct bt_conn_s *conn;
 
-          if (sec == NULL)
+          /* Get the connection associated with the provided LE address */
+
+          conn = bt_conn_lookup_addr_le(&btreq->btr_secaddr);
+          if (conn == NULL)
             {
-              ret = -EINVAL;
+              wlwarn("WARNING:  Peer not connected\n");
+              ret = -ENOTCONN;
             }
           else
             {
-              FAR struct bt_conn_s *conn;
-
-              /* Get the connection associated with the provided LE address */
-
-              conn = bt_conn_lookup_addr_le(&sec->se_addr);
-              if (conn == NULL)
+              ret = bt_conn_security(conn, btreq->btr_seclevel);
+              if (ret < 0)
                 {
-                  wlwarn("WARNING:  Peer not connected\n");
-                  ret = -ENOTCONN;
+                  wlerr("ERROR:  Security setting failed: %d\n", ret);
                 }
-              else
-                {
-                  ret = bt_conn_security(conn, sec->se_level);
-                  if (ret < 0)
-                    {
-                      wlerr("ERROR:  Security setting failed: %d\n", ret);
-                    }
 
-                  bt_conn_release(conn);
-                }
+              bt_conn_release(conn);
             }
         }
         break;
