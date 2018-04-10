@@ -1,8 +1,8 @@
 /************************************************************************************
- * arch/arm/src/tiva/chip/tiva_memorymap.h
+ * configs/bambino-200e/src/lpc43_max31855.c
  *
- *   Copyright (C) 2013-2014 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ *   Copyright (C) 2015 Alan Carvalho de Assis. All rights reserved.
+ *   Author: Alan Carvalho de Assis <acassis@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,41 +33,71 @@
  *
  ************************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_TIVA_CHIP_TIVA_MEMORYMAP_H
-#define __ARCH_ARM_SRC_TIVA_CHIP_TIVA_MEMORYMAP_H
-
 /************************************************************************************
  * Included Files
  ************************************************************************************/
 
 #include <nuttx/config.h>
 
-/* Include the memory map file for the specific Tiva/Stellaris chip */
+#include <errno.h>
+#include <debug.h>
+#include <string.h>
 
-#if defined(CONFIG_ARCH_CHIP_LM3S)
-#  include "chip/lm3s_memorymap.h"
-#elif defined(CONFIG_ARCH_CHIP_LM4F)
-#  include "chip/lm4f_memorymap.h"
-#elif defined(CONFIG_ARCH_CHIP_TM4C)
-#  include "chip/tm4c_memorymap.h"
-#else
-#  error "Unsupported Tiva/Stellaris memory map"
-#endif
+#include <nuttx/sensors/max31855.h>
+
+#include "bambino-200e.h"
+
+#include <nuttx/spi/spi.h>
+
+
+#include "lpc43_spi.h"
+#include "lpc43_ssp.h"
+
+#include <nuttx/kmalloc.h>
+#include <nuttx/fs/fs.h>
+#include <nuttx/random.h>
+
+#if defined(CONFIG_SPI) && defined(CONFIG_SENSORS_MAX31855)
 
 /************************************************************************************
- * Pre-processor Definitions
+ * Public Functions
  ************************************************************************************/
 
 /************************************************************************************
- * Public Types
+ * Name: lpc43_max31855initialize
+ *
+ * Description:
+ *   Initialize and register the MAX31855 Temperature Sensor driver.
+ *
+ * Input parameters:
+ *   devpath - The full path to the driver to register.  E.g., "/dev/temp0"
+ *   spi     - An instance of the SPI interface to use to communicate with
+ *             MAX31855
+ *   devid   - Minor device number. E.g., 0, 1, 2, etc.
+ * Returned Value:
+ *   Zero (OK) on success; a negated errno value on failure.
+ *
  ************************************************************************************/
 
-/************************************************************************************
- * Public Data
- ************************************************************************************/
+int lpc43_max31855initialize(FAR const char *devpath, int bus, uint16_t devid)
+{
+  FAR struct spi_dev_s *spi;
+  spi = lpc43_sspbus_initialize(bus);
+  if (!spi)
+    {
+      snerr("ERROR: Failed to initialize SSP%d\n", bus);
+      return -ENODEV;
+    }
 
-/************************************************************************************
- * Public Function Prototypes
- ************************************************************************************/
+  /* Then register the temperature sensor */
 
-#endif /* __ARCH_ARM_SRC_TIVA_CHIP_TIVA_MEMORYMAP_H */
+  int ret = max31855_register(devpath, spi, devid);
+  if (ret < 0)
+    {
+      snerr("ERROR: Error registering MAX31855\n");
+    }
+    
+  return ret;
+}
+
+#endif /* CONFIG_SPI && CONFIG_SENSORS_MAX31855 */

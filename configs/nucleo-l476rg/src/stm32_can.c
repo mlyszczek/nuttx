@@ -1,8 +1,8 @@
-/****************************************************************************
- * include/nuttx/input/max31855.h
+/************************************************************************************
+ * configs/stm3220g-eval/src/stm32_can.c
  *
- *   Copyright (C) 2014-2015 Gregory Nutt. All rights reserved.
- *   Author: Alan Carvalho de Assis <acassis@gmail.com>
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,69 +31,79 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ****************************************************************************/
+ ************************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_SENSORS_MAX31855_H
-#define __INCLUDE_NUTTX_SENSORS_MAX31855_H
+/* Added by: Ben vd Veen (DisruptiveNL) -- www.nuttx.nl */
 
-/****************************************************************************
+/************************************************************************************
  * Included Files
- ****************************************************************************/
+ ************************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/irq.h>
 
-#if defined(CONFIG_SENSORS_MAX31855)
+#include <stdbool.h>
+#include <errno.h>
+#include <debug.h>
+
+#include <nuttx/can/can.h>
+
+#include "stm32l4_can.h"
+#include "nucleo-l476rg.h"
+
+#ifdef CONFIG_CAN
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-/****************************************************************************
- * Public Types
- ****************************************************************************/
+#if defined(CONFIG_STM32L4_CAN1)
+#  warning "Both CAN1 and CAN2 are enabled.  Only CAN1 is connected."
+#endif
 
-#define MAX31855_SPI_MAXFREQ 4000000
-
-struct spi_dev_s;
-
-/****************************************************************************
- * Public Function Prototypes
- ****************************************************************************/
-
-#ifdef __cplusplus
-#define EXTERN extern "C"
-extern "C"
-{
-#else
-#define EXTERN extern
+#ifdef CONFIG_STM32L4_CAN1
+#  define CAN_PORT 1
 #endif
 
 /****************************************************************************
- * Name: max31855_register
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: stm32_can_setup
  *
  * Description:
- *   This function will register the max31855 driver as /dev/tempN
- *   where N is the minor device number.
- *
- * Input Parameters:
- *   devpath - The full path to the driver to register.  E.g., "/dev/temp0"
- *   spi     - An instance of the SPI interface to use to communicate with
- *             MAX31855
- *   devid   - Minor device number.  E.g., 0, 1, 2, etc.
- *
- * Returned Value:
- *   Zero is returned on success.  Otherwise, a negated errno value is
- *   returned to indicate the nature of the failure.
+ *  Initialize CAN and register the CAN device
  *
  ****************************************************************************/
 
-int max31855_register(FAR const char *devpath, FAR struct spi_dev_s *spi, uint16_t devid);
+int stm32l4_can_setup(void)
+{
+#ifdef CONFIG_STM32L4_CAN1
+  struct can_dev_s *can;
+  int ret;
 
-#undef EXTERN
-#ifdef __cplusplus
-}
+  /* Call stm32_caninitialize() to get an instance of the CAN interface */
+
+  can = stm32l4can_initialize(CAN_PORT);
+  if (can == NULL)
+    {
+      canerr("ERROR: Failed to get CAN interface\n");
+      return -ENODEV;
+    }
+
+  /* Register the CAN driver at "/dev/can0" */
+
+  ret = can_register("/dev/can0", can);
+  if (ret < 0)
+    {
+      canerr("ERROR: can_register failed: %d\n", ret);
+      return ret;
+    }
+
+  return OK;
+#else
+  return -ENODEV;
 #endif
+}
 
-#endif /* CONFIG_SENSORS_MAX31855 */
-#endif /* __INCLUDE_NUTTX_SENSORS_MAX31855_H */
+#endif /* CONFIG_CAN */

@@ -52,12 +52,6 @@
 #if defined(CONFIG_SPI) && defined(CONFIG_SENSORS_MAX31855) && defined(CONFIG_STM32_SPI2)
 
 /************************************************************************************
- * Pre-processor Definitions
- ************************************************************************************/
-
-#define MAX31855_SPI_PORTNO 2   /* On SPI2 */
-
-/************************************************************************************
  * Public Functions
  ************************************************************************************/
 
@@ -68,19 +62,21 @@
  *   Initialize and register the MAX31855 Temperature Sensor driver.
  *
  * Input Parameters:
- *   devpath - The full path to the driver to register. E.g., "/dev/temp0"
+ *   devpath - The full path to the driver to register.  E.g., "/dev/temp0"
+ *   bus     - Bus number (for hardware that has mutiple SPI interfaces)
+ *   devid   - ID associated to the device.  E.g., 0, 1, 2, etc.
  *
  * Returned Value:
  *   Zero (OK) on success; a negated errno value on failure.
  *
  ************************************************************************************/
 
-int stm32_max31855initialize(FAR const char *devpath)
+int stm32_max31855initialize(FAR const char *devpath, int bus, uint16_t devid)
 {
   FAR struct spi_dev_s *spi;
   int ret;
 
-  spi = stm32_spibus_initialize(MAX31855_SPI_PORTNO);
+  spi = stm32_spibus_initialize(bus);
 
   if (!spi)
     {
@@ -89,7 +85,7 @@ int stm32_max31855initialize(FAR const char *devpath)
 
   /* Then register the barometer sensor */
 
-  ret = max31855_register(devpath, spi);
+  ret = max31855_register(devpath, spi, devid);
   if (ret < 0)
     {
       snerr("ERROR: Error registering MAX31855\n");
