@@ -37,6 +37,10 @@
  * Included Files
  ****************************************************************************/
 
+#include <sys/types.h>
+#include <stdint.h>
+#include <stdbool.h>
+
 #include <nuttx/config.h>
 
 #include <stdint.h>
@@ -60,7 +64,7 @@
  * Mux Register index.
  */
 
-static const uint8_t g_mux2ctl_map[IMX_PADMUX_NREGISTERS] =
+static const uint8_t g_mux2ctl_map[IMXRT_PADMUX_NREGISTERS] =
 {
   /* The first mappings are simple 1-to-1 mappings.  This may be a little wasteful */
 

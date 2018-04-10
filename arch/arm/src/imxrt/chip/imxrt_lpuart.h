@@ -298,10 +298,15 @@
 #define LPUART_CTRL_R9T8               (1 << 30) /* Bit 30: Receive Bit 9 / Transmit Bit 8 */
 #define LPUART_CTRL_R8T9               (1 << 31) /* Bit 31: Receive Bit 8 / Transmit Bit 9 */
 
+#define LPUART_ALL_INTS (LPUART_CTRL_ORIE | LPUART_CTRL_NEIE | LPUART_CTRL_FEIE |  \
+                         LPUART_CTRL_PEIE | LPUART_CTRL_TIE  | LPUART_CTRL_TCIE |  \
+                         LPUART_CTRL_RIE  | LPUART_CTRL_ILIE | LPUART_CTRL_MA1IE | \
+                         LPUART_CTRL_MA2IE)
+
 /* LPUART Data Register */
 
 #define LPUART_DATA_SHIFT              (0)       /* Bits 0-9: Data bits 0-9 */
-#define LPUART_DATA_MASK               (0x3ff << LPUART_DATA_SHIFT
+#define LPUART_DATA_MASK               (0x3ff << LPUART_DATA_SHIFT)
                                                  /* Bit 10:  Reserved */
 #define LPUART_DATA_IDLINE             (1 << 11) /* Bit 11: Idle Line */
 #define LPUART_DATA_RXEMPT             (1 << 12) /* Bit 12: Receive Buffer Empty */
@@ -309,6 +314,8 @@
 #define LPUART_DATA_PARITYE            (1 << 14) /* Bit 14: Parity Error */
 #define LPUART_DATA_NOISY              (1 << 15) /* Bit 15: Noisy */
                                                  /* Bits 16-31:  Reserved */
+
+#define LPUART_DATA_STATUS_SHIFT       (11)      /* Bit 15: Noisy */
 
 /* LPUART Match Address Register */
 

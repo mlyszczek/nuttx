@@ -97,7 +97,7 @@
 #endif
 
 /* Is there a serial console? There should be at most one defined.  It could be on
- * any LPUARTn, n=0,1,2,3,4,5
+ * any LPUARTn, n=1,2,3,4,5,6,7,8
  */
 
 #undef HAVE_LPUART_CONSOLE

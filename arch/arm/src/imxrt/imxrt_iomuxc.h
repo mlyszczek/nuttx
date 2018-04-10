@@ -33,8 +33,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_IMX6_IMX_IOMUXC_H
-#define __ARCH_ARM_SRC_IMX6_IMX_IOMUXC_H
+#ifndef __ARCH_ARM_SRC_IMXRT_IMX_IOMUXC_H
+#define __ARCH_ARM_SRC_IMXRT_IMX_IOMUXC_H
 
 /****************************************************************************
  * Included Files
@@ -167,4 +167,4 @@ unsigned int imxrt_padmux_map(unsigned int padmux);
 
 int imxrt_iomux_configure(uintptr_t padctl, iomux_pinset_t ioset);
 
-#endif /* __ARCH_ARM_SRC_IMX6_IMX_IOMUXC_H */
+#endif /* __ARCH_ARM_SRC_IMXRT_IMX_IOMUXC_H */
