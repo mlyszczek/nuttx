@@ -6681,6 +6681,9 @@ config STM32_SERIALDRIVER
 config STM32_1WIREDRIVER
 	bool
 
+config STM32_HCIUART
+	bool
+
 menu "U[S]ART Configuration"
 	depends on STM32_USART
 
@@ -6700,6 +6703,11 @@ config STM32_USART1_SERIALDRIVER
 config STM32_USART1_1WIREDRIVER
 	bool "1-Wire driver"
 	select STM32_1WIREDRIVER
+
+config STM32_USART1_HCIUART
+	bool "Bluetooth HCI-UART"
+	select STM32_HCIUART
+	depends on WIRELESS_BLUETOOTH
 
 endchoice # USART1 Driver Configuration
 
@@ -6746,6 +6754,11 @@ config STM32_USART2_1WIREDRIVER
 	bool "1-Wire driver"
 	select STM32_1WIREDRIVER
 
+config STM32_USART2_HCIUART
+	bool "Bluetooth HCI-UART"
+	select STM32_HCIUART
+	depends on WIRELESS_BLUETOOTH
+
 endchoice # USART2 Driver Configuration
 
 if STM32_USART2_SERIALDRIVER
@@ -6790,6 +6803,11 @@ config STM32_USART3_SERIALDRIVER
 config STM32_USART3_1WIREDRIVER
 	bool "1-Wire driver"
 	select STM32_1WIREDRIVER
+
+config STM32_USART3_HCIUART
+	bool "Bluetooth HCI-UART"
+	select STM32_HCIUART
+	depends on WIRELESS_BLUETOOTH
 
 endchoice # USART3 Driver Configuration
 
@@ -6926,6 +6944,11 @@ config STM32_USART6_1WIREDRIVER
 	bool "1-Wire driver"
 	select STM32_1WIREDRIVER
 
+config STM32_USART6_HCIUART
+	bool "Bluetooth HCI-UART"
+	select STM32_HCIUART
+	depends on WIRELESS_BLUETOOTH
+
 endchoice # USART6 Driver Configuration
 
 if STM32_USART6_SERIALDRIVER
@@ -6971,6 +6994,11 @@ config STM32_UART7_1WIREDRIVER
 	bool "1-Wire driver"
 	select STM32_1WIREDRIVER
 
+config STM32_USART7_HCIUART
+	bool "Bluetooth HCI-UART"
+	select STM32_HCIUART
+	depends on WIRELESS_BLUETOOTH
+
 endchoice # UART7 Driver Configuration
 
 if STM32_UART7_SERIALDRIVER
@@ -7015,6 +7043,11 @@ config STM32_UART8_SERIALDRIVER
 config STM32_UART8_1WIREDRIVER
 	bool "1-Wire driver"
 	select STM32_1WIREDRIVER
+
+config STM32_UART8_HCIUART
+	bool "Bluetooth HCI-UART"
+	select STM32_HCIUART
+	depends on WIRELESS_BLUETOOTH
 
 endchoice # UART8 Driver Configuration
 
@@ -7085,7 +7118,7 @@ config STM32_FLOWCONTROL_BROKEN
 		Enable UART RTS flow control using Software. Because STM
 		Current STM32 have broken HW based RTS behavior (they assert
 		nRTS after every byte received)  Enable this setting workaround
-		this issue by useing software based management of RTS
+		this issue by using software based management of RTS
 
 config STM32_USART_BREAKS
 	bool "Add TIOxSBRK to support sending Breaks"
