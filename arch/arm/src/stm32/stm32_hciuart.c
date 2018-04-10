@@ -213,52 +213,34 @@
 #  define PM_IDLE_DOMAIN             0 /* Revisit */
 #endif
 
-/* Keep track if a Break was set
- *
- * Note:
- *
- * 1) This value is set in the priv->ie but never written to the control
- *    register. It must not collide with USART_CR1_USED_INTS or USART_CR3_EIE
- * 2) USART_CR3_EIE is also carried in the up_dev_s ie member.
- *
- * See up_restoreusartint where the masking is done.
- */
-
-#ifdef CONFIG_STM32_SERIALBRK_BSDCOMPAT
-#  define USART_CR1_IE_BREAK_INPROGRESS_SHFTS 15
-#  define USART_CR1_IE_BREAK_INPROGRESS (1 << USART_CR1_IE_BREAK_INPROGRESS_SHFTS)
-#endif
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
 
 struct up_dev_s
 {
-  struct uart_dev_s dev;       /* Generic UART device */
-  uint16_t          ie;        /* Saved interrupt mask bits value */
-  uint16_t          sr;        /* Saved status bits */
+  struct btuart_lowerhalf_s lower;  /* Generic HCI-UART lower half */
+  uint16_t ie;                      /* Saved interrupt mask bits value */
+  uint16_t sr;                      /* Saved status bits */
 
   /* Has been initialized and HW is setup. */
 
-  bool              initialized;
+  bool initialized;
 
-  /* If termios are supported, then the following fields may vary at
-   * runtime.
-   */
+  /* Configured UART settings */
 
-  const uint8_t     parity;    /* 0=none, 1=odd, 2=even */
-  const uint8_t     bits;      /* Number of bits (7 or 8) */
-  const bool        stopbits2; /* True: Configure with 2 stop bits instead of 1 */
-  const uint32_t    baud;      /* Configured baud */
+  const uint8_t parity;             /* 0=none, 1=odd, 2=even */
+  const uint8_t bits;               /* Number of bits (7 or 8) */
+  const bool stopbits2;             /* True: Configure with 2 stop bits instead of 1 */
+  const uint32_t baud;              /* Configured baud */
 
-  const uint8_t     irq;       /* IRQ associated with this USART */
-  const uint32_t    apbclock;  /* PCLK 1 or 2 frequency */
-  const uint32_t    usartbase; /* Base address of USART registers */
-  const uint32_t    tx_gpio;   /* U[S]ART TX GPIO pin configuration */
-  const uint32_t    rx_gpio;   /* U[S]ART RX GPIO pin configuration */
-  const uint32_t    rts_gpio;  /* U[S]ART RTS GPIO pin configuration */
-  const uint32_t    cts_gpio;  /* U[S]ART CTS GPIO pin configuration */
+  const uint8_t irq;                /* IRQ associated with this USART */
+  const uint32_t apbclock;          /* PCLK 1 or 2 frequency */
+  const uint32_t usartbase;         /* Base address of USART registers */
+  const uint32_t tx_gpio;           /* U[S]ART TX GPIO pin configuration */
+  const uint32_t rx_gpio;           /* U[S]ART RX GPIO pin configuration */
+  const uint32_t rts_gpio;          /* U[S]ART RTS GPIO pin configuration */
+  const uint32_t cts_gpio;          /* U[S]ART CTS GPIO pin configuration */
 
 #ifdef SERIAL_HAVE_DMA
   const unsigned int rxdma_channel; /* DMA channel assigned */
@@ -267,10 +249,10 @@ struct up_dev_s
   /* RX DMA state */
 
 #ifdef SERIAL_HAVE_DMA
-  DMA_HANDLE        rxdma;     /* currently-open receive DMA stream */
-  bool              rxenable;  /* DMA-based reception en/disable */
-  uint32_t          rxdmanext; /* Next byte in the DMA buffer to be read */
-  char       *const rxfifo;    /* Receive DMA buffer */
+  DMA_HANDLE rxdma;                 /* currently-open receive DMA stream */
+  bool rxenable;                    /* DMA-based reception en/disable */
+  uint32_t rxdmanext;               /* Next byte in the DMA buffer to be read */
+  char *const rxfifo;               /* Receive DMA buffer */
 #endif
 };
 
@@ -278,30 +260,30 @@ struct up_dev_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static void up_set_format(struct uart_dev_s *dev);
-static int  up_setup(struct uart_dev_s *dev);
-static void up_shutdown(struct uart_dev_s *dev);
-static int  up_attach(struct uart_dev_s *dev);
-static void up_detach(struct uart_dev_s *dev);
-static int  up_interrupt(int irq, void *context, void *arg);
-static int  up_ioctl(struct file *filep, int cmd, unsigned long arg);
-#ifndef SERIAL_HAVE_ONLY_DMA
-static int  up_receive(struct uart_dev_s *dev, unsigned int *status);
-static void up_rxint(struct uart_dev_s *dev, bool enable);
-static bool up_rxavailable(struct uart_dev_s *dev);
-#endif
-static bool up_rxflowcontrol(struct uart_dev_s *dev, unsigned int nbuffered,
-                             bool upper);
-static void up_send(struct uart_dev_s *dev, int ch);
-static void up_txint(struct uart_dev_s *dev, bool enable);
-static bool up_txready(struct uart_dev_s *dev);
+static void hciuart_set_format(struct btuart_lowerhalf_s *lower);
+static int  hciuart_interrupt(int irq, void *context, void *arg);
+
+/* HCI-UART Lower-Half Methods */
+
+static void hciuart_attach(FAR const struct btuart_lowerhalf_s *lower,
+                           btuart_handler_t handler, FAR void *arg);
+static void hciuart_rxenable(FAR const struct btuart_lowerhalf_s *lower,
+                             bool enable);
+static void hciuart_txenable(FAR const struct btuart_lowerhalf_s *lower,
+                             bool enable);
+static ssize_t hciuart_read(FAR const struct btuart_lowerhalf_s *lower,
+                            FAR void *buffer, size_t buflen);
+static ssize_t hciuart_write(FAR const struct btuart_lowerhalf_s *lower,
+                             FAR const void *buffer, size_t buflen);
+static ssize_t hciuart_rxdrain(FAR const struct btuart_lowerhalf_s *lower);
 
 #ifdef SERIAL_HAVE_DMA
-static int  up_dma_setup(struct uart_dev_s *dev);
-static void up_dma_shutdown(struct uart_dev_s *dev);
-static int  up_dma_receive(struct uart_dev_s *dev, unsigned int *status);
-static void up_dma_rxint(struct uart_dev_s *dev, bool enable);
-static bool up_dma_rxavailable(struct uart_dev_s *dev);
+### REVISIT:  These are DMA replaces for the old uart operations
+static int  up_dma_setup(struct btuart_lowerhalf_s *lower);
+static void up_dma_shutdown(struct btuart_lowerhalf_s *lower);
+static int  up_dma_receive(struct btuart_lowerhalf_s *lower, unsigned int *status);
+static void up_dma_rxint(struct btuart_lowerhalf_s *lower, bool enable);
+static bool up_dma_rxavailable(struct btuart_lowerhalf_s *lower);
 
 static void up_dma_rxcallback(DMA_HANDLE handle, uint8_t status, void *arg);
 #endif
@@ -317,43 +299,15 @@ static int  up_pm_prepare(struct pm_callback_s *cb, int domain,
  * Private Data
  ****************************************************************************/
 
-#ifndef SERIAL_HAVE_ONLY_DMA
-static const struct uart_ops_s g_uart_ops =
+static const struct btuart_lowerhalf_s g_hciuart_lower;
 {
-  .setup          = up_setup,
-  .shutdown       = up_shutdown,
-  .attach         = up_attach,
-  .detach         = up_detach,
-  .ioctl          = up_ioctl,
-  .receive        = up_receive,
-  .rxint          = up_rxint,
-  .rxavailable    = up_rxavailable,
-  .rxflowcontrol  = up_rxflowcontrol,
-  .send           = up_send,
-  .txint          = up_txint,
-  .txready        = up_txready,
-  .txempty        = up_txready,
+  .attach         = hciuart_attach,
+  .rxenable       = hciuart_rxenable,
+  .txenable       = hciuart_txenable,
+  .read           = hciuart_read,
+  .write          = hciuart_write,
+  .rxdrain        = hciuart_rxdrain,
 };
-#endif
-
-#ifdef SERIAL_HAVE_DMA
-static const struct uart_ops_s g_uart_dma_ops =
-{
-  .setup          = up_dma_setup,
-  .shutdown       = up_dma_shutdown,
-  .attach         = up_attach,
-  .detach         = up_detach,
-  .ioctl          = up_ioctl,
-  .receive        = up_dma_receive,
-  .rxint          = up_dma_rxint,
-  .rxavailable    = up_dma_rxavailable,
-  .rxflowcontrol  = up_rxflowcontrol,
-  .send           = up_send,
-  .txint          = up_txint,
-  .txready        = up_txready,
-  .txempty        = up_txready,
-};
-#endif
 
 /* I/O buffers */
 
@@ -410,7 +364,7 @@ static char g_uart8rxfifo[RXDMA_BUFFER_SIZE];
 #ifdef CONFIG_STM32_USART1_HCIUART
 static struct up_dev_s g_usart1priv =
 {
-  .dev =
+  .lower =
     {
       .recv      =
       {
@@ -422,11 +376,7 @@ static struct up_dev_s g_usart1priv =
         .size    = CONFIG_USART1_TXBUFSIZE,
         .buffer  = g_usart1txbuffer,
       },
-#ifdef CONFIG_USART1_RXDMA
-      .ops       = &g_uart_dma_ops,
-#else
-      .ops       = &g_uart_ops,
-#endif
+      .ops       = &g_hciuart_lower,
       .priv      = &g_usart1priv,
     },
 
@@ -457,7 +407,7 @@ static struct up_dev_s g_usart1priv =
 #ifdef CONFIG_STM32_USART2_HCIUART
 static struct up_dev_s g_usart2priv =
 {
-  .dev =
+  .lower =
     {
       .recv      =
       {
@@ -469,11 +419,7 @@ static struct up_dev_s g_usart2priv =
         .size    = CONFIG_USART2_TXBUFSIZE,
         .buffer  = g_usart2txbuffer,
       },
-#ifdef CONFIG_USART2_RXDMA
-      .ops       = &g_uart_dma_ops,
-#else
-      .ops       = &g_uart_ops,
-#endif
+      .ops       = &g_hciuart_lower,
       .priv      = &g_usart2priv,
     },
 
@@ -500,7 +446,7 @@ static struct up_dev_s g_usart2priv =
 #ifdef CONFIG_STM32_USART3_HCIUART
 static struct up_dev_s g_usart3priv =
 {
-  .dev =
+  .lower =
     {
       .recv      =
       {
@@ -512,11 +458,7 @@ static struct up_dev_s g_usart3priv =
         .size    = CONFIG_USART3_TXBUFSIZE,
         .buffer  = g_usart3txbuffer,
       },
-#ifdef CONFIG_USART3_RXDMA
-      .ops       = &g_uart_dma_ops,
-#else
-      .ops       = &g_uart_ops,
-#endif
+      .ops       = &g_hciuart_lower,
       .priv      = &g_usart3priv,
     },
 
@@ -543,7 +485,7 @@ static struct up_dev_s g_usart3priv =
 #ifdef CONFIG_STM32_USART6_HCIUART
 static struct up_dev_s g_usart6priv =
 {
-  .dev =
+  .lower =
     {
       .recv     =
       {
@@ -555,11 +497,7 @@ static struct up_dev_s g_usart6priv =
         .size   = CONFIG_USART6_TXBUFSIZE,
         .buffer = g_usart6txbuffer,
       },
-#ifdef CONFIG_USART6_RXDMA
-      .ops      = &g_uart_dma_ops,
-#else
-      .ops      = &g_uart_ops,
-#endif
+      .ops      = &g_hciuart_lower,
       .priv     = &g_usart6priv,
     },
 
@@ -586,7 +524,7 @@ static struct up_dev_s g_usart6priv =
 #ifdef CONFIG_STM32_UART7_HCIUART
 static struct up_dev_s g_uart7priv =
 {
-  .dev =
+  .lower =
     {
       .recv     =
       {
@@ -598,11 +536,7 @@ static struct up_dev_s g_uart7priv =
         .size   = CONFIG_UART7_TXBUFSIZE,
         .buffer = g_uart7txbuffer,
       },
-#ifdef CONFIG_UART7_RXDMA
-      .ops      = &g_uart_dma_ops,
-#else
-      .ops      = &g_uart_ops,
-#endif
+      .ops      = &g_hciuart_lower,
       .priv     = &g_uart7priv,
     },
 
@@ -629,7 +563,7 @@ static struct up_dev_s g_uart7priv =
 #ifdef CONFIG_STM32_UART8_HCIUART
 static struct up_dev_s g_uart8priv =
 {
-  .dev =
+  .lower =
     {
       .recv     =
       {
@@ -641,11 +575,7 @@ static struct up_dev_s g_uart8priv =
         .size   = CONFIG_UART8_TXBUFSIZE,
         .buffer = g_uart8txbuffer,
       },
-#ifdef CONFIG_UART8_RXDMA
-      .ops      = &g_uart_dma_ops,
-#else
-      .ops      = &g_uart_ops,
-#endif
+      .ops      = &g_hciuart_lower,
       .priv     = &g_uart8priv,
     },
 
@@ -834,17 +764,16 @@ static int up_dma_nextrx(struct up_dev_s *priv)
 #endif
 
 /****************************************************************************
- * Name: up_set_format
+ * Name: hciuart_set_format
  *
  * Description:
  *   Set the serial line format and speed.
  *
  ****************************************************************************/
 
-#ifndef CONFIG_SUPPRESS_UART_CONFIG
-static void up_set_format(struct uart_dev_s *dev)
+static void hciuart_set_format(struct btuart_lowerhalf_s *lower)
 {
-  struct up_dev_s *priv = (struct up_dev_s *)dev->priv;
+  struct up_dev_s *priv = (struct up_dev_s *)lower->priv;
 #if defined(CONFIG_STM32_STM32F30XX) || defined(CONFIG_STM32_STM32F33XX) || \
     defined(CONFIG_STM32_STM32F37XX)
   uint32_t usartdiv8;
@@ -1035,7 +964,6 @@ static void up_set_format(struct uart_dev_s *dev)
 
   up_serialout(priv, STM32_USART_CR3_OFFSET, regval);
 }
-#endif /* CONFIG_SUPPRESS_UART_CONFIG */
 
 /****************************************************************************
  * Name: up_set_apb_clock
@@ -1044,14 +972,14 @@ static void up_set_format(struct uart_dev_s *dev)
  *   Enable or disable APB clock for the USART peripheral
  *
  * Input Parameters:
- *   dev - A reference to the UART driver state structure
- *   on  - Enable clock if 'on' is 'true' and disable if 'false'
+ *   lower - A reference to the UART driver state structure
+ *   on    - Enable clock if 'on' is 'true' and disable if 'false'
  *
  ****************************************************************************/
 
-static void up_set_apb_clock(struct uart_dev_s *dev, bool on)
+static void up_set_apb_clock(struct btuart_lowerhalf_s *lower, bool on)
 {
-  struct up_dev_s *priv = (struct up_dev_s *)dev->priv;
+  struct up_dev_s *priv = (struct up_dev_s *)lower->priv;
   uint32_t rcc_en;
   uint32_t regaddr;
 
@@ -1120,11 +1048,9 @@ static void up_set_apb_clock(struct uart_dev_s *dev, bool on)
  *
  ****************************************************************************/
 
-static int up_setup(struct uart_dev_s *dev)
+static int up_setup(struct btuart_lowerhalf_s *lower)
 {
-  struct up_dev_s *priv = (struct up_dev_s *)dev->priv;
-
-#ifndef CONFIG_SUPPRESS_UART_CONFIG
+  struct up_dev_s *priv = (struct up_dev_s *)lower->priv;
   uint32_t regval;
   uint32_t config;
 
@@ -1134,7 +1060,7 @@ static int up_setup(struct uart_dev_s *dev)
 
   /* Enable USART APB1/2 clock */
 
-  up_set_apb_clock(dev, true);
+  up_set_apb_clock(lower, true);
 
   /* Configure pins for USART use */
 
@@ -1195,15 +1121,13 @@ static int up_setup(struct uart_dev_s *dev)
 
   /* Configure the USART line format and speed. */
 
-  up_set_format(dev);
+  hciuart_set_format(lower);
 
   /* Enable Rx, Tx, and the USART */
 
   regval      = up_serialin(priv, STM32_USART_CR1_OFFSET);
   regval     |= (USART_CR1_UE | USART_CR1_TE | USART_CR1_RE);
   up_serialout(priv, STM32_USART_CR1_OFFSET, regval);
-
-#endif /* CONFIG_SUPPRESS_UART_CONFIG */
 
   /* Set up the cached interrupt enables value */
 
@@ -1226,17 +1150,17 @@ static int up_setup(struct uart_dev_s *dev)
  ****************************************************************************/
 
 #ifdef SERIAL_HAVE_DMA
-static int up_dma_setup(struct uart_dev_s *dev)
+static int up_dma_setup(struct btuart_lowerhalf_s *lower)
 {
-  struct up_dev_s *priv = (struct up_dev_s *)dev->priv;
+  struct up_dev_s *priv = (struct up_dev_s *)lower->priv;
   int result;
   uint32_t regval;
 
   /* Do the basic UART setup first, unless we are the console */
 
-  if (!dev->isconsole)
+  if (!lower->isconsole)
     {
-      result = up_setup(dev);
+      result = up_setup(lower);
       if (result != OK)
         {
           return result;
@@ -1287,9 +1211,9 @@ static int up_dma_setup(struct uart_dev_s *dev)
  *
  ****************************************************************************/
 
-static void up_shutdown(struct uart_dev_s *dev)
+static void up_shutdown(struct btuart_lowerhalf_s *lower)
 {
-  struct up_dev_s *priv = (struct up_dev_s *)dev->priv;
+  struct up_dev_s *priv = (struct up_dev_s *)lower->priv;
   uint32_t regval;
 
   /* Mark device as uninitialized. */
@@ -1302,7 +1226,7 @@ static void up_shutdown(struct uart_dev_s *dev)
 
   /* Disable USART APB1/2 clock */
 
-  up_set_apb_clock(dev, false);
+  up_set_apb_clock(lower, false);
 
   /* Disable Rx, Tx, and the UART */
 
@@ -1334,13 +1258,13 @@ static void up_shutdown(struct uart_dev_s *dev)
  ****************************************************************************/
 
 #ifdef SERIAL_HAVE_DMA
-static void up_dma_shutdown(struct uart_dev_s *dev)
+static void up_dma_shutdown(struct btuart_lowerhalf_s *lower)
 {
-  struct up_dev_s *priv = (struct up_dev_s *)dev->priv;
+  struct up_dev_s *priv = (struct up_dev_s *)lower->priv;
 
   /* Perform the normal UART shutdown */
 
-  up_shutdown(dev);
+  up_shutdown(lower);
 
   /* Stop the DMA channel */
 
@@ -1354,70 +1278,18 @@ static void up_dma_shutdown(struct uart_dev_s *dev)
 #endif
 
 /****************************************************************************
- * Name: up_attach
- *
- * Description:
- *   Configure the USART to operation in interrupt driven mode.  This method is
- *   called when the serial port is opened.  Normally, this is just after the
- *   the setup() method is called, however, the serial console may operate in
- *   a non-interrupt driven mode during the boot phase.
- *
- *   RX and TX interrupts are not enabled when by the attach method (unless the
- *   hardware supports multiple levels of interrupt enabling).  The RX and TX
- *   interrupts are not enabled until the txint() and rxint() methods are called.
- *
- ****************************************************************************/
-
-static int up_attach(struct uart_dev_s *dev)
-{
-  struct up_dev_s *priv = (struct up_dev_s *)dev->priv;
-  int ret;
-
-  /* Attach and enable the IRQ */
-
-  ret = irq_attach(priv->irq, up_interrupt, priv);
-  if (ret == OK)
-    {
-      /* Enable the interrupt (RX and TX interrupts are still disabled
-       * in the USART
-       */
-
-      up_enable_irq(priv->irq);
-    }
-
-  return ret;
-}
-
-/****************************************************************************
- * Name: up_detach
- *
- * Description:
- *   Detach USART interrupts.  This method is called when the serial port is
- *   closed normally just before the shutdown method is called.  The exception
- *   is the serial console which is never shutdown.
- *
- ****************************************************************************/
-
-static void up_detach(struct uart_dev_s *dev)
-{
-  struct up_dev_s *priv = (struct up_dev_s *)dev->priv;
-  up_disable_irq(priv->irq);
-  irq_detach(priv->irq);
-}
-
-/****************************************************************************
- * Name: up_interrupt
+ * Name: hciuart_interrupt
  *
  * Description:
  *   This is the USART interrupt handler.  It will be invoked when an
  *   interrupt received on the 'irq'  It should call uart_transmitchars or
  *   uart_receivechar to perform the appropriate data transfers.  The
  *   interrupt handling logic must be able to map the 'irq' number into the
- *   appropriate uart_dev_s structure in order to call these functions.
+ *   appropriate btuart_lowerhalf_s structure in order to call these functions.
  *
  ****************************************************************************/
 
-static int up_interrupt(int irq, void *context, void *arg)
+static int hciuart_interrupt(int irq, void *context, void *arg)
 {
   struct up_dev_s *priv = (struct up_dev_s *)arg;
   int  passes;
@@ -1474,7 +1346,7 @@ static int up_interrupt(int irq, void *context, void *arg)
            * RXNEIE:  We cannot call uart_recvchards of RX interrupts are disabled.
            */
 
-          uart_recvchars(&priv->dev);
+          uart_recvchars(&priv->lower);
           handled = true;
         }
 
@@ -1511,7 +1383,7 @@ static int up_interrupt(int irq, void *context, void *arg)
         {
           /* Transmit data register empty ... process outgoing bytes */
 
-          uart_xmitchars(&priv->dev);
+          uart_xmitchars(&priv->lower);
           handled = true;
         }
     }
@@ -1520,48 +1392,61 @@ static int up_interrupt(int irq, void *context, void *arg)
 }
 
 /****************************************************************************
- * Name: up_receive
+ * Name: hciuart_attach
  *
  * Description:
- *   Called (usually) from the interrupt level to receive one
- *   character from the USART.  Error bits associated with the
- *   receipt are provided in the return 'status'.
+ *   Attach/detach the upper half interrupt handler.
  *
  ****************************************************************************/
 
-#ifndef SERIAL_HAVE_ONLY_DMA
-static int up_receive(struct uart_dev_s *dev, unsigned int *status)
+static void hciuart_attach(FAR const struct btuart_lowerhalf_s *lower,
+                           btuart_handler_t handler, FAR void *arg)
 {
-  struct up_dev_s *priv = (struct up_dev_s *)dev->priv;
-  uint32_t rdr;
+  struct up_dev_s *priv = (struct up_dev_s *)lower->priv;
+  int ret = OK;
 
-  /* Get the Rx byte */
+  /* If the handler is NULL, then we are detaching */
 
-  rdr      = up_serialin(priv, STM32_USART_RDR_OFFSET);
+  if (handler == NULL)
+    {
+      /* Disable and detach the IRQ */
 
-  /* Get the Rx byte plux error information.  Return those in status */
+      up_disable_irq(priv->irq);
+      irq_detach(priv->irq);
+    }
 
-  *status  = priv->sr << 16 | rdr;
-  priv->sr = 0;
+  /* Otherwise, we are attaching */
 
-  /* Then return the actual received byte */
+  else
+    {
+      /* Attach and enable the IRQ */
 
-  return rdr & 0xff;
+      ret = irq_attach(priv->irq, hciuart_interrupt, priv);
+      if (ret == OK)
+        {
+          /* Enable the interrupt (RX and TX interrupts are still disabled
+           * in the USART)
+           */
+
+          up_enable_irq(priv->irq);
+        }
+    }
+
+  return ret;
 }
-#endif
 
 /****************************************************************************
- * Name: up_rxint
+ * Name: hciuart_rxenable
  *
  * Description:
- *   Call to enable or disable RX interrupts
+ *   Enable/disable RX interrupts from the UART.
  *
  ****************************************************************************/
 
-#ifndef SERIAL_HAVE_ONLY_DMA
-static void up_rxint(struct uart_dev_s *dev, bool enable)
+static void hciuart_rxenable(FAR const struct btuart_lowerhalf_s *lower,
+                             bool enable)
 {
-  struct up_dev_s *priv = (struct up_dev_s *)dev->priv;
+  struct up_dev_s *priv = (struct up_dev_s *)lower->priv;
   irqstate_t flags;
   uint16_t ie;
 
@@ -1588,12 +1473,10 @@ static void up_rxint(struct uart_dev_s *dev, bool enable)
        * timeout occurs).
        */
 
-#ifndef CONFIG_SUPPRESS_SERIAL_INTS
 #ifdef CONFIG_USART_ERRINTS
       ie |= (USART_CR1_RXNEIE | USART_CR1_PEIE | USART_CR3_EIE);
 #else
       ie |= USART_CR1_RXNEIE;
-#endif
 #endif
     }
   else
@@ -1606,6 +1489,121 @@ static void up_rxint(struct uart_dev_s *dev, bool enable)
   up_restoreusartint(priv, ie);
   leave_critical_section(flags);
 }
+
+{
+/****************************************************************************
+ * Name: hciuart_txenable
+ *
+ * Description:
+ *   Enable/disable TX interrupts from the UART.
+ *
+ ****************************************************************************/
+
+static void hciuart_txenable(FAR const struct btuart_lowerhalf_s *lower,
+                             bool enable)
+{
+  struct up_dev_s *priv = (struct up_dev_s *)lower->priv;
+  irqstate_t flags;
+
+  /* USART transmit interrupts:
+   *
+   * Enable             Status          Meaning                      Usage
+   * ------------------ --------------- ---------------------------- ----------
+   * USART_CR1_TCIE     USART_SR_TC     Transmission Complete        (used only for RS-485)
+   * USART_CR1_TXEIE    USART_SR_TXE    Transmit Data Register Empty
+   * USART_CR3_CTSIE    USART_SR_CTS    CTS flag                     (not used)
+   */
+
+  flags = enter_critical_section();
+  if (enable)
+    {
+      /* Set to receive an interrupt when the TX data register is empty */
+
+      up_restoreusartint(priv, priv->ie | USART_CR1_TXEIE);
+
+      /* Fake a TX interrupt here by just calling uart_xmitchars() with
+       * interrupts disabled (note this may recurse).
+       */
+
+      uart_xmitchars(lower);
+    }
+  else
+    {
+      /* Disable the TX interrupt */
+
+      up_restoreusartint(priv, priv->ie & ~USART_CR1_TXEIE);
+    }
+
+  leave_critical_section(flags);
+}
+
+/****************************************************************************
+ * Name: up_receive
+ *
+ * Description:
+ *   Read UART data.
+ *
+ ****************************************************************************/
+
+static ssize_t hciuart_read(FAR const struct btuart_lowerhalf_s *lower,
+                            FAR void *buffer, size_t buflen)
+{
+}
+
+/****************************************************************************
+ * Name: up_receive
+ *
+ * Description:
+ *   Write UART data.
+ *
+ ****************************************************************************/
+
+static ssize_t hciuart_write(FAR const struct btuart_lowerhalf_s *lower,
+                             FAR const void *buffer, size_t buflen)
+{
+}
+
+/****************************************************************************
+ * Name: up_receive
+ *
+ * Description:
+ * Flush/drain all buffered RX data
+ *
+ ****************************************************************************/
+
+static ssize_t hciuart_rxdrain(FAR const struct btuart_lowerhalf_s *lower)
+{
+}
+
+/****************************************************************************
+ * Name: up_receive
+ *
+ * Description:
+ *   Called (usually) from the interrupt level to receive one
+ *   character from the USART.  Error bits associated with the
+ *   receipt are provided in the return 'status'.
+ *
+ ****************************************************************************/
+
+#ifndef SERIAL_HAVE_ONLY_DMA
+static int up_receive(struct btuart_lowerhalf_s *lower, unsigned int *status)
+{
+  struct up_dev_s *priv = (struct up_dev_s *)lower->priv;
+  uint32_t rdr;
+
+  /* Get the Rx byte */
+
+  rdr      = up_serialin(priv, STM32_USART_RDR_OFFSET);
+
+  /* Get the Rx byte plux error information.  Return those in status */
+
+  *status  = priv->sr << 16 | rdr;
+  priv->sr = 0;
+
+  /* Then return the actual received byte */
+
+  return rdr & 0xff;
+}
 #endif
 
 /****************************************************************************
@@ -1617,9 +1615,9 @@ static void up_rxint(struct uart_dev_s *dev, bool enable)
  ****************************************************************************/
 
 #ifndef SERIAL_HAVE_ONLY_DMA
-static bool up_rxavailable(struct uart_dev_s *dev)
+static bool up_rxavailable(struct btuart_lowerhalf_s *lower)
 {
-  struct up_dev_s *priv = (struct up_dev_s *)dev->priv;
+  struct up_dev_s *priv = (struct up_dev_s *)lower->priv;
   return ((up_serialin(priv, STM32_USART_SR_OFFSET) & USART_SR_RXNE) != 0);
 }
 #endif
@@ -1634,7 +1632,7 @@ static bool up_rxavailable(struct uart_dev_s *dev)
  *   data
  *
  * Input Parameters:
- *   dev       - UART device instance
+ *   lower     - UART device instance
  *   nbuffered - the number of characters currently buffered
  *               (if CONFIG_SERIAL_IFLOWCONTROL_WATERMARKS is
  *               not defined the value will be 0 for an empty buffer or the
@@ -1647,10 +1645,10 @@ static bool up_rxavailable(struct uart_dev_s *dev)
  *
  ****************************************************************************/
 
-static bool up_rxflowcontrol(struct uart_dev_s *dev,
+static bool up_rxflowcontrol(struct btuart_lowerhalf_s *lower,
                              unsigned int nbuffered, bool upper)
 {
-  struct up_dev_s *priv = (struct up_dev_s *)dev->priv;
+  struct up_dev_s *priv = (struct up_dev_s *)lower->priv;
 
 #if defined(CONFIG_STM32_FLOWCONTROL_BROKEN)
   /* Assert/de-assert nRTS set it high resume/stop sending */
@@ -1686,7 +1684,7 @@ static bool up_rxflowcontrol(struct uart_dev_s *dev,
        * prevent more data from coming in.
        *
        * This function is only called when UART recv buffer is full,
-       * that is: "dev->recv.head + 1 == dev->recv.tail".
+       * that is: "lower->recv.head + 1 == lower->recv.tail".
        *
        * Logic in "uart_read" will automatically toggle Rx interrupts
        * when buffer is read empty and thus we do not have to re-
@@ -1708,7 +1706,7 @@ static bool up_rxflowcontrol(struct uart_dev_s *dev,
        * received.
        */
 
-      up_rxint(dev, true);
+      up_rxint(lower, true);
     }
 
   return false;
@@ -1726,9 +1724,9 @@ static bool up_rxflowcontrol(struct uart_dev_s *dev,
  ****************************************************************************/
 
 #ifdef SERIAL_HAVE_DMA
-static int up_dma_receive(struct uart_dev_s *dev, unsigned int *status)
+static int up_dma_receive(struct btuart_lowerhalf_s *lower, unsigned int *status)
 {
-  struct up_dev_s *priv = (struct up_dev_s *)dev->priv;
+  struct up_dev_s *priv = (struct up_dev_s *)lower->priv;
   int c = 0;
 
   if (up_dma_nextrx(priv) != priv->rxdmanext)
@@ -1755,9 +1753,9 @@ static int up_dma_receive(struct uart_dev_s *dev, unsigned int *status)
  ****************************************************************************/
 
 #ifdef SERIAL_HAVE_DMA
-static void up_dma_rxint(struct uart_dev_s *dev, bool enable)
+static void up_dma_rxint(struct btuart_lowerhalf_s *lower, bool enable)
 {
-  struct up_dev_s *priv = (struct up_dev_s *)dev->priv;
+  struct up_dev_s *priv = (struct up_dev_s *)lower->priv;
 
   /* En/disable DMA reception.
    *
@@ -1780,9 +1778,9 @@ static void up_dma_rxint(struct uart_dev_s *dev, bool enable)
  ****************************************************************************/
 
 #ifdef SERIAL_HAVE_DMA
-static bool up_dma_rxavailable(struct uart_dev_s *dev)
+static bool up_dma_rxavailable(struct btuart_lowerhalf_s *lower)
 {
-  struct up_dev_s *priv = (struct up_dev_s *)dev->priv;
+  struct up_dev_s *priv = (struct up_dev_s *)lower->priv;
 
   /* Compare our receive pointer to the current DMA pointer, if they
    * do not match, then there are bytes to be received.
@@ -1800,66 +1798,10 @@ static bool up_dma_rxavailable(struct uart_dev_s *dev)
  *
  ****************************************************************************/
 
-static void up_send(struct uart_dev_s *dev, int ch)
+static void up_send(struct btuart_lowerhalf_s *lower, int ch)
 {
-  struct up_dev_s *priv = (struct up_dev_s *)dev->priv;
+  struct up_dev_s *priv = (struct up_dev_s *)lower->priv;
   up_serialout(priv, STM32_USART_TDR_OFFSET, (uint32_t)ch);
-}
-
-/****************************************************************************
- * Name: up_txint
- *
- * Description:
- *   Call to enable or disable TX interrupts
- *
- ****************************************************************************/
-
-static void up_txint(struct uart_dev_s *dev, bool enable)
-{
-  struct up_dev_s *priv = (struct up_dev_s *)dev->priv;
-  irqstate_t flags;
-
-  /* USART transmit interrupts:
-   *
-   * Enable             Status          Meaning                      Usage
-   * ------------------ --------------- ---------------------------- ----------
-   * USART_CR1_TCIE     USART_SR_TC     Transmission Complete        (used only for RS-485)
-   * USART_CR1_TXEIE    USART_SR_TXE    Transmit Data Register Empty
-   * USART_CR3_CTSIE    USART_SR_CTS    CTS flag                     (not used)
-   */
-
-  flags = enter_critical_section();
-  if (enable)
-    {
-      /* Set to receive an interrupt when the TX data register is empty */
-
-#ifndef CONFIG_SUPPRESS_SERIAL_INTS
-      uint16_t ie = priv->ie | USART_CR1_TXEIE;
-
-#  ifdef CONFIG_STM32_SERIALBRK_BSDCOMPAT
-      if (priv->ie & USART_CR1_IE_BREAK_INPROGRESS)
-        {
-          return;
-        }
-#  endif
-
-      up_restoreusartint(priv, ie);
-
-      /* Fake a TX interrupt here by just calling uart_xmitchars() with
-       * interrupts disabled (note this may recurse).
-       */
-
-      uart_xmitchars(dev);
-#endif
-    }
-  else
-    {
-      /* Disable the TX interrupt */
-
-      up_restoreusartint(priv, priv->ie & ~USART_CR1_TXEIE);
-    }
-
-  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -1870,9 +1812,9 @@ static void up_txint(struct uart_dev_s *dev, bool enable)
  *
  ****************************************************************************/
 
-static bool up_txready(struct uart_dev_s *dev)
+static bool up_txready(struct btuart_lowerhalf_s *lower)
 {
-  struct up_dev_s *priv = (struct up_dev_s *)dev->priv;
+  struct up_dev_s *priv = (struct up_dev_s *)lower->priv;
   return ((up_serialin(priv, STM32_USART_SR_OFFSET) & USART_SR_TXE) != 0);
 }
 
@@ -1890,9 +1832,9 @@ static void up_dma_rxcallback(DMA_HANDLE handle, uint8_t status, void *arg)
 {
   struct up_dev_s *priv = (struct up_dev_s *)arg;
 
-  if (priv->rxenable && up_dma_rxavailable(&priv->dev))
+  if (priv->rxenable && up_dma_rxavailable(&priv->lower))
     {
-      uart_recvchars(&priv->dev);
+      uart_recvchars(&priv->lower);
     }
 }
 #endif
@@ -2030,7 +1972,7 @@ FAR uart_dev_t *stm32_serial_get_uart(int uart_num)
       return NULL;
     }
 
-  return &uart_devs[uart_idx]->dev;
+  return &uart_devs[uart_idx]->lower;
 }
 
 /****************************************************************************
@@ -2055,7 +1997,7 @@ void up_earlyserialinit(void)
       if (uart_devs[i])
         {
           up_disableusartint(uart_devs[i], NULL);
-          up_setup(&uart_devs[i]->dev);
+          up_setup(&uart_devs[i]->lower);
         }
     }
 }
@@ -2100,19 +2042,10 @@ void up_serialinit(void)
           continue;
         }
 
-#ifndef CONFIG_SERIAL_DISABLE_REORDERING
-      /* Don't create a device for the console - we did that above */
-
-      if (uart_devs[i]->dev.isconsole)
-        {
-          continue;
-        }
-#endif
-
       /* Register USARTs as devices in increasing order */
 
       devname[9] = '0' + minor++;
-      (void)uart_register(devname, &uart_devs[i]->dev);
+      (void)uart_register(devname, &uart_devs[i]->lower);
     }
 }
 
