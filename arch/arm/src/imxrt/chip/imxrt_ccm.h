@@ -325,24 +325,24 @@
 
 /* Serial Clock Divider Register 1 */
 
-#define CCM_CSCDS1_UART_CLK_PODF_SHIFT           (0)       /* Bits 0-5:   Divider for uart clock podf */
-#define CCM_CSCDS1_UART_CLK_PODF_MASK            (0x3f << CCM_CSCDS1_UART_CLK_PODF_SHIFT)
-#  define CCM_CSCDS1_UART_CLK_PODF(n)            ((uint32_t)(n) << CCM_CSCDS1_UART_CLK_PODF_SHIFT)
-#define CCM_CSCDS1_UART_CLK_SEL                  (1 << 6)  /* Bit 6:      Selector for the UART clock multiplexer */
-#  define CCM_CSCDS1_UART_CLK_SEL_PLL3_80        (0 << 6)  /* derive clock from pll3_80m */
-#  define CCM_CSCDS1_UART_CLK_SEL_OSC_CLK        (1 << 6)  /* derive clock from osc_clk */
+#define CCM_CSCDR1_UART_CLK_PODF_SHIFT           (0)       /* Bits 0-5:   Divider for uart clock podf */
+#define CCM_CSCDR1_UART_CLK_PODF_MASK            (0x3f << CCM_CSCDR1_UART_CLK_PODF_SHIFT)
+#  define CCM_CSCDR1_UART_CLK_PODF(n)            ((uint32_t)(n) << CCM_CSCDR1_UART_CLK_PODF_SHIFT)
+#define CCM_CSCDR1_UART_CLK_SEL                  (1 << 6)  /* Bit 6:      Selector for the UART clock multiplexer */
+#  define CCM_CSCDR1_UART_CLK_SEL_PLL3_80        (0 << 6)  /* derive clock from pll3_80m */
+#  define CCM_CSCDR1_UART_CLK_SEL_OSC_CLK        (1 << 6)  /* derive clock from osc_clk */
                                                            /* Bits 7-10:  Reserved */
-#define CCM_CSCDS1_USDHC1_PODF_SHIFT             (11)      /* Bits 11-13: Divider for usdhc1 clock podf */
-#define CCM_CSCDS1_USDHC1_PODF_MASK              (0x7 << CCM_CSCDS1_USDHC1_PODF_SHIFT)
-#  define CCM_CSCDS1_USDHC1_PODF(n)              ((uint32_t)(n) << CCM_CSCDS1_USDHC1_PODF_SHIFT)
+#define CCM_CSCDR1_USDHC1_PODF_SHIFT             (11)      /* Bits 11-13: Divider for usdhc1 clock podf */
+#define CCM_CSCDR1_USDHC1_PODF_MASK              (0x7 << CCM_CSCDR1_USDHC1_PODF_SHIFT)
+#  define CCM_CSCDR1_USDHC1_PODF(n)              ((uint32_t)(n) << CCM_CSCDR1_USDHC1_PODF_SHIFT)
                                                            /* Bits 14-15: Reserved */
-#define CCM_CSCDS1_USDHC2_PODF_SHIFT             (16)      /* Bits 16-18: Divider for usdhc2 clock */
-#define CCM_CSCDS1_USDHC2_PODF_MASK              (0x7 << CCM_CSCDS1_USDHC2_PODF_SHIFT)
-#  define CCM_CSCDS1_USDHC2_PODF(n)              ((uint32_t)(n) << CCM_CSCDS1_USDHC2_PODF_SHIFT)
+#define CCM_CSCDR1_USDHC2_PODF_SHIFT             (16)      /* Bits 16-18: Divider for usdhc2 clock */
+#define CCM_CSCDR1_USDHC2_PODF_MASK              (0x7 << CCM_CSCDR1_USDHC2_PODF_SHIFT)
+#  define CCM_CSCDR1_USDHC2_PODF(n)              ((uint32_t)(n) << CCM_CSCDR1_USDHC2_PODF_SHIFT)
                                                            /* Bits 19-24: Reserved */
-#define CCM_CSCDS1_TRACE_PODF_SHIFT              (25)      /* Bits 25-27: Divider for trace clock */
-#define CCM_CSCDS1_TRACE_PODF_MASK               (0x7 << CCM_CSCDS1_TRACE_PODF_SHIFT)
-#  define CCM_CSCDS1_TRACE_PODF(n)               ((uint32_t)(n) << CCM_CSCDS1_TRACE_PODF_SHIFT)
+#define CCM_CSCDR1_TRACE_PODF_SHIFT              (25)      /* Bits 25-27: Divider for trace clock */
+#define CCM_CSCDR1_TRACE_PODF_MASK               (0x7 << CCM_CSCDR1_TRACE_PODF_SHIFT)
+#  define CCM_CSCDR1_TRACE_PODF(n)               ((uint32_t)(n) << CCM_CSCDR1_TRACE_PODF_SHIFT)
                                                            /* Bits 28-31: Reserved */
 
 /*  Clock Divider Register 1 */

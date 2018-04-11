@@ -63,7 +63,8 @@
  *
  */
 
-#define BOARD_CPU_FREQUENCY     600000000
+
+#define BOARD_XTAL_FREQUENCY	24000000
 
 #define IMXRT_ARM_PLL_SELECT    (100)
 #define IMXRT_SYS_PLL_SELECT    (1)
@@ -71,6 +72,7 @@
 #define IMXRT_AHB_CLOCK_DIVIDER (0)
 #define IMXRT_IPG_CLOCK_DIVIDER (3)
 
+#define BOARD_CPU_FREQUENCY     (BOARD_XTAL_FREQUENCY * IMXRT_ARM_PLL_SELECT) / (IMXRT_ARM_CLOCK_DIVIDER + 1)
 /* LED definitions ******************************************************************/
 /* There are four LED status indicators located on the EVK Board.  The functions of
  * these LEDs include:
