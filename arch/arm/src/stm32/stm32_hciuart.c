@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/arm/src/stm32/stm32_hciuart.c
  *
- *   Copyright (C) 2028 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -201,8 +201,11 @@
                  DMA_CCR_MSIZE_8BITS   | \
                  CONFIG_USART_DMAPRIO)
 # endif
-
 #endif
+
+/* All interrupts */
+
+#define HCIUART_ALLINTS (USART_CR1_USED_INTS | USART_CR3_EIE)
 
 /* Power management definitions */
 
@@ -217,11 +220,15 @@
  * Private Types
  ****************************************************************************/
 
+/* This structure is the variable state of the driver */
+
+struct hciuart_state_s
+{
+}
+
 struct hciuart_dev_s
 {
   struct btuart_lowerhalf_s lower;  /* Generic HCI-UART lower half */
-  uint16_t ie;                      /* Saved interrupt mask bits value */
-  uint16_t sr;                      /* Saved status bits */
 
   /* Has been initialized and HW is setup. */
 
@@ -260,39 +267,49 @@ struct hciuart_dev_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static void hciuart_set_format(struct btuart_lowerhalf_s *lower);
+static inline uint32_t hciuart_getreg32(struct hciuart_dev_s *priv,
+              unsigned int offset);
+static inline void hciuart_putreg32(struct hciuart_dev_s *priv,
+              unsigned int offset, uint32_t value);
+static void hciuart_enableints(struct hciuart_dev_s *priv, uint32_t intset);
+static void hciuart_disableints(struct hciuart_dev_s *priv, uint32_t intset);
+static void hciuart_isenabled(struct hciuart_dev_s *priv, uint32_t intset);
+#ifdef SERIAL_HAVE_DMA
+static int  hciuart_dma_nextrx(struct hciuart_dev_s *priv);
+#endif
+static void hciuart_setup(struct hciuart_dev_s *priv);
+#ifdef SERIAL_HAVE_DMA
+static int  hciuart_dma_setup(struct btuart_lowerhalf_s *lower)
+#endif
+static void hciuart_apbclock(struct hciuart_dev_s *priv, bool on);
+static void hciuart_configure(struct hciuart_dev_s *priv);
 static int  hciuart_interrupt(int irq, void *context, void *arg);
 
 /* HCI-UART Lower-Half Methods */
 
 static void hciuart_attach(FAR const struct btuart_lowerhalf_s *lower,
-                           btuart_handler_t handler, FAR void *arg);
+              btuart_handler_t handler, FAR void *arg);
 static void hciuart_rxenable(FAR const struct btuart_lowerhalf_s *lower,
-                             bool enable);
+              bool enable);
 static void hciuart_txenable(FAR const struct btuart_lowerhalf_s *lower,
-                             bool enable);
+              bool enable);
 static ssize_t hciuart_read(FAR const struct btuart_lowerhalf_s *lower,
-                            FAR void *buffer, size_t buflen);
+              FAR void *buffer, size_t buflen);
 static ssize_t hciuart_write(FAR const struct btuart_lowerhalf_s *lower,
-                             FAR const void *buffer, size_t buflen);
+              FAR const void *buffer, size_t buflen);
 static ssize_t hciuart_rxdrain(FAR const struct btuart_lowerhalf_s *lower);
 
 #ifdef SERIAL_HAVE_DMA
 ### REVISIT:  These are DMA replaces for the old uart operations
-static int  up_dma_setup(struct btuart_lowerhalf_s *lower);
-static void up_dma_shutdown(struct btuart_lowerhalf_s *lower);
-static int  up_dma_receive(struct btuart_lowerhalf_s *lower, unsigned int *status);
 static void up_dma_rxint(struct btuart_lowerhalf_s *lower, bool enable);
-static bool up_dma_rxavailable(struct btuart_lowerhalf_s *lower);
-
 static void up_dma_rxcallback(DMA_HANDLE handle, uint8_t status, void *arg);
 #endif
 
 #ifdef CONFIG_PM
 static void up_pm_notify(struct pm_callback_s *cb, int dowmin,
-                         enum pm_state_e pmstate);
+              enum pm_state_e pmstate);
 static int  up_pm_prepare(struct pm_callback_s *cb, int domain,
-                          enum pm_state_e pmstate);
+              enum pm_state_e pmstate);
 #endif
 
 /****************************************************************************
@@ -634,117 +651,103 @@ static  struct pm_callback_s g_serialcb =
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_serialin
+ * Name: hciuart_getreg32
  ****************************************************************************/
 
-static inline uint32_t up_serialin(struct hciuart_dev_s *priv, int offset)
+static inline uint32_t hciuart_getreg32(struct hciuart_dev_s *priv,
+                                        unsigned int offset)
 {
   return getreg32(priv->usartbase + offset);
 }
 
 /****************************************************************************
- * Name: up_serialout
+ * Name: hciuart_putreg32
  ****************************************************************************/
 
-static inline void up_serialout(struct hciuart_dev_s *priv, int offset,
-                                uint32_t value)
+static inline void hciuart_putreg32(struct hciuart_dev_s *priv,
+                                    unsigned int offset, uint32_t value)
 {
   putreg32(value, priv->usartbase + offset);
 }
 
 /****************************************************************************
- * Name: up_setusartint
+ * Name: hciuart_enableints
+ *
+ * Description:
+ *   Enable interrupts as specified by bits in the 'intset' argument
+ *
  ****************************************************************************/
 
-static inline void up_setusartint(struct hciuart_dev_s *priv, uint16_t ie)
+static void hciuart_enableints(struct hciuart_dev_s *priv, uint32_t intset)
 {
-  uint32_t cr;
-
-  /* Save the interrupt mask */
-
-  priv->ie = ie;
+  uint32_t regval;
 
   /* And restore the interrupt state (see the interrupt enable/usage table above) */
 
-  cr = up_serialin(priv, STM32_USART_CR1_OFFSET);
-  cr &= ~(USART_CR1_USED_INTS);
-  cr |= (ie & (USART_CR1_USED_INTS));
-  up_serialout(priv, STM32_USART_CR1_OFFSET, cr);
+  regval  = hciuart_getreg32(priv, STM32_USART_CR1_OFFSET);
+  regval |= (intset & USART_CR1_USED_INTS);
+  hciuart_putreg32(priv, STM32_USART_CR1_OFFSET, regval);
 
-  cr = up_serialin(priv, STM32_USART_CR3_OFFSET);
-  cr &= ~USART_CR3_EIE;
-  cr |= (ie & USART_CR3_EIE);
-  up_serialout(priv, STM32_USART_CR3_OFFSET, cr);
+  regval  = hciuart_getreg32(priv, STM32_USART_CR3_OFFSET);
+  regval |= (intset & USART_CR3_EIE);
+  hciuart_putreg32(priv, STM32_USART_CR3_OFFSET, regval);
 }
 
 /****************************************************************************
- * Name: up_restoreusartint
+ * Name: hciuart_disableints
+ *
+ * Description:
+ *   Disable interrupts as specified by bits in the 'intset' argument
+ *
  ****************************************************************************/
 
-static void up_restoreusartint(struct hciuart_dev_s *priv, uint16_t ie)
+static void hciuart_disableints(struct hciuart_dev_s *priv, uint32_t intset)
 {
-  irqstate_t flags;
+  uint32_t regval;
 
-  flags = enter_critical_section();
+  /* And restore the interrupt state (see the interrupt enable/usage table above) */
 
-  up_setusartint(priv, ie);
+  regval  = hciuart_getreg32(priv, STM32_USART_CR1_OFFSET);
+  regval &= ~(intset & USART_CR1_USED_INTS);
+  hciuart_putreg32(priv, STM32_USART_CR1_OFFSET, regval);
 
-  leave_critical_section(flags);
+  regval  = hciuart_getreg32(priv, STM32_USART_CR3_OFFSET);
+  regval &= ~(intset & USART_CR3_EIE);
+  hciuart_putreg32(priv, STM32_USART_CR3_OFFSET, regval);
 }
 
 /****************************************************************************
- * Name: up_disableusartint
+ * Name: hciuart_isenabled
+ *
+ * Description:
+ *   Return true if any any of the interrupts specified in the 'intset'
+ *   argument are enabled.
+ *
  ****************************************************************************/
 
-static void up_disableusartint(struct hciuart_dev_s *priv, uint16_t *ie)
+static void hciuart_isenabled(struct hciuart_dev_s *priv, uint32_t intset)
 {
-  irqstate_t flags;
+  uint32_t regval;
 
-  flags = enter_critical_section();
+  /* And restore the interrupt state (see the interrupt enable/usage table above) */
 
-  if (ie)
+  regval  = hciuart_getreg32(priv, STM32_USART_CR1_OFFSET);
+  if ((regval & USART_CR1_USED_INTS) != 0)
     {
-      uint32_t cr1;
-      uint32_t cr3;
-
-      /* USART interrupts:
-       *
-       * Enable             Status          Meaning                        Usage
-       * ------------------ --------------- ------------------------------ ----------
-       * USART_CR1_IDLEIE   USART_SR_IDLE   Idle Line Detected             (not used)
-       * USART_CR1_RXNEIE   USART_SR_RXNE   Received Data Ready to be Read
-       * "              "   USART_SR_ORE    Overrun Error Detected
-       * USART_CR1_TCIE     USART_SR_TC     Transmission Complete          (used only for RS-485)
-       * USART_CR1_TXEIE    USART_SR_TXE    Transmit Data Register Empty
-       * USART_CR1_PEIE     USART_SR_PE     Parity Error
-       *
-       * USART_CR2_LBDIE    USART_SR_LBD    Break Flag                     (not used)
-       * USART_CR3_EIE      USART_SR_FE     Framing Error
-       * "           "      USART_SR_NE     Noise Error
-       * "           "      USART_SR_ORE    Overrun Error Detected
-       * USART_CR3_CTSIE    USART_SR_CTS    CTS flag                       (not used)
-       */
-
-      cr1 = up_serialin(priv, STM32_USART_CR1_OFFSET);
-      cr3 = up_serialin(priv, STM32_USART_CR3_OFFSET);
-
-      /* Return the current interrupt mask value for the used interrupts.  Notice
-       * that this depends on the fact that none of the used interrupt enable bits
-       * overlap.  This logic would fail if we needed the break interrupt!
-       */
-
-      *ie = (cr1 & (USART_CR1_USED_INTS)) | (cr3 & USART_CR3_EIE);
+      return true;
     }
 
-  /* Disable all interrupts */
+  regval  = hciuart_getreg32(priv, STM32_USART_CR3_OFFSET);
+  if ((regval & USART_CR3_EIE) != 0)
+    {
+      return true;
+    }
 
-  up_setusartint(priv, 0);
-
-  leave_critical_section(flags);
+  return false;
 }
 
 /****************************************************************************
- * Name: up_dma_nextrx
+ * Name: hciuart_dma_nextrx
  *
  * Description:
  *   Returns the index into the RX FIFO where the DMA will place the next
@@ -753,7 +756,7 @@ static void up_disableusartint(struct hciuart_dev_s *priv, uint16_t *ie)
  ****************************************************************************/
 
 #ifdef SERIAL_HAVE_DMA
-static int up_dma_nextrx(struct hciuart_dev_s *priv)
+static int hciuart_dma_nextrx(struct hciuart_dev_s *priv)
 {
   size_t dmaresidual;
 
@@ -764,16 +767,15 @@ static int up_dma_nextrx(struct hciuart_dev_s *priv)
 #endif
 
 /****************************************************************************
- * Name: hciuart_set_format
+ * Name: hciuart_setup
  *
  * Description:
  *   Set the serial line format and speed.
  *
  ****************************************************************************/
 
-static void hciuart_set_format(struct btuart_lowerhalf_s *lower)
+static void hciuart_setup(struct hciuart_dev_s *priv)
 {
-  struct hciuart_dev_s *priv = (struct hciuart_dev_s *)lower->priv;
 #if defined(CONFIG_STM32_STM32F30XX) || defined(CONFIG_STM32_STM32F33XX) || \
     defined(CONFIG_STM32_STM32F37XX)
   uint32_t usartdiv8;
@@ -787,7 +789,7 @@ static void hciuart_set_format(struct btuart_lowerhalf_s *lower)
 
   /* Load CR1 */
 
-  regval = up_serialin(priv, STM32_USART_CR1_OFFSET);
+  regval = hciuart_getreg32(priv, STM32_USART_CR1_OFFSET);
 
 #if defined(CONFIG_STM32_STM32F30XX) || defined(CONFIG_STM32_STM32F33XX)|| \
     defined(CONFIG_STM32_STM32F37XX)
@@ -901,8 +903,8 @@ static void hciuart_set_format(struct btuart_lowerhalf_s *lower)
   brr |= fraction << USART_BRR_FRAC_SHIFT;
 #endif
 
-  up_serialout(priv, STM32_USART_CR1_OFFSET, regval);
-  up_serialout(priv, STM32_USART_BRR_OFFSET, brr);
+  hciuart_putreg32(priv, STM32_USART_CR1_OFFSET, regval);
+  hciuart_putreg32(priv, STM32_USART_BRR_OFFSET, brr);
 
   /* Configure parity mode */
 
@@ -932,11 +934,11 @@ static void hciuart_set_format(struct btuart_lowerhalf_s *lower)
       regval |= USART_CR1_M;
     }
 
-  up_serialout(priv, STM32_USART_CR1_OFFSET, regval);
+  hciuart_putreg32(priv, STM32_USART_CR1_OFFSET, regval);
 
   /* Configure STOP bits */
 
-  regval = up_serialin(priv, STM32_USART_CR2_OFFSET);
+  regval = hciuart_getreg32(priv, STM32_USART_CR2_OFFSET);
   regval &= ~(USART_CR2_STOP_MASK);
 
   if (priv->stopbits2)
@@ -944,11 +946,11 @@ static void hciuart_set_format(struct btuart_lowerhalf_s *lower)
       regval |= USART_CR2_STOP2;
     }
 
-  up_serialout(priv, STM32_USART_CR2_OFFSET, regval);
+  hciuart_putreg32(priv, STM32_USART_CR2_OFFSET, regval);
 
   /* Configure hardware flow control */
 
-  regval  = up_serialin(priv, STM32_USART_CR3_OFFSET);
+  regval  = hciuart_getreg32(priv, STM32_USART_CR3_OFFSET);
   regval &= ~(USART_CR3_CTSE | USART_CR3_RTSE);
 
   /* Use software controlled RTS flow control. Because STM current STM32
@@ -962,11 +964,70 @@ static void hciuart_set_format(struct btuart_lowerhalf_s *lower)
 #endif
   regval |= USART_CR3_CTSE;
 
-  up_serialout(priv, STM32_USART_CR3_OFFSET, regval);
+  hciuart_putreg32(priv, STM32_USART_CR3_OFFSET, regval);
 }
 
 /****************************************************************************
- * Name: up_set_apb_clock
+ * Name: hciuart_dma_setup
+ *
+ * Description:
+ *   Configure the USART baud, bits, parity, etc. This method is called the
+ *   first time that the serial port is opened.
+ *
+ ****************************************************************************/
+
+#ifdef SERIAL_HAVE_DMA
+static int hciuart_dma_setup(struct btuart_lowerhalf_s *lower)
+{
+  struct hciuart_dev_s *priv = (struct hciuart_dev_s *)lower->priv;
+  int result;
+  uint32_t regval;
+
+  /* Do the basic UART setup  */
+
+  result = hciuart_configure(priv);
+  if (result < 0)
+    {
+      return result;
+    }
+
+  /* Acquire the DMA channel.  This should always succeed. */
+
+  priv->rxdma = stm32_dmachannel(priv->rxdma_channel);
+
+  /* Configure for circular DMA reception into the RX fifo */
+
+  stm32_dmasetup(priv->rxdma,
+                 priv->usartbase + STM32_USART_RDR_OFFSET,
+                 (uint32_t)priv->rxfifo,
+                 RXDMA_BUFFER_SIZE,
+                 SERIAL_DMA_CONTROL_WORD);
+
+  /* Reset our DMA shadow pointer to match the address just
+   * programmed above.
+   */
+
+  priv->rxdmanext = 0;
+
+  /* Enable receive DMA for the UART */
+
+  regval  = hciuart_getreg32(priv, STM32_USART_CR3_OFFSET);
+  regval |= USART_CR3_DMAR;
+  hciuart_putreg32(priv, STM32_USART_CR3_OFFSET, regval);
+
+  /* Start the DMA channel, and arrange for callbacks at the half and
+   * full points in the FIFO.  This ensures that we have half a FIFO
+   * worth of time to claim bytes before they are overwritten.
+   */
+
+  stm32_dmastart(priv->rxdma, up_dma_rxcallback, (void *)priv, true);
+
+  return OK;
+}
+#endif
+
+/****************************************************************************
+ * Name: hciuart_apbclock
  *
  * Description:
  *   Enable or disable APB clock for the USART peripheral
@@ -977,9 +1038,8 @@ static void hciuart_set_format(struct btuart_lowerhalf_s *lower)
  *
  ****************************************************************************/
 
-static void up_set_apb_clock(struct btuart_lowerhalf_s *lower, bool on)
+static void hciuart_apbclock(struct hciuart_dev_s *priv, bool on)
 {
-  struct hciuart_dev_s *priv = (struct hciuart_dev_s *)lower->priv;
   uint32_t rcc_en;
   uint32_t regaddr;
 
@@ -987,44 +1047,50 @@ static void up_set_apb_clock(struct btuart_lowerhalf_s *lower, bool on)
 
   switch (priv->usartbase)
     {
-    default:
-      return;
 #ifdef CONFIG_STM32_USART1_HCIUART
     case STM32_USART1_BASE:
       rcc_en = RCC_APB2ENR_USART1EN;
       regaddr = STM32_RCC_APB2ENR;
       break;
 #endif
+
 #ifdef CONFIG_STM32_USART2_HCIUART
     case STM32_USART2_BASE:
       rcc_en = RCC_APB1ENR_USART2EN;
       regaddr = STM32_RCC_APB1ENR;
       break;
 #endif
+
 #ifdef CONFIG_STM32_USART3_HCIUART
     case STM32_USART3_BASE:
       rcc_en = RCC_APB1ENR_USART3EN;
       regaddr = STM32_RCC_APB1ENR;
       break;
 #endif
+
 #ifdef CONFIG_STM32_USART6_HCIUART
     case STM32_USART6_BASE:
       rcc_en = RCC_APB2ENR_USART6EN;
       regaddr = STM32_RCC_APB2ENR;
       break;
 #endif
+
 #ifdef CONFIG_STM32_UART7_HCIUART
     case STM32_UART7_BASE:
       rcc_en = RCC_APB1ENR_UART7EN;
       regaddr = STM32_RCC_APB1ENR;
       break;
 #endif
+
 #ifdef CONFIG_STM32_UART8_HCIUART
     case STM32_UART8_BASE:
       rcc_en = RCC_APB1ENR_UART8EN;
       regaddr = STM32_RCC_APB1ENR;
       break;
 #endif
+
+    default:
+      return;
     }
 
   /* Enable/disable APB 1/2 clock for USART */
@@ -1059,19 +1125,13 @@ static int hciuart_configure(struct hciuart_dev_s *priv)
 
   /* Enable USART APB1/2 clock */
 
-  up_set_apb_clock(lower, true);
+  hciuart_apbclock(priv, true);
 
   /* Configure pins for USART use */
 
   stm32_configgpio(priv->tx_gpio);
   stm32_configgpio(priv->rx_gpio);
-
-#ifdef CONFIG_SERIAL_OFLOWCONTROL
-  if (priv->cts_gpio != 0)
-    {
-      stm32_configgpio(priv->cts_gpio);
-    }
-#endif
+  stm32_configgpio(priv->cts_gpio);
 
   config = priv->rts_gpio;
 
@@ -1089,7 +1149,7 @@ static int hciuart_configure(struct hciuart_dev_s *priv)
   /* Configure CR2 */
   /* Clear STOP, CLKEN, CPOL, CPHA, LBCL, and interrupt enable bits */
 
-  regval  = up_serialin(priv, STM32_USART_CR2_OFFSET);
+  regval  = hciuart_getreg32(priv, STM32_USART_CR2_OFFSET);
   regval &= ~(USART_CR2_STOP_MASK | USART_CR2_CLKEN | USART_CR2_CPOL |
               USART_CR2_CPHA | USART_CR2_LBCL | USART_CR2_LBDIE);
 
@@ -1100,181 +1160,39 @@ static int hciuart_configure(struct hciuart_dev_s *priv)
       regval |= USART_CR2_STOP2;
     }
 
-  up_serialout(priv, STM32_USART_CR2_OFFSET, regval);
+  hciuart_putreg32(priv, STM32_USART_CR2_OFFSET, regval);
 
   /* Configure CR1 */
   /* Clear TE, REm and all interrupt enable bits */
 
-  regval  = up_serialin(priv, STM32_USART_CR1_OFFSET);
+  regval  = hciuart_getreg32(priv, STM32_USART_CR1_OFFSET);
   regval &= ~(USART_CR1_TE | USART_CR1_RE | USART_CR1_ALLINTS);
 
-  up_serialout(priv, STM32_USART_CR1_OFFSET, regval);
+  hciuart_putreg32(priv, STM32_USART_CR1_OFFSET, regval);
 
   /* Configure CR3 */
   /* Clear CTSE, RTSE, and all interrupt enable bits */
 
-  regval  = up_serialin(priv, STM32_USART_CR3_OFFSET);
+  regval  = hciuart_getreg32(priv, STM32_USART_CR3_OFFSET);
   regval &= ~(USART_CR3_CTSIE | USART_CR3_CTSE | USART_CR3_RTSE | USART_CR3_EIE);
 
-  up_serialout(priv, STM32_USART_CR3_OFFSET, regval);
+  hciuart_putreg32(priv, STM32_USART_CR3_OFFSET, regval);
 
   /* Configure the USART line format and speed. */
 
-  hciuart_set_format(lower);
+  hciuart_setup(priv);
 
   /* Enable Rx, Tx, and the USART */
 
-  regval      = up_serialin(priv, STM32_USART_CR1_OFFSET);
+  regval      = hciuart_getreg32(priv, STM32_USART_CR1_OFFSET);
   regval     |= (USART_CR1_UE | USART_CR1_TE | USART_CR1_RE);
-  up_serialout(priv, STM32_USART_CR1_OFFSET, regval);
-
-  /* Set up the cached interrupt enables value */
-
-  priv->ie    = 0;
+  hciuart_putreg32(priv, STM32_USART_CR1_OFFSET, regval);
 
   /* Mark device as initialized. */
 
   priv->initialized = true;
-
   return OK;
 }
-
-/****************************************************************************
- * Name: up_dma_setup
- *
- * Description:
- *   Configure the USART baud, bits, parity, etc. This method is called the
- *   first time that the serial port is opened.
- *
- ****************************************************************************/
-
-#ifdef SERIAL_HAVE_DMA
-static int up_dma_setup(struct btuart_lowerhalf_s *lower)
-{
-  struct hciuart_dev_s *priv = (struct hciuart_dev_s *)lower->priv;
-  int result;
-  uint32_t regval;
-
-  /* Do the basic UART setup first, unless we are the console */
-
-  if (!lower->isconsole)
-    {
-      result = hciuart_configure(lower);
-      if (result != OK)
-        {
-          return result;
-        }
-    }
-
-  /* Acquire the DMA channel.  This should always succeed. */
-
-  priv->rxdma = stm32_dmachannel(priv->rxdma_channel);
-
-  /* Configure for circular DMA reception into the RX fifo */
-
-  stm32_dmasetup(priv->rxdma,
-                 priv->usartbase + STM32_USART_RDR_OFFSET,
-                 (uint32_t)priv->rxfifo,
-                 RXDMA_BUFFER_SIZE,
-                 SERIAL_DMA_CONTROL_WORD);
-
-  /* Reset our DMA shadow pointer to match the address just
-   * programmed above.
-   */
-
-  priv->rxdmanext = 0;
-
-  /* Enable receive DMA for the UART */
-
-  regval  = up_serialin(priv, STM32_USART_CR3_OFFSET);
-  regval |= USART_CR3_DMAR;
-  up_serialout(priv, STM32_USART_CR3_OFFSET, regval);
-
-  /* Start the DMA channel, and arrange for callbacks at the half and
-   * full points in the FIFO.  This ensures that we have half a FIFO
-   * worth of time to claim bytes before they are overwritten.
-   */
-
-  stm32_dmastart(priv->rxdma, up_dma_rxcallback, (void *)priv, true);
-
-  return OK;
-}
-#endif
-
-/****************************************************************************
- * Name: up_shutdown
- *
- * Description:
- *   Disable the USART.  This method is called when the serial
- *   port is closed
- *
- ****************************************************************************/
-
-static void up_shutdown(struct btuart_lowerhalf_s *lower)
-{
-  struct hciuart_dev_s *priv = (struct hciuart_dev_s *)lower->priv;
-  uint32_t regval;
-
-  /* Mark device as uninitialized. */
-
-  priv->initialized = false;
-
-  /* Disable all interrupts */
-
-  up_disableusartint(priv, NULL);
-
-  /* Disable USART APB1/2 clock */
-
-  up_set_apb_clock(lower, false);
-
-  /* Disable Rx, Tx, and the UART */
-
-  regval  = up_serialin(priv, STM32_USART_CR1_OFFSET);
-  regval &= ~(USART_CR1_UE | USART_CR1_TE | USART_CR1_RE);
-  up_serialout(priv, STM32_USART_CR1_OFFSET, regval);
-
-  /* Release pins. "If the serial-attached device is powered down, the TX
-   * pin causes back-powering, potentially confusing the device to the point
-   * of complete lock-up."
-   *
-   * REVISIT:  Is unconfiguring the pins appropriate for all device?  If not,
-   * then this may need to be a configuration option.
-   */
-
-  stm32_unconfiggpio(priv->tx_gpio);
-  stm32_unconfiggpio(priv->rx_gpio);
-  stm32_unconfiggpio(priv->cts_gpio);
-  stm32_unconfiggpio(priv->rts_gpio);
-}
-
-/****************************************************************************
- * Name: up_dma_shutdown
- *
- * Description:
- *   Disable the USART.  This method is called when the serial
- *   port is closed
- *
- ****************************************************************************/
-
-#ifdef SERIAL_HAVE_DMA
-static void up_dma_shutdown(struct btuart_lowerhalf_s *lower)
-{
-  struct hciuart_dev_s *priv = (struct hciuart_dev_s *)lower->priv;
-
-  /* Perform the normal UART shutdown */
-
-  up_shutdown(lower);
-
-  /* Stop the DMA channel */
-
-  stm32_dmastop(priv->rxdma);
-
-  /* Release the DMA channel */
-
-  stm32_dmafree(priv->rxdma);
-  priv->rxdma = NULL;
-}
-#endif
 
 /****************************************************************************
  * Name: hciuart_interrupt
@@ -1291,6 +1209,7 @@ static void up_dma_shutdown(struct btuart_lowerhalf_s *lower)
 static int hciuart_interrupt(int irq, void *context, void *arg)
 {
   struct hciuart_dev_s *priv = (struct hciuart_dev_s *)arg;
+  uint32_t status
   int  passes;
   bool handled;
 
@@ -1313,7 +1232,7 @@ static int hciuart_interrupt(int irq, void *context, void *arg)
 
       /* Get the masked USART status word. */
 
-      priv->sr = up_serialin(priv, STM32_USART_SR_OFFSET);
+      status = hciuart_getreg32(priv, STM32_USART_SR_OFFSET);
 
       /* USART interrupts:
        *
@@ -1332,20 +1251,48 @@ static int hciuart_interrupt(int irq, void *context, void *arg)
        * "           "      USART_SR_ORE    Overrun Error Detected
        * USART_CR3_CTSIE    USART_SR_CTS    CTS flag                        (not used)
        *
-       * NOTE: Some of these status bits must be cleared by explicity writing zero
+       * NOTE: Some of these status bits must be cleared by explicitly writing zero
        * to the SR register: USART_SR_CTS, USART_SR_LBD. Note of those are currently
        * being used.
        */
 
       /* Handle incoming, receive bytes. */
 
-      if ((priv->sr & USART_SR_RXNE) != 0 && (priv->ie & USART_CR1_RXNEIE) != 0)
+      if ((status & USART_SR_RXNE) != 0 &&
+          (hciuart_isenabled(priv, USART_CR1_RXNEIE))
         {
-          /* Received data ready... process incoming bytes.  NOTE the check for
-           * RXNEIE:  We cannot call uart_recvchards of RX interrupts are disabled.
+          uint32_t rdr;
+
+          /* Received data ready... process incoming bytes. */
+
+#ifdef SERIAL_HAVE_DMA
+          /* Compare our receive pointer to the current DMA pointer, if they
+           * do not match, then there are bytes to be received.
            */
 
-          uart_recvchars(&priv->lower);
+          while ((hciuart_dma_nextrx(priv) != priv->rxdmanext))
+            {
+              int c = c = priv->rxfifo[priv->rxdmanext];
+
+              priv->rxdmanext++;
+              if (priv->rxdmanext == RXDMA_BUFFER_SIZE)
+                {
+                  priv->rxdmanext = 0;
+                }
+
+#warning Missing logic
+            }
+#else
+          /* Copy data from Rx FIFO */
+
+          while ((hciuart_getreg32(priv, STM32_USART_SR_OFFSET) & USART_SR_RXNE) != 0);
+            {
+              rdr = hciuart_getreg32(priv, STM32_USART_RDR_OFFSET) & 0xff;
+#warning Missing logic
+            }
+#endif
+          /* Copy data from the DMA buffer */
+
           handled = true;
         }
 
@@ -1353,7 +1300,7 @@ static int hciuart_interrupt(int irq, void *context, void *arg)
        * error conditions.
        */
 
-      else if ((priv->sr & (USART_SR_ORE | USART_SR_NE | USART_SR_FE)) != 0)
+      else if ((status & (USART_SR_ORE | USART_SR_NE | USART_SR_FE)) != 0)
         {
 #if defined(CONFIG_STM32_STM32F30XX) || defined(CONFIG_STM32_STM32F33XX) || \
     defined(CONFIG_STM32_STM32F37XX)
@@ -1361,7 +1308,7 @@ static int hciuart_interrupt(int irq, void *context, void *arg)
            * interrupt clear register (ICR).
            */
 
-          up_serialout(priv, STM32_USART_ICR_OFFSET,
+          hciuart_putreg32(priv, STM32_USART_ICR_OFFSET,
                       (USART_ICR_NCF | USART_ICR_ORECF | USART_ICR_FECF));
 #else
           /* If an error occurs, read from DR to clear the error (data has
@@ -1372,13 +1319,14 @@ static int hciuart_interrupt(int irq, void *context, void *arg)
            * good byte will be lost.
            */
 
-          (void)up_serialin(priv, STM32_USART_RDR_OFFSET);
+          (void)hciuart_getreg32(priv, STM32_USART_RDR_OFFSET);
 #endif
         }
 
       /* Handle outgoing, transmit bytes */
 
-      if ((priv->sr & USART_SR_TXE) != 0 && (priv->ie & USART_CR1_TXEIE) != 0)
+      if ((status & USART_SR_TXE) != 0 &&
+          hciuart_isenabled(priv, USART_CR1_TXEIE))
         {
           /* Transmit data register empty ... process outgoing bytes */
 
@@ -1446,8 +1394,19 @@ static void hciuart_rxenable(FAR const struct btuart_lowerhalf_s *lower,
                              bool enable)
 {
   struct hciuart_dev_s *priv = (struct hciuart_dev_s *)lower->priv;
+#ifdef SERIAL_HAVE_DMA
+  /* En/disable DMA reception.
+   *
+   * Note that it is not safe to check for available bytes and immediately
+   * pass them to uart_recvchars as that could potentially recurse back
+   * to us again.  Instead, bytes must wait until the next up_dma_poll or
+   * DMA event.
+   */
+
+  priv->rxenable = enable;
+#else
+  uint32_t inset;
   irqstate_t flags;
-  uint16_t ie;
 
   /* USART receive interrupts:
    *
@@ -1465,7 +1424,6 @@ static void hciuart_rxenable(FAR const struct btuart_lowerhalf_s *lower,
    */
 
   flags = enter_critical_section();
-  ie = priv->ie;
   if (enable)
     {
       /* Receive an interrupt when their is anything in the Rx data register (or an Rx
@@ -1473,23 +1431,22 @@ static void hciuart_rxenable(FAR const struct btuart_lowerhalf_s *lower,
        */
 
 #ifdef CONFIG_USART_ERRINTS
-      ie |= (USART_CR1_RXNEIE | USART_CR1_PEIE | USART_CR3_EIE);
+      intset = USART_CR1_RXNEIE | USART_CR1_PEIE | USART_CR3_EIE;
 #else
-      ie |= USART_CR1_RXNEIE;
+      intset = USART_CR1_RXNEIE;
 #endif
+      hciuart_enableints(priv, intset);
     }
   else
     {
-      ie &= ~(USART_CR1_RXNEIE | USART_CR1_PEIE | USART_CR3_EIE);
+      intset = USART_CR1_RXNEIE | USART_CR1_PEIE | USART_CR3_EIE;
+      hciuart_disableints(priv, intset);
     }
 
-  /* Then set the new interrupt state */
-
-  up_restoreusartint(priv, ie);
   leave_critical_section(flags);
+#endif
 }
 
-{
 /****************************************************************************
  * Name: hciuart_txenable
  *
@@ -1518,7 +1475,7 @@ static void hciuart_txenable(FAR const struct btuart_lowerhalf_s *lower,
     {
       /* Set to receive an interrupt when the TX data register is empty */
 
-      up_restoreusartint(priv, priv->ie | USART_CR1_TXEIE);
+      hciuart_enableints(priv, USART_CR1_TXEIE);
 
       /* Fake a TX interrupt here by just calling uart_xmitchars() with
        * interrupts disabled (note this may recurse).
@@ -1530,14 +1487,14 @@ static void hciuart_txenable(FAR const struct btuart_lowerhalf_s *lower,
     {
       /* Disable the TX interrupt */
 
-      up_restoreusartint(priv, priv->ie & ~USART_CR1_TXEIE);
+      hciuart_disableints(priv, USART_CR1_TXEIE);
     }
 
   leave_critical_section(flags);
 }
 
 /****************************************************************************
- * Name: up_receive
+ * Name: hciuart_read
  *
  * Description:
  *   Read UART data.
@@ -1547,10 +1504,11 @@ static void hciuart_txenable(FAR const struct btuart_lowerhalf_s *lower,
 static ssize_t hciuart_read(FAR const struct btuart_lowerhalf_s *lower,
                             FAR void *buffer, size_t buflen)
 {
+  /* Flush data from the Rx FIFO (or DMA buffer */)
 }
 
 /****************************************************************************
- * Name: up_receive
+ * Name: hciuart_write
  *
  * Description:
  *   Write UART data.
@@ -1560,66 +1518,29 @@ static ssize_t hciuart_read(FAR const struct btuart_lowerhalf_s *lower,
 static ssize_t hciuart_write(FAR const struct btuart_lowerhalf_s *lower,
                              FAR const void *buffer, size_t buflen)
 {
+  /* Copy data to the Tx buffer */
+
+  /* Wait for space to become available in the Tx buffer */
 }
 
 /****************************************************************************
- * Name: up_receive
+ * Name: hciuart_rxdrain
  *
  * Description:
- * Flush/drain all buffered RX data
+ *   Flush/drain all buffered RX data
  *
  ****************************************************************************/
 
 static ssize_t hciuart_rxdrain(FAR const struct btuart_lowerhalf_s *lower)
 {
+  /* Stop Rx DMA */
+
+  /* Mark the Rx buffer as empty */
+
+  /* Reset the Rx DMA buffer */
+
+  /* Flush data in the Rx FIFO */
 }
-
-/****************************************************************************
- * Name: up_receive
- *
- * Description:
- *   Called (usually) from the interrupt level to receive one
- *   character from the USART.  Error bits associated with the
- *   receipt are provided in the return 'status'.
- *
- ****************************************************************************/
-
-#ifndef SERIAL_HAVE_ONLY_DMA
-static int up_receive(struct btuart_lowerhalf_s *lower, unsigned int *status)
-{
-  struct hciuart_dev_s *priv = (struct hciuart_dev_s *)lower->priv;
-  uint32_t rdr;
-
-  /* Get the Rx byte */
-
-  rdr      = up_serialin(priv, STM32_USART_RDR_OFFSET);
-
-  /* Get the Rx byte plux error information.  Return those in status */
-
-  *status  = priv->sr << 16 | rdr;
-  priv->sr = 0;
-
-  /* Then return the actual received byte */
-
-  return rdr & 0xff;
-}
-#endif
-
-/****************************************************************************
- * Name: up_rxavailable
- *
- * Description:
- *   Return true if the receive register is not empty
- *
- ****************************************************************************/
-
-#ifndef SERIAL_HAVE_ONLY_DMA
-static bool up_rxavailable(struct btuart_lowerhalf_s *lower)
-{
-  struct hciuart_dev_s *priv = (struct hciuart_dev_s *)lower->priv;
-  return ((up_serialin(priv, STM32_USART_SR_OFFSET) & USART_SR_RXNE) != 0);
-}
-#endif
 
 /****************************************************************************
  * Name: up_rxflowcontrol
@@ -1690,9 +1611,7 @@ static bool up_rxflowcontrol(struct btuart_lowerhalf_s *lower,
        * enable Rx interrupts.
        */
 
-      ie = priv->ie;
-      ie &= ~USART_CR1_RXNEIE;
-      up_restoreusartint(priv, ie);
+      hciuart_disableints(priv, USART_CR1_RXNEIE);
       return true;
     }
 
@@ -1713,83 +1632,6 @@ static bool up_rxflowcontrol(struct btuart_lowerhalf_s *lower,
 }
 
 /****************************************************************************
- * Name: up_dma_receive
- *
- * Description:
- *   Called (usually) from the interrupt level to receive one
- *   character from the USART.  Error bits associated with the
- *   receipt are provided in the return 'status'.
- *
- ****************************************************************************/
-
-#ifdef SERIAL_HAVE_DMA
-static int up_dma_receive(struct btuart_lowerhalf_s *lower, unsigned int *status)
-{
-  struct hciuart_dev_s *priv = (struct hciuart_dev_s *)lower->priv;
-  int c = 0;
-
-  if (up_dma_nextrx(priv) != priv->rxdmanext)
-    {
-      c = priv->rxfifo[priv->rxdmanext];
-
-      priv->rxdmanext++;
-      if (priv->rxdmanext == RXDMA_BUFFER_SIZE)
-        {
-          priv->rxdmanext = 0;
-        }
-    }
-
-  return c;
-}
-#endif
-
-/****************************************************************************
- * Name: up_dma_rxint
- *
- * Description:
- *   Call to enable or disable RX interrupts
- *
- ****************************************************************************/
-
-#ifdef SERIAL_HAVE_DMA
-static void up_dma_rxint(struct btuart_lowerhalf_s *lower, bool enable)
-{
-  struct hciuart_dev_s *priv = (struct hciuart_dev_s *)lower->priv;
-
-  /* En/disable DMA reception.
-   *
-   * Note that it is not safe to check for available bytes and immediately
-   * pass them to uart_recvchars as that could potentially recurse back
-   * to us again.  Instead, bytes must wait until the next up_dma_poll or
-   * DMA event.
-   */
-
-  priv->rxenable = enable;
-}
-#endif
-
-/****************************************************************************
- * Name: up_dma_rxavailable
- *
- * Description:
- *   Return true if the receive register is not empty
- *
- ****************************************************************************/
-
-#ifdef SERIAL_HAVE_DMA
-static bool up_dma_rxavailable(struct btuart_lowerhalf_s *lower)
-{
-  struct hciuart_dev_s *priv = (struct hciuart_dev_s *)lower->priv;
-
-  /* Compare our receive pointer to the current DMA pointer, if they
-   * do not match, then there are bytes to be received.
-   */
-
-  return (up_dma_nextrx(priv) != priv->rxdmanext);
-}
-#endif
-
-/****************************************************************************
  * Name: up_send
  *
  * Description:
@@ -1800,7 +1642,7 @@ static bool up_dma_rxavailable(struct btuart_lowerhalf_s *lower)
 static void up_send(struct btuart_lowerhalf_s *lower, int ch)
 {
   struct hciuart_dev_s *priv = (struct hciuart_dev_s *)lower->priv;
-  up_serialout(priv, STM32_USART_TDR_OFFSET, (uint32_t)ch);
+  hciuart_putreg32(priv, STM32_USART_TDR_OFFSET, (uint32_t)ch);
 }
 
 /****************************************************************************
@@ -1814,7 +1656,7 @@ static void up_send(struct btuart_lowerhalf_s *lower, int ch)
 static bool up_txready(struct btuart_lowerhalf_s *lower)
 {
   struct hciuart_dev_s *priv = (struct hciuart_dev_s *)lower->priv;
-  return ((up_serialin(priv, STM32_USART_SR_OFFSET) & USART_SR_TXE) != 0);
+  return ((hciuart_getreg32(priv, STM32_USART_SR_OFFSET) & USART_SR_TXE) != 0);
 }
 
 /****************************************************************************
@@ -1831,9 +1673,14 @@ static void up_dma_rxcallback(DMA_HANDLE handle, uint8_t status, void *arg)
 {
   struct hciuart_dev_s *priv = (struct hciuart_dev_s *)arg;
 
-  if (priv->rxenable && up_dma_rxavailable(&priv->lower))
+  /* Compare our receive pointer to the current DMA pointer, if they
+   * do not match, then there are bytes to be received.
+   */
+
+  if (priv->rxenable && hciuart_dma_nextrx(priv) != priv->rxdmanext)
     {
-      uart_recvchars(&priv->lower);
+      /* Copy data from the Rx DMA buffer */
+#warning Missing logic
     }
 }
 #endif
@@ -2044,7 +1891,7 @@ void hciuart_initialize(void)
     {
       if (g_hciuarts[i])
         {
-          up_disableusartint(g_hciuarts[i], NULL);
+          hciuart_disableints(priv, HCIUART_ALLINTS);
         }
     }
 }
