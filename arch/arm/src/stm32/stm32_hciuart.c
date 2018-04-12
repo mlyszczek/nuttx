@@ -208,6 +208,11 @@
 
 #define HCIUART_ALLINTS (USART_CR1_USED_INTS | USART_CR3_EIE)
 
+/* Software flow control */
+
+#define RXFLOW_UPPER(a)             ((CONFIG_HCIUART_UPPER_WATERMARK * (a)) / 100)
+#define RXFLOW_LOWER(a)             ((CONFIG_HCIUART_LOWER_WATERMARK * (a)) / 100)
+
 /* Power management definitions */
 
 #if defined(CONFIG_PM) && !defined(CONFIG_PM_SERIAL_ACTIVITY)
@@ -241,6 +246,9 @@ struct hciuart_state_s
   volatile uint16_t txtail;
   volatile bool rxwaiting;           /* A thread is waiting for more Rx data */
   volatile bool txwaiting;           /* A thread is waiting for space in the Tx buffer */
+#ifndef CONFIG_STM32_FLOWCONTROL_BROKEN
+  bool rxflow;                       /* True: software flow control is enable */
+#endif
 
   /* RX DMA state */
 
@@ -257,7 +265,6 @@ struct hciuart_config_s
 {
   struct btuart_lowerhalf_s lower;   /* Generic HCI-UART lower half */
   struct hciuart_state_s *state;     /* Reference to variable state */
-
   uint8_t *rxbuffer;                 /* Rx buffer start */
   uint8_t *txbuffer;                 /* Tx buffer start */
 #ifdef SERIAL_HAVE_DMA
@@ -265,10 +272,13 @@ struct hciuart_config_s
 #endif
   uint16_t rxbufsize;                /* Size of the Rx buffer */
   uint16_t txbufsize;                /* Size of the tx buffer */
+#ifndef CONFIG_STM32_FLOWCONTROL_BROKEN
+  uint16_t rxupper;                  /* Upper watermark to enable Rx flow control */
+  uint16_t rxlower;                  /* Lower watermark to disable Rx flow control */
+#endif
 #ifdef SERIAL_HAVE_DMA
   uint8_t rxdmachan;                 /* Rx DMA channel */
 #endif
-
   uint8_t irq;                       /* IRQ associated with this USART */
   uint32_t baud;                     /* Configured baud */
   uint32_t apbclock;                 /* PCLK 1 or 2 frequency */
@@ -297,9 +307,11 @@ static inline bool hciuart_rxenabled(const struct hciuart_config_s *config);
 #ifdef SERIAL_HAVE_DMA
 static int  hciuart_dma_nextrx(const struct hciuart_config_s *config);
 #endif
+
+static uint16_t hciuart_rxinuse(const struct hciuart_config_s *config);
+static inline void hciuart_rxflow_enable(const struct hciuart_config_s *config);
+static inline void hciuart_rxflow_disable(const struct hciuart_config_s *config);
 static ssize_t hciuart_copytorxbuffer(const struct hciuart_config_s *config);
-static bool hciuart_rxflowcontrol(struct btuart_lowerhalf_s *lower,
-              unsigned int nbuffered, bool upper);
 static ssize_t hciuart_copyfromrxbuffer(const struct hciuart_config_s *config,
               uint8_t *dest, size_t destlen);
 static ssize_t hciuart_copytotxfifo(const struct hciuart_config_s *config);
@@ -372,6 +384,10 @@ static const struct hciuart_config_s g_hciusart1_config =
 #endif
   .rxbufsize     = CONFIG_USART1_RXBUFSIZE,
   .txbufsize     = CONFIG_USART1_TXBUFSIZE,
+#ifndef CONFIG_STM32_FLOWCONTROL_BROKEN
+  .rxupper       = RXFLOW_UPPER(CONFIG_USART1_RXBUFSIZE),
+  .rxlower       = RXFLOW_LOWER(CONFIG_USART1_RXBUFSIZE),
+#endif
 #ifdef SERIAL_HAVE_DMA
   .rxdmachan     = DMAMAP_USART1_RX,
 #endif
@@ -427,6 +443,10 @@ static const struct hciuart_config_s g_hciusart2_config =
 #endif
   .rxbufsize     = CONFIG_USART2_RXBUFSIZE,
   .txbufsize     = CONFIG_USART2_TXBUFSIZE,
+#ifndef CONFIG_STM32_FLOWCONTROL_BROKEN
+  .rxupper       = RXFLOW_UPPER(CONFIG_USART2_RXBUFSIZE),
+  .rxlower       = RXFLOW_LOWER(CONFIG_USART2_RXBUFSIZE),
+#endif
 #ifdef SERIAL_HAVE_DMA
   .rxdmachan     = DMAMAP_USART2_RX,
 #endif
@@ -478,6 +498,10 @@ static const struct hciuart_config_s g_hciusart3_config =
 #endif
   .rxbufsize     = CONFIG_USART3_RXBUFSIZE,
   .txbufsize     = CONFIG_USART3_TXBUFSIZE,
+#ifndef CONFIG_STM32_FLOWCONTROL_BROKEN
+  .rxupper       = RXFLOW_UPPER(CONFIG_USART3_RXBUFSIZE),
+  .rxlower       = RXFLOW_LOWER(CONFIG_USART3_RXBUFSIZE),
+#endif
 #ifdef SERIAL_HAVE_DMA
   .rxdmachan     = DMAMAP_USART3_RX,
 #endif
@@ -531,6 +555,10 @@ static const struct hciuart_config_s g_hciusart6_config =
 #endif
   .rxbufsize     = CONFIG_USART6_RXBUFSIZE,
   .txbufsize     = CONFIG_USART6_TXBUFSIZE,
+#ifndef CONFIG_STM32_FLOWCONTROL_BROKEN
+  .rxupper       = RXFLOW_UPPER(CONFIG_USART6_RXBUFSIZE),
+  .rxlower       = RXFLOW_LOWER(CONFIG_USART6_RXBUFSIZE),
+#endif
 #ifdef SERIAL_HAVE_DMA
   .rxdmachan     = DMAMAP_USART6_RX,
 #endif
@@ -582,6 +610,10 @@ static const struct hciuart_config_s g_hciuart7_config =
 #endif
   .rxbufsize     = CONFIG_UART7_RXBUFSIZE,
   .txbufsize     = CONFIG_UART7_TXBUFSIZE,
+#ifndef CONFIG_STM32_FLOWCONTROL_BROKEN
+  .rxupper       = RXFLOW_UPPER(CONFIG_UART7_RXBUFSIZE),
+  .rxlower       = RXFLOW_LOWER(CONFIG_UART7_RXBUFSIZE),
+#endif
 #ifdef SERIAL_HAVE_DMA
   .rxdmachan     = DMAMAP_UART7_RX,
 #endif
@@ -633,6 +665,10 @@ static const struct hciuart_config_s g_hciuart8_config =
 #endif
   .rxbufsize     = CONFIG_UART8_RXBUFSIZE,
   .txbufsize     = CONFIG_UART8_TXBUFSIZE,
+#ifndef CONFIG_STM32_FLOWCONTROL_BROKEN
+  .rxupper       = RXFLOW_UPPER(CONFIG_UART8_RXBUFSIZE),
+  .rxlower       = RXFLOW_LOWER(CONFIG_UART8_RXBUFSIZE),
+#endif
 #ifdef SERIAL_HAVE_DMA
   .rxdmachan     = DMAMAP_UART8_RX,
 #endif
@@ -835,6 +871,116 @@ static int hciuart_dma_nextrx(const struct hciuart_config_s *config)
 #endif
 
 /****************************************************************************
+ * Name: hciuart_rxinuse
+ *
+ * Description:
+ *   Return the number of bytes in the Rx buffer
+ *
+ *   Example:  rxbufsize=4, rxhead = 0, rxtail = 2
+ *
+ *    +---+---+---+---+
+ *    | X | X |   |   |  X = inuse
+ *    +---+---+---+---+
+ *      |       `- rxtail = 2
+ *      `- rxhead = 0
+ *
+ *    inuse = 2 - 0 = 2
+ *
+ *   Example:  rxbufsize=4, rxhead = 2, rxtail = 0
+ *
+ *    +---+---+---+---+
+ *    |   |   | X | X |  X = inuse
+ *    +---+---+---+---+
+ *      |       `- rxhead = 2
+ *      `- rxtail = 0
+ *
+ *    inuse = (0 + 4) - 2 = 2
+ *
+ ****************************************************************************/
+
+static uint16_t hciuart_rxinuse(const struct hciuart_config_s *config)
+{
+  struct hciuart_state_s *state;
+  size_t inuse;
+
+  DEBUGASSERT(config != NULL && config->state != NULL);
+  state = config->state;
+
+  /* Keep track of how much is discarded */
+
+  if (state->rxtail >= state->rxhead)
+    {
+      inuse = state->rxtail - state->rxhead;
+    }
+  else
+    {
+      inuse = (state->rxtail + config->rxbufsize) - state->rxhead;
+    }
+
+  return inuse;
+}
+
+/****************************************************************************
+ * Name: hciuart_rxflow_enable
+ *
+ * Description:
+ *   Enable software Rx flow control.
+ *
+ ****************************************************************************/
+
+static inline void hciuart_rxflow_enable(const struct hciuart_config_s *config)
+{
+#ifdef  CONFIG_STM32_FLOWCONTROL_BROKEN
+  struct hciuart_state_s *state;
+
+  DEBUGASSERT(config != NULL && config->state != NULL);
+  state = config->state;
+
+  /* Is Rx flow control already enable? */
+
+  if (!state->rxflow)
+    {
+      uin16_t inused = hciuart_rxinuse(config);
+
+      if (inuse >= config->rxupper)
+        {
+          stm32_gpiowrite(config->rts_gpio, true);
+          state->rxflow = true;
+        }
+    }
+#endif
+}
+
+/****************************************************************************
+ * Name: hciuart_rxflow_disable
+ *
+ * Description:
+ *   Enable software Rx flow control.
+ *
+ ****************************************************************************/
+
+static inline void hciuart_rxflow_disable(const struct hciuart_config_s *config)
+{
+#ifdef  CONFIG_STM32_FLOWCONTROL_BROKEN
+  struct hciuart_state_s *state;
+
+  DEBUGASSERT(config != NULL && config->state != NULL);
+  state = config->state;
+
+  if (state->rxflow)
+    {
+      uin16_t inused = hciuart_rxinuse(config);
+
+      if (inuse <= config->rxlower)
+        {
+          stm32_gpiowrite(config->rts_gpio, false);
+          state->rxflow = false;
+        }
+    }
+#endif
+}
+
+/****************************************************************************
  * Name: hciuart_copytorxbuffer
  *
  * Description:
@@ -954,6 +1100,10 @@ static ssize_t hciuart_copytorxbuffer(const struct hciuart_config_s *config)
 
   state->rxtail = rxtail;
 
+  /* Check if we need to enable Rx flow control */
+
+  hciuart_rxflow_enable(config);
+
   /* Notify any waiting threads that new Rx data is available */
 
   if (nbytes > 0 && state->rxwaiting)
@@ -963,97 +1113,6 @@ static ssize_t hciuart_copytorxbuffer(const struct hciuart_config_s *config)
     }
 
   return nbytes;
-}
-
-/****************************************************************************
- * Name: hciuart_rxflowcontrol
- *
- * Description:
- *   Called when Rx buffer is full (or exceeds configured watermark levels
- *   if CONFIG_SERIAL_IFLOWCONTROL_WATERMARKS is defined).
- *   Return true if UART activated RX flow control to block more incoming
- *   data
- *
- * Input Parameters:
- *   lower     - UART device instance
- *   nbuffered - the number of characters currently buffered
- *               (if CONFIG_SERIAL_IFLOWCONTROL_WATERMARKS is
- *               not defined the value will be 0 for an empty buffer or the
- *               defined buffer size for a full buffer)
- *   upper     - true indicates the upper watermark was crossed where
- *               false indicates the lower watermark has been crossed
- *
- * Returned Value:
- *   true if RX flow control activated.
- *
- ****************************************************************************/
-
-/* REVISIT:  Needs to be integrated into hciuart_copyfromrxbuffer() */
-#warning Missing logic
-
-static bool hciuart_rxflowcontrol(struct btuart_lowerhalf_s *lower,
-                                  unsigned int nbuffered, bool upper)
-{
-  const struct hciuart_config_s *config =
-    (const struct hciuart_config_s *)lower;
-
-#if defined(CONFIG_STM32_FLOWCONTROL_BROKEN)
-  /* Assert/de-assert nRTS set it high resume/stop sending */
-
-  stm32_gpiowrite(config->rts_gpio, upper);
-
-  if (upper)
-    {
-      /* With heavy Rx traffic, RXNE might be set and data pending.
-       * Returning 'true' in such case would cause RXNE left unhandled
-       * and causing interrupt storm. Sending end might be also be slow
-       * to react on nRTS, and returning 'true' here would prevent
-       * processing that data.
-       *
-       * Therefore, return 'false' so input data is still being processed
-       * until sending end reacts on nRTS signal and stops sending more.
-       */
-
-      return false;
-    }
-
-  return upper;
-
-#else
-  /* Is the RX buffer full? */
-
-  if (upper)
-    {
-      /* Disable Rx interrupt to prevent more data being from
-       * peripheral.  When hardware RTS is enabled, this will
-       * prevent more data from coming in.
-       *
-       * This function is only called when UART recv buffer is full,
-       * that is: "lower->recv.head + 1 == lower->recv.tail".
-       *
-       * Logic in "uart_read" will automatically toggle Rx interrupts
-       * when buffer is read empty and thus we do not have to re-
-       * enable Rx interrupts.
-       */
-
-      hciuart_disableints(config, USART_CR1_RXNEIE);
-      return true;
-    }
-
-  /* No.. The RX buffer is empty */
-
-  else
-    {
-      /* We might leave Rx interrupt disabled if full recv buffer was
-       * read empty.  Enable Rx interrupt to make sure that more input is
-       * received.
-       */
-
-      hciuart_enableints(config, USART_CR1_RXNEIE);
-    }
-
-  return false;
-#endif
 }
 
 /****************************************************************************
@@ -1107,8 +1166,9 @@ static ssize_t hciuart_copyfromrxbuffer(const struct hciuart_config_s *config,
           rxhead = 0;
         }
 
-      /* Check if we need to enable Rx flow control */
-#warning Missing logic
+      /* Check if we need to disable Rx flow control */
+
+      hciuart_rxflow_disable(config);
     }
 
   /* Save the updated Rx buffer head index */
@@ -1357,7 +1417,7 @@ static void hciuart_line_configure(const struct hciuart_config_s *config)
    * based management of RTS.
    */
 
-#if !defined(CONFIG_STM32_FLOWCONTROL_BROKEN)
+#ifndef CONFIG_STM32_FLOWCONTROL_BROKEN
   regval |= USART_CR3_RTSE;
 #endif
   regval |= USART_CR3_CTSE;
@@ -2128,20 +2188,9 @@ static ssize_t hciuart_rxdrain(const struct btuart_lowerhalf_s *lower)
 
   while (state->rxtail != state->rxhead)
     {
-      size_t ndiscard;
-
       /* Keep track of how much is discarded */
 
-      if (state->rxtail >= state->rxhead)
-        {
-          ndiscard = state->rxtail - state->rxhead;
-        }
-      else
-        {
-          ndiscard = (state->rxtail + config->rxbufsize) - state->rxhead;
-        }
-
-      ntotal += ndiscard;
+      ntotal += hciuart_rxinuse(config);
 
       /* Discard the data in the Rx buffer */
 
