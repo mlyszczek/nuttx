@@ -407,10 +407,6 @@ static const struct hciuart_config_s g_hciusart1_config =
   .rx_gpio       = GPIO_USART1_RX,
   .cts_gpio      = GPIO_USART1_CTS,
   .rts_gpio      = GPIO_USART1_RTS,
-#ifdef CONFIG_USART1_RXDMA
-  .rxdmachan = ,
-  .rxdmabuffer  = g_usart1_rxdmabuffer,
-#endif
 };
 #endif
 
@@ -445,7 +441,7 @@ static const struct hciuart_config_s g_hciusart2_config =
 
   .rxbuffer      = g_usart2_rxbuffer,
   .txbuffer      = g_usart2_txbuffer,
-#ifdef CONFIG_USART1_RXDMA
+#ifdef CONFIG_USART2_RXDMA
   .rxdmabuffer   = g_usart2_rxdmabuffer,
 #endif
   .rxbufsize     = CONFIG_USART2_RXBUFSIZE,
@@ -500,7 +496,7 @@ static const struct hciuart_config_s g_hciusart3_config =
 
   .rxbuffer      = g_usart3_rxbuffer,
   .txbuffer      = g_usart3_txbuffer,
-#ifdef CONFIG_USART1_RXDMA
+#ifdef CONFIG_USART3_RXDMA
   .rxdmabuffer   = g_usart3_rxdmabuffer,
 #endif
   .rxbufsize     = CONFIG_USART3_RXBUFSIZE,
@@ -557,7 +553,7 @@ static const struct hciuart_config_s g_hciusart6_config =
 
   .rxbuffer      = g_usart6_rxbuffer,
   .txbuffer      = g_usart6_txbuffer,
-#ifdef CONFIG_USART1_RXDMA
+#ifdef CONFIG_USART6_RXDMA
   .rxdmabuffer   = g_usart6_rxdmabuffer,
 #endif
   .rxbufsize     = CONFIG_USART6_RXBUFSIZE,
@@ -612,7 +608,7 @@ static const struct hciuart_config_s g_hciuart7_config =
 
   .rxbuffer      = g_uart7_rxbuffer,
   .txbuffer      = g_uart7_txbuffer,
-#ifdef CONFIG_USART1_RXDMA
+#ifdef CONFIG_UART7_RXDMA
   .rxdmabuffer   = g_uart7_rxdmabuffer,
 #endif
   .rxbufsize     = CONFIG_UART7_RXBUFSIZE,
@@ -667,7 +663,7 @@ static const struct hciuart_config_s g_hciuart8_config =
 
   .rxbuffer      = g_uart8_rxbuffer,
   .txbuffer      = g_uart8_txbuffer,
-#ifdef CONFIG_USART1_RXDMA
+#ifdef CONFIG_UART8_RXDMA
   .rxdmabuffer   = g_uart8_rxdmabuffer,
 #endif
   .rxbufsize     = CONFIG_UART8_RXBUFSIZE,
