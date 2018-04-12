@@ -50,6 +50,7 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/wireless/bt_uart.h>
 #include <nuttx/power/pm.h>
 
@@ -231,10 +232,15 @@ struct hciuart_state_s
 
   /* Rx/Tx circular buffer management */
 
-  uint16_t rxhead;                   /* Head and tail index of the Rx buffer */
+  sem_t rxwait;                      /* Supports wait for more Rx data */
+  sem_t txwait;                      /* Supports wait for space in Tx buffer */
+
+  volatile uint16_t rxhead;          /* Head and tail index of the Rx buffer */
   uint16_t rxtail;
   uint16_t txhead;                   /* Head and tail index of the Tx buffer */
-  uint16_t txtail;
+  volatile uint16_t txtail;
+  volatile bool rxwaiting;           /* A thread is waiting for more Rx data */
+  volatile bool txwaiting;           /* A thread is waiting for space in the Tx buffer */
 
   /* RX DMA state */
 
@@ -298,6 +304,7 @@ static int  hciuart_dma_nextrx(const struct hciuart_config_s *config);
 static ssize_t hciuart_copytorxbuffer(const struct hciuart_config_s *config);
 static ssize_t hciuart_copyfromrxbuffer(const struct hciuart_config_s *config
               FAR uint8_t *dest, size_t destlen);
+static ssize_t hciuart_copytotxfifo(const struct hciuart_config_s *config);
 static void hciuart_setup(const struct hciuart_config_s *config);
 #ifdef SERIAL_HAVE_DMA
 static int  hciuart_dma_setup(struct btuart_lowerhalf_s *lower)
@@ -747,6 +754,9 @@ static inline void hciuart_putreg32(const struct hciuart_config_s *config,
  * Description:
  *   Enable interrupts as specified by bits in the 'intset' argument
  *
+ *   NOTE: This operation is not atomic.  This function should be called
+ *   only from within a critical section.
+ *
  ****************************************************************************/
 
 static void hciuart_enableints(const struct hciuart_config_s *config,
@@ -772,6 +782,9 @@ static void hciuart_enableints(const struct hciuart_config_s *config,
  *
  * Description:
  *   Disable interrupts as specified by bits in the 'intset' argument
+ *
+ *   NOTE: This operation is not atomic.  This function should be called
+ *   only from within a critical section.
  *
  ****************************************************************************/
 
@@ -934,7 +947,7 @@ static ssize_t hciuart_copytorxbuffer(const struct hciuart_config_s *config);
           dmatail = 0;
         }
 
-      /* And add it to the Rx buffer */
+      /* And add it to the tail of the Rx buffer */
 
       config->rxbuffer[rxtail] = rxbyte;
       rxtail = rxnext;
@@ -945,7 +958,7 @@ static ssize_t hciuart_copytorxbuffer(const struct hciuart_config_s *config);
 #else
   /* Is there data available in the Rx FIFO? */
 
-  while ((hciuart_getreg32(config, STM32_USART_SR_OFFSET) & USART_SR_RXNE) != 0);
+  while ((hciuart_getreg32(config, STM32_USART_SR_OFFSET) & USART_SR_RXNE) != 0)
     {
       /* Compare the Rx buffer head and tail indices.  If the incremented
        * tail index would make the Rx buffer appear empty, then we must
@@ -973,7 +986,7 @@ static ssize_t hciuart_copytorxbuffer(const struct hciuart_config_s *config);
 
       rxbyte = hciuart_getreg32(config, STM32_USART_RDR_OFFSET) & 0xff;
 
-      /* And add it to the Rx buffer */
+      /* And add it to the tail of the Rx buffer */
 
       config->rxbuffer[rxtail] = rxbyte;
       rxtail = rxnext;
@@ -986,7 +999,12 @@ static ssize_t hciuart_copytorxbuffer(const struct hciuart_config_s *config);
   state->rxtail = rxtail;
 
   /* Notify any waiting threads that new Rx data is available */
-#warning Missing logic
+
+  if (nbytes > 0 && state->rxwaiting)
+    {
+      state->rxwaiting = false;
+      nxsem_post(&state->rxwait);
+    }
 
   return nbytes;
 }
@@ -1018,7 +1036,7 @@ static ssize_t hciuart_copyfromrxbuffer(const struct hciuart_config_s *config
 
   /* Is there data available in the Rx FIFO? */
 
-  while ((hciuart_getreg32(config, STM32_USART_SR_OFFSET) & USART_SR_RXNE) != 0);
+  while ((hciuart_getreg32(config, STM32_USART_SR_OFFSET) & USART_SR_RXNE) != 0)
     {
       /* Is the Rx buffer empty? Is there space in the user buffer? */
 
@@ -1029,7 +1047,7 @@ static ssize_t hciuart_copyfromrxbuffer(const struct hciuart_config_s *config
           break;
         }
 
-      /* Get a byte from the Rx buffer */
+      /* Get a byte from the head of the Rx buffer */
 
       rxbyte = config->rxbuffer[rxhead];
 
@@ -1047,6 +1065,63 @@ static ssize_t hciuart_copyfromrxbuffer(const struct hciuart_config_s *config
   /* Save the updated Rx buffer head index */
 
   state->rxhead = rxhead;
+  return nbytes;
+}
+
+/****************************************************************************
+ * Name: hciuart_copytotxfifo
+ *
+ * Description:
+ *   Copy data from the Tx buffer to the Tx FIFO
+ *
+ ****************************************************************************/
+
+static ssize_t hciuart_copytotxfifo(const struct hciuart_config_s *config)
+{
+  FAR struct hciuart_state_s *state;
+  ssize_t nbytes = 0;
+  uint16_t txhead;
+  uint16_t txtail;
+  uint8_t txbyte;
+
+  /* Get a copy of the txhead and txtail indices of the Rx buffer */
+
+  state  = config->state;
+  txhead = state->txhead;
+  txtail = state->txtail;
+
+  /* Compare the Tx buffer head and tail indices.  If the Tx buffer is
+   * empty, then we finished with the copy.
+   */
+
+  while (txhead != txtail)
+    {
+      /* Is the transmit data register empty?
+       *
+       * TXE: Transmit data register empty
+       *   This bit is set by hardware when the content of the TDR register has
+       *   been transferred into the shift register.
+       */
+
+      if ((hciuart_getreg32(config, STM32_USART_SR_OFFSET) & USART_SR_TXE) == 0)
+        {
+          break;
+        }
+
+      /* Get a byte from the head of the Tx buffer */
+
+      txbyte = config->txbuffer[txhead];
+      if (++txhead >= config->txbufsize)
+        {
+          txhead = 0
+        }
+
+      /* And add it to the of the Tx FIFO */
+
+      hciuart_putreg32(config, STM32_USART_TDR_OFFSET, (uint32_t)txbyte);
+      nbytes++;
+    }
+
   return nbytes;
 }
 
@@ -1600,14 +1675,36 @@ static int hciuart_interrupt(int irq, void *context, void *arg)
 #endif
         }
 
-      /* Handle outgoing, transmit bytes */
+      /* Handle outgoing, transmit bytes
+       *
+       * TXE: Transmit data register empty
+       *   This bit is set by hardware when the content of the TDR register has
+       *   been transferred into the shift register.
+       */
 
       if ((status & USART_SR_TXE) != 0 &&
           hciuart_isenabled(config, USART_CR1_TXEIE))
         {
-          /* Transmit data register empty ... process outgoing bytes */
+          ssize_t nbytes;
 
-          uart_xmitchars(&config->lower);
+          /* Transmit data register empty ... copy data from the Tx buffer
+           * to the Tx FIFO.
+           */
+
+          nbytes = hciuart_copytotxfifo(config);
+          UNUSED(nbytes);
+
+          /* This copy will free up space in the Tx FIFO.  Wake up any
+           * threads that may have been waiting for space in the Tx
+           * buffer.
+           */
+
+          if (state->txwaiting)
+            {
+              state->txwaiting = false;
+              nxsem_post(&state->txwait);
+            }
+
           handled = true;
         }
     }
@@ -1634,9 +1731,11 @@ static void hciuart_rxattach(FAR const struct btuart_lowerhalf_s *lower,
 {
   const struct hciuart_config_s *config =
     (const struct hciuart_config_s *)lower;
+  irqstate_t flags;
 
   /* If the callback is NULL, then we are detaching */
 
+  flags = enter_critical_section();
   if (callback == NULL)
     {
       uint32_t intset;
@@ -1658,6 +1757,7 @@ static void hciuart_rxattach(FAR const struct btuart_lowerhalf_s *lower,
       state->arg      = arg;
       state->callback = callback;
     }
+  leave_critical_section(flags);
 
   return OK;
 }
@@ -1760,6 +1860,10 @@ static ssize_t hciuart_read(FAR const struct btuart_lowerhalf_s *lower,
   ssize_t nbytes;
   bool rxenable;
 
+  /* NOTE:  This assumes that the caller has exclusive access to the Rx
+   * buffer, i.e., one lower half instance can server only one upper half!
+   */
+
   DEBUGASSERT(config != NULL && config->state != NULL);
   state = config->state;
 
@@ -1782,21 +1886,25 @@ static ssize_t hciuart_read(FAR const struct btuart_lowerhalf_s *lower,
   while (state->rxtail != state->rxhead && ntotal < buflen)
     {
       nbytes = hciuart_copyfromrxbuffer(config, dest, remaining);
-      if (nbytes < 0)
+      if (nbytes <= 0)
         {
-          /* An error occurred.. this should not really happen */
+          DEBUGASSERT(nbytes == 0);
 
-          return nbytes;
-        }
-      else if (nbytes == 0)
-        {
           /* If no data has been received, then we must wait for the arrival
            * of new Rx data and try again.
            */
 
           if (ntotal == 0)
             {
-#warning Missing logic
+              DEBUGASSERT(!state->rxwaiting);
+              state->rxwaiting = true;
+              do
+                {
+                  int ret = nxsem_wait(&rxwait);
+                  DEBUGASSERT(ret == 0 || ret == -EINTR);
+                  UNUSED(ret);
+                }
+              while (state->rxwaiting);
             }
 
           /* Otherwise, this must be the end of the packet.  Just break out
@@ -1856,11 +1964,16 @@ static ssize_t hciuart_write(FAR const struct btuart_lowerhalf_s *lower,
 {
   const struct hciuart_config_s *config =
     (const struct hciuart_config_s *)lower;
+  FAR const uint8_t *src;
+  size_t remaining;
   irqstate_t flags;
 
-  /* Disable Tx interrupts while we operate on the Tx buffer */
+  /* NOTE:  This assumes that the caller has exclusive access to the Tx
+   * buffer, i.e., one lower half instance can server only one upper half!
+   */
 
-  /* USART transmit interrupts:
+  /* Make sure that the Tx Interrupts are disabled.
+   * USART transmit interrupts:
    *
    * Enable             Status          Meaning                      Usage
    * ------------------ --------------- ---------------------------- ----------
@@ -1871,30 +1984,61 @@ static ssize_t hciuart_write(FAR const struct btuart_lowerhalf_s *lower,
 
   flags = enter_critical_section();
   hciuart_disableints(config, USART_CR1_TXEIE);
-  if (enable)
-    {
-
-      /* Fake a TX interrupt here by just calling uart_xmitchars() with
-       * interrupts disabled (note this may recurse).
-       */
-
-      uart_xmitchars(lower);
-    }
-  else
-    {
-      /* Disable the TX interrupt */
-
-    }
-
   leave_critical_section(flags);
-  /* Copy data to the Tx buffer */
 
-  /* Wait for space to become available in the Tx buffer */
+   /* Loop until all of the user data have been moved to the Tx buffer */
 
-      /* Set to receive an interrupt when the TX data register is empty */
+   src       = buffer;
+   remaining = buflen;
 
-      hciuart_enableints(config, USART_CR1_TXEIE);
+   while (remaining > 0)
+     {
+       /* Copy bytes into the Tx buffer */
 
+       nbytes = hciuart_copytotxfifo(config);
+
+       /* If nothing could be copied, then we must wait for space in the Tx
+        * buffer then try again.
+        */
+
+      if (nbytes <= 0)
+        {
+          DEBUGASSERT(nbytes == 0);
+
+          /* Enable the Tx interrupt and wait for space open up in the Tx
+           * buffer.
+           */
+
+          flags = enter_critical_section();
+          hciuart_enableints(config, USART_CR1_TXEIE);
+
+          DEBUGASSERT(!state->rxwaiting);
+          state->rxwaiting = true;
+          do
+            {
+              int ret = nxsem_wait(&rxwait);
+              DEBUGASSERT(ret == 0 || ret == -EINTR);
+              UNUSED(ret);
+            }
+          while (state->rxwaiting);
+
+          /* Disable Tx interrupts again */
+
+          hciuart_disableints(config, USART_CR1_TXEIE);
+          leave_critical_section(flags);
+        }
+     }
+
+   /* If the Tx buffer is not empty, then exit with the Tx interrupt enabled. */
+
+   if (state->txhead != state->txtail)
+     {
+       flags = enter_critical_section();
+       hciuart_disableints(config, USART_CR1_TXEIE);
+       leave_critical_section(flags);
+     }
+
+   return buflen;
 }
 
 /****************************************************************************
@@ -1907,13 +2051,59 @@ static ssize_t hciuart_write(FAR const struct btuart_lowerhalf_s *lower,
 
 static ssize_t hciuart_rxdrain(FAR const struct btuart_lowerhalf_s *lower)
 {
-  /* Stop Rx DMA */
+  const struct hciuart_config_s *config =
+    (const struct hciuart_config_s *)lower;
+  struct hciuart_state_s *state = config->state;
+  size_t ntotal;
+  ssize_t nbytes;
+  bool rxenable;
 
-  /* Mark the Rx buffer as empty */
+  DEBUGASSERT(config != NULL && config->state != NULL);
+  state = config->state;
 
-  /* Reset the Rx DMA buffer */
+  /* Read any pending data to the Rx buffer */
 
-  /* Flush data in the Rx FIFO */
+  nbytes = hciuart_copytorxbuffer(config);
+  UNUSED(nbytes)'
+
+  /* Loop discarding in the Rx buffer until the Rx buffer is empty */
+
+  ntotal    = 0;
+  rxenable  = hciuart_rxenabled(config);
+
+  hciuart_rxenable(lower, false);
+
+  while (state->rxtail != state->rxhead)
+    {
+      size_t ndiscard;
+
+      /* Keep track of how much is discarded */
+
+      if (state->rxtail >= state->rxhead)
+        {
+          ndiscard = state->rxtail - state->rxhead;
+        }
+      else
+        {
+          ndiscard = (state->rxtail + config->rxbufsize) - state->rxhead;
+        }
+
+      ntotal += ndiscard;
+
+      /* Discard the data in the Rx buffer */
+
+      state->rxhead = 0;
+      state->rxtail = 0;
+
+      /* Read any additional pending data into the Rx buffer that may
+       * have accumulated while we were discarding.
+       */
+
+      nbytes = hciuart_copytorxbuffer(config);
+      UNUSED(nbytes);
+    }
+
+  return ntotal;
 }
 
 /****************************************************************************
@@ -2005,39 +2195,6 @@ static bool up_rxflowcontrol(struct btuart_lowerhalf_s *lower,
 
   return false;
 #endif
-}
-
-/****************************************************************************
- * Name: up_send
- *
- * Description:
- *   This method will send one byte on the USART
- *
- ****************************************************************************/
-
-### MOVE to hciuart_write
-static void up_send(struct btuart_lowerhalf_s *lower, int ch)
-{
-  const struct hciuart_config_s *config =
-    (const struct hciuart_config_s *)lower;
-  hciuart_putreg32(config, STM32_USART_TDR_OFFSET, (uint32_t)ch);
-}
-
-/****************************************************************************
- * Name: up_txready
- *
- * Description:
- *   Return true if the transmit data register is empty
- *
- ****************************************************************************/
-
-### MOVE to hciuart_write
-static bool up_txready(struct btuart_lowerhalf_s *lower)
-{
-  const struct hciuart_config_s *config =
-    (const struct hciuart_config_s *)lower;
-
-  return ((hciuart_getreg32(config, STM32_USART_SR_OFFSET) & USART_SR_TXE) != 0);
 }
 
 /****************************************************************************
@@ -2272,29 +2429,43 @@ FAR struct btuart_lowerhalf_s *hciuart_instantiate(int uart)
 
 void hciuart_initialize(void)
 {
+  FAR const struct hciuart_config_s *config;
+  FAR struct hciuart_state_s *state;
   unsigned i;
 
-  /* Configure all USART interrupts */
+  /* Configure all USARTs */
 
   for (i = 0; i < STM32_NUSART; i++)
     {
-      if (g_hciuarts[i])
+      config = g_hciuarts[i]
+      if (config != NULL)
         {
+          state = config->state;
+
+          /* Disable U[S]ART interrupts */
+
           hciuart_disableints(config, HCIUART_ALLINTS);
+
+          /* Initialize signalling semaphores */
+
+          nxsem_init(&state->rxwait, 0, 0);
+          nxsem_setprotocol(&state->rxwait, SEM_PRIO_NONE);
+
+          nxsem_init(&state->txwait, 0, 0);
+          nxsem_setprotocol(&state->txwait, SEM_PRIO_NONE);
+
+          /* Attach and enable the HCI UART IRQ */
+
+          ret = irq_attach(config->irq, hciuart_interrupt, config);
+          if (ret == OK)
+            {
+              /* Enable the interrupt (RX and TX interrupts are still disabled
+               * in the USART)
+               */
+
+              up_enable_irq(config->irq);
+            }
         }
-
-      /* Attach and enable the HCI UART IRQ */
-
-      ret = irq_attach(config->irq, hciuart_interrupt, config);
-      if (ret == OK)
-        {
-          /* Enable the interrupt (RX and TX interrupts are still disabled
-           * in the USART)
-           */
-
-          up_enable_irq(config->irq);
-        }
-
     }
 }
 
