@@ -229,12 +229,19 @@ struct hciuart_state_s
   btuart_rxcallback_t *callback;     /* Rx callback function */
   FAR void *arg;                     /* Rx callback argument */
 
+  /* Rx/Tx circular buffer management */
+
+  uint16_t rxhead;                   /* Head and tail index of the Rx buffer */
+  uint16_t rxtail;
+  uint16_t txhead;                   /* Head and tail index of the Tx buffer */
+  uint16_t txtail;
+
   /* RX DMA state */
 
 #ifdef SERIAL_HAVE_DMA
-  DMA_HANDLE rxdmastream;            /* currently-open receive DMA stream */
+  uint16_t dmatail;                  /* Tail index of the Rx DMA buffer */
   bool rxenable;                     /* DMA-based reception en/disable */
-  uint32_t rxdmanext;                /* Next byte in DMA buffer to be read */
+  DMA_HANDLE rxdmastream;            /* currently-open receive DMA stream */
 #endif
 };
 
@@ -284,9 +291,13 @@ static void hciuart_disableints(const struct hciuart_config_s *config,
               uint32_t intset);
 static void hciuart_isenabled(const struct hciuart_config_s *config,
               uint32_t intset);
+static inline void hciuart_rxenabled(const struct hciuart_config_s *config);
 #ifdef SERIAL_HAVE_DMA
 static int  hciuart_dma_nextrx(const struct hciuart_config_s *config);
 #endif
+static ssize_t hciuart_copytorxbuffer(const struct hciuart_config_s *config);
+static ssize_t hciuart_copyfromrxbuffer(const struct hciuart_config_s *config
+              FAR uint8_t *dest, size_t destlen);
 static void hciuart_setup(const struct hciuart_config_s *config);
 #ifdef SERIAL_HAVE_DMA
 static int  hciuart_dma_setup(struct btuart_lowerhalf_s *lower)
@@ -816,6 +827,24 @@ static void hciuart_isenabled(const struct hciuart_config_s *config,
 }
 
 /****************************************************************************
+ * Name: hciuart_rxenabled
+ *
+ * Description:
+ *   Check if Rx interrupts are enabled.
+ *
+ ****************************************************************************/
+
+static inline void hciuart_rxenabled(const struct hciuart_config_s *config)
+{
+#ifdef SERIAL_HAVE_DMA
+  const struct hciuart_config_s *state = config->state;
+  return state->rxenabled;
+#else
+  return hciuart_isenabled(config, USART_CR1_RXNEIE));
+#endif
+}
+
+/****************************************************************************
  * Name: hciuart_dma_nextrx
  *
  * Description:
@@ -835,6 +864,191 @@ static int hciuart_dma_nextrx(const struct hciuart_config_s *config)
   return (RXDMA_BUFFER_SIZE - (int)dmaresidual);
 }
 #endif
+
+/****************************************************************************
+ * Name: hciuart_copytorxbuffer
+ *
+ * Description:
+ *   Copy data to the driver Rx buffer.  The source is either the U[S]ART
+ *   Rx FIFO or the Rx DMA buffer, depending upon the configuration.
+ *
+ ****************************************************************************/
+
+static ssize_t hciuart_copytorxbuffer(const struct hciuart_config_s *config);
+{
+  FAR struct hciuart_state_s *state;
+  ssize_t nbytes = 0;
+  uint16_t rxhead;
+  uint16_t rxtail;
+  uint16_t rxnext;
+#ifdef SERIAL_HAVE_DMA
+  uint16_t dmatail;
+#endif
+  uint8_t rxbyte;
+
+  /* Get a copy of the rxhead and rxtail indices of the Rx buffer */
+
+  state  = config->state;
+  rxhead = state->rxhead;
+  rxtail = state->rxtail;
+
+#ifdef SERIAL_HAVE_DMA
+  /* Get a copy of the dmatail index of the Rx DMA buffer */
+
+  dmatail = state->dmatail;
+
+  /* Compare dmatail to the current DMA pointer, if they do notmatch, then
+   * there is new Rx data available in the Rx DMA buffer.
+   */
+
+  while ((hciuart_dma_nextrx(config) != dmatail))
+    {
+      /* Compare the Rx buffer head and tail indices.  If the incremented
+       * tail index would make the Rx buffer appear empty, then we must
+       * stop the copy.  If there is data pending in the Rx DMA buffer,
+       * this could be very bad because a data overrun condition is likely
+       * to occur.
+       */
+
+      rxnext = rxtail + 1;
+      if (rxnext >= config->rxbufsize)
+        {
+          rxnext = 0
+        }
+
+      /* Would this make the Rx buffer appear full? */
+
+      if (rxnext == rxhead)
+        {
+          /* Yes, stop the copy and update the indices */
+
+          break;
+        }
+
+      /* Get a byte from the Rx DMA buffer */
+
+      rxbyte = config->rxdmabuffer[dmatail];
+
+      if (++dmatail >= RXDMA_BUFFER_SIZE)
+        {
+          dmatail = 0;
+        }
+
+      /* And add it to the Rx buffer */
+
+      config->rxbuffer[rxtail] = rxbyte;
+      rxtail = rxnext;
+      nbytes++;
+    }
+
+  state->dmatail = dmatail;
+#else
+  /* Is there data available in the Rx FIFO? */
+
+  while ((hciuart_getreg32(config, STM32_USART_SR_OFFSET) & USART_SR_RXNE) != 0);
+    {
+      /* Compare the Rx buffer head and tail indices.  If the incremented
+       * tail index would make the Rx buffer appear empty, then we must
+       * stop the copy.  If there is data pending in the Rx FIFO, this
+       * could be very bad because a data overrun condition is likely to
+       * occur.
+       */
+
+      rxnext = rxtail + 1;
+      if (rxnext >= config->rxbufsize)
+        {
+          rxnext = 0
+        }
+
+      /* Would this make the Rx buffer appear full? */
+
+      if (rxnext == rxhead)
+        {
+          /* Yes, stop the copy and update the indices */
+
+          break;
+        }
+
+      /* Get a byte from the Rx FIFO buffer */
+
+      rxbyte = hciuart_getreg32(config, STM32_USART_RDR_OFFSET) & 0xff;
+
+      /* And add it to the Rx buffer */
+
+      config->rxbuffer[rxtail] = rxbyte;
+      rxtail = rxnext;
+      nbytes++;
+    }
+#endif
+
+  /* Save the updated Rx buffer tail index */
+
+  state->rxtail = rxtail;
+
+  /* Notify any waiting threads that new Rx data is available */
+#warning Missing logic
+
+  return nbytes;
+}
+
+/****************************************************************************
+ * Name: hciuart_copyfromrxbuffer
+ *
+ * Description:
+ *   Copy data from the driver Rx buffer to the caller provided destination
+ *   buffer.
+ *
+ ****************************************************************************/
+
+static ssize_t hciuart_copyfromrxbuffer(const struct hciuart_config_s *config
+                                        FAR uint8_t *dest, size_t destlen);
+{
+  FAR struct hciuart_state_s *state;
+  ssize_t nbytes = 0;
+  uint16_t rxhead;
+  uint16_t rxtail;
+  uint16_t rxnext;
+  uint8_t rxbyte;
+
+  /* Get a copy of the rxhead and rxtail indices of the Rx buffer */
+
+  state  = config->state;
+  rxhead = state->rxhead;
+  rxtail = state->rxtail;
+
+  /* Is there data available in the Rx FIFO? */
+
+  while ((hciuart_getreg32(config, STM32_USART_SR_OFFSET) & USART_SR_RXNE) != 0);
+    {
+      /* Is the Rx buffer empty? Is there space in the user buffer? */
+
+      if (rxhead == rxtail && nbytes < destlen)
+        {
+          /* Yes, stop the copy and update the indices */
+
+          break;
+        }
+
+      /* Get a byte from the Rx buffer */
+
+      rxbyte = config->rxbuffer[rxhead];
+
+      /* And add it to the caller's buffer buffer */
+
+      buffer[nbytes] = rxbyte;
+      nbytes++;
+
+      if (++rxhead >= config->rxbufsize)
+        {
+          rxhead = 0
+        }
+    }
+
+  /* Save the updated Rx buffer head index */
+
+  state->rxhead = rxhead;
+  return nbytes;
+}
 
 /****************************************************************************
  * Name: hciuart_setup
@@ -1079,7 +1293,7 @@ static int hciuart_dma_setup(const struct btuart_lowerhalf_s *lower)
    * programmed above.
    */
 
-  state->rxdmanext = 0;
+  state->dmatail = 0;
 
   /* Enable receive DMA for the UART */
 
@@ -1284,7 +1498,8 @@ static int hciuart_interrupt(int irq, void *context, void *arg)
   int  passes;
   bool handled;
 
-  DEBUGASSERT(config != NULL);
+  DEBUGASSERT(config != NULL && config->state != NULL);
+  state = config->state;
 
   /* Report serial activity to the power management logic */
 
@@ -1327,51 +1542,42 @@ static int hciuart_interrupt(int irq, void *context, void *arg)
        * being used.
        */
 
+#ifndef SERIAL_HAVE_DMA
+      /* There should never be an Rx FIFO interrupt in this configuration */
+
+      DEBUGASSERT((status & USART_SR_RXNE) == 0 || !hciuart_rxenabled(config))
+#else
       /* Handle incoming, receive bytes. */
 
-      if ((status & USART_SR_RXNE) != 0 &&
-          (hciuart_isenabled(config, USART_CR1_RXNEIE))
+      if ((status & USART_SR_RXNE) != 0 && hciuart_rxenabled(config))
         {
-          uint32_t rdr;
+          ssize_t nbytes;
 
-          /* Received data ready... process incoming bytes. */
-
-#ifdef SERIAL_HAVE_DMA
-          /* Compare our receive pointer to the current DMA pointer, if they
-           * do not match, then there are bytes to be received.
+          /* Received data ready... copy data from the Rx FIFO to the Rx
+           * buffer.
            */
 
-          while ((hciuart_dma_nextrx(config) != state->rxdmanext))
+          nbytes = hciuart_copytorxbuffer(config);
+          UNUSED(nbytes);
+
+          /* Is there anything in the Rx buffer?  Has the user registered an
+           * Rx callback function?
+           */
+
+          if (state->rxhead != state->rxtail && state->callback != NULL)
             {
-              int c = config->rxdmabuffer[state->rxdmanext];
-
-              state->rxdmanext++;
-              if (state->rxdmanext == RXDMA_BUFFER_SIZE)
-                {
-                  state->rxdmanext = 0;
-                }
-
-#warning Missing logic
+              state->callback(config->lower, state->arg);
+              handled = true;
             }
-#else
-          /* Copy data from Rx FIFO */
-
-          while ((hciuart_getreg32(config, STM32_USART_SR_OFFSET) & USART_SR_RXNE) != 0);
-            {
-              rdr = hciuart_getreg32(config, STM32_USART_RDR_OFFSET) & 0xff;
-#warning Missing logic
-            }
-#endif
-          /* Copy data from the DMA buffer */
-
-          handled = true;
         }
+      else
+#endif
 
       /* We may still have to read from the DR register to clear any pending
        * error conditions.
        */
 
-      else if ((status & (USART_SR_ORE | USART_SR_NE | USART_SR_FE)) != 0)
+      if ((status & (USART_SR_ORE | USART_SR_NE | USART_SR_FE)) != 0)
         {
 #if defined(CONFIG_STM32_STM32F30XX) || defined(CONFIG_STM32_STM32F33XX) || \
     defined(CONFIG_STM32_STM32F37XX)
@@ -1545,7 +1751,90 @@ static void hciuart_rxenable(FAR const struct btuart_lowerhalf_s *lower,
 static ssize_t hciuart_read(FAR const struct btuart_lowerhalf_s *lower,
                             FAR void *buffer, size_t buflen)
 {
-  /* Flush data from the Rx FIFO (or DMA buffer */)
+  const struct hciuart_config_s *config =
+    (const struct hciuart_config_s *)lower;
+  struct hciuart_state_s *state = config->state;
+  FAR uint8_t *dest;
+  size_t remaining;
+  size_t ntotal;
+  ssize_t nbytes;
+  bool rxenable;
+
+  DEBUGASSERT(config != NULL && config->state != NULL);
+  state = config->state;
+
+  /* Read any pending data to the Rx buffer */
+
+  nbytes = hciuart_copytorxbuffer(config);
+  UNUSED(nbytes)'
+
+  /* Loop copying data to the user buffer while the Rx buffer is not empty
+   * and the callers buffer is not full.
+   */
+
+  dest      = (FAR uint8_t *)buffer;
+  remaining = buflen;
+  ntotal    = 0;
+  rxenable  = hciuart_rxenabled(config);
+
+  hciuart_rxenable(lower, false);
+
+  while (state->rxtail != state->rxhead && ntotal < buflen)
+    {
+      nbytes = hciuart_copyfromrxbuffer(config, dest, remaining);
+      if (nbytes < 0)
+        {
+          /* An error occurred.. this should not really happen */
+
+          return nbytes;
+        }
+      else if (nbytes == 0)
+        {
+          /* If no data has been received, then we must wait for the arrival
+           * of new Rx data and try again.
+           */
+
+          if (ntotal == 0)
+            {
+#warning Missing logic
+            }
+
+          /* Otherwise, this must be the end of the packet.  Just break out
+           * and return what we have.
+           */
+
+          else
+            {
+              break;
+            }
+        }
+      else
+        {
+          /* More data has been copied.  Update pointers, counts, and
+           * indices.
+           */
+
+          ntotal    += nbytes;
+          dest      += nbytes;
+          remaining -= nbytes;
+
+          /* Read any additional pending data into the Rx buffer that may
+           * have accumulated while we were copying.
+           */
+
+          nbytes = hciuart_copytorxbuffer(config);
+          if (nbytes < 0)
+            {
+              /* An error occurred.. this should not really happen */
+
+              return nbytes;
+            }
+
+          /* Otherwise, continue looping */
+        }
+    }
+
+  return ntotal;
 }
 
 /****************************************************************************
@@ -1650,6 +1939,7 @@ static ssize_t hciuart_rxdrain(FAR const struct btuart_lowerhalf_s *lower)
  *
  ****************************************************************************/
 
+### MOVE to hciuart_copytobuffer
 static bool up_rxflowcontrol(struct btuart_lowerhalf_s *lower,
                              unsigned int nbuffered, bool upper)
 {
@@ -1725,6 +2015,7 @@ static bool up_rxflowcontrol(struct btuart_lowerhalf_s *lower,
  *
  ****************************************************************************/
 
+### MOVE to hciuart_write
 static void up_send(struct btuart_lowerhalf_s *lower, int ch)
 {
   const struct hciuart_config_s *config =
@@ -1740,6 +2031,7 @@ static void up_send(struct btuart_lowerhalf_s *lower, int ch)
  *
  ****************************************************************************/
 
+### MOVE to hciuart_write
 static bool up_txready(struct btuart_lowerhalf_s *lower)
 {
   const struct hciuart_config_s *config =
@@ -1763,15 +2055,26 @@ static void up_dma_rxcallback(DMA_HANDLE handle, uint8_t status, void *arg)
   const struct hciuart_config_s *config =
     (const struct hciuart_config_s *)lower;
   struct hciuart_state_s *state = config->state;
+  ssize_t nbytes;
 
-  /* Compare our receive pointer to the current DMA pointer, if they
-   * do not match, then there are bytes to be received.
+  DEBUGASSERT(config != NULL && config->state != NULL);
+  state = config->state;
+
+  /* Received data ready... copy and data from the Rx DMA buffer to the Rx
+   * buffer.
    */
 
-  if (state->rxenable && hciuart_dma_nextrx(config) != state->rxdmanext)
+  nbytes = hciuart_copytorxbuffer(config);
+  UNUSED(nbytes);
+
+  /* Is there anything in the Rx buffer?  Has the user registered an Rx
+   * callback function?
+   */
+
+  if (state->rxhead != state->rxtail && state->callback != NULL)
     {
-      /* Copy data from the Rx DMA buffer */
-#warning Missing logic
+      state->callback(config->lower, state->arg);
+      handled = true;
     }
 }
 #endif
