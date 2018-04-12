@@ -91,7 +91,7 @@ struct btuart_lowerhalf_s
    */
 
   CODE void (*rxattach)(FAR const struct btuart_lowerhalf_s *lower,
-                        btuart_rxcallback_t callback);
+                        btuart_rxcallback_t callback, FAR void *arg);
   CODE void (*rxenable)(FAR const struct btuart_lowerhalf_s *lower,
                         bool enable);
 

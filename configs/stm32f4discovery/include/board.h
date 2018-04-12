@@ -247,7 +247,7 @@
 #  define GPIO_CAN2_TX GPIO_CAN2_TX_1
 #endif
 
-/* UART2:
+/* USART2:
  *
  * The STM32F4 Discovery has no on-board serial devices, but the console is
  * brought out to PA2 (TX) and PA3 (RX) for connection to an external serial
@@ -261,12 +261,12 @@
 #  define GPIO_USART2_TX GPIO_USART2_TX_1
 #endif
 
-/* UART3: (Used in pseudoterm configuration) */
+/* USART3: (Used in pseudoterm configuration) */
 
 #define GPIO_USART3_TX GPIO_USART3_TX_1
 #define GPIO_USART3_RX GPIO_USART3_RX_1
 
-/* UART6:
+/* USART6:
  *
  * The STM32F4DIS-BB base board provides RS-232 drivers and a DB9 connector
  * for USART6.  This is the preferred serial console for use with the STM32F4DIS-BB.
