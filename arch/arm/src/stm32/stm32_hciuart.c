@@ -74,20 +74,20 @@
  * have also been selected.
  */
 
-#ifdef SERIAL_HAVE_DMA
+#ifdef CONFIG_STM32_HCIUART_DMA
 
 #  if defined(CONFIG_STM32_STM32F20XX) || defined(CONFIG_STM32_STM32F4XXX)
 /* Verify that DMA has been enabled and the DMA channel has been defined.
  */
 
-#    if defined(CONFIG_USART1_RXDMA) || defined(CONFIG_USART6_RXDMA)
+#    if defined(CONFIG_STM32_HCIUART1_RXDMA) || defined(CONFIG_STM32_HCIUART6_RXDMA)
 #      ifndef CONFIG_STM32_DMA2
 #        error STM32 USART1/6 receive DMA requires CONFIG_STM32_DMA2
 #      endif
 #    endif
 
-#    if defined(CONFIG_USART2_RXDMA) || defined(CONFIG_USART3_RXDMA) || \
-        defined(CONFIG_UART7_RXDMA) || defined(CONFIG_UART8_RXDMA)
+#    if defined(CONFIG_STM32_HCIUART2_RXDMA) || defined(CONFIG_STM32_HCIUART3_RXDMA) || \
+        defined(CONFIG_STM32_HCIUART7_RXDMA) || defined(CONFIG_STM32_HCIUART8_RXDMA)
 #      ifndef CONFIG_STM32_DMA1
 #        error STM32 USART2/3/4/5/7/8 receive DMA requires CONFIG_STM32_DMA1
 #      endif
@@ -98,27 +98,27 @@
  * the following in the board.h file.
  */
 
-#    if defined(CONFIG_USART1_RXDMA) && !defined(DMAMAP_USART1_RX)
+#    if defined(CONFIG_STM32_HCIUART1_RXDMA) && !defined(DMAMAP_USART1_RX)
 #      error "USART1 DMA channel not defined (DMAMAP_USART1_RX)"
 #    endif
 
-#    if defined(CONFIG_USART2_RXDMA) && !defined(DMAMAP_USART2_RX)
+#    if defined(CONFIG_STM32_HCIUART2_RXDMA) && !defined(DMAMAP_USART2_RX)
 #      error "USART2 DMA channel not defined (DMAMAP_USART2_RX)"
 #    endif
 
-#    if defined(CONFIG_USART3_RXDMA) && !defined(DMAMAP_USART3_RX)
+#    if defined(CONFIG_STM32_HCIUART3_RXDMA) && !defined(DMAMAP_USART3_RX)
 #      error "USART3 DMA channel not defined (DMAMAP_USART3_RX)"
 #    endif
 
-#    if defined(CONFIG_USART6_RXDMA) && !defined(DMAMAP_USART6_RX)
+#    if defined(CONFIG_STM32_HCIUART6_RXDMA) && !defined(DMAMAP_USART6_RX)
 #      error "USART6 DMA channel not defined (DMAMAP_USART6_RX)"
 #    endif
 
-#    if defined(CONFIG_UART7_RXDMA) && !defined(DMAMAP_UART7_RX)
+#    if defined(CONFIG_STM32_HCIUART7_RXDMA) && !defined(DMAMAP_UART7_RX)
 #      error "UART7 DMA channel not defined (DMAMAP_UART7_RX)"
 #    endif
 
-#    if defined(CONFIG_UART8_RXDMA) && !defined(DMAMAP_UART8_RX)
+#    if defined(CONFIG_STM32_HCIUART8_RXDMA) && !defined(DMAMAP_UART8_RX)
 #      error "UART8 DMA channel not defined (DMAMAP_UART8_RX)"
 #    endif
 
@@ -126,8 +126,8 @@
         defined(CONFIG_STM32_STM32F30XX) || defined(CONFIG_STM32_STM32F33XX) || \
         defined(CONFIG_STM32_STM32F37XX)
 
-#    if defined(CONFIG_USART1_RXDMA) || defined(CONFIG_USART2_RXDMA) || \
-      defined(CONFIG_USART3_RXDMA)
+#    if defined(CONFIG_STM32_HCIUART1_RXDMA) || defined(CONFIG_STM32_HCIUART2_RXDMA) || \
+      defined(CONFIG_STM32_HCIUART3_RXDMA)
 #      ifndef CONFIG_STM32_DMA1
 #        error STM32 USART1/2/3 receive DMA requires CONFIG_STM32_DMA1
 #      endif
@@ -146,24 +146,23 @@
  * When streaming data, the generic serial layer will be called
  * every time the FIFO receives half this number of bytes.
  */
-#  if !defined(CONFIG_STM32_SERIAL_RXDMA_BUFFER_SIZE)
-#    define CONFIG_STM32_SERIAL_RXDMA_BUFFER_SIZE 32
+#  if !defined(CONFIG_STM32_HCIUART_RXDMA_BUFSIZE)
+#    define CONFIG_STM32_HCIUART_RXDMA_BUFSIZE 32
 #  endif
-#  define RXDMA_MUTIPLE  4
-#  define RXDMA_MUTIPLE_MASK  (RXDMA_MUTIPLE -1)
-#  define RXDMA_BUFFER_SIZE   ((CONFIG_STM32_SERIAL_RXDMA_BUFFER_SIZE \
-                                + RXDMA_MUTIPLE_MASK) \
-                                & ~RXDMA_MUTIPLE_MASK)
+#  define RXDMA_MULTIPLE      4
+#  define RXDMA_MULTIPLE_MASK (RXDMA_MULTIPLE -1)
+#  define RXDMA_BUFFER_SIZE   ((CONFIG_STM32_HCIUART_RXDMA_BUFSIZE + \
+                                RXDMA_MULTIPLE_MASK) & ~RXDMA_MULTIPLE_MASK)
 
 /* DMA priority */
 
-#  ifndef CONFIG_USART_DMAPRIO
+#  ifndef CONFIG_STM32_HCIUART_DMAPRIO
 #    if defined(CONFIG_STM32_STM32L15XX) || defined(CONFIG_STM32_STM32F10XX) || \
         defined(CONFIG_STM32_STM32F30XX) || defined(CONFIG_STM32_STM32F33XX) || \
         defined(CONFIG_STM32_STM32F37XX)
-#      define CONFIG_USART_DMAPRIO  DMA_CCR_PRIMED
+#      define CONFIG_STM32_HCIUART_DMAPRIO  DMA_CCR_PRIMED
 #    elif defined(CONFIG_STM32_STM32F20XX) || defined(CONFIG_STM32_STM32F4XXX)
-#      define CONFIG_USART_DMAPRIO  DMA_SCR_PRIMED
+#      define CONFIG_STM32_HCIUART_DMAPRIO  DMA_SCR_PRIMED
 #    else
 #      error "Unknown STM32 DMA"
 #    endif
@@ -171,12 +170,12 @@
 #    if defined(CONFIG_STM32_STM32L15XX) || defined(CONFIG_STM32_STM32F10XX) || \
         defined(CONFIG_STM32_STM32F30XX) || defined(CONFIG_STM32_STM32F33XX) || \
         defined(CONFIG_STM32_STM32F37XX)
-#    if (CONFIG_USART_DMAPRIO & ~DMA_CCR_PL_MASK) != 0
-#      error "Illegal value for CONFIG_USART_DMAPRIO"
+#    if (CONFIG_STM32_HCIUART_DMAPRIO & ~DMA_CCR_PL_MASK) != 0
+#      error "Illegal value for CONFIG_STM32_HCIUART_DMAPRIO"
 #    endif
 #  elif defined(CONFIG_STM32_STM32F20XX) || defined(CONFIG_STM32_STM32F4XXX)
-#    if (CONFIG_USART_DMAPRIO & ~DMA_SCR_PL_MASK) != 0
-#      error "Illegal value for CONFIG_USART_DMAPRIO"
+#    if (CONFIG_STM32_HCIUART_DMAPRIO & ~DMA_SCR_PL_MASK) != 0
+#      error "Illegal value for CONFIG_STM32_HCIUART_DMAPRIO"
 #    endif
 #  else
 #    error "Unknown STM32 DMA"
@@ -191,7 +190,7 @@
                  DMA_SCR_MINC          | \
                  DMA_SCR_PSIZE_8BITS   | \
                  DMA_SCR_MSIZE_8BITS   | \
-                 CONFIG_USART_DMAPRIO  | \
+                 CONFIG_STM32_HCIUART_DMAPRIO  | \
                  DMA_SCR_PBURST_SINGLE | \
                  DMA_SCR_MBURST_SINGLE)
 #  else
@@ -200,7 +199,7 @@
                  DMA_CCR_MINC          | \
                  DMA_CCR_PSIZE_8BITS   | \
                  DMA_CCR_MSIZE_8BITS   | \
-                 CONFIG_USART_DMAPRIO)
+                 CONFIG_STM32_HCIUART_DMAPRIO)
 # endif
 #endif
 
@@ -210,8 +209,8 @@
 
 /* Software flow control */
 
-#define RXFLOW_UPPER(a)             ((CONFIG_HCIUART_UPPER_WATERMARK * (a)) / 100)
-#define RXFLOW_LOWER(a)             ((CONFIG_HCIUART_LOWER_WATERMARK * (a)) / 100)
+#define RXFLOW_UPPER(a) ((CONFIG_STM32_HCIUART_UPPER_WATERMARK * (a)) / 100)
+#define RXFLOW_LOWER(a) ((CONFIG_STM32_HCIUART_LOWER_WATERMARK * (a)) / 100)
 
 /* Power management definitions */
 
@@ -219,7 +218,7 @@
 #  define CONFIG_PM_SERIAL_ACTIVITY 10
 #endif
 #if defined(CONFIG_PM)
-#  define PM_IDLE_DOMAIN             0 /* Revisit */
+#  define PM_IDLE_DOMAIN 0 /* Revisit */
 #endif
 
 /****************************************************************************
@@ -246,13 +245,13 @@ struct hciuart_state_s
   volatile uint16_t txtail;
   volatile bool rxwaiting;           /* A thread is waiting for more Rx data */
   volatile bool txwaiting;           /* A thread is waiting for space in the Tx buffer */
-#ifndef CONFIG_STM32_FLOWCONTROL_BROKEN
+#ifndef CONFIG_STM32_HCIUART_SW_RXFLOW
   bool rxflow;                       /* True: software flow control is enable */
 #endif
 
   /* RX DMA state */
 
-#ifdef SERIAL_HAVE_DMA
+#ifdef CONFIG_STM32_HCIUART_DMA
   uint16_t dmatail;                  /* Tail index of the Rx DMA buffer */
   bool rxenable;                     /* DMA-based reception en/disable */
   DMA_HANDLE rxdmastream;            /* currently-open receive DMA stream */
@@ -267,16 +266,16 @@ struct hciuart_config_s
   struct hciuart_state_s *state;     /* Reference to variable state */
   uint8_t *rxbuffer;                 /* Rx buffer start */
   uint8_t *txbuffer;                 /* Tx buffer start */
-#ifdef SERIAL_HAVE_DMA
+#ifdef CONFIG_STM32_HCIUART_DMA
   uint8_t *rxdmabuffer;              /* Rx DMA buffer start */
 #endif
   uint16_t rxbufsize;                /* Size of the Rx buffer */
   uint16_t txbufsize;                /* Size of the tx buffer */
-#ifndef CONFIG_STM32_FLOWCONTROL_BROKEN
+#ifndef CONFIG_STM32_HCIUART_SW_RXFLOW
   uint16_t rxupper;                  /* Upper watermark to enable Rx flow control */
   uint16_t rxlower;                  /* Lower watermark to disable Rx flow control */
 #endif
-#ifdef SERIAL_HAVE_DMA
+#ifdef CONFIG_STM32_HCIUART_DMA
   uint8_t rxdmachan;                 /* Rx DMA channel */
 #endif
   uint8_t irq;                       /* IRQ associated with this USART */
@@ -304,7 +303,7 @@ static void hciuart_disableints(const struct hciuart_config_s *config,
 static bool hciuart_isenabled(const struct hciuart_config_s *config,
               uint32_t intset);
 static inline bool hciuart_rxenabled(const struct hciuart_config_s *config);
-#ifdef SERIAL_HAVE_DMA
+#ifdef CONFIG_STM32_HCIUART_DMA
 static int  hciuart_dma_nextrx(const struct hciuart_config_s *config);
 #endif
 
@@ -332,7 +331,7 @@ static ssize_t hciuart_write(const struct btuart_lowerhalf_s *lower,
               const void *buffer, size_t buflen);
 static ssize_t hciuart_rxdrain(const struct btuart_lowerhalf_s *lower);
 
-#ifdef SERIAL_HAVE_DMA
+#ifdef CONFIG_STM32_HCIUART_DMA
 static void hciuart_dma_rxcallback(DMA_HANDLE handle, uint8_t status,
               void *arg);
 #endif
@@ -353,9 +352,9 @@ static int  hciuart_pm_prepare(struct pm_callback_s *cb, int domain,
 #ifdef CONFIG_STM32_USART1_HCIUART
 /* I/O buffers */
 
-static uint8_t g_usart1_rxbuffer[CONFIG_USART1_RXBUFSIZE];
-static uint8_t g_usart1_txbuffer[CONFIG_USART1_TXBUFSIZE];
-# ifdef CONFIG_USART1_RXDMA
+static uint8_t g_usart1_rxbuffer[CONFIG_STM32_HCIUART1_RXBUFSIZE];
+static uint8_t g_usart1_txbuffer[CONFIG_STM32_HCIUART1_TXBUFSIZE];
+# ifdef CONFIG_STM32_HCIUART1_RXDMA
 static uint8_t g_usart1_rxdmabuffer[RXDMA_BUFFER_SIZE];
 # endif
 
@@ -379,21 +378,21 @@ static const struct hciuart_config_s g_hciusart1_config =
 
   .rxbuffer      = g_usart1_rxbuffer,
   .txbuffer      = g_usart1_txbuffer,
-#ifdef CONFIG_USART1_RXDMA
+#ifdef CONFIG_STM32_HCIUART1_RXDMA
   .rxdmabuffer   = ,
 #endif
-  .rxbufsize     = CONFIG_USART1_RXBUFSIZE,
-  .txbufsize     = CONFIG_USART1_TXBUFSIZE,
-#ifndef CONFIG_STM32_FLOWCONTROL_BROKEN
-  .rxupper       = RXFLOW_UPPER(CONFIG_USART1_RXBUFSIZE),
-  .rxlower       = RXFLOW_LOWER(CONFIG_USART1_RXBUFSIZE),
+  .rxbufsize     = CONFIG_STM32_HCIUART1_RXBUFSIZE,
+  .txbufsize     = CONFIG_STM32_HCIUART1_TXBUFSIZE,
+#ifndef CONFIG_STM32_HCIUART_SW_RXFLOW
+  .rxupper       = RXFLOW_UPPER(CONFIG_STM32_HCIUART1_RXBUFSIZE),
+  .rxlower       = RXFLOW_LOWER(CONFIG_STM32_HCIUART1_RXBUFSIZE),
 #endif
-#ifdef SERIAL_HAVE_DMA
+#ifdef CONFIG_STM32_HCIUART_DMA
   .rxdmachan     = DMAMAP_USART1_RX,
 #endif
 
   .irq           = STM32_IRQ_USART1,
-  .baud          = CONFIG_USART1_BAUD,
+  .baud          = CONFIG_STM32_HCIUART1_BAUD,
 #if defined(CONFIG_STM32_STM32F33XX)
   .apbclock      = STM32_PCLK1_FREQUENCY, /* Errata 2.5.1 */
 #else
@@ -412,9 +411,9 @@ static const struct hciuart_config_s g_hciusart1_config =
 #ifdef CONFIG_STM32_USART2_HCIUART
 /* I/O buffers */
 
-static uint8_t g_usart2_rxbuffer[CONFIG_USART2_RXBUFSIZE];
-static uint8_t g_usart2_txbuffer[CONFIG_USART2_TXBUFSIZE];
-# ifdef CONFIG_USART2_RXDMA
+static uint8_t g_usart2_rxbuffer[CONFIG_STM32_HCIUART2_RXBUFSIZE];
+static uint8_t g_usart2_txbuffer[CONFIG_STM32_HCIUART2_TXBUFSIZE];
+# ifdef CONFIG_STM32_HCIUART2_RXDMA
 static uint8_t g_usart2_rxdmabuffer[RXDMA_BUFFER_SIZE];
 # endif
 
@@ -438,21 +437,21 @@ static const struct hciuart_config_s g_hciusart2_config =
 
   .rxbuffer      = g_usart2_rxbuffer,
   .txbuffer      = g_usart2_txbuffer,
-#ifdef CONFIG_USART2_RXDMA
+#ifdef CONFIG_STM32_HCIUART2_RXDMA
   .rxdmabuffer   = g_usart2_rxdmabuffer,
 #endif
-  .rxbufsize     = CONFIG_USART2_RXBUFSIZE,
-  .txbufsize     = CONFIG_USART2_TXBUFSIZE,
-#ifndef CONFIG_STM32_FLOWCONTROL_BROKEN
-  .rxupper       = RXFLOW_UPPER(CONFIG_USART2_RXBUFSIZE),
-  .rxlower       = RXFLOW_LOWER(CONFIG_USART2_RXBUFSIZE),
+  .rxbufsize     = CONFIG_STM32_HCIUART2_RXBUFSIZE,
+  .txbufsize     = CONFIG_STM32_HCIUART2_TXBUFSIZE,
+#ifndef CONFIG_STM32_HCIUART_SW_RXFLOW
+  .rxupper       = RXFLOW_UPPER(CONFIG_STM32_HCIUART2_RXBUFSIZE),
+  .rxlower       = RXFLOW_LOWER(CONFIG_STM32_HCIUART2_RXBUFSIZE),
 #endif
-#ifdef SERIAL_HAVE_DMA
+#ifdef CONFIG_STM32_HCIUART_DMA
   .rxdmachan     = DMAMAP_USART2_RX,
 #endif
 
   .irq           = STM32_IRQ_USART2,
-  .baud          = CONFIG_USART2_BAUD,
+  .baud          = CONFIG_STM32_HCIUART2_BAUD,
   .apbclock      = STM32_PCLK1_FREQUENCY,
   .usartbase     = STM32_USART2_BASE,
   .tx_gpio       = GPIO_USART2_TX,
@@ -467,9 +466,9 @@ static const struct hciuart_config_s g_hciusart2_config =
 #ifdef CONFIG_STM32_USART3_HCIUART
 /* I/O buffers */
 
-static uint8_t g_usart3_rxbuffer[CONFIG_USART3_RXBUFSIZE];
-static uint8_t g_usart3_txbuffer[CONFIG_USART3_TXBUFSIZE];
-#ifdef CONFIG_USART3_RXDMA
+static uint8_t g_usart3_rxbuffer[CONFIG_STM32_HCIUART3_RXBUFSIZE];
+static uint8_t g_usart3_txbuffer[CONFIG_STM32_HCIUART3_TXBUFSIZE];
+#ifdef CONFIG_STM32_HCIUART3_RXDMA
 static uint8_t g_usart3_rxdmabuffer[RXDMA_BUFFER_SIZE];
 #endif
 
@@ -493,21 +492,21 @@ static const struct hciuart_config_s g_hciusart3_config =
 
   .rxbuffer      = g_usart3_rxbuffer,
   .txbuffer      = g_usart3_txbuffer,
-#ifdef CONFIG_USART3_RXDMA
+#ifdef CONFIG_STM32_HCIUART3_RXDMA
   .rxdmabuffer   = g_usart3_rxdmabuffer,
 #endif
-  .rxbufsize     = CONFIG_USART3_RXBUFSIZE,
-  .txbufsize     = CONFIG_USART3_TXBUFSIZE,
-#ifndef CONFIG_STM32_FLOWCONTROL_BROKEN
-  .rxupper       = RXFLOW_UPPER(CONFIG_USART3_RXBUFSIZE),
-  .rxlower       = RXFLOW_LOWER(CONFIG_USART3_RXBUFSIZE),
+  .rxbufsize     = CONFIG_STM32_HCIUART3_RXBUFSIZE,
+  .txbufsize     = CONFIG_STM32_HCIUART3_TXBUFSIZE,
+#ifndef CONFIG_STM32_HCIUART_SW_RXFLOW
+  .rxupper       = RXFLOW_UPPER(CONFIG_STM32_HCIUART3_RXBUFSIZE),
+  .rxlower       = RXFLOW_LOWER(CONFIG_STM32_HCIUART3_RXBUFSIZE),
 #endif
-#ifdef SERIAL_HAVE_DMA
+#ifdef CONFIG_STM32_HCIUART_DMA
   .rxdmachan     = DMAMAP_USART3_RX,
 #endif
 
   .irq           = STM32_IRQ_USART3,
-  .baud          = CONFIG_USART3_BAUD,
+  .baud          = CONFIG_STM32_HCIUART3_BAUD,
   .apbclock      = STM32_PCLK1_FREQUENCY,
   .usartbase     = STM32_USART3_BASE,
   .tx_gpio       = GPIO_USART3_TX,
@@ -523,9 +522,9 @@ static const struct hciuart_config_s g_hciusart3_config =
 /* I/O buffers */
 
 #ifdef CONFIG_STM32_USART6_HCIUART
-static uint8_t g_usart6_rxbuffer[CONFIG_USART6_RXBUFSIZE];
-static uint8_t g_usart6_txbuffer[CONFIG_USART6_TXBUFSIZE];
-# ifdef CONFIG_USART6_RXDMA
+static uint8_t g_usart6_rxbuffer[CONFIG_STM32_HCIUART6_RXBUFSIZE];
+static uint8_t g_usart6_txbuffer[CONFIG_STM32_HCIUART6_TXBUFSIZE];
+# ifdef CONFIG_STM32_HCIUART6_RXDMA
 static uint8_t g_usart6_rxdmabuffer[RXDMA_BUFFER_SIZE];
 # endif
 #endif
@@ -550,21 +549,21 @@ static const struct hciuart_config_s g_hciusart6_config =
 
   .rxbuffer      = g_usart6_rxbuffer,
   .txbuffer      = g_usart6_txbuffer,
-#ifdef CONFIG_USART6_RXDMA
+#ifdef CONFIG_STM32_HCIUART6_RXDMA
   .rxdmabuffer   = g_usart6_rxdmabuffer,
 #endif
-  .rxbufsize     = CONFIG_USART6_RXBUFSIZE,
-  .txbufsize     = CONFIG_USART6_TXBUFSIZE,
-#ifndef CONFIG_STM32_FLOWCONTROL_BROKEN
-  .rxupper       = RXFLOW_UPPER(CONFIG_USART6_RXBUFSIZE),
-  .rxlower       = RXFLOW_LOWER(CONFIG_USART6_RXBUFSIZE),
+  .rxbufsize     = CONFIG_STM32_HCIUART6_RXBUFSIZE,
+  .txbufsize     = CONFIG_STM32_HCIUART6_TXBUFSIZE,
+#ifndef CONFIG_STM32_HCIUART_SW_RXFLOW
+  .rxupper       = RXFLOW_UPPER(CONFIG_STM32_HCIUART6_RXBUFSIZE),
+  .rxlower       = RXFLOW_LOWER(CONFIG_STM32_HCIUART6_RXBUFSIZE),
 #endif
-#ifdef SERIAL_HAVE_DMA
+#ifdef CONFIG_STM32_HCIUART_DMA
   .rxdmachan     = DMAMAP_USART6_RX,
 #endif
 
   .irq           = STM32_IRQ_USART6,
-  .baud          = CONFIG_USART6_BAUD,
+  .baud          = CONFIG_STM32_HCIUART6_BAUD,
   .apbclock      = STM32_PCLK2_FREQUENCY,
   .usartbase     = STM32_USART6_BASE,
   .tx_gpio       = GPIO_USART6_TX,
@@ -579,9 +578,9 @@ static const struct hciuart_config_s g_hciusart6_config =
 #ifdef CONFIG_STM32_UART7_HCIUART
 /* I/O buffers */
 
-static uint8_t g_uart7_rxbuffer[CONFIG_UART7_RXBUFSIZE];
-static uint8_t g_uart7_txbuffer[CONFIG_UART7_TXBUFSIZE];
-#ifdef CONFIG_UART7_RXDMA
+static uint8_t g_uart7_rxbuffer[CONFIG_STM32_HCIUART7_RXBUFSIZE];
+static uint8_t g_uart7_txbuffer[CONFIG_STM32_HCIUART7_TXBUFSIZE];
+#ifdef CONFIG_STM32_HCIUART7_RXDMA
 static uint8_t g_uart7_rxdmabuffer[RXDMA_BUFFER_SIZE];
 #endif
 
@@ -605,21 +604,21 @@ static const struct hciuart_config_s g_hciuart7_config =
 
   .rxbuffer      = g_uart7_rxbuffer,
   .txbuffer      = g_uart7_txbuffer,
-#ifdef CONFIG_UART7_RXDMA
+#ifdef CONFIG_STM32_HCIUART7_RXDMA
   .rxdmabuffer   = g_uart7_rxdmabuffer,
 #endif
-  .rxbufsize     = CONFIG_UART7_RXBUFSIZE,
-  .txbufsize     = CONFIG_UART7_TXBUFSIZE,
-#ifndef CONFIG_STM32_FLOWCONTROL_BROKEN
-  .rxupper       = RXFLOW_UPPER(CONFIG_UART7_RXBUFSIZE),
-  .rxlower       = RXFLOW_LOWER(CONFIG_UART7_RXBUFSIZE),
+  .rxbufsize     = CONFIG_STM32_HCIUART7_RXBUFSIZE,
+  .txbufsize     = CONFIG_STM32_HCIUART7_TXBUFSIZE,
+#ifndef CONFIG_STM32_HCIUART_SW_RXFLOW
+  .rxupper       = RXFLOW_UPPER(CONFIG_STM32_HCIUART7_RXBUFSIZE),
+  .rxlower       = RXFLOW_LOWER(CONFIG_STM32_HCIUART7_RXBUFSIZE),
 #endif
-#ifdef SERIAL_HAVE_DMA
+#ifdef CONFIG_STM32_HCIUART_DMA
   .rxdmachan     = DMAMAP_UART7_RX,
 #endif
 
   .irq           = STM32_IRQ_UART7,
-  .baud          = CONFIG_UART7_BAUD,
+  .baud          = CONFIG_STM32_HCIUART7_BAUD,
   .apbclock      = STM32_PCLK1_FREQUENCY,
   .usartbase     = STM32_UART7_BASE,
   .tx_gpio       = GPIO_UART7_TX,
@@ -634,9 +633,9 @@ static const struct hciuart_config_s g_hciuart7_config =
 #ifdef CONFIG_STM32_UART8_HCIUART
 /* I/O buffers */
 
-static uint8_t g_uart8_rxbuffer[CONFIG_UART8_RXBUFSIZE];
-static uint8_t g_uart8_txbuffer[CONFIG_UART8_TXBUFSIZE];
-#ifdef CONFIG_UART8_RXDMA
+static uint8_t g_uart8_rxbuffer[CONFIG_STM32_HCIUART8_RXBUFSIZE];
+static uint8_t g_uart8_txbuffer[CONFIG_STM32_HCIUART8_TXBUFSIZE];
+#ifdef CONFIG_STM32_HCIUART8_RXDMA
 static uint8_t g_uart8_rxdmabuffer[RXDMA_BUFFER_SIZE];
 #endif
 
@@ -660,21 +659,21 @@ static const struct hciuart_config_s g_hciuart8_config =
 
   .rxbuffer      = g_uart8_rxbuffer,
   .txbuffer      = g_uart8_txbuffer,
-#ifdef CONFIG_UART8_RXDMA
+#ifdef CONFIG_STM32_HCIUART8_RXDMA
   .rxdmabuffer   = g_uart8_rxdmabuffer,
 #endif
-  .rxbufsize     = CONFIG_UART8_RXBUFSIZE,
-  .txbufsize     = CONFIG_UART8_TXBUFSIZE,
-#ifndef CONFIG_STM32_FLOWCONTROL_BROKEN
-  .rxupper       = RXFLOW_UPPER(CONFIG_UART8_RXBUFSIZE),
-  .rxlower       = RXFLOW_LOWER(CONFIG_UART8_RXBUFSIZE),
+  .rxbufsize     = CONFIG_STM32_HCIUART8_RXBUFSIZE,
+  .txbufsize     = CONFIG_STM32_HCIUART8_TXBUFSIZE,
+#ifndef CONFIG_STM32_HCIUART_SW_RXFLOW
+  .rxupper       = RXFLOW_UPPER(CONFIG_STM32_HCIUART8_RXBUFSIZE),
+  .rxlower       = RXFLOW_LOWER(CONFIG_STM32_HCIUART8_RXBUFSIZE),
 #endif
-#ifdef SERIAL_HAVE_DMA
+#ifdef CONFIG_STM32_HCIUART_DMA
   .rxdmachan     = DMAMAP_UART8_RX,
 #endif
 
   .irq           = STM32_IRQ_UART8,
-  .baud          = CONFIG_UART8_BAUD,
+  .baud          = CONFIG_STM32_HCIUART8_BAUD,
   .apbclock      = STM32_PCLK1_FREQUENCY,
   .usartbase     = STM32_UART8_BASE,
   .tx_gpio       = GPIO_UART8_TX,
@@ -841,12 +840,18 @@ static bool hciuart_isenabled(const struct hciuart_config_s *config,
 
 static inline bool hciuart_rxenabled(const struct hciuart_config_s *config)
 {
-#ifdef SERIAL_HAVE_DMA
+#ifdef CONFIG_STM32_HCIUART_DMA
   const struct hciuart_config_s *state = config->state;
-  return state->rxenabled;
-#else
-  return hciuart_isenabled(config, USART_CR1_RXNEIE);
+
+  if (config->rxdmabuffer != NULL)
+    {
+      return state->rxenabled;
+    }
+  else
 #endif
+    {
+      return hciuart_isenabled(config, USART_CR1_RXNEIE);
+    }
 }
 
 /****************************************************************************
@@ -858,7 +863,7 @@ static inline bool hciuart_rxenabled(const struct hciuart_config_s *config)
  *
  ****************************************************************************/
 
-#ifdef SERIAL_HAVE_DMA
+#ifdef CONFIG_STM32_HCIUART_DMA
 static int hciuart_dma_nextrx(const struct hciuart_config_s *config)
 {
   struct hciuart_state_s *state = config->state;
@@ -930,7 +935,7 @@ static uint16_t hciuart_rxinuse(const struct hciuart_config_s *config)
 
 static inline void hciuart_rxflow_enable(const struct hciuart_config_s *config)
 {
-#ifdef  CONFIG_STM32_FLOWCONTROL_BROKEN
+#ifdef  CONFIG_STM32_HCIUART_SW_RXFLOW
   struct hciuart_state_s *state;
 
   DEBUGASSERT(config != NULL && config->state != NULL);
@@ -961,7 +966,7 @@ static inline void hciuart_rxflow_enable(const struct hciuart_config_s *config)
 
 static inline void hciuart_rxflow_disable(const struct hciuart_config_s *config)
 {
-#ifdef  CONFIG_STM32_FLOWCONTROL_BROKEN
+#ifdef  CONFIG_STM32_HCIUART_SW_RXFLOW
   struct hciuart_state_s *state;
 
   DEBUGASSERT(config != NULL && config->state != NULL);
@@ -996,7 +1001,7 @@ static ssize_t hciuart_copytorxbuffer(const struct hciuart_config_s *config)
   uint16_t rxhead;
   uint16_t rxtail;
   uint16_t rxnext;
-#ifdef SERIAL_HAVE_DMA
+#ifdef CONFIG_STM32_HCIUART_DMA
   uint16_t dmatail;
 #endif
   uint8_t rxbyte;
@@ -1007,94 +1012,99 @@ static ssize_t hciuart_copytorxbuffer(const struct hciuart_config_s *config)
   rxhead = state->rxhead;
   rxtail = state->rxtail;
 
-#ifdef SERIAL_HAVE_DMA
-  /* Get a copy of the dmatail index of the Rx DMA buffer */
-
-  dmatail = state->dmatail;
-
-  /* Compare dmatail to the current DMA pointer, if they do notmatch, then
-   * there is new Rx data available in the Rx DMA buffer.
-   */
-
-  while ((hciuart_dma_nextrx(config) != dmatail))
+#ifdef CONFIG_STM32_HCIUART_DMA
+  if (config->rxdmabuffer != NULL)
     {
-      /* Compare the Rx buffer head and tail indices.  If the incremented
-       * tail index would make the Rx buffer appear empty, then we must
-       * stop the copy.  If there is data pending in the Rx DMA buffer,
-       * this could be very bad because a data overrun condition is likely
-       * to occur.
+      /* Get a copy of the dmatail index of the Rx DMA buffer */
+
+      dmatail = state->dmatail;
+
+      /* Compare dmatail to the current DMA pointer, if they do notmatch,
+       * then there is new Rx data available in the Rx DMA buffer.
        */
 
-      rxnext = rxtail + 1;
-      if (rxnext >= config->rxbufsize)
+      while ((hciuart_dma_nextrx(config) != dmatail))
         {
-          rxnext = 0
+          /* Compare the Rx buffer head and tail indices.  If the
+           * incremented tail index would make the Rx buffer appear empty,
+           * then we must stop the copy.  If there is data pending in the Rx
+           * DMA buffer, this could be very bad because a data overrun
+           condition is likely to occur.
+           */
+
+          rxnext = rxtail + 1;
+          if (rxnext >= config->rxbufsize)
+            {
+              rxnext = 0
+            }
+
+          /* Would this make the Rx buffer appear full? */
+
+          if (rxnext == rxhead)
+            {
+              /* Yes, stop the copy and update the indices */
+
+              break;
+            }
+
+          /* Get a byte from the Rx DMA buffer */
+
+          rxbyte = config->rxdmabuffer[dmatail];
+
+          if (++dmatail >= RXDMA_BUFFER_SIZE)
+            {
+              dmatail = 0;
+            }
+
+          /* And add it to the tail of the Rx buffer */
+
+          config->rxbuffer[rxtail] = rxbyte;
+          rxtail = rxnext;
+          nbytes++;
         }
 
-      /* Would this make the Rx buffer appear full? */
-
-      if (rxnext == rxhead)
-        {
-          /* Yes, stop the copy and update the indices */
-
-          break;
-        }
-
-      /* Get a byte from the Rx DMA buffer */
-
-      rxbyte = config->rxdmabuffer[dmatail];
-
-      if (++dmatail >= RXDMA_BUFFER_SIZE)
-        {
-          dmatail = 0;
-        }
-
-      /* And add it to the tail of the Rx buffer */
-
-      config->rxbuffer[rxtail] = rxbyte;
-      rxtail = rxnext;
-      nbytes++;
+      state->dmatail = dmatail;
     }
-
-  state->dmatail = dmatail;
-#else
-  /* Is there data available in the Rx FIFO? */
-
-  while ((hciuart_getreg32(config, STM32_USART_SR_OFFSET) & USART_SR_RXNE) != 0)
-    {
-      /* Compare the Rx buffer head and tail indices.  If the incremented
-       * tail index would make the Rx buffer appear empty, then we must
-       * stop the copy.  If there is data pending in the Rx FIFO, this
-       * could be very bad because a data overrun condition is likely to
-       * occur.
-       */
-
-      rxnext = rxtail + 1;
-      if (rxnext >= config->rxbufsize)
-        {
-          rxnext = 0;
-        }
-
-      /* Would this make the Rx buffer appear full? */
-
-      if (rxnext == rxhead)
-        {
-          /* Yes, stop the copy and update the indices */
-
-          break;
-        }
-
-      /* Get a byte from the Rx FIFO buffer */
-
-      rxbyte = hciuart_getreg32(config, STM32_USART_RDR_OFFSET) & 0xff;
-
-      /* And add it to the tail of the Rx buffer */
-
-      config->rxbuffer[rxtail] = rxbyte;
-      rxtail = rxnext;
-      nbytes++;
-    }
+  else
 #endif
+    {
+      /* Is there data available in the Rx FIFO? */
+
+      while ((hciuart_getreg32(config, STM32_USART_SR_OFFSET) & USART_SR_RXNE) != 0)
+        {
+          /* Compare the Rx buffer head and tail indices.  If the
+           * incremented tail index would make the Rx buffer appear empty,
+           * then we must stop the copy.  If there is data pending in the Rx
+           * FIFO, this could be very bad because a data overrun condition
+           * is likely to* occur.
+           */
+
+          rxnext = rxtail + 1;
+          if (rxnext >= config->rxbufsize)
+            {
+              rxnext = 0;
+            }
+
+          /* Would this make the Rx buffer appear full? */
+
+          if (rxnext == rxhead)
+            {
+              /* Yes, stop the copy and update the indices */
+
+              break;
+            }
+
+          /* Get a byte from the Rx FIFO buffer */
+
+          rxbyte = hciuart_getreg32(config, STM32_USART_RDR_OFFSET) & 0xff;
+
+          /* And add it to the tail of the Rx buffer */
+
+          config->rxbuffer[rxtail] = rxbyte;
+          rxtail = rxnext;
+          nbytes++;
+        }
+    }
 
   /* Save the updated Rx buffer tail index */
 
@@ -1417,7 +1427,7 @@ static void hciuart_line_configure(const struct hciuart_config_s *config)
    * based management of RTS.
    */
 
-#ifndef CONFIG_STM32_FLOWCONTROL_BROKEN
+#ifndef CONFIG_STM32_HCIUART_SW_RXFLOW
   regval |= USART_CR3_RTSE;
 #endif
   regval |= USART_CR3_CTSE;
@@ -1534,7 +1544,7 @@ static int hciuart_configure(const struct hciuart_config_s *config)
 
   pinset = config->rts_gpio;
 
-#ifdef CONFIG_STM32_FLOWCONTROL_BROKEN
+#ifdef CONFIG_STM32_HCIUART_SW_RXFLOW
   /* Use software controlled RTS flow control. Because STM current STM32
    * have broken HW based RTS behavior (they assert nRTS after every byte
    * received)  Enable this setting workaround this issue by using software
@@ -1580,7 +1590,7 @@ static int hciuart_configure(const struct hciuart_config_s *config)
   regval     |= (USART_CR1_UE | USART_CR1_TE | USART_CR1_RE);
   hciuart_putreg32(config, STM32_USART_CR1_OFFSET, regval);
 
-#ifdef SERIAL_HAVE_DMA
+#ifdef CONFIG_STM32_HCIUART_DMA
   /* Acquire the DMA channel.  This should always succeed. */
 
   state->rxdmastream = stm32_dmachannel(config->rxdmachan);
@@ -1669,7 +1679,7 @@ static int hciuart_interrupt(int irq, void *context, void *arg)
        * "              "   USART_SR_ORE    Overrun Error Detected
        * USART_CR1_TCIE     USART_SR_TC     Transmission Complete           (used only for RS-485)
        * USART_CR1_TXEIE    USART_SR_TXE    Transmit Data Register Empty
-       * USART_CR1_PEIE     USART_SR_PE     Parity Error
+       * USART_CR1_PEIE     USART_SR_PE     Parity Error                    (No parity)
        *
        * USART_CR2_LBDIE    USART_SR_LBD    Break Flag                      (not used)
        * USART_CR3_EIE      USART_SR_FE     Framing Error
@@ -1682,12 +1692,7 @@ static int hciuart_interrupt(int irq, void *context, void *arg)
        * being used.
        */
 
-#ifndef SERIAL_HAVE_DMA
-      /* There should never be an Rx FIFO interrupt in this configuration */
-
-      DEBUGASSERT((status & USART_SR_RXNE) == 0 || !hciuart_rxenabled(config))
-#else
-      /* Handle incoming, receive bytes. */
+      /* Handle incoming, receive bytes (non-DMA only) */
 
       if ((status & USART_SR_RXNE) != 0 && hciuart_rxenabled(config))
         {
@@ -1706,18 +1711,16 @@ static int hciuart_interrupt(int irq, void *context, void *arg)
 
           if (state->rxhead != state->rxtail && state->callback != NULL)
             {
-              state->callback(config->lower, state->arg);
+              state->callback(&config->lower, state->arg);
               handled = true;
             }
         }
-      else
-#endif
 
       /* We may still have to read from the DR register to clear any pending
        * error conditions.
        */
 
-      if ((status & (USART_SR_ORE | USART_SR_NE | USART_SR_FE)) != 0)
+      else if ((status & (USART_SR_ORE | USART_SR_NE | USART_SR_FE)) != 0)
         {
 #if defined(CONFIG_STM32_STM32F30XX) || defined(CONFIG_STM32_STM32F33XX) || \
     defined(CONFIG_STM32_STM32F37XX)
@@ -1811,7 +1814,7 @@ static void hciuart_rxattach(const struct btuart_lowerhalf_s *lower,
 
       /* Disable Rx callbacks and detach the Rx callback */
 
-      intset = USART_CR1_RXNEIE | USART_CR1_PEIE | USART_CR3_EIE;
+      intset = USART_CR1_RXNEIE | USART_CR3_EIE;
       hciuart_disableints(config, intset);
 
       state->callback = NULL;
@@ -1849,58 +1852,60 @@ static void hciuart_rxenable(const struct btuart_lowerhalf_s *lower,
   const struct hciuart_config_s *config =
     (const struct hciuart_config_s *)lower;
 
-#ifdef SERIAL_HAVE_DMA
+#ifdef CONFIG_STM32_HCIUART_DMA
   struct hciuart_state_s *state = config->state;
 
-  /* En/disable DMA reception.
-   *
-   * Note that it is not safe to check for available bytes and immediately
-   * pass them to uart_recvchars as that could potentially recurse back
-   * to us again.  Instead, bytes must wait until the next up_dma_poll or
-   * DMA event.
-   */
-
-  state->rxenable = enable;
-#else
-  uint32_t intset;
-  irqstate_t flags;
-
-  /* USART receive interrupts:
-   *
-   * Enable             Status          Meaning                         Usage
-   * ------------------ --------------- ------------------------------- ----------
-   * USART_CR1_IDLEIE   USART_SR_IDLE   Idle Line Detected              (not used)
-   * USART_CR1_RXNEIE   USART_SR_RXNE   Received Data Ready to be Read
-   * "              "   USART_SR_ORE    Overrun Error Detected
-   * USART_CR1_PEIE     USART_SR_PE     Parity Error
-   *
-   * USART_CR2_LBDIE    USART_SR_LBD    Break Flag                      (not used)
-   * USART_CR3_EIE      USART_SR_FE     Framing Error
-   * "           "      USART_SR_NE     Noise Error
-   * "           "      USART_SR_ORE    Overrun Error Detected
-   */
-
-  flags = enter_critical_section();
-  if (enable)
+  if (config->rxdmabuffer != NULL)
     {
-      /* Receive an interrupt when their is anything in the Rx data register (or an Rx
-       * timeout occurs).
+      /* En/disable DMA reception.
+       *
+       * Note that it is not safe to check for available bytes and immediately
+       * pass them to uart_recvchars as that could potentially recurse back to
+       * us again.  Instead, bytes must wait until the next up_dma_poll or DMA
+       * event.
        */
 
-#ifdef CONFIG_USART_ERRINTS
-      intset = USART_CR1_RXNEIE | USART_CR1_PEIE | USART_CR3_EIE;
-#else
-      intset = USART_CR1_RXNEIE;
-#endif
-      hciuart_enableints(config, intset);
+      state->rxenable = enable;
     }
   else
+#else
     {
-      intset = USART_CR1_RXNEIE | USART_CR1_PEIE | USART_CR3_EIE;
-      hciuart_disableints(config, intset);
-    }
+      uint32_t intset;
+      irqstate_t flags;
 
-  leave_critical_section(flags);
+      /* USART receive interrupts:
+       *
+       * Enable             Status          Meaning                         Usage
+       * ------------------ --------------- ------------------------------- ----------
+       * USART_CR1_IDLEIE   USART_SR_IDLE   Idle Line Detected              (not used)
+       * USART_CR1_RXNEIE   USART_SR_RXNE   Received Data Ready to be Read
+       * "              "   USART_SR_ORE    Overrun Error Detected
+       * USART_CR1_PEIE     USART_SR_PE     Parity Error                    (No parity)
+       *
+       * USART_CR2_LBDIE    USART_SR_LBD    Break Flag                      (not used)
+       * USART_CR3_EIE      USART_SR_FE     Framing Error
+       * "           "      USART_SR_NE     Noise Error
+       * "           "      USART_SR_ORE    Overrun Error Detected
+       */
+
+      flags = enter_critical_section();
+      if (enable)
+        {
+          /* Receive an interrupt when their is anything in the Rx data register (or an Rx
+           * timeout occurs).
+           */
+
+          intset = USART_CR1_RXNEIE | USART_CR3_EIE;
+          hciuart_enableints(config, intset);
+        }
+      else
+        {
+          intset = USART_CR1_RXNEIE | USART_CR3_EIE;
+          hciuart_disableints(config, intset);
+        }
+
+      leave_critical_section(flags);
+    }
 #endif
 }
 
@@ -2218,7 +2223,7 @@ static ssize_t hciuart_rxdrain(const struct btuart_lowerhalf_s *lower)
  *
  ****************************************************************************/
 
-#ifdef SERIAL_HAVE_DMA
+#ifdef CONFIG_STM32_HCIUART_DMA
 static void hciuart_dma_rxcallback(DMA_HANDLE handle, uint8_t status,
                                    void *arg)
 {
@@ -2464,14 +2469,14 @@ void hciuart_initialize(void)
  *
  ****************************************************************************/
 
-#ifdef SERIAL_HAVE_DMA
+#ifdef CONFIG_STM32_HCIUART_DMA
 void stm32_serial_dma_poll(void)
 {
   irqstate_t flags;
 
   flags = enter_critical_section();
 
-#ifdef CONFIG_USART1_RXDMA
+#ifdef CONFIG_STM32_HCIUART1_RXDMA
   if (g_hciusart1_config.state->rxdmastream != NULL)
     {
       hciuart_dma_rxcallback(g_hciusart1_config.state->rxdmastream, 0,
@@ -2479,7 +2484,7 @@ void stm32_serial_dma_poll(void)
     }
 #endif
 
-#ifdef CONFIG_USART2_RXDMA
+#ifdef CONFIG_STM32_HCIUART2_RXDMA
   if (g_hciusart2_config.state->rxdmastream != NULL)
     {
       hciuart_dma_rxcallback(g_hciusart2_config.state->rxdmastream, 0,
@@ -2487,7 +2492,7 @@ void stm32_serial_dma_poll(void)
     }
 #endif
 
-#ifdef CONFIG_USART3_RXDMA
+#ifdef CONFIG_STM32_HCIUART3_RXDMA
   if (g_hciusart3_config.state->rxdmastream != NULL)
     {
       hciuart_dma_rxcallback(g_hciusart3_config.state->rxdmastream, 0,
@@ -2495,7 +2500,7 @@ void stm32_serial_dma_poll(void)
     }
 #endif
 
-#ifdef CONFIG_USART6_RXDMA
+#ifdef CONFIG_STM32_HCIUART6_RXDMA
   if (g_hciusart6_config.state->rxdmastream != NULL)
     {
       hciuart_dma_rxcallback(g_hciusart6_config.state->rxdmastream, 0,
@@ -2503,14 +2508,14 @@ void stm32_serial_dma_poll(void)
     }
 #endif
 
-#ifdef CONFIG_UART7_RXDMA
+#ifdef CONFIG_STM32_HCIUART7_RXDMA
   if (g_hciuart7_config.state->rxdmastream != NULL)
     {
       hciuart_dma_rxcallback(g_hciuart7_config.state->rxdmastream, 0, &g_hciuart7_config);
     }
 #endif
 
-#ifdef CONFIG_UART8_RXDMA
+#ifdef CONFIG_STM32_HCIUART8_RXDMA
   if (g_hciuart8_config.state->rxdmastream != NULL)
     {
       hciuart_dma_rxcallback(g_hciuart8.state->rxdmastream, 0,
