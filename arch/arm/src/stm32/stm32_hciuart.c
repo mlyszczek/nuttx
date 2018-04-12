@@ -269,12 +269,8 @@ struct hciuart_config_s
   uint8_t rxdmachan;                 /* Rx DMA channel */
 #endif
 
-  uint8_t parity;                    /* 0=none, 1=odd, 2=even */
-  uint8_t bits;                      /* Number of bits (7 or 8) */
-  bool stopbits2;                    /* True: Configure with 2 vs. 1 stop */
-  uint32_t baud;                     /* Configured baud */
-
   uint8_t irq;                       /* IRQ associated with this USART */
+  uint32_t baud;                     /* Configured baud */
   uint32_t apbclock;                 /* PCLK 1 or 2 frequency */
   uint32_t usartbase;                /* Base address of USART registers */
   uint32_t tx_gpio;                  /* U[S]ART TX GPIO pin configuration */
@@ -307,11 +303,8 @@ static bool hciuart_rxflowcontrol(struct btuart_lowerhalf_s *lower,
 static ssize_t hciuart_copyfromrxbuffer(const struct hciuart_config_s *config,
               uint8_t *dest, size_t destlen);
 static ssize_t hciuart_copytotxfifo(const struct hciuart_config_s *config);
-static void hciuart_setup(const struct hciuart_config_s *config);
-#ifdef SERIAL_HAVE_DMA
-static int  hciuart_dma_setup(struct btuart_lowerhalf_s *lower)
-#endif
-static void hciuart_apbclock(const struct hciuart_config_s *config, bool on);
+static void hciuart_line_configure(const struct hciuart_config_s *config);
+static void hciuart_apbclock_enable(const struct hciuart_config_s *config);
 static int  hciuart_configure(const struct hciuart_config_s *config);
 static int  hciuart_interrupt(int irq, void *context, void *arg);
 
@@ -383,20 +376,8 @@ static const struct hciuart_config_s g_hciusart1_config =
   .rxdmachan     = DMAMAP_USART1_RX,
 #endif
 
-  .parity        = CONFIG_USART1_PARITY,
-  .bits          = CONFIG_USART1_BITS,
-  .stopbits2     = CONFIG_USART1_2STOP,
-  .baud          = CONFIG_USART1_BAUD,
-
-  uint8_t irq;                       /* IRQ associated with this USART */
-  uint32_t apbclock;                 /* PCLK 1 or 2 frequency */
-  uint32_t usartbase;                /* Base address of USART registers */
-  uint32_t tx_gpio;                  /* U[S]ART TX GPIO pin configuration */
-  uint32_t rx_gpio;                  /* U[S]ART RX GPIO pin configuration */
-  uint32_t cts_gpio;                 /* U[S]ART CTS GPIO pin configuration */
-  uint32_t rts_gpio;                 /* U[S]ART RTS GPIO pin configuration */
-
   .irq           = STM32_IRQ_USART1,
+  .baud          = CONFIG_USART1_BAUD,
 #if defined(CONFIG_STM32_STM32F33XX)
   .apbclock      = STM32_PCLK1_FREQUENCY, /* Errata 2.5.1 */
 #else
@@ -450,12 +431,8 @@ static const struct hciuart_config_s g_hciusart2_config =
   .rxdmachan     = DMAMAP_USART2_RX,
 #endif
 
-  .parity        = CONFIG_USART2_PARITY,
-  .bits          = CONFIG_USART2_BITS,
-  .stopbits2     = CONFIG_USART2_2STOP,
-  .baud          = CONFIG_USART2_BAUD,
-
   .irq           = STM32_IRQ_USART2,
+  .baud          = CONFIG_USART2_BAUD,
   .apbclock      = STM32_PCLK1_FREQUENCY,
   .usartbase     = STM32_USART2_BASE,
   .tx_gpio       = GPIO_USART2_TX,
@@ -505,12 +482,8 @@ static const struct hciuart_config_s g_hciusart3_config =
   .rxdmachan     = DMAMAP_USART3_RX,
 #endif
 
-  .parity        = CONFIG_USART3_PARITY,
-  .bits          = CONFIG_USART3_BITS,
-  .stopbits2     = CONFIG_USART3_2STOP,
-  .baud          = CONFIG_USART3_BAUD,
-
   .irq           = STM32_IRQ_USART3,
+  .baud          = CONFIG_USART3_BAUD,
   .apbclock      = STM32_PCLK1_FREQUENCY,
   .usartbase     = STM32_USART3_BASE,
   .tx_gpio       = GPIO_USART3_TX,
@@ -562,12 +535,8 @@ static const struct hciuart_config_s g_hciusart6_config =
   .rxdmachan     = DMAMAP_USART6_RX,
 #endif
 
-  .parity        = CONFIG_USART6_PARITY,
-  .bits          = CONFIG_USART6_BITS,
-  .stopbits2     = CONFIG_USART6_2STOP,
-  .baud          = CONFIG_USART6_BAUD,
-
   .irq           = STM32_IRQ_USART6,
+  .baud          = CONFIG_USART6_BAUD,
   .apbclock      = STM32_PCLK2_FREQUENCY,
   .usartbase     = STM32_USART6_BASE,
   .tx_gpio       = GPIO_USART6_TX,
@@ -617,12 +586,8 @@ static const struct hciuart_config_s g_hciuart7_config =
   .rxdmachan     = DMAMAP_UART7_RX,
 #endif
 
-  .parity        = CONFIG_UART7_PARITY,
-  .bits          = CONFIG_UART7_BITS,
-  .stopbits2     = CONFIG_UART7_2STOP,
-  .baud          = CONFIG_UART7_BAUD,
-
   .irq           = STM32_IRQ_UART7,
+  .baud          = CONFIG_UART7_BAUD,
   .apbclock      = STM32_PCLK1_FREQUENCY,
   .usartbase     = STM32_UART7_BASE,
   .tx_gpio       = GPIO_UART7_TX,
@@ -672,12 +637,8 @@ static const struct hciuart_config_s g_hciuart8_config =
   .rxdmachan     = DMAMAP_UART8_RX,
 #endif
 
-  .parity        = CONFIG_UART8_PARITY,
-  .bits          = CONFIG_UART8_BITS,
-  .stopbits2     = CONFIG_UART8_2STOP,
-  .baud          = CONFIG_UART8_BAUD,
-
   .irq           = STM32_IRQ_UART8,
+  .baud          = CONFIG_UART8_BAUD,
   .apbclock      = STM32_PCLK1_FREQUENCY,
   .usartbase     = STM32_UART8_BASE,
   .tx_gpio       = GPIO_UART8_TX,
@@ -1214,14 +1175,22 @@ static ssize_t hciuart_copytotxfifo(const struct hciuart_config_s *config)
 }
 
 /****************************************************************************
- * Name: hciuart_setup
+ * Name: hciuart_line_configure
  *
  * Description:
  *   Set the serial line format and speed.
  *
+ *   Per "Specification of the Bluetooth System, Wireless connections made
+ *   easy, Host Controller Interface [Transport Layer]", Volume 4, Revision
+ *   1.2 or later, 1 January 2006, HCI UART tranport uses these settings:
+ *
+ *     8 data bits, no parity, 1 stop, RTS/CTS flow control
+ *
+ *   BAUD and flow control response time are manufacturer specific.
+ *
  ****************************************************************************/
 
-static void hciuart_setup(const struct hciuart_config_s *config)
+static void hciuart_line_configure(const struct hciuart_config_s *config)
 {
 #if defined(CONFIG_STM32_STM32F30XX) || defined(CONFIG_STM32_STM32F33XX) || \
     defined(CONFIG_STM32_STM32F37XX)
@@ -1353,46 +1322,28 @@ static void hciuart_setup(const struct hciuart_config_s *config)
   hciuart_putreg32(config, STM32_USART_CR1_OFFSET, regval);
   hciuart_putreg32(config, STM32_USART_BRR_OFFSET, brr);
 
-  /* Configure parity mode */
+  /* Configure parity mode
+   *
+   * HCI UART spec requires:  No parity
+   */
 
   regval &= ~(USART_CR1_PCE | USART_CR1_PS | USART_CR1_M);
 
-  if (config->parity == 1)       /* Odd parity */
-    {
-      regval |= (USART_CR1_PCE | USART_CR1_PS);
-    }
-  else if (config->parity == 2)  /* Even parity */
-    {
-      regval |= USART_CR1_PCE;
-    }
-
-  /* Configure word length (parity uses one of configured bits)
+  /* Configure word length
    *
-   * Default: 1 start, 8 data (no parity), n stop, OR
-   *          1 start, 7 data + parity, n stop
+   * HCI UART spec requires:  8 data bits
    */
 
-  if (config->bits == 9 || (config->bits == 8 && config->parity != 0))
-    {
-      /* Select: 1 start, 8 data + parity, n stop, OR
-       *         1 start, 9 data (no parity), n stop.
-       */
-
-      regval |= USART_CR1_M;
-    }
-
+  regval |= USART_CR1_M;
   hciuart_putreg32(config, STM32_USART_CR1_OFFSET, regval);
 
-  /* Configure STOP bits */
+  /* Configure STOP bits
+   *
+   * HCI UART spec requires:  1 stop bit
+   */
 
   regval = hciuart_getreg32(config, STM32_USART_CR2_OFFSET);
   regval &= ~(USART_CR2_STOP_MASK);
-
-  if (config->stopbits2)
-    {
-      regval |= USART_CR2_STOP2;
-    }
-
   hciuart_putreg32(config, STM32_USART_CR2_OFFSET, regval);
 
   /* Configure hardware flow control */
@@ -1415,69 +1366,7 @@ static void hciuart_setup(const struct hciuart_config_s *config)
 }
 
 /****************************************************************************
- * Name: hciuart_dma_setup
- *
- * Description:
- *   Configure the USART baud, bits, parity, etc. This method is called the
- *   first time that the serial port is opened.
- *
- ****************************************************************************/
-
-#ifdef SERIAL_HAVE_DMA
-static int hciuart_dma_setup(const struct btuart_lowerhalf_s *lower)
-{
-  const struct hciuart_config_s *config =
-    (const struct hciuart_config_s *)lower;
-  struct hciuart_state_s *state = config->state;
-  int result;
-  uint32_t regval;
-
-  /* Do the basic UART setup  */
-
-  result = hciuart_configure(config);
-  if (result < 0)
-    {
-      return result;
-    }
-
-  /* Acquire the DMA channel.  This should always succeed. */
-
-  state->rxdmastream = stm32_dmachannel(config->rxdmachan);
-
-  /* Configure for circular DMA reception into the RX fifo */
-
-  stm32_dmasetup(state->rxdmastream,
-                 config->usartbase + STM32_USART_RDR_OFFSET,
-                 (uint32_t)config->rxdmabuffer,
-                 RXDMA_BUFFER_SIZE,
-                 SERIAL_DMA_CONTROL_WORD);
-
-  /* Reset our DMA shadow pointer to match the address just
-   * programmed above.
-   */
-
-  state->dmatail = 0;
-
-  /* Enable receive DMA for the UART */
-
-  regval  = hciuart_getreg32(config, STM32_USART_CR3_OFFSET);
-  regval |= USART_CR3_DMAR;
-  hciuart_putreg32(config, STM32_USART_CR3_OFFSET, regval);
-
-  /* Start the DMA channel, and arrange for callbacks at the half and
-   * full points in the FIFO.  This ensures that we have half a FIFO
-   * worth of time to claim bytes before they are overwritten.
-   */
-
-  stm32_dmastart(state->rxdmastream, hciuart_dma_rxcallback,
-                 (void *)config, true);
-
-  return OK;
-}
-#endif
-
-/****************************************************************************
- * Name: hciuart_apbclock
+ * Name: hciuart_apbclock_enable
  *
  * Description:
  *   Enable or disable APB clock for the USART peripheral
@@ -1488,7 +1377,7 @@ static int hciuart_dma_setup(const struct btuart_lowerhalf_s *lower)
  *
  ****************************************************************************/
 
-static void hciuart_apbclock(const struct hciuart_config_s *config, bool on)
+static void hciuart_apbclock_enable(const struct hciuart_config_s *config)
 {
   uint32_t rcc_en;
   uint32_t regaddr;
@@ -1545,22 +1434,22 @@ static void hciuart_apbclock(const struct hciuart_config_s *config, bool on)
 
   /* Enable/disable APB 1/2 clock for USART */
 
-  if (on)
-    {
-      modifyreg32(regaddr, 0, rcc_en);
-    }
-  else
-    {
-      modifyreg32(regaddr, rcc_en, 0);
-    }
+  modifyreg32(regaddr, 0, rcc_en);
 }
 
 /****************************************************************************
  * Name: hciuart_configure
  *
  * Description:
- *   Configure the USART baud, bits, parity, etc. This method is called the
- *   first time that the serial port is opened.
+ *   Configure the USART clocking, GPIO pins, baud, bits, parity, etc.
+ *
+ *   Per "Specification of the Bluetooth System, Wireless connections made
+ *   easy, Host Controller Interface [Transport Layer]", Volume 4, Revision
+ *   1.2 or later, 1 January 2006, HCI UART tranport uses these settings:
+ *
+ *     8 data bits, no parity, 1 stop, RTS/CTS flow control
+ *
+ *   BAUD and flow control response time are manufacturer specific.
  *
  ****************************************************************************/
 
@@ -1575,7 +1464,7 @@ static int hciuart_configure(const struct hciuart_config_s *config)
 
   /* Enable USART APB1/2 clock */
 
-  hciuart_apbclock(config, true);
+  hciuart_apbclock_enable(config);
 
   /* Configure pins for USART use */
 
@@ -1598,18 +1487,11 @@ static int hciuart_configure(const struct hciuart_config_s *config)
 
   /* Configure CR2 */
   /* Clear STOP, CLKEN, CPOL, CPHA, LBCL, and interrupt enable bits */
+  /* HCI UART spec:  1 stop bit */
 
   regval  = hciuart_getreg32(config, STM32_USART_CR2_OFFSET);
   regval &= ~(USART_CR2_STOP_MASK | USART_CR2_CLKEN | USART_CR2_CPOL |
               USART_CR2_CPHA | USART_CR2_LBCL | USART_CR2_LBDIE);
-
-  /* Configure STOP bits */
-
-  if (config->stopbits2)
-    {
-      regval |= USART_CR2_STOP2;
-    }
-
   hciuart_putreg32(config, STM32_USART_CR2_OFFSET, regval);
 
   /* Configure CR1 */
@@ -1630,13 +1512,47 @@ static int hciuart_configure(const struct hciuart_config_s *config)
 
   /* Configure the USART line format and speed. */
 
-  hciuart_setup(config);
+  hciuart_line_configure(config);
 
   /* Enable Rx, Tx, and the USART */
 
   regval      = hciuart_getreg32(config, STM32_USART_CR1_OFFSET);
   regval     |= (USART_CR1_UE | USART_CR1_TE | USART_CR1_RE);
   hciuart_putreg32(config, STM32_USART_CR1_OFFSET, regval);
+
+#ifdef SERIAL_HAVE_DMA
+  /* Acquire the DMA channel.  This should always succeed. */
+
+  state->rxdmastream = stm32_dmachannel(config->rxdmachan);
+
+  /* Configure for circular DMA reception into the RX fifo */
+
+  stm32_dmasetup(state->rxdmastream,
+                 config->usartbase + STM32_USART_RDR_OFFSET,
+                 (uint32_t)config->rxdmabuffer,
+                 RXDMA_BUFFER_SIZE,
+                 SERIAL_DMA_CONTROL_WORD);
+
+  /* Reset our DMA shadow pointer to match the address just
+   * programmed above.
+   */
+
+  state->dmatail = 0;
+
+  /* Enable receive DMA for the UART */
+
+  regval  = hciuart_getreg32(config, STM32_USART_CR3_OFFSET);
+  regval |= USART_CR3_DMAR;
+  hciuart_putreg32(config, STM32_USART_CR3_OFFSET, regval);
+
+  /* Start the DMA channel, and arrange for callbacks at the half and
+   * full points in the FIFO.  This ensures that we have half a FIFO
+   * worth of time to claim bytes before they are overwritten.
+   */
+
+  stm32_dmastart(state->rxdmastream, hciuart_dma_rxcallback,
+                 (void *)config, true);
+#endif
 
   return OK;
 }
