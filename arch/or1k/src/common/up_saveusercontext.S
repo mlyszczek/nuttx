@@ -1,7 +1,7 @@
 /**************************************************************************
  * arch/or1k/src/common/up_saveusercontext.S
  *
- *   Copyright (C) 2007, 2009 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Matt Thompson <matt@extent3d.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,30 +41,6 @@
 #include "up_internal.h"
 
 /**************************************************************************
- * Pre-processor Definitions
- **************************************************************************/
-
-/**************************************************************************
- * Private Types
- **************************************************************************/
-
-/**************************************************************************
- * Private Function Prototypes
- **************************************************************************/
-
-/**************************************************************************
- * Public Data
- **************************************************************************/
-
-/**************************************************************************
- * Private Data
- **************************************************************************/
-
-/**************************************************************************
- * Private Functions
- **************************************************************************/
-
-/**************************************************************************
  * Public Functions
  **************************************************************************/
 
@@ -72,9 +48,9 @@
  * Name: up_saveusercontext
  **************************************************************************/
 
-	.text
-	.globl  up_saveusercontext
-	.type   up_saveusercontext, function
+  .text
+  .globl  up_saveusercontext
+  .type   up_saveusercontext, function
 up_saveusercontext:
 
   /* r3 holds the address of the xcptcontext structure */
@@ -126,5 +102,4 @@ up_saveusercontext:
   l.jr    r9
   l.nop
 
-	.size	up_saveusercontext, . - up_saveusercontext
-
+  .size	up_saveusercontext, . - up_saveusercontext

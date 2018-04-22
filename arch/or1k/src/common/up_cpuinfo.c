@@ -43,6 +43,10 @@
 #include <sys/types.h>
 #include <arch/spr.h>
 
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
 int or1k_print_cpuinfo(void)
 {
   uint32_t vr;
@@ -61,37 +65,60 @@ int or1k_print_cpuinfo(void)
        ((vr & SPR_VR_REV_MASK) >> SPR_VR_REV_SHIFT),
        ((vr & SPR_VR_VER_MASK) >> SPR_VR_VER_SHIFT));
 
-  if(vr & SPR_VR_UVRP)
+  if ((vr & SPR_VR_UVRP) != 0)
     {
       mfspr(SPR_SYS_VR2, vr2);
       syslog(LOG_INFO, "  CPUID:             %d\n", (vr2 & SPR_VR2_CPUID_MASK) >> SPR_VR2_CPUID_SHIFT);
       syslog(LOG_INFO, "  V2.VER:            0x%x\n", (vr2 & SPR_VR2_VER_MASK) >> SPR_VR2_VER_SHIFT);
     }
 
-  syslog(LOG_INFO, "  AVR/VR2:           %s\n", (vr & SPR_VR_UVRP) ? "yes" : "no");
-  syslog(LOG_INFO, "  Data Cache:        %s\n", (upr & SPR_UPR_DCP) ? "yes" : "no");
-  syslog(LOG_INFO, "  Instruction Cache: %s\n", (upr & SPR_UPR_ICP) ? "yes" : "no");
-  syslog(LOG_INFO, "  Data MMU:          %s\n", (upr & SPR_UPR_DMP) ? "yes" : "no");
-  syslog(LOG_INFO, "  Instruction MMU:   %s\n", (upr & SPR_UPR_IMP) ? "yes" : "no");
-  syslog(LOG_INFO, "  DSP MAC:           %s\n", (upr & SPR_UPR_MP) ? "yes" : "no");
-  syslog(LOG_INFO, "  Debug Unit:        %s\n", (upr & SPR_UPR_DUP) ? "yes" : "no");
-  syslog(LOG_INFO, "  Performance Count: %s\n", (upr & SPR_UPR_PCUP) ? "yes" : "no");
-  syslog(LOG_INFO, "  Power Management:  %s\n", (upr & SPR_UPR_PMP) ? "yes" : "no");
-  syslog(LOG_INFO, "  Interrupt Ctrl:    %s\n", (upr & SPR_UPR_PICP) ? "yes" : "no");
-  syslog(LOG_INFO, "  Tick Timer:        %s\n", (upr & SPR_UPR_TTP) ? "yes" : "no");
+  syslog(LOG_INFO, "  AVR/VR2:           %s\n",
+         (vr & SPR_VR_UVRP) ? "yes" : "no");
+  syslog(LOG_INFO, "  Data Cache:        %s\n",
+         (upr & SPR_UPR_DCP) ? "yes" : "no");
+  syslog(LOG_INFO, "  Instruction Cache: %s\n",
+         (upr & SPR_UPR_ICP) ? "yes" : "no");
+  syslog(LOG_INFO, "  Data MMU:          %s\n",
+         (upr & SPR_UPR_DMP) ? "yes" : "no");
+  syslog(LOG_INFO, "  Instruction MMU:   %s\n",
+         (upr & SPR_UPR_IMP) ? "yes" : "no");
+  syslog(LOG_INFO, "  DSP MAC:           %s\n",
+         (upr & SPR_UPR_MP) ? "yes" : "no");
+  syslog(LOG_INFO, "  Debug Unit:        %s\n",
+         (upr & SPR_UPR_DUP) ? "yes" : "no");
+  syslog(LOG_INFO, "  Performance Count: %s\n",
+         (upr & SPR_UPR_PCUP) ? "yes" : "no");
+  syslog(LOG_INFO, "  Power Management:  %s\n",
+         (upr & SPR_UPR_PMP) ? "yes" : "no");
+  syslog(LOG_INFO, "  Interrupt Ctrl:    %s\n",
+         (upr & SPR_UPR_PICP) ? "yes" : "no");
+  syslog(LOG_INFO, "  Tick Timer:        %s\n",
+         (upr & SPR_UPR_TTP) ? "yes" : "no");
 
-  syslog(LOG_INFO, "  Shadow Regs:       %d\n", (cpucfg & SPR_CPUCFGR_NSGF_MASK));
-  syslog(LOG_INFO, "  Custom GPR:        %s\n", (cpucfg & SPR_CPUCFGR_CGF) ? "yes" : "no");
-  syslog(LOG_INFO, "  ORBIS32:           %s\n", (cpucfg & SPR_CPUCFGR_OB32S) ? "yes" : "no");
-  syslog(LOG_INFO, "  ORBIS64:           %s\n", (cpucfg & SPR_CPUCFGR_OB64S) ? "yes" : "no");
-  syslog(LOG_INFO, "  ORFPX32:           %s\n", (cpucfg & SPR_CPUCFGR_OF32S) ? "yes" : "no");
-  syslog(LOG_INFO, "  ORFPX64:           %s\n", (cpucfg & SPR_CPUCFGR_OF64S) ? "yes" : "no");
-  syslog(LOG_INFO, "  ORVDX64:           %s\n", (cpucfg & SPR_CPUCFGR_OV64S) ? "yes" : "no");
-  syslog(LOG_INFO, "  No Delay Slot:     %s\n", (cpucfg & SPR_CPUCFGR_ND) ? "yes" : "no");
-  syslog(LOG_INFO, "  AVR Present:       %s\n", (cpucfg & SPR_CPUCFGR_AVRP) ? "yes" : "no");
-  syslog(LOG_INFO, "  Exception BAR:     %s\n", (cpucfg & SPR_CPUCFGR_EVBARP) ? "yes" : "no");
-  syslog(LOG_INFO, "  ISR Present:       %s\n", (cpucfg & SPR_CPUCFGR_ISRP) ? "yes" : "no");
-  syslog(LOG_INFO, "  AE[CS]R Present:   %s\n", (cpucfg & SPR_CPUCFGR_AECSRP) ? "yes" : "no");
+  syslog(LOG_INFO, "  Shadow Regs:       %d\n",
+         (cpucfg & SPR_CPUCFGR_NSGF_MASK));
+  syslog(LOG_INFO, "  Custom GPR:        %s\n",
+         (cpucfg & SPR_CPUCFGR_CGF) ? "yes" : "no");
+  syslog(LOG_INFO, "  ORBIS32:           %s\n",
+         (cpucfg & SPR_CPUCFGR_OB32S) ? "yes" : "no");
+  syslog(LOG_INFO, "  ORBIS64:           %s\n",
+         (cpucfg & SPR_CPUCFGR_OB64S) ? "yes" : "no");
+  syslog(LOG_INFO, "  ORFPX32:           %s\n",
+         (cpucfg & SPR_CPUCFGR_OF32S) ? "yes" : "no");
+  syslog(LOG_INFO, "  ORFPX64:           %s\n",
+         (cpucfg & SPR_CPUCFGR_OF64S) ? "yes" : "no");
+  syslog(LOG_INFO, "  ORVDX64:           %s\n",
+         (cpucfg & SPR_CPUCFGR_OV64S) ? "yes" : "no");
+  syslog(LOG_INFO, "  No Delay Slot:     %s\n",
+         (cpucfg & SPR_CPUCFGR_ND) ? "yes" : "no");
+  syslog(LOG_INFO, "  AVR Present:       %s\n",
+         (cpucfg & SPR_CPUCFGR_AVRP) ? "yes" : "no");
+  syslog(LOG_INFO, "  Exception BAR:     %s\n",
+         (cpucfg & SPR_CPUCFGR_EVBARP) ? "yes" : "no");
+  syslog(LOG_INFO, "  ISR Present:       %s\n",
+         (cpucfg & SPR_CPUCFGR_ISRP) ? "yes" : "no");
+  syslog(LOG_INFO, "  AE[CS]R Present:   %s\n",
+         (cpucfg & SPR_CPUCFGR_AECSRP) ? "yes" : "no");
 
   return OK;
 }

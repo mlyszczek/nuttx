@@ -1,7 +1,7 @@
 /****************************************************************************
  *  arch/or1k/src/common/up_unblocktask.c
  *
- *   Copyright (C) 2007-2009, 2013-2015 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -98,10 +98,8 @@ void up_unblock_task(struct tcb_s *tcb)
 
       /* Are we in an interrupt handler? */
 
-      //syslog(LOG_INFO, "save %p\n", rtcb);
-
       //if (CURRENT_REGS)
-      if(0)
+      if (0)
         {
           /* Yes, then we have to do things differently.
            * Just copy the CURRENT_REGS into the OLD rtcb.
@@ -156,7 +154,6 @@ void up_unblock_task(struct tcb_s *tcb)
 
           /* Then switch contexts */
 
-          //syslog(LOG_INFO, "restore %p\n", rtcb);
           up_fullcontextrestore(rtcb->xcp.regs);
         }
     }

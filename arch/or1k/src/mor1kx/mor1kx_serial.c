@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/or1k/src/mor1kx/mor1kx_serial.c
  *
- *   Copyright (C) 2014-2015 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Matt Thompson <matt@extent3d.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -67,14 +67,6 @@
 #define OR1K_SYS_CLK (20000000)
 #define OR1K_BAUD (115200)
 #define OR1K_DIVISOR (OR1K_SYS_CLK / (16*OR1K_BAUD))
-
-/****************************************************************************
- * Private Types
- ****************************************************************************/
-
-/****************************************************************************
- * Private Function Prototypes
- ****************************************************************************/
 
 /****************************************************************************
  * Public Functions
@@ -149,12 +141,11 @@ int up_putc(int ch)
     {
       /* Add CR */
 
-      //sam_lowputc('\r');
+      //or1k_lowputc('\r');
     }
 
-  //sam_lowputc(ch);
+  //or1k_lowputc(ch);
   leave_critical_section(flags);
 #endif
   return ch;
 }
-

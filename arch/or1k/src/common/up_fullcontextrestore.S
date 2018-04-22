@@ -1,7 +1,7 @@
 /**************************************************************************
  * arch/or1k/src/common/up_fullcontextrestore.S
  *
- *   Copyright (C) 2007, 2009-2010 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Matt Thompson <matt@extent3d.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,30 +41,6 @@
 #include "up_internal.h"
 
 /**************************************************************************
- * Pre-processor Definitions
- **************************************************************************/
-
-/**************************************************************************
- * Private Types
- **************************************************************************/
-
-/**************************************************************************
- * Private Function Prototypes
- **************************************************************************/
-
-/**************************************************************************
- * Public Data
- **************************************************************************/
-
-/**************************************************************************
- * Private Data
- **************************************************************************/
-
-/**************************************************************************
- * Private Functions
- **************************************************************************/
-
-/**************************************************************************
  * Public Functions
  **************************************************************************/
 
@@ -72,8 +48,8 @@
  * Name: up_fullcontextrestore
  **************************************************************************/
 
-	.globl  up_fullcontextrestore
-	.type   up_fullcontextrestore, function
+  .globl  up_fullcontextrestore
+  .type   up_fullcontextrestore, function
 up_fullcontextrestore:
 
 /*
@@ -132,5 +108,4 @@ up_fullcontextrestore:
 
   //l.rfe;
 
-	.size up_fullcontextrestore, . - up_fullcontextrestore
-
+  .size up_fullcontextrestore, . - up_fullcontextrestore

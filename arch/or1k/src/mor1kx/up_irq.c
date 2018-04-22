@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/or1k/src/mor1kx/up_irq.c
  *
- *   Copyright (C) 2014, 2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Matt Thompson <matt@extent3d.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -51,10 +51,6 @@
 #include "up_internal.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/****************************************************************************
  * Public Data
  ****************************************************************************/
 
@@ -65,14 +61,6 @@
  */
 
 volatile uint32_t *g_current_regs[1];
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
 
 /****************************************************************************
  * Public Functions
@@ -113,7 +101,7 @@ void up_disable_irq(int irq)
 
   irqinfo("irq: %d\n", irq);
 
-  if(irq <= 31)
+  if (irq <= 31)
     {
       mfspr(SPR_PIC_MR, mr);
       mr &= ~(1 << irq);
@@ -137,7 +125,7 @@ void up_enable_irq(int irq)
 
   irqinfo("irq: %d\n", irq);
 
-  if(irq <= 31)
+  if (irq <= 31)
     {
       mfspr(SPR_PIC_MR, mr);
       mr |= (1 << irq);
@@ -155,7 +143,7 @@ void up_enable_irq(int irq)
 
 void up_ack_irq(int irq)
 {
-  if(irq <= 31)
+  if (irq <= 31)
     {
       //uint32_t sr = (1 << irq);
       uint32_t sr = 0;
@@ -184,4 +172,3 @@ void or1k_dump_pic(const char *msg, int irq)
 #else
 #  define or1k_dump_pic(msg, irq)
 #endif
-

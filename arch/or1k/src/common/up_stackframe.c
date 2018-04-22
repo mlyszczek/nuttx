@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/or1k/src/common/up_stackframe.c
  *
- *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -64,14 +64,6 @@
 #define STACK_ALIGN_MASK    (CONFIG_STACK_ALIGNMENT-1)
 #define STACK_ALIGN_DOWN(a) ((a) & ~STACK_ALIGN_MASK)
 #define STACK_ALIGN_UP(a)   (((a) + STACK_ALIGN_MASK) & ~STACK_ALIGN_MASK)
-
-/****************************************************************************
- * Private Types
- ****************************************************************************/
-
-/****************************************************************************
- * Private Function Prototypes
- ****************************************************************************/
 
 /****************************************************************************
  * Public Functions

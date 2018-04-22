@@ -21,4 +21,4 @@ config ARCH_CHIP
 
 source arch/or1k/src/mor1kx/Kconfig
 
-endif
+endif # ARCH_OR1K

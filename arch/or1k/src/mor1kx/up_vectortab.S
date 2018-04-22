@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/or1k/src/mor1kx/up_vectortab.S
  *
- *   Copyright (C) 1018 Extent3D. All rights reserved.
+ *   Copyright (C) 2018 Extent3D. All rights reserved.
  *   Author: Matt Thompson <matt@extent3d.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -52,15 +52,12 @@
 #define LED_DIR (LED_BASE+1)
 
 /* For debugging, we'll use a dedicated IRQ stack at 8MB */
+
 #define IRQ_STACK (0x800000)
 
 /* For now, we'll store interrupt context in RAM
  * at the following offsets. This must fit before 0x100.
  */
-
-/****************************************************************************
- * Public Data
- ****************************************************************************/
 
 /****************************************************************************
  * Assembly Macros
@@ -70,7 +67,7 @@
   l.movhi gpr,hi(symbol); \
   l.ori   gpr,gpr,lo(symbol)
 
-/*
+#if 0
 .macro _led_init
   l.movhi r3,hi(LED_BASE);
   l.addi  r4,r0,0x80;
@@ -78,7 +75,7 @@
   l.addi  r4,r0,0x80;
   l.sb    4(r3),r4
 .endm
-*/
+#endif
 
 /* Disable the programmable interrupt controller */
 
@@ -163,7 +160,7 @@
   l.addi  r1,r1,-EXCEPTION_STACK_SIZE;
 .endm
 
-/*
+#if 0
 .macro _disable_interrupts
   l.mfspr r30,r0,SPR_SYS_SR;
   l.movhi r31,hi(~(SPR_SR_IEE|SPR_SR_TEE));
@@ -177,7 +174,7 @@
   l.ori   r30,r30,lo(SPR_SR_IEE|SPR_SR_TEE);
   l.mtspr r0,r30,SPR_SYS_SR;
 .endm
-*/
+#endif
 
 /****************************************************************************
  * Name: _vectors
@@ -270,6 +267,7 @@ _reset_vector:
   l.nop;
 
   /* Bus exception */
+
   .org 0x200
 _bus_fault:
   l.nop;
@@ -277,6 +275,7 @@ _bus_fault:
   l.nop;
 
   /* Data page fault */
+
   .org 0x300
 _data_page_fault:
   l.nop;
@@ -284,6 +283,7 @@ _data_page_fault:
   l.nop;
  
   /* Instruction page fault */
+
   .org 0x400
 _instruction_page_fault:
   l.nop;
@@ -291,6 +291,7 @@ _instruction_page_fault:
   l.nop;
   
   /* Tick Timer */
+
   .org 0x500
 _tick_timer:
   //_grow_stack;
@@ -305,6 +306,7 @@ _tick_timer:
   l.nop;
 
   /* Alignment exception */
+
   .org 0x600
 _alignment_fault:
   l.nop;
@@ -312,6 +314,7 @@ _alignment_fault:
   l.nop;
 
   /* Illegal Instruction exception */
+
   .org 0x700
 _illegal_instruction:
   l.nop;
@@ -319,6 +322,7 @@ _illegal_instruction:
   l.nop;
 
   /* External interrupt */
+
   .org 0x800
 _external_interrupt:
   //_grow_stack;
@@ -333,6 +337,7 @@ _external_interrupt:
   l.nop;
 
   /* Data TLB Miss */
+
   .org 0x900
 _dtlb_miss:
   l.nop;
@@ -340,6 +345,7 @@ _dtlb_miss:
   l.nop;
 
   /* Instruction TLB Miss */
+
   .org 0xA00
 _itlb_miss:
   l.nop;
@@ -347,6 +353,7 @@ _itlb_miss:
   l.nop;
 
   /* Range exception */
+
   .org 0xB00 
 _range_exception:
   l.nop;
@@ -354,6 +361,7 @@ _range_exception:
   l.nop;
 
   /* System Call */
+
   .org 0xC00
 _syscall_vector:
   l.nop;
@@ -361,6 +369,7 @@ _syscall_vector:
   l.nop;
 
   /* Floating Point */
+
   .org 0xD00
 _fpu_vector:
   l.nop;
@@ -368,6 +377,7 @@ _fpu_vector:
   l.nop;
 
   /* Trap */
+
   .org 0xE00
 _trap_vector:
   l.nop;
@@ -379,6 +389,7 @@ _vector_end:
 _handler_entry:
 
   /* Pointer to registers */
+
   l.addi  r4,r1,0;
 
   l.jal   up_doirq;
@@ -388,9 +399,11 @@ _handler_entry:
   //l.lwz   r2, -4(r1);
 
   /* Restore saved registers from RAM */
+
   _restore_registers r0;
 
   /* Return from exception */
+
   l.rfe;
 
-	.end
+  .end

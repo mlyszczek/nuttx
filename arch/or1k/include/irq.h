@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/or1k/include/irq.h
  *
- *   Copyright (C) 2007-2009, 2011, 2015 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2028 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -53,4 +53,3 @@
 #include <arch/chip/irq.h>
 
 #endif /* __ARCH_OR1K_INCLUDE_IRQ_H */
-

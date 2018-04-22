@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/or1k/src/common/up_uart.c
  *
- *   Copyright (C) 2008-2009 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Matt Thompson <matt@extent3d.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -53,7 +53,8 @@ uart_datawidth_t uart_getreg(uart_addrwidth_t base, unsigned int offset)
   return *(uint8_t *)(base + offset);
 }
 
-void uart_putreg(uart_addrwidth_t base, unsigned int offset, uart_datawidth_t value)
+void uart_putreg(uart_addrwidth_t base, unsigned int offset,
+                 uart_datawidth_t value)
 {
   *(uint8_t *)(base + offset) = value;
 }

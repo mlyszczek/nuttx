@@ -1,7 +1,7 @@
 /****************************************************************************
  * common/up_exit.c
  *
- *   Copyright (C) 2007-2009, 201-2014, 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -95,7 +95,7 @@ static void _up_dumponexit(FAR struct tcb_s *tcb, FAR void *arg)
   for (i = 0; i < CONFIG_NFILE_DESCRIPTORS; i++)
     {
       struct inode *inode = filelist->fl_files[i].f_inode;
-      if (inode)
+      if (inode != NULL)
         {
           sinfo("      fd=%d refcount=%d\n",
                 i, inode->i_crefssinfo);

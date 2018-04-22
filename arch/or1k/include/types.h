@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/or1k/include/types.h
  *
- *   Copyright (C) 2007-2009, 2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -76,7 +76,8 @@ typedef unsigned int       _uint32_t;
 
 typedef signed long long   _int64_t;
 typedef unsigned long long _uint64_t;
-#define __INT64_DEFINED
+
+#define __INT64_DEFINED    1
 
 /* A pointer is 4 bytes */
 

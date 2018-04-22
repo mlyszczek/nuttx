@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/or1k/src/common/up_allocateheap.c
  *
- *   Copyright (C) 2007, 2008, 2014-2015 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -56,6 +56,7 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
 /* Configuration ************************************************************/
 /* Terminology.  In the flat build (CONFIG_BUILD_FLAT=y), there is only a
  * single heap access with the standard allocations (malloc/free).  This
@@ -66,14 +67,6 @@
  * memory.  These are referred to as the kernel and user heaps,
  * respectively.
  */
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
 
 /****************************************************************************
  * Public Functions

@@ -115,7 +115,7 @@ config ARCH
 	default "xtensa"  if ARCH_XTENSA
 	default "z16"     if ARCH_Z16
 	default "z80"     if ARCH_Z80
-        default "or1k"    if ARCH_OR1K
+	default "or1k"    if ARCH_OR1K
 
 source arch/arm/Kconfig
 source arch/avr/Kconfig

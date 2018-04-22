@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/or1k/src/common/up_checkstack.c
  *
- *   Copyright (C) 2011, 2013, 2015-2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -56,6 +56,12 @@
 
 /****************************************************************************
  * Private Function Prototypes
+ ****************************************************************************/
+
+static size_t do_stackcheck(uintptr_t alloc, size_t size, bool int_stack);
+
+/****************************************************************************
+ * Private Functions
  ****************************************************************************/
 
 static size_t do_stackcheck(uintptr_t alloc, size_t size, bool int_stack);

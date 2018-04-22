@@ -36,6 +36,10 @@
 #ifndef __ARCH_OR1K_INCLUDE_SPR_H
 #define __ARCH_OR1K_INCLUDE_SPR_H
 
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
 /* Move a register to an SPR */
 
 #define mtspr(_spr, _val) __asm__ __volatile__ ( \
@@ -299,4 +303,3 @@
 #define SPR_TTMR_M         (1<<30)
 
 #endif /* __ARCH_OR1K_INCLUDE_SPR_H */
-

@@ -1,7 +1,7 @@
 ############################################################################
 # arch/or1k/src/mor1kx/Toolchain.defs
 #
-#   Copyright (C) 2012-2013, 2015 Gregory Nutt. All rights reserved.
+#   Copyright (C) 2018 Gregory Nutt. All rights reserved.
 #   Author: Matt Thompson <matt@extent3d.com>
 #
 # Redistribution and use in source and binary forms, with or without
@@ -56,11 +56,7 @@ endif
 # Pick correct or1k architecture selection
 
 ifeq ($(CONFIG_ARCH_OR1K_MOR1KX),y)
-  #MIPS_MARCH = m14k
-  #MIPS_MPROCESSOR = elf32pic32mz
 else
-  #MIPS_MARCH = 24kc
-  #MIPS_MPROCESSOR = elf32pic32mx
 endif
 
 # Generic GNU or1k toolchain on OS X or Linux
@@ -68,7 +64,6 @@ endif
 #ifeq ($(CONFIG_OR1K_TOOLCHAIN),GNU_ELF)
 CROSSDEV ?= or1k-elf-
 MAXOPTIMIZATION ?= -O2
-#ARCHCPUFLAGS = -mlong32 -membedded-data -msoft-float -march=$(MIPS_MARCH) $(MIPS_MICROMIPS) -EL
 ARCHCPUFLAGS = -mboard=de0_nano
 ARCHPICFLAGS = -fpic -membedded-pic
 LDFLAGS += -nostartfiles -nodefaultlibs
