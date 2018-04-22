@@ -79,12 +79,16 @@ static inline uint32_t up_getsp(void)
 {
 #if 0
   uint32_t sp;
+
   __asm__
   (
     "\tmov %0, sp\n\t"
     : "=r"(sp)
   );
+
   return sp;
+#else
+  return 0;
 #endif
 }
 

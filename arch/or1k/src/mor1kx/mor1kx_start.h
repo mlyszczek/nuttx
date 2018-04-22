@@ -1,8 +1,8 @@
 /****************************************************************************
- * configs/or1k/src/or1k_boot.c
+ * arch/or1k/src/mor1kx/mor1kx_start.h
  *
- *   Copyright (C) 2018 Extent3D. All rights reserved.
- *   Author: Matt Thompson <matt@extent3d.com>
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,16 +33,14 @@
  *
  ****************************************************************************/
 
+#ifndef __ARCH_OR1K_SRC_MOR1KX_MOR1KX_START_H
+#define __ARCH_OR1K_SRC_MOR1KX_MOR1KX_START_H 1
+
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/board.h>
-
-#include <debug.h>
-
-#include "or1k.h"
 
 /****************************************************************************
  * Public Functions
@@ -59,33 +57,6 @@
  *
  ****************************************************************************/
 
-void or1k_board_initialize(void)
-{
-#ifdef CONFIG_ARCH_LEDS
-  /* Configure on-board LEDs if LED support has been selected. */
+void or1k_board_initialize(void);
 
-  board_autoled_initialize();
-#endif
-}
-
-/****************************************************************************
- * Name: board_initialize
- *
- * Description:
- *   If CONFIG_BOARD_INITIALIZE is selected, then an additional
- *   initialization call will be performed in the boot-up sequence to a
- *   function called board_initialize().  board_initialize() will be
- *   called immediately after up_initialize() is called and just before the
- *   initial application is started.  This additional initialization phase
- *   may be used, for example, to initialize board-specific device drivers.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_BOARD_INITIALIZE
-void board_initialize(void)
-{
-  /* Perform board-specific initialization */
-
-  (void)or1k_bringup();
-}
-#endif
+#endif /* __ARCH_OR1K_SRC_MOR1KX_MOR1KX_START_H */

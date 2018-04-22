@@ -254,6 +254,7 @@ EXTERN uint32_t _eramfuncs;       /* Copy destination end address in RAM */
 /* Low level initialization provided by board-level logic ******************/
 
 void or1k_boot(void);
+int  or1k_print_cpuinfo(void);
 
 /* Context switching */
 

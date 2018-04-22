@@ -46,6 +46,7 @@
 #include <nuttx/init.h>
 
 #include "up_internal.h"
+#include "mor1kx_start.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -120,13 +121,19 @@ void __start(void)
       *dest++ = *src++;
     }
 
-  board_autoled_initialize();  
+  /* Perform board level initialize */
+
+  or1k_board_initialize();
+
+  /* Bring up some serial support early for debug support */
 
   up_earlyserialinit();
 
+  /* Start NuttX */
+
   os_start();
 
-  /* Shoulnd't get here */
+  /* Shouldn't get here */
 
   for (; ; );
 }
