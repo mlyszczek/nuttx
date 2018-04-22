@@ -1,7 +1,7 @@
 ############################################################################
 # configs/or1k/scripts/Make.defs
 #
-#   Copyright (C) 2015, 2017 Gregory Nutt. All rights reserved.
+#   Copyright (C) 2018 Gregory Nutt. All rights reserved.
 #   Author: Matt Thompson <matt@extent3d.com>
 #
 # Redistribution and use in source and binary forms, with or without

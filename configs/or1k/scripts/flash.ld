@@ -1,7 +1,7 @@
 /****************************************************************************
  * configs/or1k/scripts/ram.ld
  *
- *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@
 
 MEMORY
 {
-    dram  (rwx) : ORIGIN = 0x00000000, LENGTH = 2M
+	dram  (rwx) : ORIGIN = 0x00000000, LENGTH = 2M
 }
 
 OUTPUT_ARCH(or1k)
@@ -44,7 +44,8 @@ ENTRY(_stext)
 
 SECTIONS
 {
-	.text : {
+	.text :
+	{
 		_stext = ABSOLUTE(.);
 		*(.vectors)
 		*(.text .text.*)
@@ -60,13 +61,15 @@ SECTIONS
 		_etext = ABSOLUTE(.);
 	} > dram
 
-	.init_section : {
+	.init_section :
+	{
 		_sinit = ABSOLUTE(.);
 		*(.init_array .init_array.*)
 		_einit = ABSOLUTE(.);
 	} > dram
 
-	.data : {
+	.data :
+	{
 		_sdata = ABSOLUTE(.);
 		*(.data .data.*)
 		*(.gnu.linkonce.d.*)
@@ -76,7 +79,8 @@ SECTIONS
 
 	_eronly = LOADADDR(.data);
 
-	.ramfunc ALIGN(4): {
+	.ramfunc ALIGN(4):
+	{
 		_sramfuncs = ABSOLUTE(.);
 		*(.ramfunc  .ramfunc.*)
 		_eramfuncs = ABSOLUTE(.);
@@ -84,7 +88,8 @@ SECTIONS
 
 	_framfuncs = LOADADDR(.ramfunc);
 
-	.bss : {
+	.bss :
+	{
 		_sbss = ABSOLUTE(.);
 		*(.bss .bss.*)
 		*(.gnu.linkonce.b.*)
@@ -93,6 +98,7 @@ SECTIONS
 	} > dram
 
 	/* Stabs debugging sections. */
+
 	.stab 0 : { *(.stab) }
 	.stabstr 0 : { *(.stabstr) }
 	.stab.excl 0 : { *(.stab.excl) }

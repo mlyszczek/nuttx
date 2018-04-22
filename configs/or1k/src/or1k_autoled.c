@@ -1,8 +1,8 @@
 /****************************************************************************
- * config/or1k/src/or1k_bringup.c
+ * configs/or1k/src/or1k_autoled.c
  *
- *   Copyright (C) 2018 Extent3D. All rights reserved.
- *   Author: Matt Thompson <matt@extent3d.com>
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,42 +39,66 @@
 
 #include <nuttx/config.h>
 
-#include <sys/mount.h>
-#include <syslog.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <debug.h>
 
-#include <sys/mount.h>
+#include <nuttx/board.h>
+#include <arch/board/board.h>
+
+#include "up_arch.h"
+#include "up_internal.h"
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define LED_BASE      (0x91000000)
+#define LED_DATA      (LED_BASE)
+#define LED_DIRECTION (LED_BASE+4)
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static uint32_t *led_data = (uint32_t *)LED_DATA;
+static uint32_t *led_dir  = (uint32_t *)LED_DIRECTION;
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: or1k_bringup
- *
- * Description:
- *   Perform architecture-specific initialization
- *
- *   CONFIG_BOARD_INITIALIZE=y :
- *     Called from board_initialize().
- *
- *   CONFIG_BOARD_INITIALIZE=n && CONFIG_LIB_BOARDCTL=y :
- *     Called from the NSH library
- *
+ * Name: board_autoled_initialize
  ****************************************************************************/
 
-int or1k_bringup(void)
+#ifdef CONFIG_ARCH_LEDS
+void board_autoled_initialize(void)
 {
-#ifdef CONFIG_FS_PROCFS
-  int ret;
+  /* Set the or1k GPIO direction register to output */
 
-  /* Mount the procfs file system */
-
-  ret = mount(NULL, "/proc", "procfs", 0, NULL);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: Failed to mount procfs at /proc: %d\n", ret);
-    }
-#endif
-
-  return OK;
+  /* The Terasic C5G has 18 LEDs on GPIO0[0:17] */
+  
+  *led_dir = 0x3fff;
+  *led_data = 0x0;
 }
+
+/****************************************************************************
+ * Name: board_autoled_on
+ ****************************************************************************/
+
+void board_autoled_on(int led)
+{
+  *led_data |= led & 0xff;
+}
+
+/****************************************************************************
+ * Name: board_autoled_off
+ ****************************************************************************/
+
+void board_autoled_off(int led)
+{
+  *led_data &= ~(led & 0xff);
+}
+
+#endif /* CONFIG_ARCH_LEDS */

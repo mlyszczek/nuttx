@@ -1,4 +1,4 @@
-/************************************************************************************
+/****************************************************************************
  * configs/or1k/src/or1k_boot.c
  *
  *   Copyright (C) 2018 Extent3D. All rights reserved.
@@ -31,43 +31,59 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ************************************************************************************/
+ ****************************************************************************/
 
-/************************************************************************************
+/****************************************************************************
  * Included Files
- ************************************************************************************/
+ ****************************************************************************/
 
 #include <nuttx/config.h>
 #include <nuttx/board.h>
-#include <sys/types.h>
-#include <sys/mount.h>
+
 #include <debug.h>
 
-/************************************************************************************
- * Pre-processor Definitions
- ************************************************************************************/
-
-/************************************************************************************
- * Private Functions
- ************************************************************************************/
-
-/************************************************************************************
+/****************************************************************************
  * Public Functions
- ************************************************************************************/
+ ****************************************************************************/
 
-/************************************************************************************
+/****************************************************************************
  * Name: or1k_boardinitialize
  *
  * Description:
+ *   All OR1K architectures must provide the following entry point.  This
+ *   entry point is called early in the initialization -- after all memory
+ *   has been configured and mapped but before any devices have been
+ *   initialized.
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 void or1k_boardinitialize(void)
 {
-
-  mount(NULL, "/proc", "procfs", 0, NULL);
-
 #ifdef CONFIG_ARCH_LEDS
+  /* Configure on-board LEDs if LED support has been selected. */
+
   board_autoled_initialize();
 #endif
 }
+
+/****************************************************************************
+ * Name: board_initialize
+ *
+ * Description:
+ *   If CONFIG_BOARD_INITIALIZE is selected, then an additional
+ *   initialization call will be performed in the boot-up sequence to a
+ *   function called board_initialize().  board_initialize() will be
+ *   called immediately after up_initialize() is called and just before the
+ *   initial application is started.  This additional initialization phase
+ *   may be used, for example, to initialize board-specific device drivers.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_BOARD_INITIALIZE
+void board_initialize(void)
+{
+  /* Perform board-specific initialization */
+
+  (void)or1k_bringup();
+}
+#endif

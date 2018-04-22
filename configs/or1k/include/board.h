@@ -1,7 +1,7 @@
 /****************************************************************************
  * configs/or1k/include/board.h
  *
- *   Copyright (C) 2007, 2008 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,8 +33,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_BOARD_BOARD_H
-#define __ARCH_BOARD_BOARD_H
+#ifndef __CONFIGS_OR1K_INCLUDE_BOARD_H
+#define __CONFIGS_OR1K_INCLUDE_BOARD_H
 
 /****************************************************************************
  * Included Files
@@ -44,17 +44,17 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define LED_STARTED       (1<<0)
-#define LED_HEAPALLOCATE  (1<<1)
-#define LED_IRQSENABLED   (1<<2)
-#define LED_STACKCREATED  (1<<3)
-#define LED_INIRQ         (1<<4)
-#define LED_SIGNAL        (1<<5)
-#define LED_ASSERTION     (1<<6)
-#define LED_PANIC         (1<<7)
+#define LED_STARTED       (1 << 0)
+#define LED_HEAPALLOCATE  (1 << 1)
+#define LED_IRQSENABLED   (1 << 2)
+#define LED_STACKCREATED  (1 << 3)
+#define LED_INIRQ         (1 << 4)
+#define LED_SIGNAL        (1 << 5)
+#define LED_ASSERTION     (1 << 6)
+#define LED_PANIC         (1 << 7)
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-#endif  /* __ARCH_BOARD_BOARD_H */
+#endif  /* __CONFIGS_OR1K_INCLUDE_BOARD_H */

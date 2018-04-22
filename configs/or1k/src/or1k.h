@@ -1,8 +1,8 @@
-/****************************************************************************
- * config/or1k/src/or1k_bringup.c
+/************************************************************************************
+ * configs/or1k/src/or1k.h
  *
- *   Copyright (C) 2018 Extent3D. All rights reserved.
- *   Author: Matt Thompson <matt@extent3d.com>
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,22 +31,14 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
- * Included Files
- ****************************************************************************/
+#ifndef __CONFIGS_OR1K_SRC_OR1K_H
+#define __CONFIGS_OR1K_SRC_OR1K_H
 
-#include <nuttx/config.h>
-
-#include <sys/mount.h>
-#include <syslog.h>
-
-#include <sys/mount.h>
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
+/************************************************************************************
+ * Public Function Prototypes
+ ************************************************************************************/
 
 /****************************************************************************
  * Name: or1k_bringup
@@ -62,19 +54,6 @@
  *
  ****************************************************************************/
 
-int or1k_bringup(void)
-{
-#ifdef CONFIG_FS_PROCFS
-  int ret;
+int or1k_bringup(void);
 
-  /* Mount the procfs file system */
-
-  ret = mount(NULL, "/proc", "procfs", 0, NULL);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: Failed to mount procfs at /proc: %d\n", ret);
-    }
-#endif
-
-  return OK;
-}
+#endif  /* __CONFIGS_OR1K_SRC_OR1K_H */

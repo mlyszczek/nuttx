@@ -1,7 +1,7 @@
 ############################################################################
 # configs/or1k/src/Makefile
 #
-#   Copyright (C) 2007, 2008, 2012, 2017 Gregory Nutt. All rights reserved.
+#   Copyright (C) 2018 Gregory Nutt. All rights reserved.
 #   Author: Gregory Nutt <gnutt@nuttx.org>
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,6 +36,10 @@
 -include $(TOPDIR)/Make.defs
 
 ASRCS =
-CSRCS = or1k_boot.c or1k_bringup.c led.c
+CSRCS = or1k_boot.c or1k_bringup.c or1k_autoled.c
+
+ifeq ($(CONFIG_LIB_BOARDCTL),y)
+CSRCS += or1k_appinit.c
+endif
 
 include $(TOPDIR)/configs/Board.mk
