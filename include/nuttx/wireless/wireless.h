@@ -2,7 +2,7 @@
  * include/nuttx/wireless/wireless.h
  * Wireless network IOCTL commands
  *
- *   Copyright (C) 2011-2013, 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2011-2013, 2017-2018 Gregory Nutt. All rights reserved.
  *   Author:  Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -52,8 +52,6 @@
 
 #include <net/if.h>
 #include <nuttx/fs/ioctl.h>
-
-#ifdef CONFIG_DRIVERS_WIRELESS
 
 /************************************************************************************
  * Pre-processor Definitions
@@ -159,12 +157,20 @@
 #define WL_NETFIRST         0x0001          /* First network command */
 #define WL_NNETCMDS         0x0032          /* Number of network commands */
 
+/* Reserved for Bluetooth network devices (see bt_ioctls.h) */
+
+#define WL_BLUETOOTHFIRST     (WL_NETFIRST + WL_NNETCMDS)
+#define WL_BLUETOOTHCMDS      (24)
+#define WL_IBLUETOOTHCMD(cmd) (_WLIOCVALID(cmd) && \
+                              _IOC_NR(cmd) >= WL_BLUETOOTHFIRST && \
+                              _IOC_NR(cmd) < (WL_BLUETOOTHFIRST + WL_BLUETOOTHCMDS))
+
 /* Reserved for IEEE802.15.4 wireless network devices
  * NOTE:  Not used.  Currently logic uses IOCTL commands from the IEEE802.15.4
  * character driver space.
  */
 
-#define WL_802154FIRST        (WL_NETFIRST + WL_NNETCMDS)
+#define WL_802154FIRST        (WL_BLUETOOTHFIRST + WL_BLUETOOTHCMDS)
 #define WL_N802154CMDS        (3)
 #define WL_IS802154CMD(cmd)   (_WLIOCVALID(cmd) && \
                                _IOC_NR(cmd) >= WL_802154FIRST && \
@@ -178,25 +184,25 @@
                                _IOC_NR(cmd) >= WL_PKTRADIOFIRST && \
                                _IOC_NR(cmd) < (WL_PKTRADIOFIRST + WL_NPKTRADIOCMDS))
 
-/* ------------------------------- WIRELESS EVENTS ------------------------------- */
+/* ------------------------------ WIRELESS EVENTS -------------------------------- */
 /* Those are *NOT* ioctls, do not issue request on them !!! */
 /* Most events use the same identifier as ioctl requests */
 
-#define IWEVTXDROP      0x8C00    /* Packet dropped to excessive retry */
-#define IWEVQUAL        0x8C01    /* Quality part of statistics (scan) */
-#define IWEVCUSTOM      0x8C02    /* Driver specific ascii string */
-#define IWEVREGISTERED  0x8C03    /* Discovered a new node (AP mode) */
-#define IWEVEXPIRED     0x8C04    /* Expired a node (AP mode) */
-#define IWEVGENIE       0x8C05    /* Generic IE (WPA, RSN, WMM, ..)
+#define IWEVTXDROP      0x8c00    /* Packet dropped to excessive retry */
+#define IWEVQUAL        0x8c01    /* Quality part of statistics (scan) */
+#define IWEVCUSTOM      0x8c02    /* Driver specific ascii string */
+#define IWEVREGISTERED  0x8c03    /* Discovered a new node (AP mode) */
+#define IWEVEXPIRED     0x8c04    /* Expired a node (AP mode) */
+#define IWEVGENIE       0x8c05    /* Generic IE (WPA, RSN, WMM, ..)
                                    * (scan results); This includes id and
                                    * length fields. One IWEVGENIE may
                                    * contain more than one IE. Scan
                                    * results may contain one or more
                                    * IWEVGENIE events. */
-#define IWEVMICHAELMICFAILURE 0x8C06  /* Michael MIC failure
+#define IWEVMICHAELMICFAILURE 0x8c06  /* Michael MIC failure
                                        * (struct iw_michaelmicfailure)
                                        */
-#define IWEVASSOCREQIE  0x8C07    /* IEs used in (Re)Association Request.
+#define IWEVASSOCREQIE  0x8c07    /* IEs used in (Re)Association Request.
                                    * The data includes id and length
                                    * fields and may contain more than one
                                    * IE. This event is required in
@@ -205,18 +211,18 @@
                                    * should be sent just before
                                    * IWEVREGISTERED event for the
                                    * association. */
-#define IWEVASSOCRESPIE 0x8C08    /* IEs used in (Re)Association
+#define IWEVASSOCRESPIE 0x8c08    /* IEs used in (Re)Association
                                    * Response. The data includes id and
                                    * length fields and may contain more
                                    * than one IE. This may be sent
                                    * between IWEVASSOCREQIE and
                                    * IWEVREGISTERED events for the
                                    * association. */
-#define IWEVPMKIDCAND   0x8C09    /* PMKID candidate for RSN
+#define IWEVPMKIDCAND   0x8c09    /* PMKID candidate for RSN
                                    * pre-authentication
                                    * (struct iw_pmkid_cand) */
 
-#define IWEVFIRST       0x8C00
+#define IWEVFIRST       0x8c00
 #define IW_EVENT_IDX(cmd) ((cmd) - IWEVFIRST)
 
 /* Other Common Wireless Definitions ***********************************************/
@@ -280,6 +286,7 @@
 /* Scan-related */
 
 /* Scanning request flags */
+
 #define IW_SCAN_DEFAULT    0x0000  /* Default scan of the driver */
 #define IW_SCAN_ALL_ESSID  0x0001  /* Scan all ESSIDs */
 #define IW_SCAN_THIS_ESSID 0x0002  /* Scan only this ESSID */
@@ -289,13 +296,18 @@
 #define IW_SCAN_THIS_MODE  0x0020  /* Scan only this Mode */
 #define IW_SCAN_ALL_RATE   0x0040  /* Scan all Bit-Rates */
 #define IW_SCAN_THIS_RATE  0x0080  /* Scan only this Bit-Rate */
+
 /* struct iw_scan_req scan_type */
+
 #define IW_SCAN_TYPE_ACTIVE  0
 #define IW_SCAN_TYPE_PASSIVE 1
+
 /* Maximum size of returned data */
+
 #define IW_SCAN_MAX_DATA     4096  /* In bytes */
 
 /* Scan capability flags - in (struct iw_range *)->scan_capa */
+
 #define IW_SCAN_CAPA_NONE    0x00
 #define IW_SCAN_CAPA_ESSID   0x01
 #define IW_SCAN_CAPA_BSSID   0x02
@@ -375,6 +387,7 @@
 /************************************************************************************
  * Public Types
  ************************************************************************************/
+
 /* TODO:
  *
  * - Add types for statistics (struct iw_statistics and related)
@@ -508,17 +521,17 @@ struct  iw_encode_ext
   uint8_t    key[0];
 };
 
-/*
- *  Optional data for scan request
+/* Optional data for scan request
  *
- *  Note: these optional parameters are controlling parameters for the
- *  scanning behavior, these do not apply to getting scan results
- *  (SIOCGIWSCAN). Drivers are expected to keep a local BSS table and
- *  provide a merged results with all BSSes even if the previous scan
- *  request limited scanning to a subset, e.g., by specifying an SSID.
- *  Especially, scan results are required to include an entry for the
- *  current BSS if the driver is in Managed mode and associated with an AP.
+ * Note: these optional parameters are controlling parameters for the
+ * scanning behavior, these do not apply to getting scan results
+ * (SIOCGIWSCAN). Drivers are expected to keep a local BSS table and
+ * provide a merged results with all BSSes even if the previous scan
+ * request limited scanning to a subset, e.g., by specifying an SSID.
+ * Especially, scan results are required to include an entry for the
+ * current BSS if the driver is in Managed mode and associated with an AP.
  */
+
 struct  iw_scan_req
 {
   uint8_t scan_type; /* IW_SCAN_TYPE_{ACTIVE,PASSIVE} */
@@ -531,16 +544,15 @@ struct  iw_scan_req
   struct sockaddr bssid; /* ff:ff:ff:ff:ff:ff for broadcast BSSID or
         * individual address of a specific BSS */
 
-  /*
-   * Use this ESSID if IW_SCAN_THIS_ESSID flag is used instead of using
+  /* Use this ESSID if IW_SCAN_THIS_ESSID flag is used instead of using
    * the current ESSID. This allows scan requests for specific ESSID
    * without having to change the current ESSID and potentially breaking
    * the current association.
    */
+
   uint8_t essid[IW_ESSID_MAX_SIZE];
 
-  /*
-   * Optional parameters for changing the default scanning behavior.
+  /* Optional parameters for changing the default scanning behavior.
    * These are based on the MLME-SCAN.request from IEEE Std 802.11.
    * TU is 1.024 ms. If these are set to 0, driver is expected to use
    * reasonable default values. min_channel_time defines the time that
@@ -549,11 +561,11 @@ struct  iw_scan_req
    * replies are received, total time waited on the channel is defined by
    * max_channel_time.
    */
+
   uint32_t min_channel_time; /* in TU */
   uint32_t max_channel_time; /* in TU */
 
   struct iw_freq  channel_list[IW_MAX_FREQUENCIES];
 };
 
-#endif /* CONFIG_DRIVERS_WIRELESS */
 #endif /* __INCLUDE_NUTTX_WIRELESS_WIRELESS_H */

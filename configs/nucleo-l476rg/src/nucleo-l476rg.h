@@ -1,7 +1,7 @@
 /************************************************************************************
  * configs/nucleo-l476rg/src/nucleo-l476rg.h
  *
- *   Copyright (C) 2014, 2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2014, 2016, 2018 Gregory Nutt. All rights reserved.
  *   Authors: Frank Bennett
  *            Gregory Nutt <gnutt@nuttx.org>
  *            Sebastien Lorquet <sebastien@lorquet.fr>
@@ -50,6 +50,7 @@
 /************************************************************************************
  * Pre-processor Definitions
  ************************************************************************************/
+
 /* Configuration ********************************************************************/
 
 #define HAVE_PROC             1
@@ -119,35 +120,7 @@
  *                      D7=PA_8     I2C1_SCL=D15=PB_8 WIFI Probe
  *
  *  mostly from: https://mbed.org/platforms/ST-Nucleo-F401RE/
- *
  */
-
-#ifdef CONFIG_WL_CC3000
-#  define GPIO_WIFI_INT (GPIO_PORTB | GPIO_PIN3 | GPIO_INPUT | \
-                         GPIO_PULLUP | GPIO_EXTI)
-#  define GPIO_WIFI_EN  (GPIO_PORTB | GPIO_PIN4 | GPIO_OUTPUT_CLEAR | \
-                         GPIO_OUTPUT | GPIO_PULLUP | GPIO_SPEED_50MHz)
-#  define GPIO_WIFI_CS  (GPIO_PORTB | GPIO_PIN6 | GPIO_OUTPUT_SET | \
-                         GPIO_OUTPUT | GPIO_PULLUP | GPIO_SPEED_50MHz)
-#  define GPIO_D14      (GPIO_PORTB | GPIO_PIN9 | GPIO_OUTPUT_CLEAR | \
-                         GPIO_OUTPUT | GPIO_PULLUP | GPIO_SPEED_50MHz)
-#  define GPIO_D15      (GPIO_PORTB | GPIO_PIN8 | GPIO_OUTPUT_CLEAR | \
-                         GPIO_OUTPUT | GPIO_PULLUP | GPIO_SPEED_50MHz)
-#  define GPIO_D0       (GPIO_PORTA | GPIO_PIN3 | GPIO_INPUT | \
-                         GPIO_PULLUP)
-#  define GPIO_D1       (GPIO_PORTA | GPIO_PIN2 | GPIO_OUTPUT_CLEAR | \
-                         GPIO_PULLUP)
-#  define GPIO_D2       (GPIO_PORTA | GPIO_PIN10 | GPIO_OUTPUT_CLEAR | \
-                         GPIO_OUTPUT | GPIO_PULLUP | GPIO_SPEED_50MHz)
-#  define GPIO_A0       (GPIO_PORTA | GPIO_PIN0 | GPIO_OUTPUT_SET | \
-                         GPIO_OUTPUT | GPIO_PULLUP | GPIO_SPEED_50MHz)
-#  define GPIO_A1       (GPIO_PORTA | GPIO_PIN1 | GPIO_OUTPUT_SET | \
-                         GPIO_OUTPUT | GPIO_PULLUP | GPIO_SPEED_50MHz)
-#  define GPIO_A2       (GPIO_PORTA | GPIO_PIN4 | GPIO_INPUT | \
-                         GPIO_PULLUP)
-#  define GPIO_A3       (GPIO_PORTB | GPIO_PIN0 | GPIO_INPUT | \
-                         GPIO_PULLUP)
-#endif
 
 /* SPI1 off */
 
@@ -158,12 +131,14 @@
 #define GPIO_SPI1_SCK_OFF  (GPIO_INPUT | GPIO_PULLDOWN | \
                             GPIO_PORTA | GPIO_PIN5)
 
-/* SPI1 chip selects off */
-
-#ifdef CONFIG_WL_CC3000
-#  define GPIO_SPI_CS_WIFI_OFF \
-    (GPIO_INPUT | GPIO_PULLDOWN | GPIO_SPEED_2MHz | \
-     GPIO_PORTB | GPIO_PIN6)
+#ifdef CONFIG_WL_CC1101
+#  define GPIO_CC1101_PWR  (GPIO_PORTC | GPIO_PIN6 | GPIO_OUTPUT_SET | \
+                            GPIO_OUTPUT | GPIO_PULLUP | GPIO_SPEED_50MHz)
+#  define GPIO_CC1101_CS   (GPIO_PORTB | GPIO_PIN12 | GPIO_OUTPUT_SET | \
+                            GPIO_OUTPUT | GPIO_PULLUP | GPIO_SPEED_50MHz)
+#  define GPIO_CC1101_MISO (GPIO_PORTB | GPIO_PIN14)
+#  define GPIO_CC1101_GDO2 (GPIO_PORTC | GPIO_PIN10 | \
+                            GPIO_EXTI | GPIO_SPEED_50MHz)
 #endif
 
 #ifdef HAVE_MMCSD
@@ -173,12 +148,6 @@
 #endif
 
 /* SPI chip selects */
-
-#ifdef CONFIG_WL_CC3000
-#  define GPIO_SPI_CS_WIFI \
-    (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_2MHz | \
-     GPIO_OUTPUT_SET | GPIO_PORTB | GPIO_PIN6)
-#endif
 
 #ifdef HAVE_MMCSD
 #  define GPIO_SPI_CS_SD_CARD \
@@ -198,19 +167,6 @@
  *
  * GPIO0-1 are for probing WIFI status
  */
-
-#ifdef CONFIG_WL_CC3000
-#  define GPIO_GPIO0_INPUT \
-    (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTB | GPIO_PIN8)
-#  define GPIO_GPIO1_INPUT \
-    (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTB | GPIO_PIN9)
-#  define GPIO_GPIO0_OUTPUT \
-    (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_2MHz | \
-     GPIO_OUTPUT_CLEAR | GPIO_PORTB | GPIO_PIN8)
-#  define GPIO_GPIO1_OUTPUT \
-    (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_2MHz | \
-     GPIO_OUTPUT_CLEAR | GPIO_PORTB | GPIO_PIN9)
-#endif
 
 /* Itead Joystick Shield
  *
@@ -287,6 +243,26 @@
 #define GPIO_FIRE     GPIO_BUTTON_2
 #define GPIO_JUMP     GPIO_BUTTON_3
 
+/* GPIO pins used by the GPIO Subsystem
+ * Added by: Ben vd Veen (DisruptiveNL) -- www.nuttx.nl
+ */
+
+#define BOARD_NGPIOIN     1 /* Amount of GPIO Input pins */
+#define BOARD_NGPIOOUT    1 /* Amount of GPIO Output pins */
+#define BOARD_NGPIOINT    1 /* Amount of GPIO Input w/ Interruption pins */
+
+/* This was really something to find out! But the GPIOA Port was causing
+ * conflicts with the nsh console.  So thats why I have chosen GPIOB
+ *
+ * Author: Ben vd Veen (DisruptiveNL) -- www.nuttx.nl
+ * https://www.youtube.com/watch?v=VXsTLzI6idA -- Original video GPIO
+ */
+
+#define GPIO_IN1          (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTB | GPIO_PIN0)
+#define GPIO_OUT1         (GPIO_OUTPUT | GPIO_OUTPUT | GPIO_SPEED_50MHz | \
+                           GPIO_OUTPUT_SET | GPIO_PORTB | GPIO_PIN1)
+#define GPIO_INT1         (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTB | GPIO_PIN2)
+
 /************************************************************************************
  * Public Data
  ************************************************************************************/
@@ -326,6 +302,32 @@ void stm32l4_spiinitialize(void);
  ************************************************************************************/
 
 void stm32l4_usbinitialize(void);
+
+/****************************************************************************
+ * Name: stm32_gpio_initialize
+ *
+ * Description:
+ *   Initialize GPIO drivers for use with /apps/examples/gpio
+ *   Added by: Ben vd Veen (DisruptiveNL) -- www.nuttx.nl
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_DEV_GPIO
+int stm32l4_gpio_initialize(void);
+#endif
+
+/************************************************************************************
+ * Name: stm32l4_can_setup -- DisruptiveNL
+ *
+ * Description:
+ *   Initialize CAN and register the CAN device.
+ *   Added by: Ben vd Veen (DisruptiveNL) -- www.nuttx.nl
+ *
+ ************************************************************************************/
+
+#ifdef CONFIG_CAN
+int stm32l4_can_setup(void);
+#endif
 
 /************************************************************************************
  * Name: stm32l4_pwm_setup
@@ -385,6 +387,18 @@ int board_timer_driver_initialize(FAR const char *devpath, int timer);
 
 #ifdef CONFIG_SENSORS_QENCODER
 int stm32l4_qencoder_initialize(FAR const char *devpath, int timer);
+#endif
+
+/****************************************************************************
+ * Name: stm32_cc1101_initialize
+ *
+ * Description:
+ *   Initialize and register the cc1101 radio driver
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_WL_CC1101
+int stm32_cc1101_initialize(void);
 #endif
 
 #endif /* __CONFIGS_NUCLEO_L476RG_SRC_NUCLEO_L476RG_H */

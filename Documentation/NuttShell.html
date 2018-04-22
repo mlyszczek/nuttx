@@ -1060,7 +1060,7 @@ mount -t vfat /dev/ram1 /tmp
     </li>
     <li>
       NSH will execute the script at <code>/etc/init.d/rcS</code> at start-up (before the
-      first NSH prompt.  After execution of the script, the root FS will look
+      first NSH prompt).  After execution of the script, the root FS will look
       like:
 <ul><pre>
 |--dev/
@@ -2952,7 +2952,7 @@ telnetd
   The Telnet daemon may be started either programmatically by calling <code>nsh_telnetstart()</code> or it may be started from the NSH command line using this <code>telnetd</code> command.
 </p>
 <p>
-  Normally this command would be suppressed with <code>CONFIG_NSH_DISABLE_TELNETD</code>because the Telnet daemon is automatically started in <code>nsh_main.c</code>.  The exception is when <code>CONFIG_NSH_NETLOCAL</code> is selected.  In that case, the network is not enabled at initialization but rather must be enabled from the NSH command line or via other applications.
+  Normally this command would be suppressed with <code>CONFIG_NSH_DISABLE_TELNETD</code> because the Telnet daemon is automatically started in <code>nsh_main.c</code>.  The exception is when <code>CONFIG_NSH_NETLOCAL</code> is selected.  In that case, the network is not enabled at initialization but rather must be enabled from the NSH command line or via other applications.
 </p>
 <p>
   In that case, when <code>nsh_telnetstart()</code> is called before the the network is initialized, it will fail.
@@ -3905,20 +3905,13 @@ nsh&gt;
      The entity to be executed is identified by enclosing the command line in back quotes.
      For example,
      <ul><pre>
-set FOO `myprogram $BAR
+set FOO `myprogram $BAR`
 </pre></ul>
      will execute the program named  <code>myprogram </code> passing it the value of the environment variable <code>BAR</code>.
      The value of the environment variable <code>FOO</code> is then set output of <code>myprogram</code> on <code>stdout</code>.  Because this feature commits significant resources, it is disabled by default.
-    </td>
-  </tr>
-  <tr>
-    <td valign="top"><b><code>CONFIG_NSH_TMPDIR</code></b></td>
-    <td>
-     If <code>CONFIG_NSH_CMDPARMS</code> is selected, then function output will be retained
-     in a temporary file.  In that case, this string must be provided to
-     specify the full path to a directory where temporary files can be
-     created.  This would be a good application of RAM disk: To provide
-     temporary storage for function output.
+
+     The <code>CONFIG_NSH_CMDPARMS</code> interim output will be retained in a temporary file.
+     Full path to a directory where temporary files can be created is taken from <code>CONFIG_LIBC_TMPDIR</code> and it defaults to <code>/tmp</code> if <code>CONFIG_LIBC_TMPDIR</code> is not set.
     </td>
   </tr>
   <tr>
@@ -4561,11 +4554,9 @@ nsh&gt; help
   <b>Implementation of Your Command.</b>
   For example, if you want to add a new a new command called <code>mycmd</code> to NSH, you would first implement  the <code>mycmd</code> code in a function with this prototype:
 </p>
-
-<ul></pre>
+<ul><pre>
 int cmd_mycmd(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv);
 </pre></ul>
-
 <p>
   The <code>argc</code> and <code>argv</code> are used to pass command line arguments to the NSH command.
   Command line parameters are passed in a very standard way: <code>argv[0]</code> will be the name of the command, and <code>argv[1]</code> through <code>argv[argc-1]</code> are the additional arguments provided on the NSH command line.
@@ -4587,12 +4578,12 @@ void nsh_output(FAR struct nsh_vtbl_s *vtbl, const char *fmt, &hellip;);
 <ul><pre>
 int cmd_mycmd(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
 {
-  nsh_output(vtbl, &quote;Hello, World!&quote;);
+  nsh_output(vtbl, &quot;Hello, World!&quot;);
   return 0;
 }
 </pre></ul>
 <p>
-  The prototype for the new command should be placed in <code>apps/examples/nshlib/nsh.h></code>.
+  The prototype for the new command should be placed in <code>apps/examples/nshlib/nsh.h</code>.
 </p>
 
 <p>
@@ -5528,7 +5519,6 @@ xxd -i romfs_img >nsh_romfsimg.h
 </ul></td>
 <td width="33%" valign="top">
 <ul>
-  <li><a href="#nshconfiguration"><code>CONFIG_NSH_TMPDIR</code></a></li>
   <li><a href="#nshconfiguration"><code>CONFIG_NSH_USBCONDEV</code></a></li>
   <li><a href="#nshconfiguration"><code>CONFIG_NSH_USBCONSOLE</code></a></li>
   <li><a href="#nshconfiguration"><code>CONFIG_NSH_UBSDEV_MINOR</code></a></li>
@@ -5580,7 +5570,7 @@ xxd -i romfs_img >nsh_romfsimg.h
   <li><a href="#cmdls"><code>ls</code></a></li>
   <li><a href="#cmdmbhw"><code>mb</code></a></li>
   <li><a href="#nshlogin">Login</a></li>
-  <li><a href="#verifymethods">Login, Credentials</a></li>
+  <li><a href="#verifymethods">Login, credentials</a></li>
   <li><a href="#cmdlsmod"><code>lsmod</code></a></li>
   <li><a href="#cmdmd5"><code>md5</code></a></li>
   <li><a href="#cmdmbhw"><code>mh</code></a></li>
@@ -5594,11 +5584,11 @@ xxd -i romfs_img >nsh_romfsimg.h
   <li><a href="#cmdmv"><code>mv</code></a></li>
   <li><a href="#cmdnfsmount"><code>nfsmount</code></a></li>
   <li><a href="#cmdoverview"><code>nice</code></a></li>
-  <li><a href="#custonshlib">NSH library (<code>nshlib</code>)</a></li>
+  <li><a href="#nshlibrary">NSH library (<code>nshlib</code>)</a></li>
+  <li><a href="#custonshlib">NSH library (<code>nshlib</code>), initialization</a></li>
 </ul></td>
 <td width="34%" valign="top">
 <ul>
-  <li><a href="#nshlibrary">NSH library (<code>nshlib</code>)</a></li>
   <li><a href="#custonshlib"><code>nsh_consolemain()</code></a></li>
   <li><a href="#custonshlib"><code>nsh_initialize()</code></a></li>
   <li><a href="#custonshlib"><code>nsh_main()</code></a></li>
@@ -5630,8 +5620,8 @@ xxd -i romfs_img >nsh_romfsimg.h
   <li><a href="#cmdrm"><code>rm</code></a></li>
   <li><a href="#cmdrmdir"><code>rmdir</code></a></li>
   <li><a href="#cmdrmmod"><code>rmmod</code></a></li>
-  <li><a href="#custinit">ROMFS, Modifying the ROMFS image</a></li>
-  <li><a href="#passwdromfs">ROMFS, Password File</a></li>
+  <li><a href="#custinit">ROMFS, modifying the ROMFS image</a></li>
+  <li><a href="#passwdromfs">ROMFS, password File</a></li>
   <li><a href="#cmdroute"><code>route</code></a></li>
   <li><a href="#cmdset"><code>set</code></a></li>
   <li><a href="#cmdsh"><code>sh</code></a></li>

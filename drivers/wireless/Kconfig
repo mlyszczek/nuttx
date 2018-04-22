@@ -9,20 +9,27 @@ config WL_CC1101
 	bool "CC1101 RF transceiver support"
 	default n
 	select SPI
+	select SCHED_HPWORK
+	select SCHED_LPWORK
 
-menuconfig WL_CC3000
-	bool "CC3000 Wireless Module support"
-	default n
-	select SPI
+if WL_CC1101
 
-source drivers/wireless/cc3000/Kconfig
+config CC1101_SPIDEV
+	int "SPI bus number"
+	default 2
+	---help---
+		Selects the SPI bus number identying that SPI interface that
+		connects the CC1101 to the MCU.
+
+endif
+
 source drivers/wireless/spirit/Kconfig
 
 menuconfig DRIVERS_IEEE802154
 	bool "IEEE 802.15.4 Device Support"
 	default n
 	---help---
-		This directory holds implementations of IEEE802.15.4 device drivers.
+		Select to enable building of IEEE802.15.4 device drivers.
 
 source drivers/wireless/ieee802154/Kconfig
 
@@ -30,9 +37,18 @@ menuconfig DRIVERS_IEEE80211
 	bool "IEEE 802.11 Device Support"
 	default n
 	---help---
-		This directory holds implementations of IEEE802.11 device drivers.
+		Select to enable building of IEEE802.11 device drivers.
 
 source drivers/wireless/ieee80211/Kconfig
+
+menuconfig DRIVERS_BLUETOOTH
+	bool "Bluetooth Device Support"
+	default n
+	depends on WIRELESS_BLUETOOTH
+	---help---
+		Select to enable building of Bluetooth device drivers.
+
+source drivers/wireless/bluetooth/Kconfig
 
 config WL_NRF24L01
 	bool "nRF24l01+ transceiver support"

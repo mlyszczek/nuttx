@@ -1,7 +1,8 @@
 /****************************************************************************
  * net/netdev/netdev_register.c
  *
- *   Copyright (C) 2007-2012, 2014-2015, 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007-2012, 2014-2015, 2017-2018 Gregory Nutt. All rights
+ *     reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -53,6 +54,7 @@
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/arp.h>
+#include <nuttx/net/bluetooth.h>
 
 #include "utils/utils.h"
 #include "igmp/igmp.h"
@@ -66,6 +68,8 @@
 #define NETDEV_LO_FORMAT    "lo"
 #define NETDEV_SLIP_FORMAT  "sl%d"
 #define NETDEV_TUN_FORMAT   "tun%d"
+#define NETDEV_BNEP_FORMAT  "bnep%d"
+#define NETDEV_PAN_FORMAT   "pan%d"
 #define NETDEV_WLAN_FORMAT  "wlan%d"
 #define NETDEV_WPAN_FORMAT  "wpan%d"
 
@@ -102,7 +106,7 @@ struct net_driver_s *g_netdevices = NULL;
  *   Given a device name format string, find the next device number for the
  *   class of device represented by that format string.
  *
- * Parameters:
+ * Input Parameters:
  *   devfmt - The device format string
  *
  * Returned Value:
@@ -153,7 +157,7 @@ static int find_devnum(FAR const char *devfmt)
  *   Register a network device driver and assign a name to it so that it can
  *   be found in subsequent network ioctl operations on the device.
  *
- * Parameters:
+ * Input Parameters:
  *   dev    - The device driver structure to be registered.
  *   lltype - Link level protocol used by the driver (Ethernet, SLIP, TUN, ...
  *              ...
@@ -215,10 +219,25 @@ int netdev_register(FAR struct net_driver_s *dev, enum net_lltype_e lltype)
             break;
 #endif
 
+#ifdef CONFIG_NET_BLUETOOTH
+          case NET_LL_BLUETOOTH:  /* Bluetooth */
+            dev->d_llhdrlen = BLUETOOTH_MAX_HDRLEN; /* Determined at runtime */
+#ifdef CONFIG_NET_6LOWPAN
+#  warning Missing logic
+            dev->d_mtu      = CONFIG_NET_6LOWPAN_MTU;
+#ifdef CONFIG_NET_TCP
+#  warning Missing logic
+            dev->d_recvwndo = CONFIG_NET_6LOWPAN_TCP_RECVWNDO;
+#endif
+#endif
+            devfmt          = NETDEV_BNEP_FORMAT;
+            break;
+#endif
+
 #if defined(CONFIG_NET_6LOWPAN) || defined(CONFIG_NET_IEEE802154)
           case NET_LL_IEEE802154: /* IEEE 802.15.4 MAC */
           case NET_LL_PKTRADIO:   /* Non-IEEE 802.15.4 packet radio */
-            dev->d_llhdrlen = 0;
+            dev->d_llhdrlen = 0;  /* Determined at runtime */
 #ifdef CONFIG_NET_6LOWPAN
             dev->d_mtu      = CONFIG_NET_6LOWPAN_MTU;
 #ifdef CONFIG_NET_TCP

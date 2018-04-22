@@ -96,7 +96,7 @@
  */
 
 #ifndef CONFIG_TUN_NINTERFACES
-# define CONFIG_TUN_NINTERFACES 1
+#  define CONFIG_TUN_NINTERFACES 1
 #endif
 
 /* TX poll delay = 1 seconds. CLK_TCK is the number of clock ticks per
@@ -104,6 +104,12 @@
  */
 
 #define TUN_WDDELAY   (1*CLK_TCK)
+
+/* This is a helper pointer for accessing the contents of the Ethernet header */
+
+#ifdef CONFIG_NET_ETHERNET
+#  define BUF ((struct eth_hdr_s *)priv->dev.d_buf)
+#endif
 
 /****************************************************************************
  * Private Types
@@ -157,10 +163,19 @@ static void tun_unlock(FAR struct tun_device_s *priv);
 
 static int  tun_fd_transmit(FAR struct tun_device_s *priv);
 static int  tun_txpoll(struct net_driver_s *dev);
+#ifdef CONFIG_NET_ETHERNET
+static int  tun_txpoll_tap(struct net_driver_s *dev);
+#endif
+static int  tun_txpoll_tun(struct net_driver_s *dev);
 
 /* Interrupt handling */
 
 static void tun_net_receive(FAR struct tun_device_s *priv);
+#ifdef CONFIG_NET_ETHERNET
+static void tun_net_receive_tap(FAR struct tun_device_s *priv);
+#endif
+static void tun_net_receive_tun(FAR struct tun_device_s *priv);
+
 static void tun_txdone(FAR struct tun_device_s *priv);
 
 /* Watchdog timer expirations */
@@ -320,7 +335,7 @@ static void tun_pollnotify(FAR struct tun_device_s *priv, pollevent_t eventset)
  *   Start hardware transmission.  Called either from the txdone interrupt
  *   handling or from watchdog based polling.
  *
- * Parameters:
+ * Input Parameters:
  *   priv - Reference to the driver state structure
  *
  * Returned Value:
@@ -364,7 +379,7 @@ static int tun_fd_transmit(FAR struct tun_device_s *priv)
  *   2. When the preceding TX packet send timesout and the interface is reset
  *   3. During normal TX polling
  *
- * Parameters:
+ * Input Parameters:
  *   dev - Reference to the NuttX driver state structure
  *
  * Returned Value:
@@ -378,6 +393,123 @@ static int tun_fd_transmit(FAR struct tun_device_s *priv)
  ****************************************************************************/
 
 static int tun_txpoll(struct net_driver_s *dev)
+{
+  int ret;
+
+#ifdef CONFIG_NET_ETHERNET
+  if (dev->d_lltype == NET_LL_ETHERNET)
+    {
+      ret = tun_txpoll_tap(dev);
+    }
+  else
+#endif
+    {
+      ret = tun_txpoll_tun(dev);
+    }
+
+  return ret;
+}
+
+/****************************************************************************
+ * Name: tun_txpoll_tap : for tap (ethernet bridge) mode
+ *
+ * Description:
+ *   The transmitter is available, check if the network has any outgoing packets
+ *   ready to send.  This is a callback from devif_poll().  devif_poll() may
+ *   be called:
+ *
+ *   1. When the preceding TX packet send is complete,
+ *   2. When the preceding TX packet send timesout and the interface is reset
+ *   3. During normal TX polling
+ *
+ * Input Parameters:
+ *   dev - Reference to the NuttX driver state structure
+ *
+ * Returned Value:
+ *   OK on success; a negated errno on failure
+ *
+ * Assumptions:
+ *   May or may not be called from an interrupt handler.  In either case,
+ *   global interrupts are disabled, either explicitly or indirectly through
+ *   interrupt handling logic.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_ETHERNET
+static int tun_txpoll_tap(struct net_driver_s *dev)
+{
+  FAR struct tun_device_s *priv = (FAR struct tun_device_s *)dev->d_private;
+
+  /* If the polling resulted in data that should be sent out on the network,
+   * the field d_len is set to a value > 0.
+   */
+
+  if (priv->dev.d_len > 0)
+    {
+      /* Look up the destination MAC address and add it to the Ethernet
+       * header.
+       */
+
+#ifdef CONFIG_NET_IPv4
+#ifdef CONFIG_NET_IPv6
+      if (IFF_IS_IPv4(priv->dev.d_flags))
+#endif
+        {
+          arp_out(&priv->dev);
+        }
+#endif /* CONFIG_NET_IPv4 */
+
+#ifdef CONFIG_NET_IPv6
+#ifdef CONFIG_NET_IPv4
+      else
+#endif
+        {
+          neighbor_out(&priv->dev);
+        }
+#endif /* CONFIG_NET_IPv6 */
+
+      /* Send the packet */
+
+      priv->read_d_len = priv->dev.d_len;
+      tun_fd_transmit(priv);
+
+      return 1;
+    }
+
+  /* If zero is returned, the polling will continue until all connections have
+   * been examined.
+   */
+
+  return 0;
+}
+#endif
+
+/****************************************************************************
+ * Name: tun_txpoll_tun : for tun (IP tunneling) mode
+ *
+ * Description:
+ *   The transmitter is available, check if the network has any outgoing packets
+ *   ready to send.  This is a callback from devif_poll().  devif_poll() may
+ *   be called:
+ *
+ *   1. When the preceding TX packet send is complete,
+ *   2. When the preceding TX packet send timesout and the interface is reset
+ *   3. During normal TX polling
+ *
+ * Input Parameters:
+ *   dev - Reference to the NuttX driver state structure
+ *
+ * Returned Value:
+ *   OK on success; a negated errno on failure
+ *
+ * Assumptions:
+ *   May or may not be called from an interrupt handler.  In either case,
+ *   global interrupts are disabled, either explicitly or indirectly through
+ *   interrupt handling logic.
+ *
+ ****************************************************************************/
+
+static int tun_txpoll_tun(struct net_driver_s *dev)
 {
   FAR struct tun_device_s *priv = (FAR struct tun_device_s *)dev->d_private;
 
@@ -403,12 +535,12 @@ static int tun_txpoll(struct net_driver_s *dev)
 }
 
 /****************************************************************************
- * Name: tun_receive
+ * Name: tun_net_receive
  *
  * Description:
  *   An interrupt was received indicating the availability of a new RX packet
  *
- * Parameters:
+ * Input Parameters:
  *   priv - Reference to the driver state structure
  *
  * Returned Value:
@@ -420,6 +552,201 @@ static int tun_txpoll(struct net_driver_s *dev)
  ****************************************************************************/
 
 static void tun_net_receive(FAR struct tun_device_s *priv)
+{
+#ifdef CONFIG_NET_ETHERNET
+  if (priv->dev.d_lltype == NET_LL_ETHERNET)
+    {
+      tun_net_receive_tap(priv);
+    }
+  else
+#endif
+    {
+      tun_net_receive_tun(priv);
+    }
+}
+
+/****************************************************************************
+ * Name: tun_net_receive_tap : for tap (ethernet bridge) mode
+ *
+ * Description:
+ *   An interrupt was received indicating the availability of a new RX packet
+ *
+ * Input Parameters:
+ *   priv - Reference to the driver state structure
+ *
+ * Returned Value:
+ *   None
+ *
+ * Assumptions:
+ *   Global interrupts are disabled by interrupt handling logic.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_ETHERNET
+static void tun_net_receive_tap(FAR struct tun_device_s *priv)
+{
+  int ret;
+
+  /* Copy the data data from the hardware to priv->dev.d_buf.  Set amount of
+   * data in priv->dev.d_len
+   */
+
+  NETDEV_RXPACKETS(&priv->dev);
+
+#ifdef CONFIG_NET_PKT
+  /* When packet sockets are enabled, feed the frame into the packet tap */
+
+  pkt_input(&priv->dev);
+#endif
+
+  /* We only accept IP packets of the configured type and ARP packets */
+
+#if defined(CONFIG_NET_IPv4)
+  if (BUF->type == HTONS(ETHTYPE_IP))
+    {
+      ninfo("IPv4 frame\n");
+      NETDEV_RXIPV4(&priv->dev);
+
+      /* Give the IPv4 packet to the network layer.  ipv4_input will return
+       * an error if it is unable to dispatch the packet at this time.
+       */
+
+      arp_ipin(&priv->dev);
+      ret = ipv4_input(&priv->dev);
+
+      if (ret == OK)
+        {
+          /* If the above function invocation resulted in data that should be
+           * sent out on the network, the field d_len will set to a value > 0.
+           */
+
+          if (priv->dev.d_len > 0)
+            {
+
+              /* Update the Ethernet header with the correct MAC address */
+
+#ifdef CONFIG_NET_IPv6
+              if (IFF_IS_IPv4(priv->dev.d_flags))
+#endif
+                {
+                  arp_out(&priv->dev);
+                }
+#ifdef CONFIG_NET_IPv6
+              else
+                {
+                  neighbor_out(&priv->dev);
+                }
+#endif
+
+              /* And send the packet */
+
+              priv->write_d_len = priv->dev.d_len;
+              tun_fd_transmit(priv);
+            }
+          else
+            {
+              tun_pollnotify(priv, POLLOUT);
+            }
+        }
+      else
+        {
+          priv->dev.d_len = 0;
+          tun_pollnotify(priv, POLLOUT);
+        }
+
+    }
+  else
+#endif
+#ifdef CONFIG_NET_IPv6
+  if (BUF->type == HTONS(ETHTYPE_IP6))
+    {
+      ninfo("Iv6 frame\n");
+      NETDEV_RXIPV6(&priv->dev);
+
+      /* Give the IPv6 packet to the network layer.  ipv6_input will return
+       * an error if it is unable to dispatch the packet at this time.
+       */
+
+      ret = ipv6_input(&priv->dev);
+
+      if (ret == OK)
+        {
+          if (priv->dev.d_len > 0)
+            {
+              /* Update the Ethernet header with the correct MAC address */
+
+#ifdef CONFIG_NET_IPv4
+              if (IFF_IS_IPv4(priv->dev.d_flags))
+                {
+                  arp_out(&priv->dev);
+                }
+              else
+#endif
+#ifdef CONFIG_NET_IPv6
+                {
+                  neighbor_out(&priv->dev);
+                }
+#endif
+
+              priv->write_d_len = priv->dev.d_len;
+              tun_fd_transmit(priv);
+            }
+          else
+            {
+              tun_pollnotify(priv, POLLOUT);
+            }
+        }
+      else
+        {
+          priv->write_d_len = 0;
+          tun_pollnotify(priv, POLLOUT);
+        }
+    }
+  else
+#endif
+#ifdef CONFIG_NET_ARP
+  if (BUF->type == htons(ETHTYPE_ARP))
+    {
+      arp_arpin(&priv->dev);
+      NETDEV_RXARP(&priv->dev);
+
+      /* If the above function invocation resulted in data that should be
+       * sent out on the network, the field  d_len will set to a value > 0.
+       */
+
+      if (priv->dev.d_len > 0)
+        {
+          priv->write_d_len = priv->dev.d_len;
+          tun_fd_transmit(priv);
+        }
+    }
+  else
+#endif
+    {
+      NETDEV_RXDROPPED(&priv->dev);
+    }
+
+}
+#endif
+
+/****************************************************************************
+ * Name: tun_net_receive_tun : for tun (IP tunneling) mode
+ *
+ * Description:
+ *   An interrupt was received indicating the availability of a new RX packet
+ *
+ * Input Parameters:
+ *   priv - Reference to the driver state structure
+ *
+ * Returned Value:
+ *   None
+ *
+ * Assumptions:
+ *   Global interrupts are disabled by interrupt handling logic.
+ *
+ ****************************************************************************/
+
+static void tun_net_receive_tun(FAR struct tun_device_s *priv)
 {
   int ret;
 
@@ -510,7 +837,7 @@ static void tun_net_receive(FAR struct tun_device_s *priv)
  * Description:
  *   An interrupt was received indicating that the last TX packet(s) is done
  *
- * Parameters:
+ * Input Parameters:
  *   dev - Reference to the driver state structure
  *
  * Returned Value:
@@ -539,7 +866,7 @@ static void tun_txdone(FAR struct tun_device_s *priv)
  * Description:
  *   Perform periodic polling from the worker thread
  *
- * Parameters:
+ * Input Parameters:
  *   arg - The argument passed when work_queue() as called.
  *
  * Returned Value:
@@ -585,7 +912,7 @@ static void tun_poll_work(FAR void *arg)
  * Description:
  *   Periodic timer handler.  Called from the timer interrupt handler.
  *
- * Parameters:
+ * Input Parameters:
  *   argc - The number of available arguments
  *   arg  - The first argument
  *
@@ -613,7 +940,7 @@ static void tun_poll_expiry(int argc, wdparm_t arg, ...)
  *   NuttX Callback: Bring up the Ethernet interface when an IP address is
  *   provided
  *
- * Parameters:
+ * Input Parameters:
  *   dev - Reference to the NuttX driver state structure
  *
  * Returned Value:
@@ -664,7 +991,7 @@ static int tun_ifup(struct net_driver_s *dev)
  * Description:
  *   NuttX Callback: Stop the interface.
  *
- * Parameters:
+ * Input Parameters:
  *   dev - Reference to the NuttX driver state structure
  *
  * Returned Value:
@@ -701,7 +1028,7 @@ static int tun_ifdown(struct net_driver_s *dev)
  *   stimulus perform an out-of-cycle poll and, thereby, reduce the TX
  *   latency.
  *
- * Parameters:
+ * Input Parameters:
  *   dev - Reference to the NuttX driver state structure
  *
  * Returned Value:
@@ -747,7 +1074,7 @@ static void tun_txavail_work(FAR void *arg)
  *   stimulus perform an out-of-cycle poll and, thereby, reduce the TX
  *   latency.
  *
- * Parameters:
+ * Input Parameters:
  *   dev - Reference to the NuttX driver state structure
  *
  * Returned Value:
@@ -779,7 +1106,7 @@ static int tun_txavail(struct net_driver_s *dev)
  *   NuttX Callback: Add the specified MAC address to the hardware multicast
  *   address filtering
  *
- * Parameters:
+ * Input Parameters:
  *   dev  - Reference to the NuttX driver state structure
  *   mac  - The MAC address to be added
  *
@@ -806,7 +1133,7 @@ static int tun_addmac(struct net_driver_s *dev, FAR const uint8_t *mac)
  *   NuttX Callback: Remove the specified MAC address from the hardware multicast
  *   address filtering
  *
- * Parameters:
+ * Input Parameters:
  *   dev  - Reference to the NuttX driver state structure
  *   mac  - The MAC address to be removed
  *
@@ -832,7 +1159,7 @@ static int tun_rmmac(struct net_driver_s *dev, FAR const uint8_t *mac)
  * Description:
  *   Configure the IPv6 multicast MAC address.
  *
- * Parameters:
+ * Input Parameters:
  *   priv - A reference to the private driver state structure
  *
  * Returned Value:
@@ -854,7 +1181,7 @@ static void tun_ipv6multicast(FAR struct tun_device_s *priv)
  * Description:
  *   Initialize the TUN device
  *
- * Parameters:
+ * Input Parameters:
  *
  * Returned Value:
  *   OK on success; Negated errno on failure.
@@ -904,19 +1231,22 @@ static int tun_dev_init(FAR struct tun_device_s *priv, FAR struct file *filep,
 
   tun_ifdown(&priv->dev);
 
-  if (devfmt)
-    {
-      strncpy(priv->dev.d_ifname, devfmt, IFNAMSIZ);
-    }
-
   /* Register the device with the OS so that socket IOCTLs can be performed */
 
   ret = netdev_register(&priv->dev, NET_LL_TUN);
+
   if (ret != OK)
     {
       nxsem_destroy(&priv->waitsem);
       nxsem_destroy(&priv->read_wait_sem);
       return ret;
+    }
+
+  /* Assign d_ifname if specified. This must be done after registration */
+
+  if (devfmt)
+    {
+      strncpy(priv->dev.d_ifname, devfmt, IFNAMSIZ);
     }
 
   priv->filep         = filep;        /* Set link to file */
@@ -1242,6 +1572,10 @@ static int tun_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
            */
 
           priv->dev.d_llhdrlen = ETH_HDRLEN;
+
+          /* Also, set the link type to NET_LL_ETHERNET */
+
+          priv->dev.d_lltype = NET_LL_ETHERNET;
         }
       else if ((ifr->ifr_flags & IFF_MASK) == IFF_TUN)
 #endif
@@ -1271,7 +1605,7 @@ static int tun_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
  * Description:
  *   Instantiate a SLIP network interface.
  *
- * Parameters:
+ * Input Parameters:
  *
  * Returned Value:
  *   OK on success; Negated errno on failure.

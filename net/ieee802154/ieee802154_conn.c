@@ -83,7 +83,7 @@ static dq_queue_t g_active_ieee802154_connections;
  * Name: ieee802154_conn_initialize
  *
  * Description:
- *   Initialize the IEEE 802.15.5 connection structure allocator.  Called
+ *   Initialize the IEEE 802.15.4 connection structure allocator.  Called
  *   once and only from ieee802154_initialize().
  *
  * Assumptions:
@@ -218,7 +218,7 @@ FAR struct ieee802154_conn_s *
        conn = (FAR struct ieee802154_conn_s *)conn->node.flink)
     {
       /* Does the destination address match the bound address of the socket. */
-      /* REVISIT: Currently and explict address must be assigned.  Should we
+      /* REVISIT: Currently and explicit address must be assigned.  Should we
        * support some moral equivalent to INADDR_ANY?
        */
 

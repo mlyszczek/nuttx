@@ -1,7 +1,7 @@
 /****************************************************************************
  * configs/nucleo-l476rg/src/stm32l4_spi.c
  *
- *   Copyright (C) 2014 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2014, 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -53,7 +53,8 @@
 
 #include "nucleo-l476rg.h"
 
-#if defined(CONFIG_STM32L4_SPI1) || defined(CONFIG_STM32L4_SPI2) || defined(CONFIG_STM32L4_SPI3)
+#if defined(CONFIG_STM32L4_SPI1) || defined(CONFIG_STM32L4_SPI2) || \
+    defined(CONFIG_STM32L4_SPI3)
 
 /************************************************************************************
  * Public Data
@@ -91,10 +92,6 @@ void weak_function stm32l4_spiinitialize(void)
       spierr("ERROR: FAILED to initialize SPI port 1\n");
     }
 
-#ifdef CONFIG_WL_CC3000
-  stm32l4_configgpio(GPIO_SPI_CS_WIFI);
-#endif
-
 #ifdef HAVE_MMCSD
   stm32l4_configgpio(GPIO_SPI_CS_SD_CARD);
 #endif
@@ -105,13 +102,14 @@ void weak_function stm32l4_spiinitialize(void)
 
   g_spi2 = stm32l4_spibus_initialize(2);
 
-  /* Setup CS, EN & IRQ line IOs */
+#ifdef CONFIG_WL_CC1101
+  /* Setup CS, IRQ(gdo2) line IOs */
 
-#ifdef CONFIG_WL_CC3000
-  stm32l4_configgpio(GPIO_WIFI_CS);
-  stm32l4_configgpio(GPIO_WIFI_EN);
-  stm32l4_configgpio(GPIO_WIFI_INT);
+  stm32l4_configgpio(GPIO_CC1101_PWR);
+  stm32l4_configgpio(GPIO_CC1101_CS);
+  stm32l4_configgpio(GPIO_CC1101_GDO2);
 #endif
+
 #endif
 }
 
@@ -145,13 +143,6 @@ void stm32l4_spi1select(FAR struct spi_dev_s *dev, uint32_t devid, bool selected
 {
   spiinfo("devid: %d CS: %s\n", (int)devid, selected ? "assert" : "de-assert");
 
-#ifdef CONFIG_WL_CC3000
-  if (devid == SPIDEV_WIRELESS(0))
-    {
-      stm32l4_gpiowrite(GPIO_SPI_CS_WIFI, !selected);
-    }
-  else
-#endif
 #ifdef HAVE_MMCSD
   if (devid == SPIDEV_MMCSD(0))
     {
@@ -171,10 +162,10 @@ void stm32l4_spi2select(FAR struct spi_dev_s *dev, uint32_t devid, bool selected
 {
   spiinfo("devid: %d CS: %s\n", (int)devid, selected ? "assert" : "de-assert");
 
-#ifdef CONFIG_WL_CC3000
-  if (devid == SPIDEV_WIRELESS(0))
+#ifdef CONFIG_WL_CC1101
+  if (devid == SPIDEV_WIRELESS(5))
     {
-      stm32l4_gpiowrite(GPIO_WIFI_CS, !selected);
+      stm32l4_gpiowrite(GPIO_CC1101_CS, !selected);
     }
 #endif
 }

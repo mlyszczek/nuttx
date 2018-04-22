@@ -440,7 +440,7 @@ Related Repositories
     There are snapshots of some tools here that you will need to work with
     NuttX:  kconfig-frontends, genromfs, and others.
 
-  * https://bitbucket.org/nuttx/drivers
+  * https://bitbucket.org/nuttx/nonbsd
 
     A few drivers that are not integrated into the main NuttX source tree due
     to licensing issues.
@@ -1638,8 +1638,6 @@ nuttx/
  |   |   `- README.txt
  |   |- c5471evm/
  |   |   `- README.txt
- |   |- cc3200-launchpad/
- |   |   `- README.txt
  |   |- clicker2-stm32
  |   |   `- README.txt
  |   |- cloudctrl
@@ -1686,6 +1684,8 @@ nuttx/
  |   |- freedom-kl26z/
  |   |   `- README.txt
  |   |- hymini-stm32v/
+ |   |   `- README.txt
+ |   |- imxrt1050-evk
  |   |   `- README.txt
  |   |- indium-f7
  |   |   `- README.txt
@@ -1734,6 +1734,8 @@ nuttx/
  |   |- moteino-mega/
  |   |   `- README.txt
  |   |- ne63badge/
+ |   |   `- README.txt
+ |   |- nrf52-pca10040/
  |   |   `- README.txt
  |   |- ntosd-dm320/
  |   |   |- doc/README.txt
@@ -1841,8 +1843,6 @@ nuttx/
  |   |   `- README.txt
  |   |- skp16c26/
  |   |   `- README.txt
- |   |- spark/
- |   |   `- README.txt
  |   |- stm3210e-eval/
  |   |   |- RIDE/README.txt
  |   |   `- README.txt
@@ -1892,6 +1892,8 @@ nuttx/
  |   |   `- README.txt
  |   |- twr-k60n512/
  |   |   `- README.txt
+ |   |- tms570ls31x-usb-kit/
+ |   |   `- README.txt
  |   |- twr-k64f120m/
  |   |   `- README.txt
  |   |- u-blox-co27/
@@ -1936,6 +1938,8 @@ nuttx/
  |   `- README.txt
  |- fs/
  |   |- binfs/
+ |   |   `- README.txt
+ |   |- cromfs/
  |   |   `- README.txt
  |   |- mmap/
  |   |   `- README.txt
@@ -2027,7 +2031,13 @@ apps/
  |   |  `- README.txt
  |   `- zmodem
  |      `- README.txt
- `- README.txt
+ `- wireless
+     |- bluetooth
+     |  `- btsak
+     |     `- README.txt
+     `- ieee802154
+        `- i8sak
+           `- README.txt
 
 Additional README.txt files in the other, related repositories:
 

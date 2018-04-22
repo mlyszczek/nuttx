@@ -1,7 +1,7 @@
 ############################################################################
 # fs/Makefile
 #
-#   Copyright (C) 2007, 2008, 2011-2014, 2016-2017 Gregory Nutt. All rights
+#   Copyright (C) 2007, 2008, 2011-2014, 2016-2018 Gregory Nutt. All rights
 #     reserved.
 #   Author: Gregory Nutt <gnutt@nuttx.org>
 #
@@ -65,6 +65,7 @@ ifneq ($(CONFIG_DISABLE_MOUNTPOINT),y)
 include mount/Make.defs
 include fat/Make.defs
 include romfs/Make.defs
+include cromfs/Make.defs
 include tmpfs/Make.defs
 include nxffs/Make.defs
 include nfs/Make.defs

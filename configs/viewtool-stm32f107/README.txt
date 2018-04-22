@@ -502,8 +502,8 @@ LCD/Touchscreen Interface
 FT80x Integration
 =================
 
-  I have used the ViewTool F107 for initial testing of the two displays
-  based on FTDI/BridgeTek FT800 GUIs:
+  I have used the ViewTool F107 for initial testing of the three displays
+  based on FTDI/BridgeTek FT80x GUIs:
 
   Haoyu 5"
   --------
@@ -527,10 +527,18 @@ FT80x Integration
    9   AUDIO-L                       10   GND    J18 Pin 4
 
   The Haoyu display has no audio amplifier on board;  Output is raw PWM
-  audio.  MikroElektronkia ConnectEVE FT800.
+  audio.
 
   GPIO0 and MODE are pulled low meaning that SPI is the default interface
   with slave address bit 0 = 0.  GPIO1 is not connected.
+
+  This display should have:
+
+    CONFIG_LCD_FT800=y
+    CONFIG_LCD_FT80X_SPI=y
+    CONFIG_LCD_FT80X_WQVGA=y
+    CONFIG_LCD_FT80X_AUDIO_NOSHUTDOWN=y
+    CONFIG_EXAMPLES_FT80X_DEVPATH="/dev/ft800"
 
   MikroElektronkia ConnectEVE FT800
   ---------------------------------
@@ -631,6 +639,65 @@ FT80x Integration
 
   GPIO0 is not connected.
 
+  This display should have:
+
+    CONFIG_LCD_FT800=y
+    CONFIG_LCD_FT80X_SPI=y
+    CONFIG_LCD_FT80X_WQVGA=y
+    CONFIG_LCD_FT80X_AUDIO_GPIOSHUTDOWN=y
+    CONFIG_LCD_FT80X_AUDIO_GPIO=0
+    CONFIG_EXAMPLES_FT80X_DEVPATH="/dev/ft800"
+
+  Reverdi RVT43ULFNWC01
+  ---------------------
+
+  I used this FT801 board with a 20 pin breakout module.
+
+  2x10 Connector CN2 using SPI1:
+  ---- --------- ----------- ----------- ---- --------- ----------- -----------
+  PIN  NAME      VIEWTOOL    STM32       PIN  NAME      VIEWTOOL    STM32
+  ---- --------- ----------- ----------- ---- --------- ----------- -----------
+    1  VDD       J8  Pin  7 *             2  GND        J8  Pin  8
+    3  SPI_CLK   J8  Pin 11  PA5/SCK1     4  MISO       J8  Pin  9  PA6/MISO1
+    5  MOSI/IO1  J8  Pin 10  PA7/MOSI1    6  CS         J8  Pin 12  PA4/NSS1
+    7  INT       J18 Pin  8  PA1          8  PD         J18 Pin  6  PC5
+    9  NC        N/C                     10  AUDIO OUT  N/C
+   11  GPIO0/IO2 N/C                     12  GPIO0/IO3  N/C
+   13  GPIO2     N/C                     14  GPIO3      N/C
+   15  NC        N/C                     16  NC         N/C
+   17  BLVDD     N/C **                  18  BLVDD      N/C **
+   19  BLGND     N/C **                  20  BLGND      N/C **
+
+  2x10 Connector CN2 using SPI2:
+  ---- --------- ----------- ----------- ---- --------- ----------- -----------
+  PIN  NAME      VIEWTOOL    STM32       PIN  NAME      VIEWTOOL    STM32
+  ---- --------- ----------- ---------- ---- --------- ----------- ------------
+    1  VDD       J8  Pin  1 *             2  GND        J8  Pin  2
+    3  SPI_CLK   J8  Pin  5  PB13/SCK2    4  MISO       J8  Pin  3  PB14/MISO2
+    5  MOSI/IO1  J8  Pin  4  PB15/MOSI2   6  CS         J8  Pin  6  PB12/NSS2
+    7  INT       J18 Pin  8  PA1          8  PD         J18 Pin  6  PC5
+    9  NC        N/C                     10  AUDIO OUT  N/C
+   11  GPIO0/IO2 N/C                     12  GPIO0/IO3  N/C
+   13  GPIO2     N/C                     14  GPIO3      N/C
+   15  NC        N/C                     16  NC         N/C
+   17  BLVDD     N/C **                  18  BLVDD      N/C **
+   19  BLGND     N/C **                  20  BLGND      N/C **
+
+  *  0.0-4.0V
+  ** May be connected to VDD, 0.0-7.0V
+
+     I did not see a backlight without BLVDD or BLGND connected.  Possibly
+     this depends on the 3.3V current provided by the board?  Obvious
+     connections would be J18 pins 2 and 4.
+
+  This display should have:
+
+    CONFIG_LCD_FT801=y
+    CONFIG_LCD_FT80X_SPI=y
+    CONFIG_LCD_FT80X_WQVGA=y
+    CONFIG_LCD_FT80X_AUDIO_NOSHUTDOWN=y
+    CONFIG_EXAMPLES_FT80X_DEVPATH="/dev/ft801"
+
 Toolchains
 ==========
 
@@ -728,8 +795,38 @@ Configurations
   f80x:
 
     This configuration was added in order to verify the FTDI/Bridgetick
-    Ft80x driver.  At this point, I have no hardware in that.  So this
-    configuration is totally unverified.
+    Ft80x driver using apps/examples/ft80x with apps/graphics/ft80x.  It
+    is very similar to the NSH configuration with support for the FTDI
+    FT80x LCD enabled on SPI1.
+
+    This configuration is properly setup for the MikroElektronika
+    ConnectEVE LCD.  To use the Reverdi FT801 LCD, the following changes
+    would be required to the configuration:
+
+      -CONFIG_LCD_FT800=y
+      +CONFIG_LCD_FT801=y
+
+      -CONFIG_LCD_FT80X_AUDIO_GPIOSHUTDOWN=y
+      -CONFIG_LCD_FT80X_AUDIO_GPIO=0
+      +CONFIG_LCD_FT80X_AUDIO_NOSHUTDOWN=y
+
+      -CONFIG_EXAMPLES_FT80X_DEVPATH="/dev/ft800"
+      +CONFIG_EXAMPLES_FT80X_DEVPATH="/dev/ft801"
+
+    STATUS:
+    2018-03-09:  The ConnectEVE display is basically working.  There are
+      some specific issues with some of the demos in apps/examples/ft80x
+      that still need to be addressed.  I have the Riverdi display FT801
+      display in hand as well, but have not tested with the display yet.
+
+      I have seen issues also where the board does not recover after a
+      reset.  It required a full power cycle to get functionality back.
+      This is not too surprising since there is no reset signal to the
+      FT80x (there is power down/up).  It might be necessary to perform
+      a software reset of the FT80x during initialization.
+
+    1028-03-10:  Most of issues have been worked out in the FT80x demos
+      and the driver appears 100% functional.
 
   netnsh:
 

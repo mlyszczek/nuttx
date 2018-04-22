@@ -275,6 +275,16 @@ config ARCH_BOARD_HYMINI_STM32V
 		A configuration for the HY-Mini STM32v board.  This board is based on the
 		STM32F103VCT6 chip.
 
+config ARCH_BOARD_IMXRT1050_EVK
+	bool "NXP i.MX RT 1050 EVK"
+	depends on ARCH_CHIP_MIMXRT1052DVL6A
+	select ARCH_HAVE_LEDS
+	select ARCH_HAVE_BUTTONS
+	select ARCH_HAVE_IRQBUTTONS
+	---help---
+		This is the board configuratino for the port of NuttX to the NXP i.MXRT
+		evaluation kit, MIMXRT1050-EVKB.  This board features the MIMXRT1052DVL6A MCU.
+
 config ARCH_BOARD_INDIUM_F7
 	bool "Indium-F7"
 	depends on ARCH_CHIP_STM32F722RE || ARCH_CHIP_STM32F722ZE || ARCH_CHIP_STM32F746ZG || ARCH_CHIP_STM32F767ZI
@@ -498,6 +508,14 @@ config ARCH_BOARD_NTOSD_DM320
 		NuttX operates on the ARM9EJS of this dual core processor.
 		STATUS: This port is code complete, verified, and included in the
 		NuttX 0.2.1 release.
+
+config ARCH_BOARD_NRF52_PCA10040
+	bool "NRF52 PCA10040 eval board"
+	depends on ARCH_CHIP_NRF52
+	select ARCH_HAVE_LEDS
+	select ARCH_HAVE_BUTTONS
+	---help---
+		PCA10040 Evaluation board
 
 config ARCH_BOARD_LPC1766STK
 	bool "Olimex LPC1766-STK board"
@@ -1110,17 +1128,6 @@ config ARCH_BOARD_SKP16C26
 		uses the GNU m32c toolchain.  STATUS:  The port is complete but untested
 		due to issues with compiler internal errors.
 
-config ARCH_BOARD_SPARK
-	bool "Spark Core"
-	depends on ARCH_CHIP_STM32F103CB
-	select ARCH_HAVE_LEDS
-	select ARCH_HAVE_BUTTONS
-	select ARCH_HAVE_IRQBUTTONS
-	---help---
-		A configuration for the Spark Core from Spark Devices
-		(http://www.spark.io).  This board features the STM32103CBT6
-		MCU from STMicro.
-
 config ARCH_BOARD_PHOTON
 	bool "Photon wifi board"
 	depends on ARCH_CHIP_STM32F205RG
@@ -1411,15 +1418,15 @@ config ARCH_BOARD_TM4C1294_LAUNCHPAD
 	---help---
 		Tiva EK-TM4C1294XL LaunchPad.
 
-config ARCH_BOARD_CC3200_LAUNCHPAD
-	bool "Tiva CC3200 Launchpad"
-	depends on ARCH_CHIP_CC3200
+config ARCH_BOARD_TMS570LS31X_USB_KIT
+	bool "TI TMS570LS31X_USB_KIT"
+	depends on ARCH_CHIP_TMS570LS3137ZWT
 	select ARCH_HAVE_LEDS
 	select ARCH_HAVE_BUTTONS
 	select ARCH_HAVE_IRQBUTTONS
-	select TIVA_BOARD_EARLYINIT
 	---help---
-		Tiva CC3200 Launchpad.
+		TI Hercules TMS570LS31xx Evaluation Kit (TMDS570ls31xx USB Kit)
+		featuring the Hercules TMS570LS3137ZWT chip.
 
 config ARCH_BOARD_TWR_K60N512
 	bool "FreeScale TWR-K60N512 development board"
@@ -1647,6 +1654,7 @@ config ARCH_BOARD
 	default "freedom-kl25z"            if ARCH_BOARD_FREEDOM_KL25Z
 	default "freedom-kl26z"            if ARCH_BOARD_FREEDOM_KL26Z
 	default "hymini-stm32v"            if ARCH_BOARD_HYMINI_STM32V
+	default "imxrt1050-evk"            if ARCH_BOARD_IMXRT1050_EVK
 	default "indium-f7"                if ARCH_BOARD_INDIUM_F7
 	default "kwikstik-k40"             if ARCH_BOARD_KWIKSTIK_K40
 	default "launchxl-tms57004"        if ARCH_BOARD_LAUNCHXL_TMS57004
@@ -1671,6 +1679,7 @@ config ARCH_BOARD
 	default "mirtoo"                   if ARCH_BOARD_MIRTOO
 	default "moteino-mega"             if ARCH_BOARD_MOTEINO_MEGA
 	default "ne64badge"                if ARCH_BOARD_NE64BADGE
+	default "nrf52-pca10040"           if ARCH_BOARD_NRF52_PCA10040
 	default "ntosd-dm320"              if ARCH_BOARD_NTOSD_DM320
 	default "nucleo-144"               if ARCH_BOARD_NUCLEO_144
 	default "nucleo-f072rb"            if ARCH_BOARD_NUCLEO_F072RB
@@ -1725,7 +1734,6 @@ config ARCH_BOARD
 	default "samv71-xult"              if ARCH_BOARD_SAMV71_XULT
 	default "shenzhou"                 if ARCH_BOARD_SHENZHOU
 	default "skp16c26"                 if ARCH_BOARD_SKP16C26
-	default "spark"                    if ARCH_BOARD_SPARK
 	default "photon"                   if ARCH_BOARD_PHOTON
 	default "stm32butterfly2"          if ARCH_BOARD_STM32_BUTTERFLY2
 	default "stm32_tiny"               if ARCH_BOARD_STM32_TINY
@@ -1755,7 +1763,7 @@ config ARCH_BOARD
 	default "teensy-lc"                if ARCH_BOARD_TEENSY_LC
 	default "tm4c123g-launchpad"       if ARCH_BOARD_TM4C123G_LAUNCHPAD
 	default "tm4c1294-launchpad"       if ARCH_BOARD_TM4C1294_LAUNCHPAD
-	default "cc3200-launchpad"         if ARCH_BOARD_CC3200_LAUNCHPAD
+	default "tms570ls31x-usb-kit"      if ARCH_BOARD_TMS570LS31X_USB_KIT
 	default "twr-k60n512"              if ARCH_BOARD_TWR_K60N512
 	default "twr-k64f120m"             if ARCH_BOARD_TWR_K64F120M
 	default "u-blox-c027"              if ARCH_BOARD_U_BLOX_C027
@@ -1888,6 +1896,9 @@ endif
 if ARCH_BOARD_HYMINI_STM32V
 source "configs/hymini-stm32v/Kconfig"
 endif
+if ARCH_BOARD_IMXRT1050_EVK
+source "configs/imxrt1050-evk/Kconfig"
+endif
 if ARCH_BOARD_INDIUM_F7
 source "configs/indium-f7/Kconfig"
 endif
@@ -1962,6 +1973,9 @@ source "configs/moxa/Kconfig"
 endif
 if ARCH_BOARD_NE64BADGE
 source "configs/ne64badge/Kconfig"
+endif
+if ARCH_BOARD_NRF52_PCA10040
+source "configs/nrf52-pca10040/Kconfig"
 endif
 if ARCH_BOARD_NTOSD_DM320
 source "configs/ntosd-dm320/Kconfig"
@@ -2116,9 +2130,6 @@ endif
 if ARCH_BOARD_SKP16C26
 source "configs/skp16c26/Kconfig"
 endif
-if ARCH_BOARD_SPARK
-source "configs/spark/Kconfig"
-endif
 if ARCH_BOARD_PHOTON
 source "configs/photon/Kconfig"
 endif
@@ -2200,8 +2211,8 @@ endif
 if ARCH_BOARD_TM4C1294_LAUNCHPAD
 source "configs/tm4c1294-launchpad/Kconfig"
 endif
-if ARCH_BOARD_CC3200_LAUNCHPAD
-source "configs/cc3200-launchpad/Kconfig"
+if ARCH_BOARD_TMS570LS31X_USB_KIT
+source "configs/tms570ls31x-usb-kit/Kconfig"
 endif
 if ARCH_BOARD_TWR_K60N512
 source "configs/twr-k60n512/Kconfig"
@@ -2341,7 +2352,6 @@ config BOARDCTL_UNIQUEID_SIZE
 config BOARDCTL_APP_SYMTAB
 	bool "Enable application symbol table interfaces"
 	default n
-	depends on EXECFUNCS_HAVE_SYMTAB
 	---help---
 		Enables support for the BOARDIOC_APP_SYMTAB boardctl() command.
 

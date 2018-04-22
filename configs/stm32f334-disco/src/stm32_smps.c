@@ -1,7 +1,7 @@
 /****************************************************************************
  * configs/stm32f334-disco/src/stm32_smps.c
  *
- *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2017, 2018 Gregory Nutt. All rights reserved.
  *   Author: Mateusz Szafoni <raiden00@railab.me>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,16 +39,15 @@
 
 #include <nuttx/config.h>
 
-#include <fcntl.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-
-#include <debug.h>
-#include <errno.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <string.h>
+#include <unistd.h>
+#include <errno.h>
+#include <debug.h>
+
 #include <sys/boardctl.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
@@ -68,8 +67,6 @@
 #include "stm32_adc.h"
 
 #if defined(CONFIG_EXAMPLES_SMPS) && defined(CONFIG_DRIVERS_SMPS)
-
-#warning "STM32F334-DISCO buck-boost converter example under development!"
 
 #ifndef CONFIG_ARCH_HIPRI_INTERRUPT
 #  error CONFIG_ARCH_HIPRI_INTERRUPT is required
@@ -372,18 +369,18 @@ static int smps_setup(FAR struct smps_dev_s *dev)
   hrtim = lower->hrtim;
   if (hrtim == NULL)
     {
-      printf("ERROR: failed to get hrtim ");
+      pwrerr("ERROR:  Failed to get hrtim ");
     }
 
   adc = lower->adc;
   if (adc == NULL)
     {
-      printf("ERROR: failed to get ADC lower level interface");
+      pwrerr("ERROR:  Failed to get ADC lower level interface");
     }
 
   /* TODO: create current limit table */
 
-errout:
+  UNUSED(priv);
   return OK;
 }
 
@@ -413,7 +410,7 @@ static int smps_start(FAR struct smps_dev_s *dev)
   per = fclk/TIMA_PWM_FREQ;
   if (per > HRTIM_PER_MAX)
     {
-      printf("ERROR: can not achieve tima pwm freq=%u if fclk=%llu\n",
+      pwrerr("ERROR:  Can not achieve tima pwm freq=%u if fclk=%llu\n",
              (uint32_t)TIMA_PWM_FREQ, (uint64_t)fclk);
       ret = -EINVAL;
       goto errout;
@@ -429,7 +426,7 @@ static int smps_start(FAR struct smps_dev_s *dev)
   per = fclk/TIMB_PWM_FREQ;
   if (per > HRTIM_PER_MAX)
     {
-      printf("ERROR: can not achieve timb pwm freq=%u if fclk=%llu\n",
+      pwrerr("ERROR:  Can not achieve timb pwm freq=%u if fclk=%llu\n",
              (uint32_t)TIMB_PWM_FREQ, (uint64_t)fclk);
       ret = -EINVAL;
       goto errout;
@@ -516,12 +513,12 @@ static int smps_params_set(FAR struct smps_dev_s *dev,
 
   if (param->i_out > 0)
     {
-      printf("WARNING: Output current parameters not used in this demo\n");
+      pwrwarn("WARNING: Output current parameters not used in this demo\n");
     }
 
   if (param->p_out > 0)
     {
-      printf("WARNING: Output power parameters not used in this demo\n");
+      pwrwarn("WARNING: Output power parameters not used in this demo\n");
     }
 
   return ret;
@@ -540,7 +537,7 @@ static int smps_mode_set(FAR struct smps_dev_s *dev, uint8_t mode)
     }
   else
     {
-      printf("ERROR: unsupported SMPS mode %d!\n", mode);
+      pwrerr("ERROR:  Unsupported SMPS mode %d!\n", mode);
       ret = ERROR;
       goto errout;
     }
@@ -559,21 +556,21 @@ static int smps_limits_set(FAR struct smps_dev_s *dev,
 
   if (limits->v_out <= 0)
     {
-      printf("Output voltage limit must be set!\n");
+      pwrerr("ERROR:  Output voltage limit must be set!\n");
       ret = ERROR;
       goto errout;
     }
 
   if (limits->v_in <= 0)
     {
-      printf("Input voltage limit must be set!\n");
+      pwrerr("ERROR:  Input voltage limit must be set!\n");
       ret = ERROR;
       goto errout;
     }
 
   if (limits->i_out <= 0)
     {
-      printf("Output current limit must be set!\n");
+      pwrerr("ERROR:  Output current limit must be set!\n");
       ret = ERROR;
       goto errout;
     }
@@ -581,25 +578,28 @@ static int smps_limits_set(FAR struct smps_dev_s *dev,
   if (limits->v_out * 1000 > CONFIG_EXAMPLES_SMPS_OUT_VOLTAGE_LIMIT)
     {
       limits->v_out = (float)CONFIG_EXAMPLES_SMPS_OUT_VOLTAGE_LIMIT/1000.0;
-      printf("SMPS output voltage limiit > SMPS absoulute output voltage limit."
-             " Set output voltage limit to %.2f.\n",
-             limits->v_out);
+      pwrwarn("WARNING: "
+              "SMPS output voltage limiit > SMPS absoulute output voltage limit."
+              " Set output voltage limit to %.2f.\n",
+              limits->v_out);
     }
 
   if (limits->v_in * 1000 > CONFIG_EXAMPLES_SMPS_IN_VOLTAGE_LIMIT)
     {
       limits->v_in = (float)CONFIG_EXAMPLES_SMPS_IN_VOLTAGE_LIMIT/1000.0;
-      printf("SMPS input voltage limiit > SMPS absoulute input voltage limit."
-             " Set input voltage limit to %.2f.\n",
-             limits->v_in);
+      pwrwarn("WARNING: "
+              "SMPS input voltage limiit > SMPS absoulute input voltage limit."
+              " Set input voltage limit to %.2f.\n",
+              limits->v_in);
     }
 
   if (limits->i_out * 1000 > CONFIG_EXAMPLES_SMPS_OUT_CURRENT_LIMIT)
     {
       limits->i_out = (float)CONFIG_EXAMPLES_SMPS_OUT_CURRENT_LIMIT/1000.0;
-      printf("SMPS output current limiit > SMPS absoulute output current limit."
-             " Set output current limit to %.2f.\n",
-             limits->i_out);
+      pwrwarn("WARNING: "
+              "SMPS output current limiit > SMPS absoulute output current limit."
+              " Set output current limit to %.2f.\n",
+              limits->i_out);
     }
 
   /* Set output voltage limit */
@@ -641,25 +641,21 @@ static int smps_state_get(FAR struct smps_dev_s *dev,
 
 static int smps_fault_set(FAR struct smps_dev_s *dev, uint8_t fault)
 {
-#warning "missing logic"
   return OK;
 }
 
 static int smps_fault_get(FAR struct smps_dev_s *dev, FAR uint8_t *fault)
 {
-#warning "missing logic"
   return OK;
 }
 
 static int smps_fault_clean(FAR struct smps_dev_s *dev, uint8_t fault)
 {
-#warning "missing logic"
   return OK;
 }
 
 static int smps_ioctl(FAR struct smps_dev_s *dev, int cmd, unsigned long arg)
 {
-#warning "missing logic"
   return OK;
 }
 
@@ -790,7 +786,7 @@ static void smps_duty_set(struct smps_priv_s *priv, struct smps_lower_dev_s *low
 
       default:
         {
-          printf("ERROR: unknown converter mode %d!\n", mode);
+          pwrerr("ERROR:  Unknown converter mode %d!\n", mode);
           break;
         }
     }
@@ -882,7 +878,7 @@ static void smps_conv_mode_set(struct smps_priv_s *priv, struct smps_lower_dev_s
 
       default:
         {
-          printf("ERROR: unknown converter mode %d!\n", mode);
+          pwrerr("ERROR:  Unknown converter mode %d!\n", mode);
           break;
         }
     }
@@ -1017,7 +1013,7 @@ int stm32_smps_setup(void)
       hrtim = stm32_hrtiminitialize();
       if (hrtim == NULL)
         {
-          printf("ERROR: Failed to get HRTIM1 interface\n");
+          pwrerr("ERROR:  Failed to get HRTIM1 interface\n");
           return -ENODEV;
         }
 
@@ -1033,7 +1029,7 @@ int stm32_smps_setup(void)
       adc = stm32_adcinitialize(1, g_adc1chan, ADC1_NCHANNELS);
       if (adc == NULL)
         {
-          printf("ERROR: Failed to get ADC %d interface\n", 1);
+          pwrerr("ERROR:  Failed to get ADC %d interface\n", 1);
           return -ENODEV;
         }
 
@@ -1050,8 +1046,7 @@ int stm32_smps_setup(void)
       ret = up_ramvec_attach(STM32_IRQ_ADC12, adc12_handler);
       if (ret < 0)
         {
-          fprintf(stderr, "highpri_main: ERROR: up_ramvec_attach failed: %d\n",
-                  ret);
+          pwrerr("ERROR:  up_ramvec_attach failed: %d\n", ret);
           ret = EXIT_FAILURE;
           goto errout;
         }
@@ -1061,8 +1056,7 @@ int stm32_smps_setup(void)
       ret = up_prioritize_irq(STM32_IRQ_ADC12, NVIC_SYSH_HIGH_PRIORITY);
       if (ret < 0)
         {
-          fprintf(stderr,
-                  "highpri_main: ERROR: up_prioritize_irq failed: %d\n", ret);
+          pwrerr("ERROR:  up_prioritize_irq failed: %d\n", ret);
           ret = EXIT_FAILURE;
           goto errout;
         }
@@ -1080,7 +1074,7 @@ int stm32_smps_setup(void)
       ret = smps_register(CONFIG_EXAMPLES_SMPS_DEVPATH, smps, (void *)lower);
       if (ret < 0)
         {
-          printf("ERROR: smps_register failed: %d\n", ret);
+          pwrerr("ERROR:  smps_register failed: %d\n", ret);
           return ret;
         }
 

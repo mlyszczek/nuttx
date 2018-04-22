@@ -2,7 +2,8 @@
  * net/tcp/tcp_timer.c
  * Poll for the availability of TCP TX data
  *
- *   Copyright (C) 2007-2010, 2015-2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007-2010, 2015-2016, 2018 Gregory Nutt. All rights
+ *     reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Adapted for NuttX from logic in uIP which also has a BSD-like license:
@@ -50,11 +51,13 @@
 #include <debug.h>
 
 #include <nuttx/net/netconfig.h>
+#include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/netstats.h>
 #include <nuttx/net/tcp.h>
 
 #include "devif/devif.h"
+#include "socket/socket.h"
 #include "tcp/tcp.h"
 
 /****************************************************************************
@@ -67,7 +70,7 @@
  * Description:
  *   Handle a TCP timer expiration for the provided TCP connection
  *
- * Parameters:
+ * Input Parameters:
  *   dev  - The device driver structure to use in the send operation
  *   conn - The TCP "connection" to poll for TX data
  *   hsed - The polling interval in halves of a second
@@ -347,10 +350,6 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
 
       else if ((conn->tcpstateflags & TCP_STATE_MASK) == TCP_ESTABLISHED)
         {
-          /* If there was no need for a retransmission, we poll the
-           * application for new data.
-           */
-
           /* The TCP connection is established and, hence, should be bound
            * to a device. Make sure that the polling device is the one that
            * we are bound to.
@@ -359,6 +358,119 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
           DEBUGASSERT(conn->dev != NULL);
           if (dev == conn->dev)
             {
+#ifdef CONFIG_NET_TCP_KEEPALIVE
+              /* Is this an established connected with KeepAlive enabled? */
+
+              if (conn->keepalive)
+                {
+                  socktimeo_t timeo;
+                  uint32_t saveseq;
+
+                  /* If this is the first probe, then the keepstart time is
+                   * the time that the last ACK or data was received from the
+                   * remote.
+                   *
+                   * On subsequent retries, keepstart is the time that the
+                   * last probe was sent.
+                   */
+
+                  if (conn->keepretries > 0)
+                    {
+                      timeo = (socktimeo_t)conn->keepintvl;
+                    }
+                  else
+                    {
+                      timeo = (socktimeo_t)conn->keepidle;
+                    }
+
+                  /* Yes... has the idle period elapsed with no data or ACK
+                   * received from the remote peer?
+                   */
+
+                  if (net_timeo(conn->keeptime, timeo))
+                    {
+                      /* Yes.. Has the retry count expired? */
+
+                      if (conn->keepretries >= conn->keepcnt)
+                        {
+                          /* Yes... stop the network monitor, closing the connection and all sockets
+                           * associated with the connection.
+                           */
+
+                          tcp_stop_monitor(conn, TCP_ABORT);
+                        }
+                      else
+                        {
+                          unsigned int tcpiplen;
+
+                          /* No.. we need to send another probe.
+                           *
+                           * Get the size of the IP header and the TCP header.
+                           */
+#ifdef CONFIG_NET_IPv4
+#ifdef CONFIG_NET_IPv6
+                          if (conn->domain == PF_INET)
+#endif
+                            {
+                              tcpiplen = IPv4_HDRLEN + TCP_HDRLEN;
+                            }
+#endif
+#ifdef CONFIG_NET_IPv6
+#ifdef CONFIG_NET_IPv4
+                          else
+#endif
+                            {
+                              tcpiplen = IPv6_HDRLEN + TCP_HDRLEN;
+                            }
+#endif
+
+                          /* And send the probe (along with a garbage byte).
+                           * The packet we sned must have these properties:
+                           *
+                           *   - TCP_ACK flag (only) is set.
+                           *   - Sequence number is the sequence number of
+                           *     previously ACKed data, i.e., the expected
+                           *     sequence number minus one.
+                           *   - The data payload is one or two bytes.
+                           *
+                           * tcp_send() will send the TCP sequence number as
+                           * conn->sndseq.  Rather than creating a new
+                           * interface, we spoof tcp_end() here:
+                           */
+
+                          saveseq = tcp_getsequence(conn->sndseq);
+                          tcp_setsequence(conn->sndseq, saveseq - 1);
+
+                          tcp_send(dev, conn, TCP_ACK, tcpiplen + 1);
+
+                          tcp_setsequence(conn->sndseq, saveseq);
+
+                          /* Increment the number of un-ACKed bytes due to the dummy
+                           * byte that we just sent.
+                           */
+
+                          conn->unacked++;
+
+#ifdef CONFIG_NET_TCP_WRITE_BUFFERS
+                          /* Increment the un-ACKed sequence number */
+
+                          conn->sndseq_max++;
+#endif
+                          /* Update for the next probe */
+
+                          conn->keeptime = clock_systimer();
+                          conn->keepretries++;
+                        }
+
+                      goto done;
+                    }
+                }
+#endif
+              /* There was no need for a retransmission and there was no
+               * need to probe the remote peer.  We poll the application for
+               * new outgoing data.
+               */
+
               result = tcp_callback(dev, conn, TCP_POLL);
               tcp_appsend(dev, conn, result);
               goto done;

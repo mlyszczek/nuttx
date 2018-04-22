@@ -1,7 +1,7 @@
 /****************************************************************************
  * net/netdev/netdev_lladdrsize.c
  *
- *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2017-2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,6 +48,7 @@
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/radiodev.h>
+#include <nuttx/net/bluetooth.h>
 #include <nuttx/net/sixlowpan.h>
 
 #include "netdev/netdev.h"
@@ -62,10 +63,10 @@
  * Description:
  *   Returns the size of the node address associated with a packet radio.
  *   This is probably CONFIG_PKTRADIO_ADDRLEN but we cannot be sure in the
- *   case that there ar mutiple packet radios.  In that case, we have to
+ *   case that there are multiple packet radios.  In that case, we have to
  *   query the radio for its address length.
  *
- * Parameters:
+ * Input Parameters:
  *   dev - A reference to the device of interest
  *
  * Returned Value:
@@ -73,7 +74,8 @@
  *
  ****************************************************************************/
 
-#if defined(CONFIG_NET_6LOWPAN) && defined(CONFIG_WIRELESS_PKTRADIO)
+#if defined(CONFIG_NET_6LOWPAN) && (defined(CONFIG_WIRELESS_PKTRADIO) || \
+    defined(CONFIG_NET_BLUETOOTH))
 static inline int netdev_pktradio_addrlen(FAR struct net_driver_s *dev)
 {
   FAR struct radio_driver_s *radio = (FAR struct radio_driver_s *)dev;
@@ -101,7 +103,7 @@ static inline int netdev_pktradio_addrlen(FAR struct net_driver_s *dev)
  * Description:
  *   Returns the size of the MAC address associated with a network device.
  *
- * Parameters:
+ * Input Parameters:
  *   dev - A reference to the device of interest
  *
  * Returned Value:
@@ -127,6 +129,17 @@ int netdev_dev_lladdrsize(FAR struct net_driver_s *dev)
 #endif
 
 #ifdef CONFIG_NET_6LOWPAN
+#ifdef CONFIG_WIRELESS_BLUETOOTH
+      case NET_LL_BLUETOOTH:
+        {
+          /* 6LoWPAN can be configured to use either extended or short
+           * addressing.
+           */
+
+          return BLUETOOTH_HDRLEN;
+        }
+#endif /* CONFIG_WIRELESS_BLUETOOTH */
+
 #ifdef CONFIG_WIRELESS_IEEE802154
       case NET_LL_IEEE802154:
         {
@@ -140,17 +153,21 @@ int netdev_dev_lladdrsize(FAR struct net_driver_s *dev)
           return NET_6LOWPAN_SADDRSIZE;
 #endif
         }
-
 #endif /* CONFIG_WIRELESS_IEEE802154 */
 
+#if defined(CONFIG_WIRELESS_PKTRADIO) || defined(CONFIG_NET_BLUETOOTH)
 #ifdef CONFIG_WIRELESS_PKTRADIO
       case NET_LL_PKTRADIO:
+#endif
+#ifdef CONFIG_NET_BLUETOOTH
+      case NET_LL_BLUETOOTH:
+#endif
         {
            /* Return the size of the packet radio address */
 
            return netdev_pktradio_addrlen(dev);
         }
-#endif /* CONFIG_WIRELESS_PKTRADIO */
+#endif /* CONFIG_WIRELESS_PKTRADIO || CONFIG_NET_BLUETOOTH */
 #endif /* CONFIG_NET_6LOWPAN */
 
        default:

@@ -1,4 +1,4 @@
-NuttX TODO List (Last updated January 23, 2018)
+NuttX TODO List (Last updated March 4, 2018)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This file summarizes known NuttX bugs, limitations, inconsistencies with
@@ -9,7 +9,7 @@ issues related to each board port.
 
 nuttx/:
 
- (14)  Task/Scheduler (sched/)
+ (15)  Task/Scheduler (sched/)
   (1)  SMP
   (1)  Memory Management (mm/)
   (0)  Power Management (drivers/pm)
@@ -21,13 +21,13 @@ nuttx/:
   (6)  Binary loaders (binfmt/)
  (16)  Network (net/, drivers/net)
   (4)  USB (drivers/usbdev, drivers/usbhost)
-  (0)  Other drivers (drivers/)
+  (2)  Other drivers (drivers/)
  (12)  Libraries (libc/, libm/)
  (10)  File system/Generic drivers (fs/, drivers/)
  (10)  Graphics Subsystem (graphics/)
   (1)  Build system / Toolchains
   (3)  Linux/Cywgin simulation (arch/sim)
-  (4)  ARM (arch/arm/)
+  (5)  ARM (arch/arm/)
 
 apps/ and other Add-Ons:
 
@@ -387,6 +387,18 @@ o Task/Scheduler (sched/)
   Status:      Open
   Priority:    Low.  This is an enhancement.  And does anyone actually use
                the sporadic scheduler?
+
+  Title:       REMOVE NESTED CANCELATION POINT SUPPORT
+  Description: The current implementation support nested cancelation points.
+               The TCB field cpcount keeps track of that nesting level.
+               However, cancelation points should not be calling other
+               cancellation points so this design could be simplified by
+               removing all support for nested cancellation points.
+  Status:      Open
+  Priority:    Low.  No harm is being done by the current implementation.
+               This change is primarily for aesthetic reasons.  If would
+               reduce memory usage by a very small but probably
+               insignificant amount.
 
 o SMP
   ^^^
@@ -1708,8 +1720,6 @@ o Libraries (libc/, libm/)
                providing patches, but we found it easier just to switch the
                math library."
 
-               Ref: https://groups.yahoo.com/neo/groups/nuttx/conversations/messages/7805
-
                UPDATE: 2015-09-01: A fix for the noted problems with asin()
                has been applied.
                2016-07-30: Numerous fixes and performance improvements from
@@ -2061,11 +2071,7 @@ o Graphics Subsystem (graphics/)
 
   Title:       WIDE-FONT SUPPORT
   Description: Wide fonts are not currently supported by the NuttX graphics sub-
-               system.  There is some discussion here:
-
-                 https://groups.yahoo.com/neo/groups/nuttx/conversations/topics/3507
-                 http://www.nuttx.org/doku.php?id=wiki:graphics:wide-fonts
-
+               system.
   Status:      Open
   Priority:    Low for many, but I imagine higher in countries that use wide fonts
 
@@ -2108,6 +2114,28 @@ o Build system
 
 o Other drivers (drivers/)
   ^^^^^^^^^^^^^^^^^^^^^^^^
+
+  Title:       SYSLOG OUTPUT LOST ON A CRASH
+  Desription:  Flush syslog output on crash.  I don't know how to do in the
+               character driver case with interrupts disabled.  It would be
+               easy to flush the interrupt interrupt buffer, but not the
+               data buffered within a character driver (such as the serial
+               driver).
+
+               Perhaps there could be a crash dump IOCTL command to flush
+               that buffered data with interrupts disabled?
+  Status:      Open
+  Priority:    Low.  It would be a convenience and would simplify crash
+               debug if you could see all of the SYSLOG output up to the
+               time of the crash.  But not essential.
+
+  Title:       ADD SUPPORT FOR CONTROL-C
+  Description: Add support for control-C interrupts and perhaps other
+               interrupts generated from a keyboard.
+  Status:      Open
+  Priority:    Low.  This would make working with tasks at the NSH terminal
+               more like working with processes via a Bash shell.  That is
+               a feature enhancement.
 
 o Linux/Cywgin simulation (arch/sim)
   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2250,8 +2278,7 @@ o ARM (arch/arm/)
                interrupt, the stack pointer may increment and possibly overflow.
 
                This can happen only under conditions of continuous interrupts.
-               See this email thread: https://groups.yahoo.com/neo/groups/nuttx/conversations/messages/1261
-               On suggested change is:
+               One suggested change is:
 
                  ldr  r1, [r0, #(4*REG_CPSR)] /* Fetch the stored CPSR value */
                  msr spsr_cxsf, r1 /* Set the CPSR */
@@ -2287,6 +2314,19 @@ o ARM (arch/arm/)
                same kind of logic to do this.
   Status:      Open
   Priority:    Low-ish, but a good opportunity for performance improvement.
+
+  Title:       USE COMMON VECTOR LOGIC IN ALL ARM ARCHITECTURES.
+  Description: Originally, each ARMv7-M MCU architecture had its own
+               private implementation for interrupt vectors and interrupt
+               handling logic.  This was superceded by common interrupt
+               vector logic but these private implementations were never
+               removed from older MCU architectures.  This is turning into
+               a maintenance issue because any improvements to the common
+               vector handling must also be re-implemented for each of the
+               older MCU architectures.
+  Status:      Open
+  Priority:    Low.  A pain in the ass and an annoying implementation, but
+               not really an issue otherwise.
 
 o Network Utilities (apps/netutils/)
   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

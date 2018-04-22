@@ -2,7 +2,7 @@
  * net/tcp/tcp_input.c
  * Handling incoming TCP input
  *
- *   Copyright (C) 2007-2014, 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007-2014, 2017-2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Adapted for NuttX from logic in uIP which also has a BSD-like license:
@@ -51,6 +51,7 @@
 #include <assert.h>
 #include <debug.h>
 
+#include <nuttx/clock.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/netstats.h>
@@ -71,7 +72,7 @@
  * Description:
  *   Handle incoming TCP input
  *
- * Parameters:
+ * Input Parameters:
  *   dev   - The device driver structure containing the received TCP packet.
  *   domain - IP domain (PF_INET or PF_INET6)
  *   iplen - Lngth of the IP header (IPv4_HDRLEN or IPv6_HDRLEN).
@@ -384,11 +385,58 @@ found:
 
   dev->d_len -= (len + iplen);
 
-  /* First, check if the sequence number of the incoming packet is
-   * what we're expecting next. If not, we send out an ACK with the
-   * correct numbers in, unless we are in the SYN_RCVD state and
-   * receive a SYN, in which case we should retransmit our SYNACK
-   * (which is done further down).
+#ifdef CONFIG_NET_TCP_KEEPALIVE
+  /* Check for a to KeepAlive probes.  These packets have these properties:
+   *
+   *   - TCP_ACK flag is set.  SYN/FIN/RST never appear in a Keepalive probe.
+   *   - Sequence number is the sequence number of previously ACKed data, i.e.,
+   *     the expected sequence number minus one.
+   *   - The data payload is one or two bytes.
+   *
+   * We would expect a KeepAlive only in the ESTABLISHED state and only after
+   * some time has elapsed with no network activity.  If there is un-ACKed data,
+   * then we will let the normal TCP re-transmission logic handle that case.
+   */
+
+  if ((tcp->flags & TCP_ACK) != 0 &&
+      (tcp->flags & (TCP_SYN | TCP_FIN | TCP_RST)) == 0 &&
+      (conn->tcpstateflags & TCP_STATE_MASK) == TCP_ESTABLISHED &&
+      (dev->d_len == 0 || dev->d_len == 1) &&
+      conn->unacked <= 0)
+    {
+      uint32_t ackseq;
+      uint32_t rcvseq;
+
+      /* Get the sequence number of that has just been acknowledged by this
+       * incoming packet.
+       */
+
+      ackseq = tcp_getsequence(tcp->seqno);
+      rcvseq = tcp_getsequence(conn->rcvseq);
+
+      if (ackseq < rcvseq)
+        {
+          if (dev->d_len > 0)
+            {
+              /* Increment the received sequence number (perhaps including the
+               * discarded dummy byte in the probe).
+               */
+
+              net_incr32(conn->rcvseq, dev->d_len);
+            }
+
+          /* And send a "normal" acknowledgment of the KeepAlive probe */
+
+          tcp_send(dev, conn, TCP_ACK, tcpiplen);
+          return;
+        }
+    }
+#endif
+
+  /* Check if the sequence number of the incoming packet is what we are
+   * expecting next.  If not, we send out an ACK with the correct numbers
+   * in, unless we are in the SYN_RCVD state and receive a SYN, in which
+   * case we should retransmit our SYNACK (which is done further down).
    */
 
   if (!((((conn->tcpstateflags & TCP_STATE_MASK) == TCP_SYN_SENT) &&
@@ -404,10 +452,9 @@ found:
         }
     }
 
-  /* Next, check if the incoming segment acknowledges any outstanding
-   * data. If so, we update the sequence number, reset the length of
-   * the outstanding data, calculate RTT estimations, and reset the
-   * retransmission timer.
+  /* Check if the incoming segment acknowledges any outstanding data. If so,
+   * we update the sequence number, reset the length of the outstanding
+   * data, calculate RTT estimations, and reset the retransmission timer.
    */
 
   if ((tcp->flags & TCP_ACK) != 0 && conn->unacked > 0)
@@ -685,14 +732,14 @@ found:
 
       case TCP_ESTABLISHED:
         /* In the ESTABLISHED state, we call upon the application to feed
-         * data into the d_buf. If the TCP_ACKDATA flag is set, the
+         * data into the d_buf.  If the TCP_ACKDATA flag is set, the
          * application should put new data into the buffer, otherwise we are
          * retransmitting an old segment, and the application should put that
          * data into the buffer.
          *
          * If the incoming packet is a FIN, we should close the connection on
          * this side as well, and we send out a FIN and enter the LAST_ACK
-         * state. We require that there is no outstanding data; otherwise the
+         * state.  We require that there is no outstanding data; otherwise the
          * sequence numbers will be screwed up.
          */
 
@@ -763,6 +810,25 @@ found:
 #endif /* CONFIG_NET_TCPURGDATA */
           }
 
+#ifdef CONFIG_NET_TCP_KEEPALIVE
+        /* If the established socket receives an ACK or any kind of data
+         * from the remote peer (whether we accept it or not), then reset
+         * the keep alive timer.
+         */
+
+        if (conn->keepalive && (dev->d_len > 0 || (tcp->flags & TCP_ACK) != 0))
+          {
+            /* Reset the last known "alive" time.
+             *
+             * REVISIT:  At this level, we don't actually know if keep-
+             * alive is enabled for this connection.
+             */
+
+            conn->keeptime    = clock_systimer();
+            conn->keepretries = 0;
+          }
+#endif
+
         /* If d_len > 0 we have TCP data in the packet, and we flag this
          * by setting the TCP_NEWDATA flag. If the application has stopped
          * the data flow using TCP_STOPPED, we must not accept any data
@@ -776,19 +842,19 @@ found:
 
         /* If this packet constitutes an ACK for outstanding data (flagged
          * by the TCP_ACKDATA flag), we should call the application since it
-         * might want to send more data. If the incoming packet had data
+         * might want to send more data.  If the incoming packet had data
          * from the peer (as flagged by the TCP_NEWDATA flag), the
          * application must also be notified.
          *
          * When the application is called, the d_len field
-         * contains the length of the incoming data. The application can
+         * contains the length of the incoming data.  The application can
          * access the incoming data through the global pointer
          * d_appdata, which usually points hdrlen bytes into the d_buf
          * array.
          *
          * If the application wishes to send any data, this data should be
          * put into the d_appdata and the length of the data should be
-         * put into d_len. If the application don't have any data to
+         * put into d_len.  If the application don't have any data to
          * send, d_len must be set to 0.
          */
 
@@ -944,7 +1010,7 @@ drop:
  * Description:
  *   Handle incoming TCP input with IPv4 header
  *
- * Parameters:
+ * Input Parameters:
  *   dev - The device driver structure containing the received TCP packet.
  *
  * Returned Value:
@@ -974,7 +1040,7 @@ void tcp_ipv4_input(FAR struct net_driver_s *dev)
  * Description:
  *   Handle incoming TCP input with IPv4 header
  *
- * Parameters:
+ * Input Parameters:
  *   dev - The device driver structure containing the received TCP packet.
  *
  * Returned Value:

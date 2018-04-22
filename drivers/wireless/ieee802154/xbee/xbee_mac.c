@@ -55,6 +55,7 @@
  ****************************************************************************/
 
 #define XBEE_ASSOC_POLLDELAY 100
+#define XBEE_RESPONSE_TIMEOUT 100
 
 /****************************************************************************
  * Private Types
@@ -88,7 +89,7 @@ static void xbee_assocworker(FAR void *arg);
  *   is called when it expires. The watchdog timer is scheduled again until
  *   the association is either successful or fails.
  *
- * Parameters:
+ * Input Parameters:
  *   argc - The number of available arguments
  *   arg  - The first argument
  *
@@ -130,7 +131,7 @@ static void xbee_assoctimer(int argc, uint32_t arg, ...)
  *   scheduled rom xbee_req_associate in order to poll the device for association
  *   progress.
  *
- * Parameters:
+ * Input Parameters:
  *   arg     - The reference to the driver structure (cast to void*)
  *
  * Returned Value:
@@ -150,6 +151,40 @@ static void xbee_assocworker(FAR void *arg)
 }
 
 /****************************************************************************
+ * Name: xbee_reqdata_timeout
+ *
+ * Description:
+ *   This function runs when a send request has timed out waiting for a response
+ *   from the XBee module. This really should never happen, but if it does,
+ *   handle it gracefully by retrying the query. Although I still think this
+ *   should not happen, it does seem to happen. The XBee seemingly randomly drops
+ *   the request and never sends a response.
+ *
+ * Parameters:
+ *   argc - The number of available arguments
+ *   arg  - The first argument
+ *
+ * Returned Value:
+ *   None
+ *
+ * Assumptions:
+ *
+ ****************************************************************************/
+
+static void xbee_reqdata_timeout(int argc, uint32_t arg, ...)
+{
+  FAR struct xbee_priv_s *priv = (FAR struct xbee_priv_s *)arg;
+
+  DEBUGASSERT(priv != NULL);
+
+  wlwarn("Send timeout\n");
+
+  /* Wake the pending reqdata thread so it can retry */
+
+  nxsem_post(&priv->txdone_sem);
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -159,7 +194,7 @@ static void xbee_assocworker(FAR void *arg)
  * Description:
  *   Bind the MAC callback table to the XBee driver.
  *
- * Parameters:
+ * Input Parameters:
  *   xbee - Reference to the XBee driver structure
  *   cb   - MAC callback operations
  *
@@ -327,12 +362,25 @@ int xbee_req_data(XBEEHANDLE xbee,
   xbee_insert_checksum(&frame->io_data[frame->io_offset],
                        (frame->io_len - frame->io_offset));
 
-  xbee_send_apiframe(priv, &frame->io_data[frame->io_offset],
-                     (frame->io_len - frame->io_offset));
+  priv->txdone = false;
 
-  /* Wait for a transmit status to be received. Does not necessarily mean success */
+  do
+    {
+      /* Setup a timeout in case the XBee never responds with a tx status */
 
-  while (nxsem_wait(&priv->txdone_sem) < 0);
+      (void)wd_start(priv->reqdata_wd, XBEE_RESPONSE_TIMEOUT, xbee_reqdata_timeout,
+                     1, (wdparm_t)priv);
+
+      /* Send the frame */
+
+      xbee_send_apiframe(priv, &frame->io_data[frame->io_offset],
+                         (frame->io_len - frame->io_offset));
+
+      /* Wait for a transmit status to be received. Does not necessarily mean success */
+
+      while (nxsem_wait(&priv->txdone_sem) < 0);
+    }
+  while (!priv->txdone);
 
   nxsem_post(&priv->tx_sem);
   iob_free(frame);

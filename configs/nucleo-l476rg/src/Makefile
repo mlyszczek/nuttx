@@ -48,11 +48,8 @@ ifeq ($(CONFIG_ARCH_BUTTONS),y)
 CSRCS +=  stm32_buttons.c
 endif
 
-ifeq ($(CONFIG_WL_CC3000),y)
-CSRCS += stm32_cc3000.c
-ifeq ($(CONFIG_CC3000_PROBES),)
-CSRCS += stm32_io.c
-endif
+ifeq ($(CONFIG_WL_CC1101),y)
+CSRCS += stm32_cc1101.c
 endif
 
 ifeq ($(CONFIG_ADC),y)
@@ -60,6 +57,16 @@ CSRCS += stm32_adc.c
 ifeq ($(CONFIG_AJOYSTICK),y)
 CSRCS += stm32_ajoystick.c
 endif
+endif
+
+# Ben vd Veen (DisruptiveNL) -- 31-03-2018
+ifeq ($(CONFIG_DEV_GPIO),y)
+  CSRCS += stm32_gpio.c
+endif
+
+# Ben vd Veen (DisruptiveNL) -- 31-03-2018
+ifeq ($(CONFIG_CAN),y)
+  CSRCS += stm32_can.c
 endif
 
 ifeq ($(CONFIG_SENSORS_QENCODER),y)
