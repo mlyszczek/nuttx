@@ -3,15 +3,42 @@ README
 
   Generic OpenRISC board, suitable for use with Qemu, for example.
 
+Pre-built or1k-elf Toolchain (newlib):
+=====================================
+
+Ref: https://openrisc.io/newlib/
+
+Download and Install the Toolchain
+
+You can install pre-compiled toolchains and install them on your Linux system.
+We have prebuilt-toolchains for releases of the different components that are
+preferably installed to /opt/toolchains/or1k-elf. You can find all releases
+here. Those are current releases:
+
+  GCC 4.9.2, Binutils 2.26, Newlib 2.3.0 (+or1k backports), GDB 7.11
+  https://github.com/openrisc/newlib/releases/download/v2.3.0-1/or1k-elf_gcc4.9.3_binutils2.26_newlib2.3.0-1_gdb7.11.tgz
+
+  GCC 5.2.0, Binutils 2.26, Newlib 2.3.0 (+or1k backports), GDB 7.11
+  https://github.com/openrisc/newlib/releases/download/v2.3.0-1/or1k-elf_gcc5.2.0_binutils2.26_newlib2.3.0-1_gdb7.11.tgz
+
+After downloading a release you can extract it anywhere in your filesystem, we
+recommend to /opt/toolchains/or1k-elf/. You need to add the toolchain to your
+path:
+
+  export PATH=/opt/toolchains/or1k-elf/bin:${PATH}
 
 OpenRISC GNU tool chain from source
 ===================================
 
 ref: https://github.com/juliusbaxter/mor1kx-dev-env/wiki/OpenRISC-tool-chain-installation-guide
 
-These instructions are as per the project's GNU tool chain page on [OpenCores] (http://opencores.org/or1k).
+These instructions are as per the project's GNU tool chain page on [OpenCores]
+(http://opencores.org/or1k).
 
-What is required first is a copy of the tool chain source. There are two repositories - one for GCC (called or1k-gcc) and one for the rest of the GNU tools and libraries (binutils, GDB, newlib, called or1k-src). We must get the entirety of both.
+What is required first is a copy of the tool chain source. There are two
+repositories - one for GCC (called or1k-gcc) and one for the rest of the GNU
+tools and libraries (binutils, GDB, newlib, called or1k-src). We must get the
+entirety of both.
 
 You will need to download the repositories as a zip file OR use git.
 Download zip files (save into $HOME/or1k):
@@ -19,7 +46,8 @@ Download zip files (save into $HOME/or1k):
   or1k-src - https://github.com/openrisc/or1k-src/archive/or1k.zip
   or1k-gcc - https://github.com/openrisc/or1k-gcc/archive/or1k.zip
 
-and unzip into the $HOME/or1k directory, making 2 directories or1k-src-or1k/ and or1k-gcc-or1k/
+and unzip into the $HOME/or1k directory, making 2 directories or1k-src-or1k/
+and or1k-gcc-or1k/
 
 Rename those directories to be without the trailing -or1k so
 
@@ -34,12 +62,14 @@ or with git clone:
 
 Once the source trees are in place, we will build.
 
-We will install the tool chain into /opt/or1k-toolchain. Make sure that directory is writeable eg.:
+We will install the tool chain into /opt/or1k-toolchain. Make sure that
+directory is writeable eg.:
 
   sudo mkdir /opt/or1k-toolchain
   sudo chown $USER /opt/or1k-toolchain
 
-The following commands will build the tool chain (starting in the $HOME/or1k directory):
+The following commands will build the tool chain (starting in the $HOME/or1k
+directory):
 
   # Build the first set of tools, binutils etc.
   # NOTE: on 32-bit machines --disable-werror is needed due to an enum acting as bit mask is considered signed
@@ -99,16 +129,25 @@ You can run make install if you like, too.
 Qemu
 ====
 
-The compiled ELF that works in or1ksim (https://github.com/openrisc/or1ksim). The uart must be enabled in sim.cfg for it to work.
+The compiled ELF that works in or1ksim (https://github.com/openrisc/or1ksim).
+The uart must be enabled in sim.cfg for it to work.
 
 Ref: https://github.com/openrisc/or1ksim
 
-Or1ksim is a generic OpenRISC 1000 architecture simulator capable of emulating OpenRISC based computer systems at the instruction level. It includes models of a range of peripherals, allowing complete systems to be modeled.  For full details see http://opencores.org/or1k/Or1ksim
+Or1ksim is a generic OpenRISC 1000 architecture simulator capable of emulating
+OpenRISC based computer systems at the instruction level. It includes models of
+a range of peripherals, allowing complete systems to be modeled.  For full
+details see http://opencores.org/or1k/Or1ksim
 
-This is a variant of the standard Or1ksim, which uses or1k as the architecture name, rather than or32. At some stage in the future this will be merged in, so that either architecture name is supported.
+This is a variant of the standard Or1ksim, which uses or1k as the architecture
+name, rather than or32. At some stage in the future this will be merged in, so
+that either architecture name is supported.
+
 Installation
 
-Or1ksim uses a standard GNU autoconf/automake installation and is designed to be built in a separate build directory. So from the main directory, a minimal install can be done with
+Or1ksim uses a standard GNU autoconf/automake installation and is designed to
+be built in a separate build directory. So from the main directory, a minimal
+install can be done with
 
   mkdir bd
   cd bd
@@ -119,4 +158,3 @@ Or1ksim uses a standard GNU autoconf/automake installation and is designed to be
 This will get it running:
 
   qemu-system-or1k -kernel nuttx-or1k-sim.elf -serial stdio -nographic -monitor none
-
