@@ -42,7 +42,7 @@ POWER_CFLAGS =
 ifeq ($(CONFIG_PM),y)
 
 CSRCS += pm_activity.c pm_changestate.c pm_checkstate.c pm_initialize.c
-CSRCS += pm_register.c pm_update.c
+CSRCS += pm_register.c pm_unregister.c pm_update.c
 
 # Include power management in the build
 
@@ -69,6 +69,18 @@ endif
 ifeq ($(CONFIG_DRIVERS_POWERLED),y)
 
 CSRCS += powerled.c
+
+POWER_DEPPATH := --dep-path power
+POWER_VPATH := :power
+POWER_CFLAGS := ${shell $(INCDIR) $(INCDIROPT) "$(CC)" $(TOPDIR)$(DELIM)drivers$(DELIM)power}
+
+endif
+
+# Add motor driver
+
+ifeq ($(CONFIG_DRIVERS_MOTOR),y)
+
+CSRCS += motor.c
 
 POWER_DEPPATH := --dep-path power
 POWER_VPATH := :power

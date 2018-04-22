@@ -37,7 +37,11 @@ include ${TOPDIR}/.config
 include ${TOPDIR}/tools/Config.mk
 include ${TOPDIR}/arch/arm/src/armv7-m/Toolchain.defs
 
-LDSCRIPT = ld.script
+ifeq ($(CONFIG_STM32_DFU),y)
+  LDSCRIPT = ld.script.dfu
+else
+  LDSCRIPT = ld.script
+endif
 
 ifeq ($(WINTOOL),y)
   # Windows-native toolchains
@@ -59,6 +63,7 @@ CC = $(CROSSDEV)gcc
 CXX = $(CROSSDEV)g++
 CPP = $(CROSSDEV)gcc -E
 LD = $(CROSSDEV)ld
+STRIP = $(CROSSDEV)strip --strip-unneeded
 AR = $(CROSSDEV)ar rcs
 NM = $(CROSSDEV)nm
 OBJCOPY = $(CROSSDEV)objcopy

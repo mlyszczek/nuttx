@@ -3,7 +3,7 @@
 #
 #   Copyright (C) 2012 Gregory Nutt. All rights reserved.
 #   Author: Gregory Nutt <gnutt@nuttx.org>
-#           Alan Carvalho de Assis acassis@gmail.com [nuttx] <nuttx@yahoogroups.com>
+#           Alan Carvalho de Assis acassis@gmail.com [nuttx] <nuttx@googlegroups.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -37,7 +37,11 @@
 -include $(TOPDIR)/Make.defs
 
 ASRCS =
-CSRCS = lpc43_boot.c
+CSRCS = lpc43_boot.c lpc43_ssp.c
+
+ifeq ($(CONFIG_SENSORS_MAX31855),y)
+CSRCS += lpc43_max31855.c
+endif
 
 ifeq ($(CONFIG_LIB_BOARDCTL),y)
 CSRCS += lpc43_appinit.c

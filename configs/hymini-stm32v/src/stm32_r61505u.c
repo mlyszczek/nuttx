@@ -1,7 +1,7 @@
 /************************************************************************************
  * configs/hymini-stm32v/src/stm32_r61505u.c
  *
- *   Copyright (C) 2009, 2011, 2013 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2009, 2011, 2013, 2018 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>
  *            Laurent Latil <laurent@latil.nom.fr>
  *            C. Faure 2013-05-15
@@ -54,11 +54,11 @@
 #include <nuttx/spi/spi.h>
 #include <nuttx/lcd/lcd.h>
 
-#include <arch/board/board.h>
-
 #include "up_arch.h"
 #include "stm32.h"
 #include "hymini-stm32v.h"
+
+#include <arch/board/board.h>  /* Should always be included last due to dependencies */
 
 /**************************************************************************************
  * Pre-processor Definitions
@@ -344,10 +344,10 @@ static void stm32_selectlcd(void)
 
   /* Bank1 NOR/SRAM timing register configuration */
 
-  putreg32(
-      FSMC_BTR_ADDSET(2)|FSMC_BTR_ADDHLD(0)|FSMC_BTR_DATAST(2)|FSMC_BTR_BUSTURN(0)|
-      FSMC_BTR_CLKDIV(0)|FSMC_BTR_DATLAT(0)|FSMC_BTR_ACCMODA,
-      STM32_FSMC_BTR1);
+  putreg32(FSMC_BTR_ADDSET(2)  | FSMC_BTR_ADDHLD(0) |FSMC_BTR_DATAST(2) |
+           FSMC_BTR_BUSTURN(0) | FSMC_BTR_CLKDIV(0) | FSMC_BTR_DATLAT(0) |
+           FSMC_BTR_ACCMODA,
+           STM32_FSMC_BTR1);
 
   /* As ext mode is not active the write timing is ignored!! */
 
@@ -367,7 +367,6 @@ static void stm32_selectlcd(void)
  *
  ************************************************************************************/
 
-// FIXME: Check this code !!
 static void stm32_deselectlcd(void)
 {
   /* Restore registers to their power up settings */
@@ -925,13 +924,13 @@ int board_lcd_initialize(void)
 
   /* Check model id */
 
-  id=read_reg(0x0);
+  id = read_reg(0x0);
   if (id != LCD_ID)
     {
       /* Not a R61505U ? */
 
       lcderr("ERROR: board_lcd_initialize: LCD ctrl is not a R61505U");
-      return ERROR;
+      return -ENXIO;
     }
 
   /* Configure and enable LCD */

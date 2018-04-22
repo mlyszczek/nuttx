@@ -402,6 +402,10 @@ configs/ne64badge
   STATUS:  Under development.  The port is code-complete but has
   not yet been fully tested.
 
+configs/nrf52-pca10040
+  NuttX port to the NRF PCA10040 board from Nordic Semiconductor
+  featuring the NRF52832 MCU.
+
 configs/ntosd-dm320
   This port uses the Neuros OSD v1.0 Dev Board with a GNU arm-nuttx-elf
   toolchain*: see
@@ -660,10 +664,6 @@ configs/shenzhou
   This is the port of NuttX to the Shenzhou development board from
   www.armjishu.com. This board features the STMicro STM32F107VCT MCU.
 
-configs/spark
-  Board support for the Spark Core from Spark Devices http://www.sparkdevices.com).
-  This board features the STM32103CBT6 MCU from STMicro.
-
 configs/skp16c26
   Renesas M16C processor on the Renesas SKP16C26 StarterKit.  This port
   uses the GNU m32c toolchain.  STATUS:  The port is complete but untested
@@ -780,6 +780,10 @@ configs/tm4c1294-launchpad
   Tiva® TM4C123G LaunchPad Evaluation Board is a low-cost evaluation
   platform for ARM® Cortex™-M4F-based microcontrollers from Texas
   Instruments.
+
+configs/tms570ls31x-usb-kit
+  TI Hercules TMS570LS31xx Evaluation Kit (TMDS570ls31xx USB Kit)
+  featuring the Hercules TMS570LS3137ZWT chip.
 
 configs/twr-k60n512
   Kinetis K60 Cortex-M4 MCU.  This port uses the FreeScale TWR-K60N512

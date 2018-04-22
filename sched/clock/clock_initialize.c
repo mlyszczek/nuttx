@@ -1,7 +1,8 @@
 /****************************************************************************
  * sched/clock/clock_initialize.c
  *
- *   Copyright (C) 2007, 2009, 2011-2012, 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007, 2009, 2011-2012, 2017-2018 Gregory Nutt. All rights
+ *     reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -57,16 +58,6 @@
 #ifdef CONFIG_CLOCK_TIMEKEEPING
 #  include "clock/clock_timekeeping.h"
 #endif
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/* Standard time definitions (in units of seconds) */
-
-#define SEC_PER_MIN  ((time_t)60)
-#define SEC_PER_HOUR ((time_t)60 * SEC_PER_MIN)
-#define SEC_PER_DAY  ((time_t)24 * SEC_PER_HOUR)
 
 /****************************************************************************
  * Public Data
@@ -272,7 +263,7 @@ void clock_initialize(void)
  *   Time going backward could have bad consequences if there are ongoing
  *   timers and delays.  So use this interface with care.
  *
- * Parameters:
+ * Input Parameters:
  *   None
  *
  * Returned Value:
@@ -311,7 +302,7 @@ void clock_synchronize(void)
  *   time. If setting system time with RTC would result time going "backward"
  *   then resynchronization is not performed.
  *
- * Parameters:
+ * Input Parameters:
  *   rtc_diff:  amount of time system-time is adjusted forward with RTC
  *
  * Returned Value:

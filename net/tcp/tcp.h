@@ -45,6 +45,7 @@
 #include <sys/types.h>
 #include <queue.h>
 
+#include <nuttx/clock.h>
 #include <nuttx/mm/iob.h>
 #include <nuttx/net/ip.h>
 
@@ -197,6 +198,21 @@ struct tcp_conn_s
 
   FAR struct tcp_conn_s    *blparent;
   FAR struct tcp_backlog_s *backlog;
+#endif
+
+#ifdef CONFIG_NET_TCP_KEEPALIVE
+  /* There fields manage TCP/IP keep-alive.  All times are in units of the
+   * system clock tick.
+   */
+
+  systime_t  keeptime;    /* Last time that the TCP socket was known to be
+                           * alive (ACK or data received) OR time that the
+                           * last probe was sent. */
+  uint16_t   keepidle;    /* Elapsed idle time before first probe sent (dsec) */
+  uint16_t   keepintvl;   /* Interval between probes (dsec) */
+  bool       keepalive;   /* True: KeepAlive enabled; false: disabled */
+  uint8_t    keepcnt;     /* Number of retries before the socket is closed */
+  uint8_t    keepretries; /* Number of retries attempted */
 #endif
 
   /* Application callbacks:
@@ -518,7 +534,7 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr);
  * Description:
  *   Perform a TCP connection
  *
- * Parameters:
+ * Input Parameters:
  *   psock - A reference to the socket structure of the socket to be connected
  *   addr  - The address of the remote server to connect to
  *
@@ -610,7 +626,7 @@ void tcp_close_monitor(FAR struct socket *psock);
  *   (1) explicitly mark this socket and (2) disable further callbacks
  *   the event handler.
  *
- * Parameters:
+ * Input Parameters:
  *   psock - The TCP socket structure associated.
  *   cb    - devif callback structure
  *   flags - Set of connection events events
@@ -723,7 +739,7 @@ void tcp_nextsequence(void);
  * Description:
  *   Poll a TCP connection structure for availability of TX data
  *
- * Parameters:
+ * Input Parameters:
  *   dev - The device driver structure to use in the send operation
  *   conn - The TCP "connection" to poll for TX data
  *
@@ -743,7 +759,7 @@ void tcp_poll(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn);
  * Description:
  *   Handle a TCP timer expiration for the provided TCP connection
  *
- * Parameters:
+ * Input Parameters:
  *   dev  - The device driver structure to use in the send operation
  *   conn - The TCP "connection" to poll for TX data
  *   hsec - The polling interval in halves of a second
@@ -853,7 +869,7 @@ int tcp_accept_connection(FAR struct net_driver_s *dev,
  * Description:
  *   Setup to send a TCP packet
  *
- * Parameters:
+ * Input Parameters:
  *   dev    - The device driver structure to use in the send operation
  *   conn   - The TCP connection structure holding connection information
  *   flags  - flags to apply to the TCP header
@@ -877,7 +893,7 @@ void tcp_send(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
  *   The tcp_sendfile() call may be used only when the INET socket is in a
  *   connected state (so that the intended recipient is known).
  *
- * Parameters:
+ * Input Parameters:
  *   psock    An instance of the internal socket structure.
  *   buf      Data to send
  *   len      Length of data to send
@@ -901,7 +917,7 @@ ssize_t tcp_sendfile(FAR struct socket *psock, FAR struct file *infile,
  * Description:
  *   Send a TCP reset (no-data) message
  *
- * Parameters:
+ * Input Parameters:
  *   dev    - The device driver structure to use in the send operation
  *
  * Returned Value:
@@ -920,7 +936,7 @@ void tcp_reset(FAR struct net_driver_s *dev);
  * Description:
  *   Send the SYN or SYNACK response.
  *
- * Parameters:
+ * Input Parameters:
  *   dev  - The device driver structure to use in the send operation
  *   conn - The TCP connection structure holding connection information
  *   ack  - The ACK response to send
@@ -944,7 +960,7 @@ void tcp_ack(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
  *   with dev->d_sndlen > 0, then this is an application attempting to send
  *   packet.
  *
- * Parameters:
+ * Input Parameters:
  *   dev    - The device driver structure to use in the send operation
  *   conn   - The TCP connection structure holding connection information
  *   result - App result event sent
@@ -966,7 +982,7 @@ void tcp_appsend(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
  * Description:
  *   Handle application retransmission
  *
- * Parameters:
+ * Input Parameters:
  *   dev    - The device driver structure to use in the send operation
  *   conn   - The TCP connection structure holding connection information
  *   result - App result event sent
@@ -988,7 +1004,7 @@ void tcp_rexmit(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
  * Description:
  *   Handle incoming TCP input with IPv4 header
  *
- * Parameters:
+ * Input Parameters:
  *   dev - The device driver structure containing the received TCP packet.
  *
  * Returned Value:
@@ -1009,7 +1025,7 @@ void tcp_ipv4_input(FAR struct net_driver_s *dev);
  * Description:
  *   Handle incoming TCP input with IPv4 header
  *
- * Parameters:
+ * Input Parameters:
  *   dev - The device driver structure containing the received TCP packet.
  *
  * Returned Value:
@@ -1191,7 +1207,7 @@ int tcp_backlogdelete(FAR struct tcp_conn_s *conn,
  *   This function implements accept() for TCP/IP sockets.  See the
  *   description of accept() for further information.
  *
- * Parameters:
+ * Input Parameters:
  *   psock    The listening TCP socket structure
  *   addr     Receives the address of the connecting client
  *   addrlen  Input: allocated size of 'addr', Return: returned size of 'addr'
@@ -1217,7 +1233,7 @@ int psock_tcp_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
  *   The psock_tcp_send() call may be used only when the TCP socket is in a
  *   connected state (so that the intended recipient is known).
  *
- * Parameters:
+ * Input Parameters:
  *   psock    An instance of the internal socket structure.
  *   buf      Data to send
  *   len      Length of data to send
@@ -1272,6 +1288,74 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
                        size_t len);
 
 /****************************************************************************
+ * Name: tcp_setsockopt
+ *
+ * Description:
+ *   tcp_setsockopt() sets the TCP-protocol option specified by the
+ *   'option' argument to the value pointed to by the 'value' argument for
+ *   the socket specified by the 'psock' argument.
+ *
+ *   See <netinet/tcp.h> for the a complete list of values of TCP protocol
+ *   options.
+ *
+ * Input Parameters:
+ *   psock     Socket structure of socket to operate on
+ *   option    identifies the option to set
+ *   value     Points to the argument value
+ *   value_len The length of the argument value
+ *
+ * Returned Value:
+ *   Returns zero (OK) on success.  On failure, it returns a negated errno
+ *   value to indicate the nature of the error.  See psock_setcockopt() for
+ *   the list of possible error values.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_TCPPROTO_OPTIONS
+int tcp_setsockopt(FAR struct socket *psock, int option,
+                   FAR const void *value, socklen_t value_len);
+#endif
+
+/****************************************************************************
+ * Name: tcp_getsockopt
+ *
+ * Description:
+ *   tcp_getsockopt() retrieves the value for the option specified by the
+ *   'option' argument for the socket specified by the 'psock' argument.  If
+ *   the size of the option value is greater than 'value_len', the value
+ *   stored in the object pointed to by the 'value' argument will be silently
+ *   truncated. Otherwise, the length pointed to by the 'value_len' argument
+ *   will be modified to indicate the actual length of the 'value'.
+ *
+ *   The 'level' argument specifies the protocol level of the option. To
+ *   retrieve options at the socket level, specify the level argument as
+ *   SOL_SOCKET; to retrieve options at the TCP-protocol level, the level
+ *   argument is SOL_CP.
+ *
+ *   See <sys/socket.h> a complete list of values for the socket-level
+ *   'option' argument.  Protocol-specific options are are protocol specific
+ *   header files (such as netinet/tcp.h for the case of the TCP protocol).
+ *
+ * Input Parameters:
+ *   psock     Socket structure of the socket to query
+ *   level     Protocol level to set the option
+ *   option    identifies the option to get
+ *   value     Points to the argument value
+ *   value_len The length of the argument value
+ *
+ * Returned Value:
+ *   Returns zero (OK) on success.  On failure, it returns a negated errno
+ *   value to indicate the nature of the error.  See psock_getsockopt() for
+ *   the complete list of appropriate return error codes.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_TCPPROTO_OPTIONS
+int tcp_getsockopt(FAR struct socket *psock, int option,
+                   FAR void *value, FAR socklen_t *value_len);
+#endif
+
+/****************************************************************************
  * Name: psock_tcp_cansend
  *
  * Description:
@@ -1280,7 +1364,7 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
  *   possible that the write may still block if the buffer is filled by
  *   another means.
  *
- * Parameters:
+ * Input Parameters:
  *   psock    An instance of the internal socket structure.
  *
  * Returned Value:
@@ -1332,6 +1416,25 @@ void tcp_wrbuffer_initialize(void);
 struct tcp_wrbuffer_s;
 
 FAR struct tcp_wrbuffer_s *tcp_wrbuffer_alloc(void);
+
+/****************************************************************************
+ * Name: tcp_wrbuffer_tryalloc
+ *
+ * Description:
+ *   Try to allocate a TCP write buffer by taking a pre-allocated buffer from
+ *   the free list.  This function is called from TCP logic when a buffer
+ *   of TCP data is about to be sent if the socket is non-blocking. Returns
+ *   immediately if allocation fails.
+ *
+ * Input parameters:
+ *   None
+ *
+ * Assumptions:
+ *   Called from user logic with the network locked.
+ *
+ ****************************************************************************/
+
+FAR struct tcp_wrbuffer_s *tcp_wrbuffer_tryalloc(void);
 #endif /* CONFIG_NET_TCP_WRITE_BUFFERS */
 
 /****************************************************************************

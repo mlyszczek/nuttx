@@ -958,75 +958,40 @@
 #define HRTIM_TIMCHP_STRTPW_SHIFT     7 /* Bits 7-10: Chopper start pulsewidth */
 #define HRTIM_TIMCHP_STRTPW_MASK      (15 << HRTIM_TIMCHP_STRTPW_SHIFT)
 
-/* Timer X Capture 1 Control Register */
+/* Timer X Capture 12 Control Register */
 
-#define HRTIM_TIMCPT1CR_SWCPT         (1 << 0)
-#define HRTIM_TIMCPT1CR_UPDCPT        (1 << 1)
-#define HRTIM_TIMCPT1CR_EXEV1CPT      (1 << 2)
-#define HRTIM_TIMCPT1CR_EXEV2CPT      (1 << 3)
-#define HRTIM_TIMCPT1CR_EXEV3CPT      (1 << 4)
-#define HRTIM_TIMCPT1CR_EXEV4CPT      (1 << 5)
-#define HRTIM_TIMCPT1CR_EXEV5CPT      (1 << 6)
-#define HRTIM_TIMCPT1CR_EXEV6CPT      (1 << 7)
-#define HRTIM_TIMCPT1CR_EXEV7CPT      (1 << 8)
-#define HRTIM_TIMCPT1CR_EXEV8CPT      (1 << 9)
-#define HRTIM_TIMCPT1CR_EXEV9CPT      (1 << 10)
-#define HRTIM_TIMCPT1CR_EXEV10CPT     (1 << 11)
-#define HRTIM_TIMCPT1CR_TA1SET        (1 << 12)
-#define HRTIM_TIMCPT1CR_TA1RST        (1 << 13)
-#define HRTIM_TIMCPT1CR_TACMP1        (1 << 14)
-#define HRTIM_TIMCPT1CR_TACMP2        (1 << 15)
-#define HRTIM_TIMCPT1CR_TB1SET        (1 << 16)
-#define HRTIM_TIMCPT1CR_TB1RST        (1 << 17)
-#define HRTIM_TIMCPT1CR_TBCMP1        (1 << 18)
-#define HRTIM_TIMCPT1CR_TBCMP2        (1 << 19)
-#define HRTIM_TIMCPT1CR_TC1SET        (1 << 20)
-#define HRTIM_TIMCPT1CR_TC1RST        (1 << 21)
-#define HRTIM_TIMCPT1CR_TCCMP1        (1 << 22)
-#define HRTIM_TIMCPT1CR_TCCMP2        (1 << 23)
-#define HRTIM_TIMCPT1CR_TD1SET        (1 << 24)
-#define HRTIM_TIMCPT1CR_TD1RST        (1 << 25)
-#define HRTIM_TIMCPT1CR_TDCMP1        (1 << 26)
-#define HRTIM_TIMCPT1CR_TDCMP2        (1 << 27)
-#define HRTIM_TIMCPT1CR_TE1SET        (1 << 28)
-#define HRTIM_TIMCPT1CR_TE1RST        (1 << 29)
-#define HRTIM_TIMCPT1CR_TECMP1        (1 << 30)
-#define HRTIM_TIMCPT1CR_TECMP2        (1 << 31)
-
-/* Timer X Capture 2 Control Register */
-
-#define HRTIM_TIMCPT2CR_SWCPT         (1 << 0)
-#define HRTIM_TIMCPT2CR_UPDCPT        (1 << 1)
-#define HRTIM_TIMCPT2CR_EXEV1CPT      (1 << 2)
-#define HRTIM_TIMCPT2CR_EXEV2CPT      (1 << 3)
-#define HRTIM_TIMCPT2CR_EXEV3CPT      (1 << 4)
-#define HRTIM_TIMCPT2CR_EXEV4CPT      (1 << 5)
-#define HRTIM_TIMCPT2CR_EXEV5CPT      (1 << 6)
-#define HRTIM_TIMCPT2CR_EXEV6CPT      (1 << 7)
-#define HRTIM_TIMCPT2CR_EXEV7CPT      (1 << 8)
-#define HRTIM_TIMCPT2CR_EXEV8CPT      (1 << 9)
-#define HRTIM_TIMCPT2CR_EXEV9CPT      (1 << 10)
-#define HRTIM_TIMCPT2CR_EXEV10CPT     (1 << 11)
-#define HRTIM_TIMCPT2CR_TA1SET        (1 << 12)
-#define HRTIM_TIMCPT2CR_TA1RST        (1 << 13)
-#define HRTIM_TIMCPT2CR_TACMP1        (1 << 14)
-#define HRTIM_TIMCPT2CR_TACMP2        (1 << 15)
-#define HRTIM_TIMCPT2CR_TB1SET        (1 << 16)
-#define HRTIM_TIMCPT2CR_TB1RST        (1 << 17)
-#define HRTIM_TIMCPT2CR_TBCMP1        (1 << 18)
-#define HRTIM_TIMCPT2CR_TBCMP2        (1 << 19)
-#define HRTIM_TIMCPT2CR_TC1SET        (1 << 20)
-#define HRTIM_TIMCPT2CR_TC1RST        (1 << 21)
-#define HRTIM_TIMCPT2CR_TCCMP1        (1 << 22)
-#define HRTIM_TIMCPT2CR_TCCMP2        (1 << 23)
-#define HRTIM_TIMCPT2CR_TD1SET        (1 << 24)
-#define HRTIM_TIMCPT2CR_TD1RST        (1 << 25)
-#define HRTIM_TIMCPT2CR_TDCMP1        (1 << 26)
-#define HRTIM_TIMCPT2CR_TDCMP2        (1 << 27)
-#define HRTIM_TIMCPT2CR_TE1SET        (1 << 28)
-#define HRTIM_TIMCPT2CR_TE1RST        (1 << 29)
-#define HRTIM_TIMCPT2CR_TECMP1        (1 << 30)
-#define HRTIM_TIMCPT2CR_TECMP2        (1 << 31)
+#define HRTIM_TIMCPT12CR_SWCPT        (1 << 0)
+#define HRTIM_TIMCPT12CR_UPDCPT       (1 << 1)
+#define HRTIM_TIMCPT12CR_EXEV1CPT     (1 << 2)
+#define HRTIM_TIMCPT12CR_EXEV2CPT     (1 << 3)
+#define HRTIM_TIMCPT12CR_EXEV3CPT     (1 << 4)
+#define HRTIM_TIMCPT12CR_EXEV4CPT     (1 << 5)
+#define HRTIM_TIMCPT12CR_EXEV5CPT     (1 << 6)
+#define HRTIM_TIMCPT12CR_EXEV6CPT     (1 << 7)
+#define HRTIM_TIMCPT12CR_EXEV7CPT     (1 << 8)
+#define HRTIM_TIMCPT12CR_EXEV8CPT     (1 << 9)
+#define HRTIM_TIMCPT12CR_EXEV9CPT     (1 << 10)
+#define HRTIM_TIMCPT12CR_EXEV10CPT    (1 << 11)
+#define HRTIM_TIMCPT12CR_TA1SET       (1 << 12)
+#define HRTIM_TIMCPT12CR_TA1RST       (1 << 13)
+#define HRTIM_TIMCPT12CR_TACMP1       (1 << 14)
+#define HRTIM_TIMCPT12CR_TACMP2       (1 << 15)
+#define HRTIM_TIMCPT12CR_TB1SET       (1 << 16)
+#define HRTIM_TIMCPT12CR_TB1RST       (1 << 17)
+#define HRTIM_TIMCPT12CR_TBCMP1       (1 << 18)
+#define HRTIM_TIMCPT12CR_TBCMP2       (1 << 19)
+#define HRTIM_TIMCPT12CR_TC1SET       (1 << 20)
+#define HRTIM_TIMCPT12CR_TC1RST       (1 << 21)
+#define HRTIM_TIMCPT12CR_TCCMP1       (1 << 22)
+#define HRTIM_TIMCPT12CR_TCCMP2       (1 << 23)
+#define HRTIM_TIMCPT12CR_TD1SET       (1 << 24)
+#define HRTIM_TIMCPT12CR_TD1RST       (1 << 25)
+#define HRTIM_TIMCPT12CR_TDCMP1       (1 << 26)
+#define HRTIM_TIMCPT12CR_TDCMP2       (1 << 27)
+#define HRTIM_TIMCPT12CR_TE1SET       (1 << 28)
+#define HRTIM_TIMCPT12CR_TE1RST       (1 << 29)
+#define HRTIM_TIMCPT12CR_TECMP1       (1 << 30)
+#define HRTIM_TIMCPT12CR_TECMP2       (1 << 31)
 
 /* Timer X Output Register */
 
@@ -1077,13 +1042,13 @@
 
 /* Common Control Register 1 */
 
-#define HRTIM_CR1_MUDIS               (1 << 0) /* Bit 0 */
-#define HRTIM_CR1_TAUDIS              (1 << 1) /* Bit 1 */
-#define HRTIM_CR1_TBUDIS              (1 << 2) /* Bit 2 */
-#define HRTIM_CR1_TCUDIS              (1 << 3) /* Bit 3 */
-#define HRTIM_CR1_TDUDIS              (1 << 4) /* Bit 4 */
-#define HRTIM_CR1_TEUDIS              (1 << 5) /* Bit 5 */
-#define HRTIM_CR1_AD1USRC_SHIFT       16 /* Bits 16-18  */
+#define HRTIM_CR1_MUDIS               (1 << 0) /* Bit 0: Master Update Disable */
+#define HRTIM_CR1_TAUDIS              (1 << 1) /* Bit 1: Timer A Update Disable */
+#define HRTIM_CR1_TBUDIS              (1 << 2) /* Bit 2: Timer B Update Disable */
+#define HRTIM_CR1_TCUDIS              (1 << 3) /* Bit 3: Timer C Update Disable */
+#define HRTIM_CR1_TDUDIS              (1 << 4) /* Bit 4: Timer D Update Disable */
+#define HRTIM_CR1_TEUDIS              (1 << 5) /* Bit 5: Timer E Update Disable */
+#define HRTIM_CR1_AD1USRC_SHIFT       16 /* Bits 16-18: ADC Trigger 1 Update Source  */
 #define HRTIM_CR1_AD1USRC_MASK        (7 << HRTIM_CR1_AD1USRC_SHIFT)
 #  define HRTIM_CR1_AD1USRC_MT        (0 << HRTIM_CR1_AD1USRC_SHIFT) /* 000: Mater Timer */
 #  define HRTIM_CR1_AD1USRC_TA        (1 << HRTIM_CR1_AD1USRC_SHIFT) /* 001: Timer A */
@@ -1091,7 +1056,7 @@
 #  define HRTIM_CR1_AD1USRC_TC        (3 << HRTIM_CR1_AD1USRC_SHIFT) /* 011: Timer C */
 #  define HRTIM_CR1_AD1USRC_TD        (4 << HRTIM_CR1_AD1USRC_SHIFT) /* 100: Timer D */
 #  define HRTIM_CR1_AD1USRC_TE        (5 << HRTIM_CR1_AD1USRC_SHIFT) /* 101: Timer A */
-#define HRTIM_CR1_AD2USRC_SHIFT       19 /* Bits 19-21  */
+#define HRTIM_CR1_AD2USRC_SHIFT       19 /* Bits 19-21: ADC Trigger 2 Update Source  */
 #define HRTIM_CR1_AD2USRC_MASK        (7 << HRTIM_CR1_AD2USRC_SHIFT)
 #  define HRTIM_CR1_AD2USRC_MT        (0 << HRTIM_CR1_AD2USRC_SHIFT) /* 000: Mater Timer */
 #  define HRTIM_CR1_AD2USRC_TA        (1 << HRTIM_CR1_AD2USRC_SHIFT) /* 001: Timer A */
@@ -1099,7 +1064,7 @@
 #  define HRTIM_CR1_AD2USRC_TC        (3 << HRTIM_CR1_AD2USRC_SHIFT) /* 011: Timer C */
 #  define HRTIM_CR1_AD2USRC_TD        (4 << HRTIM_CR1_AD2USRC_SHIFT) /* 100: Timer D */
 #  define HRTIM_CR1_AD2USRC_TE        (5 << HRTIM_CR1_AD2USRC_SHIFT) /* 101: Timer A */
-#define HRTIM_CR1_AD3USRC_SHIFT       22 /* Bits 22-24  */
+#define HRTIM_CR1_AD3USRC_SHIFT       22 /* Bits 22-24: ADC Trigger 3 Update Source  */
 #define HRTIM_CR1_AD3USRC_MASK        (7 << HRTIM_CR1_AD3USRC_SHIFT)
 #  define HRTIM_CR1_AD3USRC_MT        (0 << HRTIM_CR1_AD3USRC_SHIFT) /* 000: Mater Timer */
 #  define HRTIM_CR1_AD3USRC_TA        (1 << HRTIM_CR1_AD3USRC_SHIFT) /* 001: Timer A */
@@ -1107,7 +1072,7 @@
 #  define HRTIM_CR1_AD3USRC_TC        (3 << HRTIM_CR1_AD3USRC_SHIFT) /* 011: Timer C */
 #  define HRTIM_CR1_AD3USRC_TD        (4 << HRTIM_CR1_AD3USRC_SHIFT) /* 100: Timer D */
 #  define HRTIM_CR1_AD3USRC_TE        (5 << HRTIM_CR1_AD3USRC_SHIFT) /* 101: Timer A */
-#define HRTIM_CR1_AD4USRC_SHIFT       25 /* Bits 25-27  */
+#define HRTIM_CR1_AD4USRC_SHIFT       25 /* Bits 25-27: ADC Trigger 4 Update Source  */
 #define HRTIM_CR1_AD4USRC_MASK        (7 << HRTIM_CR1_AD4USRC_SHIFT)
 #  define HRTIM_CR1_AD4USRC_MT        (0 << HRTIM_CR1_AD4USRC_SHIFT) /* 000: Mater Timer */
 #  define HRTIM_CR1_AD4USRC_TA        (1 << HRTIM_CR1_AD4USRC_SHIFT) /* 001: Timer A */

@@ -122,7 +122,7 @@
  * Private Types
  ****************************************************************************/
 
-/* This is our private version of the MAC callback stucture */
+/* This is our private version of the MAC callback structure */
 
 struct macnet_callback_s
 {
@@ -565,7 +565,7 @@ static int macnet_rxframe(FAR struct macnet_driver_s *priv,
  *   2. When the preceding TX packet send timesout and the interface is reset
  *   3. During normal TX polling
  *
- * Parameters:
+ * Input Parameters:
  *   dev - Reference to the NuttX driver state structure
  *
  * Returned Value:
@@ -591,7 +591,7 @@ static int macnet_txpoll_callback(FAR struct net_driver_s *dev)
  * Description:
  *   Perform periodic polling from the worker thread
  *
- * Parameters:
+ * Input Parameters:
  *   arg - The argument passed when work_queue() as called.
  *
  * Returned Value:
@@ -637,7 +637,7 @@ static void macnet_txpoll_work(FAR void *arg)
  * Description:
  *   Periodic timer handler.  Called from the timer interrupt handler.
  *
- * Parameters:
+ * Input Parameters:
  *   argc - The number of available arguments
  *   arg  - The first argument
  *
@@ -739,7 +739,7 @@ static int macnet_coord_saddr(FAR struct radio_driver_s *radio,
  *   NuttX Callback: Bring up the IEEE 802.15.4 interface when an IP address
  *   is provided
  *
- * Parameters:
+ * Input Parameters:
  *   dev - Reference to the NuttX driver state structure
  *
  * Returned Value:
@@ -818,7 +818,7 @@ static int macnet_ifup(FAR struct net_driver_s *dev)
  * Description:
  *   NuttX Callback: Stop the interface.
  *
- * Parameters:
+ * Input Parameters:
  *   dev - Reference to the NuttX driver state structure
  *
  * Returned Value:
@@ -859,7 +859,7 @@ static int macnet_ifdown(FAR struct net_driver_s *dev)
  * Description:
  *   Perform an out-of-cycle poll on the worker thread.
  *
- * Parameters:
+ * Input Parameters:
  *   arg - Reference to the NuttX driver state structure (cast to void*)
  *
  * Returned Value:
@@ -910,7 +910,7 @@ static void macnet_txavail_work(FAR void *arg)
  *   stimulus perform an out-of-cycle poll and, thereby, reduce the TX
  *   latency.
  *
- * Parameters:
+ * Input Parameters:
  *   dev - Reference to the NuttX driver state structure
  *
  * Returned Value:
@@ -949,7 +949,7 @@ static int macnet_txavail(FAR struct net_driver_s *dev)
  *   NuttX Callback: Add the specified MAC address to the hardware multicast
  *   address filtering
  *
- * Parameters:
+ * Input Parameters:
  *   dev  - Reference to the NuttX driver state structure
  *   mac  - The MAC address to be added
  *
@@ -980,7 +980,7 @@ static int macnet_addmac(FAR struct net_driver_s *dev, FAR const uint8_t *mac)
  *   NuttX Callback: Remove the specified MAC address from the hardware multicast
  *   address filtering
  *
- * Parameters:
+ * Input Parameters:
  *   dev  - Reference to the NuttX driver state structure
  *   mac  - The MAC address to be removed
  *
@@ -1010,7 +1010,7 @@ static int macnet_rmmac(FAR struct net_driver_s *dev, FAR const uint8_t *mac)
  * Description:
  *   Handle network IOCTL commands directed to this device.
  *
- * Parameters:
+ * Input Parameters:
  *   dev - Reference to the NuttX driver state structure
  *   cmd - The IOCTL command
  *   arg - The argument for the IOCTL command
@@ -1170,12 +1170,12 @@ static int macnet_ioctl(FAR struct net_driver_s *dev, int cmd,
  *   Calculate the MAC header length given the frame meta-data.
  *
  * Input Parameters:
- *   netdev    - The networkd device that will mediate the MAC interface
+ *   netdev    - The network device that will mediate the MAC interface
  *   meta      - Obfuscated metadata structure needed to create the radio
  *               MAC header
  *
  * Returned Value:
- *   A non-negative MAC headeer length is returned on success; a negated
+ *   A non-negative MAC header length is returned on success; a negated
  *   errno value is returned on any failure.
  *
  ****************************************************************************/
@@ -1199,7 +1199,7 @@ static int macnet_get_mhrlen(FAR struct radio_driver_s *netdev,
  *   Requests the transfer of a list of frames to the MAC.
  *
  * Input Parameters:
- *   netdev    - The networkd device that will mediate the MAC interface
+ *   netdev    - The network device that will mediate the MAC interface
  *   meta      - Obfuscated metadata structure needed to create the radio
  *               MAC header
  *   framelist - Head of a list of frames to be transferred.
@@ -1282,7 +1282,7 @@ static int macnet_req_data(FAR struct radio_driver_s *netdev,
  *
  * Input Parameters:
  *   netdev     - The network device to be queried
- *   properties - Location where radio properities will be returned.
+ *   properties - Location where radio properties will be returned.
  *
  * Returned Value:
  *   Zero (OK) returned on success; a negated errno value is returned on
@@ -1419,7 +1419,7 @@ int mac802154netdev_register(MACHANDLE mac)
 
   radio->r_get_mhrlen = macnet_get_mhrlen;  /* Get MAC header length */
   radio->r_req_data   = macnet_req_data;    /* Enqueue frame for transmission */
-  radio->r_properties = macnet_properties;  /* Return radio properies */
+  radio->r_properties = macnet_properties;  /* Return radio properties */
 
   /* Initialize fields related to MAC event handling */
 

@@ -1,7 +1,8 @@
 ############################################################################
 # configs/stm32f4discovery/src/Makefile
 #
-#   Copyright (C) 2011-2013, 2015-2016 Gregory Nutt. All rights reserved.
+#   Copyright (C) 2011-2013, 2015-2016, 2018 Gregory Nutt. All rights
+#     reserved.
 #   Author: Gregory Nutt <gnutt@nuttx.org>
 #
 # Redistribution and use in source and binary forms, with or without
@@ -88,6 +89,10 @@ ifeq ($(CONFIG_SENSORS_MAX6675),y)
 CSRCS += stm32_max6675.c
 endif
 
+ifeq ($(CONFIG_LCD_MAX7219),y)
+  CSRCS += stm32_max7219.c
+endif
+
 ifeq ($(CONFIG_PCA9635PW),y)
 CSRCS += stm32_pca9635.c
 endif
@@ -116,7 +121,7 @@ ifeq ($(CONFIG_SENSORS_XEN1210),y)
 CSRCS += stm32_xen1210.c
 endif
 
-ifeq ($(CONFIG_NSH_LIBRARY),y)
+ifeq ($(CONFIG_LIB_BOARDCTL),y)
 CSRCS += stm32_appinit.c
 endif
 
@@ -162,6 +167,12 @@ endif
 
 ifeq ($(CONFIG_TIMER),y)
 CSRCS += stm32_timer.c
+endif
+
+ifeq ($(CONFIG_STM32_HCIUART),y)
+ifeq ($(CONFIG_BLUETOOTH_UART),y)
+CSRCS += stm32_hciuart.c
+endif
 endif
 
 ifeq ($(CONFIG_STM32_ROMFS),y)

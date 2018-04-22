@@ -1,7 +1,7 @@
 /****************************************************************************
  * include/nuttx/clock.h
  *
- *   Copyright (C) 2007-2009, 2011-2012, 2014, 2016-2017 Gregory Nutt.
+ *   Copyright (C) 2007-2009, 2011-2012, 2014, 2016-2018 Gregory Nutt.
              All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
@@ -120,6 +120,24 @@
 
 #define NSEC_PER_USEC               1000L /* Microseconds */
 
+#define SEC_PER_MIN                   60L
+#define NSEC_PER_MIN           (NSEC_PER_SEC * SEC_PER_MIN)
+#define USEC_PER_MIN           (USEC_PER_SEC * SEC_PER_MIN)
+#define MSEC_PER_MIN           (MSEC_PER_SEC * SEC_PER_MIN)
+#define DSEC_PER_MIN           (HSEC_PER_SEC * SEC_PER_MIN)
+#define HSEC_PER_MIN           (HSEC_PER_SEC * SEC_PER_MIN)
+
+#define MIN_PER_HOUR                  60L
+#define NSEC_PER_HOUR          (NSEC_PER_MIN * MIN_PER_HOUR)
+#define USEC_PER_HOUR          (USEC_PER_MIN * MIN_PER_HOUR)
+#define MSEC_PER_HOUR          (MSEC_PER_MIN * MIN_PER_HOUR)
+#define DSEC_PER_HOUR          (HSEC_PER_SEC * MIN_PER_HOUR)
+#define HSEC_PER_HOUR          (DSEC_PER_MIN * MIN_PER_HOUR)
+#define SEC_PER_HOUR           (SEC_PER_MIN  * MIN_PER_HOUR)
+
+#define HOURS_PER_DAY                 24L
+#define SEC_PER_DAY            (HOURS_PER_DAY * SEC_PER_HOUR)
+
 /* If CONFIG_SCHED_TICKLESS is not defined, then the interrupt interval of
  * the system timer is given by USEC_PER_TICK.  This is the expected number
  * of microseconds between calls from the processor-specific logic to
@@ -145,10 +163,13 @@
  * preferred for that reason (at the risk of overflow)
  */
 
-#define TICK_PER_DSEC         (USEC_PER_DSEC / USEC_PER_TICK)            /* Truncates! */
-#define TICK_PER_HSEC         (USEC_PER_HSEC / USEC_PER_TICK)            /* Truncates! */
+#define TICK_PER_HOUR         (USEC_PER_HOUR / USEC_PER_TICK)            /* Truncates! */
+#define TICK_PER_MIN          (USEC_PER_MIN  / USEC_PER_TICK)            /* Truncates! */
 #define TICK_PER_SEC          (USEC_PER_SEC  / USEC_PER_TICK)            /* Truncates! */
 #define TICK_PER_MSEC         (USEC_PER_MSEC / USEC_PER_TICK)            /* Truncates! */
+#define TICK_PER_DSEC         (USEC_PER_DSEC / USEC_PER_TICK)            /* Truncates! */
+#define TICK_PER_HSEC         (USEC_PER_HSEC / USEC_PER_TICK)            /* Truncates! */
+
 #define MSEC_PER_TICK         (USEC_PER_TICK / USEC_PER_MSEC)            /* Truncates! */
 #define NSEC_PER_TICK         (USEC_PER_TICK * NSEC_PER_USEC)            /* Exact */
 
@@ -269,7 +290,7 @@ EXTERN volatile systime_t g_system_timer;
  *   Time going backward could have bad consequences if there are ongoing
  *   timers and delays.  So use this interface with care.
  *
- * Parameters:
+ * Input Parameters:
  *   None
  *
  * Returned Value:
@@ -299,7 +320,7 @@ void clock_synchronize(void);
  *   time. If setting system time with RTC would result time going "backward"
  *   then resynchronization is not performed.
  *
- * Parameters:
+ * Input Parameters:
  *   diff:  amount of time system-time is adjusted forward with RTC
  *
  * Returned Value:
@@ -315,24 +336,27 @@ void clock_resynchronize(FAR struct timespec *rtc_diff);
 #endif
 
 /****************************************************************************
- * Name:  clock_systimer
+ * Name: clock_systimer
  *
  * Description:
  *   Return the current value of the 32/64-bit system timer counter.
+ *
  *   Indirect access to the system timer counter is required through this
  *   function if the execution environment does not have direct access to
  *   kernel global data.
  *
- *   Use of this function is also required to assue atomic access to the
+ *   Use of this function is also required to assure atomic access to the
  *   64-bit system timer.
  *
- * Parameters:
+ *   NOTE:  This is an internal OS interface and should not be called from
+ *   application code.  Rather, the functionally equivalent, standard
+ *   interface clock() should be used.
+ *
+ * Input Parameters:
  *   None
  *
  * Returned Value:
  *   The current value of the system timer counter
- *
- * Assumptions:
  *
  ****************************************************************************/
 
@@ -347,7 +371,7 @@ systime_t clock_systimer(void);
  *   Return the current value of the system timer counter as a struct
  *   timespec.
  *
- * Parameters:
+ * Input Parameters:
  *   ts - Location to return the time
  *
  * Returned Value:
@@ -365,7 +389,7 @@ int clock_systimespec(FAR struct timespec *ts);
  * Description:
  *   Return load measurement data for the select PID.
  *
- * Parameters:
+ * Input Parameters:
  *   pid - The task ID of the thread of interest.  pid == 0 is the IDLE thread.
  *   cpuload - The location to return the CPU load
  *

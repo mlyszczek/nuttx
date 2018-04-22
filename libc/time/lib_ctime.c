@@ -55,7 +55,7 @@
  *   epoch to a string representation. ctime is not re-entrant; ctime_r is
  *   re-entrant.
  *
- * Parameters:
+ * Input Parameters:
  *   timep - The current time represented as seconds since the epoch.
  *
  * Returned Value:

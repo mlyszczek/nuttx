@@ -965,12 +965,53 @@ config ARCH_CHIP_STM32F373VC
 	select STM32_STM32F37XX
 	select ARCH_HAVE_FPU
 
+config ARCH_CHIP_STM32F401CB
+	bool "STM32F401CB"
+	select STM32_STM32F401xBC
+
+config ARCH_CHIP_STM32F401RB
+	bool "STM32F401RB"
+	select STM32_STM32F401xBC
+
+config ARCH_CHIP_STM32F401VB
+	bool "STM32F401VB"
+	select STM32_STM32F401xBC
+
+config ARCH_CHIP_STM32F401CC
+	bool "STM32F401CC"
+	select STM32_STM32F401xBC
+
+config ARCH_CHIP_STM32F401RC
+	bool "STM32F401RC"
+	select STM32_STM32F401xBC
+
+config ARCH_CHIP_STM32F401VC
+	bool "STM32F401VC"
+	select STM32_STM32F401xBC
+
+config ARCH_CHIP_STM32F401CD
+	bool "STM32F401CD"
+	select STM32_STM32F401xDE
+
+config ARCH_CHIP_STM32F401RD
+	bool "STM32F401RD"
+	select STM32_STM32F401xDE
+
+config ARCH_CHIP_STM32F401VD
+	bool "STM32F401VD"
+	select STM32_STM32F401xDE
+
+config ARCH_CHIP_STM32F401CE
+	bool "STM32F401CE"
+	select STM32_STM32F401xDE
+
 config ARCH_CHIP_STM32F401RE
 	bool "STM32F401RE"
-	select ARCH_CORTEXM4
-	select STM32_STM32F4XXX
-	select STM32_STM32F401
-	select ARCH_HAVE_FPU
+	select STM32_STM32F401xDE
+
+config ARCH_CHIP_STM32F401VE
+	bool "STM32F401VE"
+	select STM32_STM32F401xDE
 
 config ARCH_CHIP_STM32F410RB
 	bool "STM32F410RB"
@@ -1530,9 +1571,22 @@ config STM32_STM32F4XXX
 	select STM32_HAVE_SPI2
 	select STM32_HAVE_I2C2
 
+config STM32_STM32F401xBC
+	bool
+	default n
+	select STM32_STM32F401
+
+config STM32_STM32F401xDE
+	bool
+	default n
+	select STM32_STM32F401
+
 config STM32_STM32F401
 	bool
 	default n
+	select ARCH_CORTEXM4
+	select ARCH_HAVE_FPU
+	select STM32_STM32F4XXX
 	select STM32_HAVE_USART6
 	select STM32_HAVE_TIM1
 	select STM32_HAVE_TIM3
@@ -2327,26 +2381,38 @@ if STM32_HRTIM1
 config STM32_HRTIM_MASTER
 	bool "HRTIM MASTER"
 	default n
+	---help---
+		Enable HRTIM Master Timer
 
 config STM32_HRTIM_TIMA
 	bool "HRTIM TIMA"
 	default n
+	---help---
+		Enable HRTIM Timer A
 
 config STM32_HRTIM_TIMB
 	bool "HRTIM TIMB"
 	default n
+	---help---
+		Enable HRTIM Timer B
 
 config STM32_HRTIM_TIMC
 	bool "HRTIM TIMC"
 	default n
+	---help---
+		Enable HRTIM Timer C
 
 config STM32_HRTIM_TIMD
 	bool "HRTIM TIMD"
 	default n
+	---help---
+		Enable HRTIM Timer D
 
 config STM32_HRTIM_TIME
 	bool "HRTIM TIME"
 	default n
+	---help---
+		Enable HRTIM Timer E
 
 endif # STM32_HRTIM
 
@@ -2430,6 +2496,8 @@ config STM32_RNG
 	default n
 	depends on STM32_HAVE_RNG
 	select ARCH_HAVE_RNG
+
+# REVISIT:  There are some lower-end STM32F401 parts without SDIO too. Others?
 
 config STM32_SDIO
 	bool "SDIO"
@@ -5797,10 +5865,15 @@ if STM32_HRTIM1
 config STM32_HRTIM_DISABLE_CHARDRV
 	bool "HRTIM Disable Character Driver"
 	default n
+	---help---
+		In most cases we do not need HRTIM Character Driver, so we can disable it
+		and save some memory.
 
 menuconfig STM32_HRTIM_ADC
-	bool "HRTIM ADC Configuration"
+	bool "HRTIM ADC Triggering"
 	default n
+	---help---
+		Enable HRTIM ADC Triggering support.
 
 if STM32_HRTIM_ADC
 
@@ -5841,33 +5914,54 @@ endif # STM32_HRTIM_ADC
 config STM32_HRTIM_DAC
 	bool "HRTIM DAC Triggering"
 	default n
+	---help---
+		Enable HRTIM DAC Triggering support.
 
 config STM32_HRTIM_PWM
 	bool "HRTIM PWM Outputs"
 	default n
+	---help---
+		Enable HRTIM PWM Outputs support.
 
 config STM32_HRTIM_CAP
 	bool "HRTIM Capture"
 	default n
+	---help---
+		Enable HRTIM Capture support.
 
 config STM32_HRTIM_INTERRUPTS
 	bool "HRTIM Interrupts"
 	default n
+	---help---
+		Enable HRTIM Interrupts support.
 
 config STM32_HRTIM_BURST
 	bool "HRTIM Burst Mode"
 	depends on STM32_HRTIM_PWM
 	default n
+	---help---
+		Enable HRTIM Burst Mode support for PWM outputs.
 
 config STM32_HRTIM_DEADTIME
 	bool "HRTIM Dead-time"
 	depends on STM32_HRTIM_PWM
 	default n
+	---help---
+		Enable HRTIM Deadtime support for PWM outputs.
 
 config STM32_HRTIM_PUSHPULL
-	bool "HRTIM push-pull mode"
+	bool "HRTIM Push-Pull Mode"
 	depends on STM32_HRTIM_PWM
 	default n
+	---help---
+		Enable HRTIM Push-Pull Mode support for PWM outputs.
+
+config STM32_HRTIM_CHOPPER
+	bool "HRTIM Chopper"
+	depends on STM32_HRTIM_PWM
+	default n
+	---help---
+		Enable HRTIM Chopper Mode for PWM outputs.
 
 config STM32_HRTIM_DMA
 	bool "HRTIM DMA"
@@ -5875,11 +5969,6 @@ config STM32_HRTIM_DMA
 
 config STM32_HRTIM_DMABURST
 	bool "HRTIM DMA Burst"
-	default n
-
-config STM32_HRTIM_CHOPPER
-	bool "HRTIM Chopper"
-	depends on STM32_HRTIM_PWM
 	default n
 
 config STM32_HRTIM_AUTODELAY
@@ -5890,6 +5979,8 @@ config STM32_HRTIM_AUTODELAY
 menuconfig STM32_HRTIM_EVENTS
 	bool "HRTIM Events Configuration"
 	default n
+	---help---
+		Enable HRTIM Events support.
 
 if STM32_HRTIM_EVENTS
 
@@ -5938,6 +6029,8 @@ endif # STM32_HRTIM_EVENTS
 menuconfig STM32_HRTIM_FAULTS
 	bool "HRTIM Faults Configuration"
 	default n
+	---help---
+		Enable HRTIM Faults support.
 
 if STM32_HRTIM_FAULTS
 
@@ -5962,6 +6055,11 @@ endif # STM32_HRTIM_FAULTS
 config STM32_HRTIM_CLK_FROM_PLL
 	bool "HRTIM Clock from PLL"
 	default n
+	---help---
+		Set PLL as the clock source for HRTIM.
+		This configuration requires the following conditions:
+		  1) system clock is PLL,
+			2) SYSCLK and PCLK2 ratio must be 1 o 2.
 
 menu "HRTIM Master Configuration"
 	depends on STM32_HRTIM_MASTER
@@ -6390,6 +6488,22 @@ config STM32_ADC4_DMA
 		DMA transfer, which is necessary if multiple channels are read
 		or if very high trigger frequencies are used.
 
+config STM32_ADC1_INJECTED
+	bool "ADC1 INJECTED"
+	depends on STM32_ADC1 && STM32_STM32F33XX
+	default n
+	---help---
+		Support for ADC1 injected channels.
+		Only for STM32_STM32F33XX at this moment.
+
+config STM32_ADC2_INJECTED
+	bool "ADC2 INJECTED"
+	depends on STM32_ADC2 && STM32_STM32F33XX
+	default n
+	---help---
+		Support for ADC2 injected channels.
+		Only for STM32_STM32F33XX at this moment.
+
 endmenu
 
 menu "SDADC Configuration"
@@ -6560,12 +6674,27 @@ endmenu
 
 config STM32_USART
 	bool
+	default n
+
+config STM32_USART_RXDMA
+	bool
+	default n
 
 config STM32_SERIALDRIVER
 	bool
+	default n
 
 config STM32_1WIREDRIVER
 	bool
+	default n
+
+config STM32_HCIUART
+	bool
+	default n
+
+config STM32_HCIUART_RXDMA
+	bool
+	default n
 
 menu "U[S]ART Configuration"
 	depends on STM32_USART
@@ -6586,6 +6715,11 @@ config STM32_USART1_SERIALDRIVER
 config STM32_USART1_1WIREDRIVER
 	bool "1-Wire driver"
 	select STM32_1WIREDRIVER
+
+config STM32_USART1_HCIUART
+	bool "Bluetooth HCI-UART"
+	select STM32_HCIUART
+	depends on WIRELESS_BLUETOOTH
 
 endchoice # USART1 Driver Configuration
 
@@ -6612,10 +6746,45 @@ config USART1_RXDMA
 	bool "USART1 Rx DMA"
 	default n
 	depends on (((STM32_STM32F10XX || STM32_STM32L15XX) && STM32_DMA1) || (!STM32_STM32F10XX && STM32_DMA2))
+	select STM32_USART_RXDMA
 	---help---
 		In high data rate usage, Rx DMA may eliminate Rx overrun errors
 
 endif # STM32_USART1_SERIALDRIVER
+
+if STM32_USART1_HCIUART
+
+config STM32_HCIUART1_RXBUFSIZE
+	int "HCI UART1 Rx buffer size"
+	default 80
+	---help---
+		Characters are buffered as they are received. This specifies
+		the size of the receive buffer.  Ideally this should be at least
+		the size of the largest frame that can be received
+
+config STM32_HCIUART1_TXBUFSIZE
+	int "HCI UART1 Transmit buffer size"
+	default 80
+	---help---
+		Characters are buffered before being sent.  This specifies
+		the size of the transmit buffer.  Ideally this should be at least
+		the size of the largest frame that can be sent
+
+config STM32_HCIUART1_BAUD
+	int "HCI UART1 BAUD rate"
+	default 115200
+	---help---
+		The configured BAUD of the USART.
+
+config STM32_HCIUART1_RXDMA
+	bool "HCI UART1 Rx DMA"
+	default n
+	depends on (((STM32_STM32F10XX || STM32_STM32L15XX) && STM32_DMA1) || (!STM32_STM32F10XX && STM32_DMA2))
+	select STM32_HCIUART_RXDMA
+	---help---
+		In high data rate usage, Rx DMA may eliminate Rx overrun errors
+
+endif # STM32_USART1_HCIUART
 
 choice
 	prompt "USART2 Driver Configuration"
@@ -6631,6 +6800,11 @@ config STM32_USART2_SERIALDRIVER
 config STM32_USART2_1WIREDRIVER
 	bool "1-Wire driver"
 	select STM32_1WIREDRIVER
+
+config STM32_USART2_HCIUART
+	bool "Bluetooth HCI-UART"
+	select STM32_HCIUART
+	depends on WIRELESS_BLUETOOTH
 
 endchoice # USART2 Driver Configuration
 
@@ -6657,10 +6831,45 @@ config USART2_RXDMA
 	bool "USART2 Rx DMA"
 	default n
 	depends on STM32_DMA1
+	select STM32_USART_RXDMA
 	---help---
 		In high data rate usage, Rx DMA may eliminate Rx overrun errors
 
 endif # STM32_USART2_SERIALDRIVER
+
+if STM32_USART2_HCIUART
+
+config STM32_HCIUART2_RXBUFSIZE
+	int "HCI UART2 Rx buffer size"
+	default 80
+	---help---
+		Characters are buffered as they are received. This specifies
+		the size of the receive buffer.  Ideally this should be at least
+		the size of the largest frame that can be received
+
+config STM32_HCIUART2_TXBUFSIZE
+	int "HCI UART2 Transmit buffer size"
+	default 80
+	---help---
+		Characters are buffered before being sent.  This specifies
+		the size of the transmit buffer.  Ideally this should be at least
+		the size of the largest frame that can be sent
+
+config STM32_HCIUART2_BAUD
+	int "HCI UART2 BAUD rate"
+	default 115200
+	---help---
+		The configured BAUD of the USART.
+
+config STM32_HCIUART2_RXDMA
+	bool "HCI UART2 Rx DMA"
+	default n
+	depends on STM32_DMA1
+	select STM32_HCIUART_RXDMA
+	---help---
+		In high data rate usage, Rx DMA may eliminate Rx overrun errors
+
+endif # STM32_USART2_HCIUART
 
 choice
 	prompt "USART3 Driver Configuration"
@@ -6676,6 +6885,11 @@ config STM32_USART3_SERIALDRIVER
 config STM32_USART3_1WIREDRIVER
 	bool "1-Wire driver"
 	select STM32_1WIREDRIVER
+
+config STM32_USART3_HCIUART
+	bool "Bluetooth HCI-UART"
+	select STM32_HCIUART
+	depends on WIRELESS_BLUETOOTH
 
 endchoice # USART3 Driver Configuration
 
@@ -6702,10 +6916,45 @@ config USART3_RXDMA
 	bool "USART3 Rx DMA"
 	default n
 	depends on STM32_DMA1
+	select STM32_USART_RXDMA
 	---help---
 		In high data rate usage, Rx DMA may eliminate Rx overrun errors
 
 endif # STM32_USART3_SERIALDRIVER
+
+if STM32_USART3_HCIUART
+
+config STM32_HCIUART3_RXBUFSIZE
+	int "HCI UART3 Rx buffer size"
+	default 80
+	---help---
+		Characters are buffered as they are received. This specifies
+		the size of the receive buffer.  Ideally this should be at least
+		the size of the largest frame that can be received
+
+config STM32_HCIUART3_TXBUFSIZE
+	int "HCI UART3 Transmit buffer size"
+	default 80
+	---help---
+		Characters are buffered before being sent.  This specifies
+		the size of the transmit buffer.  Ideally this should be at least
+		the size of the largest frame that can be sent
+
+config STM32_HCIUART3_BAUD
+	int "HCI UART3 BAUD rate"
+	default 115200
+	---help---
+		The configured BAUD of the USART.
+
+config STM32_HCIUART3_RXDMA
+	bool "HCI UART3 Rx DMA"
+	default n
+	depends on STM32_DMA1
+	select STM32_HCIUART_RXDMA
+	---help---
+		In high data rate usage, Rx DMA may eliminate Rx overrun errors
+
+endif # STM32_USART3_HCIUART
 
 choice
 	prompt "UART4 Driver Configuration"
@@ -6747,6 +6996,7 @@ config UART4_RXDMA
 	bool "UART4 Rx DMA"
 	default n
 	depends on STM32_DMA1
+	select STM32_USART_RXDMA
 	---help---
 		In high data rate usage, Rx DMA may eliminate Rx overrun errors
 
@@ -6792,6 +7042,7 @@ config UART5_RXDMA
 	bool "UART5 Rx DMA"
 	default n
 	depends on STM32_DMA1
+	select STM32_USART_RXDMA
 	---help---
 		In high data rate usage, Rx DMA may eliminate Rx overrun errors
 
@@ -6811,6 +7062,11 @@ config STM32_USART6_SERIALDRIVER
 config STM32_USART6_1WIREDRIVER
 	bool "1-Wire driver"
 	select STM32_1WIREDRIVER
+
+config STM32_USART6_HCIUART
+	bool "Bluetooth HCI-UART"
+	select STM32_HCIUART
+	depends on WIRELESS_BLUETOOTH
 
 endchoice # USART6 Driver Configuration
 
@@ -6837,10 +7093,45 @@ config USART6_RXDMA
 	bool "USART6 Rx DMA"
 	default n
 	depends on STM32_DMA2
+	select STM32_USART_RXDMA
 	---help---
 		In high data rate usage, Rx DMA may eliminate Rx overrun errors
 
 endif # STM32_USART6_SERIALDRIVER
+
+if STM32_USART6_HCIUART
+
+config STM32_HCIUART6_RXBUFSIZE
+	int "HCI UART6 Rx buffer size"
+	default 80
+	---help---
+		Characters are buffered as they are received. This specifies
+		the size of the receive buffer.  Ideally this should be at least
+		the size of the largest frame that can be received
+
+config STM32_HCIUART6_TXBUFSIZE
+	int "HCI UART6 Transmit buffer size"
+	default 80
+	---help---
+		Characters are buffered before being sent.  This specifies
+		the size of the transmit buffer.  Ideally this should be at least
+		the size of the largest frame that can be sent
+
+config STM32_HCIUART6_BAUD
+	int "HCI UART6 BAUD rate"
+	default 115200
+	---help---
+		The configured BAUD of the USART.
+
+config STM32_HCIUART6_RXDMA
+	bool "HCI UART6 Rx DMA"
+	default n
+	depends on STM32_DMA1
+	select STM32_HCIUART_RXDMA
+	---help---
+		In high data rate usage, Rx DMA may eliminate Rx overrun errors
+
+endif # STM32_USART6_HCIUART
 
 choice
 	prompt "UART7 Driver Configuration"
@@ -6856,6 +7147,11 @@ config STM32_UART7_SERIALDRIVER
 config STM32_UART7_1WIREDRIVER
 	bool "1-Wire driver"
 	select STM32_1WIREDRIVER
+
+config STM32_UART7_HCIUART
+	bool "Bluetooth HCI-UART"
+	select STM32_HCIUART
+	depends on WIRELESS_BLUETOOTH
 
 endchoice # UART7 Driver Configuration
 
@@ -6882,10 +7178,45 @@ config UART7_RXDMA
 	bool "UART7 Rx DMA"
 	default n
 	depends on STM32_DMA2
+	select STM32_USART_RXDMA
 	---help---
 		In high data rate usage, Rx DMA may eliminate Rx overrun errors
 
 endif # STM32_UART7_SERIALDRIVER
+
+if STM32_UART7_HCIUART
+
+config STM32_HCIUART7_RXBUFSIZE
+	int "HCI UART7 Rx buffer size"
+	default 80
+	---help---
+		Characters are buffered as they are received. This specifies
+		the size of the receive buffer.  Ideally this should be at least
+		the size of the largest frame that can be received
+
+config STM32_HCIUART7_TXBUFSIZE
+	int "HCI UART7 Transmit buffer size"
+	default 80
+	---help---
+		Characters are buffered before being sent.  This specifies
+		the size of the transmit buffer.  Ideally this should be at least
+		the size of the largest frame that can be sent
+
+config STM32_HCIUART7_BAUD
+	int "HCI UART7 BAUD rate"
+	default 115200
+	---help---
+		The configured BAUD of the USART.
+
+config STM32_HCIUART7_RXDMA
+	bool "HCI UART7 Rx DMA"
+	default n
+	depends on STM32_DMA2
+	select STM32_HCIUART_RXDMA
+	---help---
+		In high data rate usage, Rx DMA may eliminate Rx overrun errors
+
+endif # STM32_UART7_HCIUART
 
 choice
 	prompt "UART8 Driver Configuration"
@@ -6901,6 +7232,11 @@ config STM32_UART8_SERIALDRIVER
 config STM32_UART8_1WIREDRIVER
 	bool "1-Wire driver"
 	select STM32_1WIREDRIVER
+
+config STM32_UART8_HCIUART
+	bool "Bluetooth HCI-UART"
+	select STM32_HCIUART
+	depends on WIRELESS_BLUETOOTH
 
 endchoice # UART8 Driver Configuration
 
@@ -6927,20 +7263,54 @@ config UART8_RXDMA
 	bool "UART8 Rx DMA"
 	default n
 	depends on STM32_DMA2
+	select STM32_USART_RXDMA
 	---help---
 		In high data rate usage, Rx DMA may eliminate Rx overrun errors
 
 endif # STM32_UART8_SERIALDRIVER
 
-if STM32_SERIALDRIVER
+if STM32_UART8_HCIUART
 
-comment "Serial Driver Configuration"
+config STM32_HCIUART8_RXBUFSIZE
+	int "HCI UART8 Rx buffer size"
+	default 80
+	---help---
+		Characters are buffered as they are received. This specifies
+		the size of the receive buffer.  Ideally this should be at least
+		the size of the largest frame that can be received
+
+config STM32_HCIUART8_TXBUFSIZE
+	int "HCI UART8 Transmit buffer size"
+	default 80
+	---help---
+		Characters are buffered before being sent.  This specifies
+		the size of the transmit buffer.  Ideally this should be at least
+		the size of the largest frame that can be sent
+
+config STM32_HCIUART8_BAUD
+	int "HCI UART8 BAUD rate"
+	default 115200
+	---help---
+		The configured BAUD of the USART.
+
+config STM32_HCIUART8_RXDMA
+	bool "HCI UART8 Rx DMA"
+	default n
+	depends on STM32_DMA2
+	select STM32_HCIUART_RXDMA
+	---help---
+		In high data rate usage, Rx DMA may eliminate Rx overrun errors
+
+endif # STM32_UART8_HCIUART
+
+menu "Serial Driver Configuration"
+	depends on STM32_SERIALDRIVER
 
 config STM32_SERIAL_RXDMA_BUFFER_SIZE
 	int "Rx DMA buffer size"
 	default 32
 	range 32 4096
-	depends on USART1_RXDMA || USART2_RXDMA || USART3_RXDMA || UART4_RXDMA || UART5_RXDMA || USART6_RXDMA || UART7_RXDMA || UART8_RXDMA
+	depends on STM32_USART_RXDMA
 	---help---
 		The DMA buffer size when using RX DMA to emulate a FIFO.
 
@@ -6951,7 +7321,6 @@ config STM32_SERIAL_RXDMA_BUFFER_SIZE
 
 config SERIAL_DISABLE_REORDERING
 	bool "Disable reordering of ttySx devices."
-	depends on STM32_USART1 || STM32_USART2 || STM32_USART3 || STM32_UART4 || STM32_UART5 || STM32_USART6 || STM32_UART7 || STM32_UART8
 	default n
 	---help---
 		NuttX per default reorders the serial ports (/dev/ttySx) so that the
@@ -6965,17 +7334,15 @@ config SERIAL_DISABLE_REORDERING
 
 config STM32_FLOWCONTROL_BROKEN
 	bool "Use Software UART RTS flow control"
-	depends on STM32_USART
 	default n
 	---help---
 		Enable UART RTS flow control using Software. Because STM
 		Current STM32 have broken HW based RTS behavior (they assert
 		nRTS after every byte received)  Enable this setting workaround
-		this issue by useing software based management of RTS
+		this issue by using software based management of RTS
 
 config STM32_USART_BREAKS
 	bool "Add TIOxSBRK to support sending Breaks"
-	depends on STM32_USART
 	default n
 	---help---
 		Add TIOCxBRK routines to send a line break per the STM32 manual, the
@@ -6984,7 +7351,7 @@ config STM32_USART_BREAKS
 
 config STM32_SERIALBRK_BSDCOMPAT
 	bool "Use GPIO To send Break"
-	depends on STM32_USART && STM32_USART_BREAKS
+	depends on STM32_USART_BREAKS
 	default n
 	---help---
 		Enable using GPIO on the TX pin to send a BSD compatible break:
@@ -6993,13 +7360,74 @@ config STM32_SERIALBRK_BSDCOMPAT
 		on because the SW starts the break and then the HW automatically clears
 		the break. This makes it is difficult to sent a long break.
 
-config STM32_USART_SINGLEWIRE
-	bool "Single Wire Support"
-	default n
-	depends on STM32_USART
+endmenu # Serial Driver Configuration
+
+menu "HCI UART Driver Configuration"
+	depends on STM32_SERIALDRIVER
+
+config STM32_HCIUART_RXDMA_BUFSIZE
+	int "Rx DMA buffer size"
+	default 32
+	range 32 4096
+	depends on STM32_HCIUART_RXDMA
 	---help---
-		Enable single wire UART support.  The option enables support for the
-		TIOCSSINGLEWIRE ioctl in the STM32 serial driver.
+		The DMA buffer size when using RX DMA to emulate a FIFO.
+
+		When streaming data, the generic serial layer will be called
+		every time the FIFO receives half or this number of bytes.
+
+		Value given here will be rounded up to next multiple of 4 bytes.
+
+config STM32_HCIUART_DMAPRIO
+	hex "HCI UART DMA priority"
+	default 0x00001000 if STM32_STM32F10XX
+	default 0x00010000 if !STM32_STM32F10XX
+	depends on STM32_HCIUART_RXDMA
+	---help---
+		Select HCI UART DMA prority.
+
+		For STM32 F1 family, options are: 0x00000000 low, 0x00001000 medium,
+		0x00002000 high, 0x00003000 very high.  Default: medium.
+
+		For other STM32's, options are: 0x00000000 low, 0x00010000 medium,
+		0x00020000 high, 0x00030000 very high.  Default: medium.
+
+config STM32_HCIUART_SW_RXFLOW
+	bool "Use Software UART RTS flow control"
+	default n
+	---help---
+		Enable UART RTS flow control using Software.  Current STM32 have
+		broken HW based RTS behavior (they assert nRTS after every byte
+		received)  Enable this setting workaround this issue by using
+		software based management of RTS
+
+		If HCI UART DMA is enabled, this is probably the better selection
+		as well. In that case, the Rx DMA buffer will avoid Rx overrun due
+		to short, bursty activity.  Software RTS management will probably
+		result in overall better throughput and shoudl still avoid Rx data
+		overrun conditions.
+
+config STM32_HCIUART_UPPER_WATERMARK
+	int "RTS flow control upper watermark (%)"
+	default 75
+	range 2 100
+	depends on STM32_HCIUART_SW_RXFLOW
+	---help---
+		If software RTS flow control is enable, then RTS will be asserted
+		when this amount of Rx data has been buffered.  The amount is
+		expressed as a percentage of the Rx buffer size.
+
+config STM32_HCIUART_LOWER_WATERMARK
+	int "RTS flow control lower watermark (%)"
+	default 25
+	range 1 99
+	depends on STM32_HCIUART_SW_RXFLOW
+	---help---
+		If software RTS flow control is enable, then RTS will be de-asserted
+		when there is less than this amount ofdata in the Rx buffere.  The
+		amount is expressed as a percentage of the Rx buffer size.
+
+endmenu # HCI UART Driver Configuration
 
 if PM
 config PM_SERIAL_ACTIVITY
@@ -7010,7 +7438,6 @@ config PM_SERIAL_ACTIVITY
 		interrupt.
 endif
 
-endif # STM32_SERIALDRIVER
 endmenu # U[S]ART Configuration
 
 menu "SPI Configuration"

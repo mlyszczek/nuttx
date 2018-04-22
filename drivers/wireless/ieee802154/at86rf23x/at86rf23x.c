@@ -196,10 +196,8 @@ static int  at86rf23x_transmit(FAR struct ieee802154_radio_s *ieee,
  ****************************************************************************/
 
 /* These are pointers to ALL registered at86rf23x devices.
- * This table is used during irqs to find the context
+ * This table is used during interrupt handling to find the context.
  * Only one device is supported for now.
- * More devices can be supported in the future by lookup them up
- * using the IRQ number. See the ENC28J60 or CC3000 drivers for reference.
  */
 
 static struct at86rf23x_dev_s g_at86rf23x_devices[1];
@@ -1288,18 +1286,18 @@ static int at86rf23x_interrupt(int irq, FAR void *context, FAR void *arg)
 static int at86rf23x_regdump(FAR struct at86rf23x_dev_s *dev)
 {
   uint32_t i;
-  char buf[4+16*3+2+1];
+  char buf[4 + 16 * 3 + 2 + 1];
   int len=0;
 
-  printf("RF23X regs:\n");
+  wlinfo("RF23X regs:\n");
 
-  for (i=0;i<0x30;i++)
+  for (i = 0; i < 0x30; i++)
     {
       /* First row and every 15 regs */
 
       if ((i & 0x0f) == 0)
        {
-         len = sprintf(buf, "%02x: ",i&0xFF);
+         len = sprintf(buf, "%02x: ", i & 0xFF);
        }
 
       /* Print the register value */
@@ -1310,10 +1308,10 @@ static int at86rf23x_regdump(FAR struct at86rf23x_dev_s *dev)
        * debug message.
        */
 
-      if ((i&15) == 15 || i == 0x2f)
+      if ((i & 15) == 15 || i == 0x2f)
         {
-          sprintf(buf+len, "\n");
-          printf("%s",buf);
+          sprintf(buf + len, "\n");
+          wlinfo("%s" ,buf);q
         }
     }
 

@@ -111,20 +111,20 @@
 
 /* Floating point types */
 
-typedef float  float32;
+typedef float        float32;
 #ifndef CONFIG_HAVE_DOUBLE
-typedef float  double_t;
-typedef float  float64;
+typedef float        double_t;
+typedef float        float64;
 #else
-typedef double double_t;
-typedef double float64;
+typedef double       double_t;
+typedef double       float64;
 #endif
 
 /* Misc. scalar types */
 
 /* mode_t is an integer type used for file attributes.  mode_t needs
- * to be at least 16-bits but, in fact must be sizeof(int) because it is
- * pased via varargs.
+ * to be at least 16-bits but, in fact, must be sizeof(int) because it is
+ * passed via varargs.
  */
 
 typedef unsigned int mode_t;
@@ -231,9 +231,13 @@ typedef int16_t      blksize_t;
 typedef unsigned int socklen_t;
 typedef uint16_t     sa_family_t;
 
-/* Used for system times in clock ticks */
+/* Used for system times in clock ticks (equivalent to systime_t) */
 
+#ifdef CONFIG_SYSTEM_TIME64
+typedef uint64_t     clock_t;
+#else
 typedef uint32_t     clock_t;
+#endif
 
 /* The type useconds_t shall be an unsigned integer type capable of storing
  * values at least in the range [0, 1000000]. The type suseconds_t shall be
