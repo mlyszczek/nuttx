@@ -3,7 +3,28 @@ README
 
   Generic OpenRISC board, suitable for use with Qemu, for example.
 
-Pre-built or1k-elf Toolchain (newlib):
+Contents
+========
+
+  o STATUS
+  o Pre-built or1k-elf Toolchain (newlib)
+  o OpenRISC GNU tool chain from source
+  o OpenOCD
+  o Qemu
+
+STATUS
+======
+
+  2018-04-23:  I have been trying to retrace all of Matt Thompson's steps to
+    get or1k building running on Qemu.   I am stuck at the moment because it
+    looks like there is some problem with my Kubuntu package manager.  The
+    Qemu configuration gives:
+
+      ERROR:  glib-2.22 gthread-2.0 is requred to compile QEMU.
+
+    But it looks like to do have a later version of gthread-2.0 installed.
+
+Pre-built or1k-elf Toolchain (newlib)
 =====================================
 
 Ref: https://openrisc.io/newlib/
@@ -130,7 +151,6 @@ Qemu
 ====
 
 The compiled ELF that works in or1ksim (https://github.com/openrisc/or1ksim).
-The uart must be enabled in sim.cfg for it to work.
 
 Ref: https://github.com/openrisc/or1ksim
 
@@ -143,18 +163,44 @@ This is a variant of the standard Or1ksim, which uses or1k as the architecture
 name, rather than or32. At some stage in the future this will be merged in, so
 that either architecture name is supported.
 
-Installation
+Or1k Build
+----------
 
 Or1ksim uses a standard GNU autoconf/automake installation and is designed to
 be built in a separate build directory. So from the main directory, a minimal
 install can be done with
 
+  cd or1ksim
   mkdir bd
   cd bd
   ../configure
   make
   sudo make install
 
-This will get it running:
+This will install the executables 'sim', 'profile', and 'mprofile' at
+/user/local/bin and libraries at /usr/local/lib.
+
+The UART must be enabled in sim.cfg BEFORE the build in order for the NSH
+configuration to work:
+
+   section uart
+  -  enabled  = 0
+  +  enabled  = 1
+
+Qemu Build
+----------
+
+Download:
+
+  https://www.qemu.org/download/#source
+
+Configure and build
+
+  Ref: https://wiki.qemu.org/Documentation/Platforms/OpenRISC
+
+  ./configure --target-list=or1k-softmmu
+  make
+
+Then this command will get it running:
 
   qemu-system-or1k -kernel nuttx-or1k-sim.elf -serial stdio -nographic -monitor none
