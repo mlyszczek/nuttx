@@ -57,7 +57,7 @@
 
 #  else
 
-VECTOR(kinetis_dmach0,  KINETIS_IRQ_DMACH0    /*  0: DMA channel 0, 16 transfer complete */
+VECTOR(kinetis_dmach0,  KINETIS_IRQ_DMACH0)   /*  0: DMA channel 0, 16 transfer complete */
 VECTOR(kinetis_dmach1,  KINETIS_IRQ_DMACH1)   /*  1: DMA channel 1, 17 transfer complete */
 VECTOR(kinetis_dmach2,  KINETIS_IRQ_DMACH2)   /*  2: DMA channel 2, 18 transfer complete */
 VECTOR(kinetis_dmach3,  KINETIS_IRQ_DMACH3)   /*  3: DMA channel 3, 19 transfer complete */
@@ -76,7 +76,6 @@ VECTOR(kinetis_dmach14, KINETIS_IRQ_DMACH14)  /* 14: DMA channel 14, 30 transfer
 VECTOR(kinetis_dmach15, KINETIS_IRQ_DMACH15)  /* 15: DMA channel 15, 31 transfer complete */
 VECTOR(kinetis_dmaerr,  KINETIS_IRQ_DMAERR)   /* 16: DMA error interrupt channels 0-31 */
 VECTOR(kinetis_mcm,     KINETIS_IRQ_MCM)      /* 17: MCM or RDC interrupt */
-VECTOR(kinetis_rdc,     KINETIS_IRQ_RDC)      /* 17: MCM or RDC interrupt */
 VECTOR(kinetis_flashcc, KINETIS_IRQ_FLASHCC)  /* 18: Flash memory command complete */
 VECTOR(kinetis_flashrc, KINETIS_IRQ_FLASHRC)  /* 19: Flash memory read collision */
 
@@ -157,7 +156,7 @@ UNUSED(KINETIS_IRQ_RESVD87)
 VECTOR(kinetis_tpm1,    KINETIS_IRQ_TPM1)     /* 88: TPM1 */
 VECTOR(kinetis_tpm2,    KINETIS_IRQ_TPM2)     /* 89: TPM2 */
 
-VECTOR(kinetis_usbhsdcd, KINETIS_IRQ_USBHSDCD)  /* 90: USBHS DCD or USBHS Phy modules */
+VECTOR(kinetis_usbhsdcd, KINETIS_IRQ_USBHSDCD) /* 90: USBHS DCD or USBHS Phy modules */
 VECTOR(kinetis_i2c3,    KINETIS_IRQ_I2C3)     /* 91: I2C3 */
 UNUSED(KINETIS_IRQ_RESVD92)
 VECTOR(kinetis_usb1otg, KINETIS_IRQ_USB1OTG)  /* 93: USB1 OTG*/

@@ -54,7 +54,7 @@
 /* K28 Family
  *
  * The memory map for the following parts is defined in NXP document
- * K28P144M180SF5RMV2 Rev. 2, May 2015
+ * K28P210M150SF5RM Rev. 4, August 2017
  */
 
 #if defined(CONFIG_ARCH_CHIP_MK28FN2M0VMI15) || defined(CONFIG_ARCH_CHIP_MK28FN2M0CAU15R)
@@ -174,7 +174,7 @@
 #  define KINETIS_TPM2_BASE          0x400ca000 /* TPM2 */
 #  define KINETIS_DAC0_ALT_BASE      0x400cc000 /* Alternate address 12-bit digital-to-analog
                                                  * converter (DAC) 0 */
-#  define KINETIS_LPUART3_BASE       0x400d6000 /* LPUART3 */
+#  define KINETIS_LPUART4_BASE       0x400d6000 /* LPUART4 */
 #  define KINETIS_QSPI0C_BASE        0x400da000 /* QSPI0 controller */
 #  define KINETIS_FLEXIO0_BASE       0x400df000 /* FlexIO0 */
 #  define KINETIS_I2C2_BASE          0x400e6000 /* I2C 2 */
@@ -183,6 +183,12 @@
                                                  * purpose input/output module that shares the
                                                  * crossbar switch slave port with the AIPS-Lite
                                                  * is accessed at this address. */
+#  define KINETIS_GPIO_BASE(n)       (0x400ff000 + ((n) << 6))
+#  define KINETIS_GPIOA_BASE         0x400ff000 /* GPIO PORTA registers */
+#  define KINETIS_GPIOB_BASE         0x400ff040 /* GPIO PORTB registers */
+#  define KINETIS_GPIOC_BASE         0x400ff080 /* GPIO PORTC registers */
+#  define KINETIS_GPIOD_BASE         0x400ff0c0 /* GPIO PORTD registers */
+#  define KINETIS_GPIOE_BASE         0x400ff100 /* GPIO PORTE registers */
 
 /* Private Peripheral Bus (PPB) Memory Map ******************************************/
 

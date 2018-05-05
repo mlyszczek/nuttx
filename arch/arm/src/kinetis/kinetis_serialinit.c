@@ -86,8 +86,6 @@ void kinetis_earlyserialinit(void)
 }
 #endif
 
-#if defined(USE_SERIALDRIVER)
-
 /****************************************************************************
  * Name: up_serialinit
  *
@@ -97,9 +95,10 @@ void kinetis_earlyserialinit(void)
  *
  ****************************************************************************/
 
+#if defined(USE_SERIALDRIVER)
 void up_serialinit(void)
 {
-#if defined(HAVE_UART_DEVICE) ||defined(HAVE_LUART_DEVICE)
+#if defined(HAVE_UART_DEVICE) ||defined(HAVE_LPUART_DEVICE)
   uint32_t start = 0;
 #endif
 

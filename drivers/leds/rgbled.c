@@ -1,7 +1,7 @@
 /****************************************************************************
  * drivers/rgbled.c
  *
- *   Copyright (C) 2016-2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2016-2018 Gregory Nutt. All rights reserved.
  *   Author: Alan Carvalho de Assis <acassis@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -73,12 +73,14 @@ struct rgbled_upperhalf_s
   uint8_t           crefs;    /* The number of times the device has been opened */
   volatile bool     started;  /* True: pulsed output is being generated */
   sem_t             exclsem;  /* Supports mutual exclusion */
-  struct pwm_info_s ledr;     /* Pulsed output for LED R*/
-  struct pwm_info_s ledg;     /* Pulsed output for LED G*/
-  struct pwm_info_s ledb;     /* Pulsed output for LED B*/
-  struct pwm_lowerhalf_s *devledr;
-  struct pwm_lowerhalf_s *devledg;
-  struct pwm_lowerhalf_s *devledb;
+  FAR struct pwm_lowerhalf_s *devledr;
+  FAR struct pwm_lowerhalf_s *devledg;
+  FAR struct pwm_lowerhalf_s *devledb;
+#ifdef CONFIG_PWM_MULTICHAN
+  int chanr;                  /* Red PWM channel */
+  int chang;                  /* Green PWM channel */
+  int chanb;                  /* Blue PWM channel */
+#endif
 };
 
 /****************************************************************************
@@ -298,11 +300,12 @@ static ssize_t rgbled_write(FAR struct file *filep, FAR const char *buffer,
   FAR struct pwm_lowerhalf_s *ledr = upper->devledr;
   FAR struct pwm_lowerhalf_s *ledg = upper->devledg;
   FAR struct pwm_lowerhalf_s *ledb = upper->devledb;
-
+  struct pwm_info_s pwm;
   unsigned int red;
   unsigned int green;
   unsigned int blue;
   char color[3];
+  int i;
 
   /* We need to receive a string #RRGGBB = 7 bytes */
 
@@ -383,26 +386,91 @@ static ssize_t rgbled_write(FAR struct file *filep, FAR const char *buffer,
   blue  ^= 0xffff;
 #endif
 
-  /* Setup LED R */
+#ifdef CONFIG_PWM_MULTICHAN
+  pwm.frequency = 100;
 
-  upper->ledr.frequency = 100;
-  upper->ledr.duty = red;
+  i = 0;
+  pwm.channels[i].duty = red;
+  pwm.channels[i++].channel = upper->chanr;
 
-  ledr->ops->start(ledr, &upper->ledr);
+  /* If the green pwm source is on the same timer as the red,
+   * set that up now too.
+   */
 
-  /* Setup LED G */
+  if (ledr == ledg)
+    {
+      pwm.channels[i].duty = green;
+      pwm.channels[i++].channel = upper->chang;
+    }
 
-  upper->ledg.frequency = 100;
-  upper->ledg.duty = green;
+  /* If the blue pwm source is on the same timer as the red,
+   * set that up now too.
+   */
 
-  ledg->ops->start(ledg, &upper->ledg);
+  if (ledr == ledb)
+    {
+      pwm.channels[i].duty = blue;
+      pwm.channels[i++].channel = upper->chanb;
+    }
 
-  /* Setup LED B */
+  ledr->ops->start(ledr, &pwm);
 
-  upper->ledb.frequency = 100;
-  upper->ledb.duty = blue;
+  for (i = 0; i < CONFIG_PWM_NCHANNELS; i++)
+    {
+      pwm.channels[i].channel = 0;
+    }
 
-  ledb->ops->start(ledb, &upper->ledb);
+  /* If the green timer is not the same as the red timer, update it
+   * separately.
+   */
+
+  if (ledg != ledr)
+    {
+      i = 0;
+      pwm.channels[i].duty = green;
+      pwm.channels[i++].channel = upper->chang;
+
+      /* If the blue pwm source is on the same timer as the green,
+       * set that up now too.
+       */
+
+      if (ledg == ledb)
+        {
+          pwm.channels[i].duty = blue;
+          pwm.channels[i++].channel = upper->chanb;
+        }
+
+      ledg->ops->start(ledg, &pwm);
+
+      for (i = 0; i < CONFIG_PWM_NCHANNELS; i++)
+        {
+          pwm.channels[i].channel = 0;
+        }
+    }
+
+  /* If the blue timer is not the same as the red or green timer, update it
+   * separately.
+   */
+
+  if (ledb != ledr && ledb != ledg)
+    {
+      pwm.channels[0].duty = green;
+      pwm.channels[0].channel = upper->chanb;
+
+      ledb->ops->start(ledb, &pwm);
+    }
+#else
+  pwminfo.frequency = 100;
+
+  pwminfo.duty = red;
+  ledr->ops->start(ledr, &pwminfo);
+
+  pwminfo.duty = green;
+  ledg->ops->start(ledg, &pwminfo);
+
+  pwminfo.duty = blue;
+  ledb->ops->start(ledb, &pwminfo);
+#endif
 
   return buflen;
 }
@@ -429,6 +497,8 @@ static ssize_t rgbled_write(FAR struct file *filep, FAR const char *buffer,
  *     drivers for the red, green, and blue LEDs, respectively.  These
  *     instances will be bound to the RGB LED driver and must persists as
  *     long as that driver persists.
+ *   chanr, chang, chanb -Red/Green/Blue PWM channels (only if
+ *     CONFIG_PWM_MULTICHAN is defined)
  *
  * Returned Value:
  *   Zero on success; a negated errno value on failure.
@@ -437,7 +507,11 @@ static ssize_t rgbled_write(FAR struct file *filep, FAR const char *buffer,
 
 int rgbled_register(FAR const char *path, FAR struct pwm_lowerhalf_s *ledr,
                                           FAR struct pwm_lowerhalf_s *ledg,
-                                          FAR struct pwm_lowerhalf_s *ledb)
+                                          FAR struct pwm_lowerhalf_s *ledb
+#ifdef CONFIG_PWM_MULTICHAN
+                                        , int chanr, int chang, int chanb
+#endif
+                                          )
 {
   FAR struct rgbled_upperhalf_s *upper;
 
@@ -460,6 +534,12 @@ int rgbled_register(FAR const char *path, FAR struct pwm_lowerhalf_s *ledr,
   upper->devledr = ledr;
   upper->devledg = ledg;
   upper->devledb = ledb;
+
+#ifdef CONFIG_PWM_MULTICHAN
+  upper->chanr = chanr;
+  upper->chang = chang;
+  upper->chanb = chanb;
+#endif
 
   /* Register the PWM device */
 

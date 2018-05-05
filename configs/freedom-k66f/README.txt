@@ -131,10 +131,10 @@ LEDs and Buttons
   Beside the general purpose IO function, both SW2 and SW3 can be used
   as a low-leakage wakeup (LLWU) source.
 
-  Switch    GPIO Function
-  --------- ---------------------------------------------------------------
-  SW2       PTD11/LLWU_P25/SPI2_PCS0/SDHC0_CLKIN/LPUART0_CTS/FB_A19
-  SW3       PTA10/LLWU_P22/FTM2_CH0/MII0_RXD2/FTM2_QD_PHA/TPM2_CH0/TRACE_D0
+    Switch    GPIO Function
+    --------- ---------------------------------------------------------------
+    SW2       PTD11/LLWU_P25/SPI2_PCS0/SDHC0_CLKIN/LPUART0_CTS/FB_A19
+    SW3       PTA10/LLWU_P22/FTM2_CH0/MII0_RXD2/FTM2_QD_PHA/TPM2_CH0/TRACE_D0
 
 Networking Support
 ==================
@@ -753,7 +753,7 @@ Freedom K66F Configuration Options
     CONFIG_KINETIS_FTM1     -- Support FlexTimer 1
     CONFIG_KINETIS_FTM2     -- Support FlexTimer 2
     CONFIG_KINETIS_FTM3     -- Support FlexTimer 3
-    CONFIG_KINETIS_LPTIMER  -- Support the low power timer
+    CONFIG_KINETIS_LPTMR0   -- Support the low power timer 0
     CONFIG_KINETIS_RTC      -- Support RTC
     CONFIG_KINETIS_SLCD     -- Support the segment LCD (K3x, K4x, and K5x only)
     CONFIG_KINETIS_EWM      -- Support the external watchdog
