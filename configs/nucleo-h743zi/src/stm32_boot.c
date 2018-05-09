@@ -1,7 +1,7 @@
 /************************************************************************************
  * configs/nucleo-h743zi/src/stm32_boot.c
  *
- *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,6 +45,7 @@
 #include <arch/board/board.h>
 
 #include "up_arch.h"
+#include "stm32_start.h"
 #include "nucleo-h743zi.h"
 
 /************************************************************************************

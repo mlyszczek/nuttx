@@ -1,7 +1,7 @@
 ############################################################################
 # configs/nucleo-h743zi/src/Makefile
 #
-#   Copyright (C) 2015 Gregory Nutt. All rights reserved.
+#   Copyright (C) 2018 Gregory Nutt. All rights reserved.
 #   Author: Gregory Nutt <gnutt@nuttx.org>
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,8 +36,7 @@
 -include $(TOPDIR)/Make.defs
 
 ASRCS =
-CSRCS = stm32_boot.c stm32_bringup.c
-# stm32_boot.c stm32_spi.c stm32_bringup.c
+CSRCS = stm32_boot.c stm32_bringup.c # stm32_spi.c
 
 # ifeq ($(CONFIG_ARCH_LEDS),y)
 # CSRCS += stm32_autoleds.c

@@ -111,17 +111,21 @@
 #define STM32_HSEBYP_ENABLE
 
 #define STM32_PLLCFG_PLLSRC      RCC_PLLCKSELR_PLLSRC_HSE
+
 /* Wide PLL, 4 - 8 MHz input, enable DIVP */
-#define STM32_PLLCFG_PLL1CFG     (RCC_PLLCFGR_PLL1VCOSEL_WIDE | RCC_PLLCFGR_PLL1RGE_4_8_MHZ | RCC_PLLCFGR_DIVP1EN)
+
+#define STM32_PLLCFG_PLL1CFG     (RCC_PLLCFGR_PLL1VCOSEL_WIDE | \
+                                  RCC_PLLCFGR_PLL1RGE_4_8_MHZ | \
+                                  RCC_PLLCFGR_DIVP1EN)
 #define STM32_PLLCFG_PLL1M       RCC_PLLCKSELR_DIVM1(2)
 #define STM32_PLLCFG_PLL1N       RCC_PLL1DIVR_N1(200)
 #define STM32_PLLCFG_PLL1P       RCC_PLL1DIVR_P1(2)
 #define STM32_PLLCFG_PLL1Q       RCC_PLL1DIVR_Q1(4)
 #define STM32_PLLCFG_PLL1R       RCC_PLL1DIVR_R1(8)
 
-#define STM32_VCO1_FREQUENCY    ((STM32_HSE_FREQUENCY / 4) * 200)
-#define STM32_SYSCLK_FREQUENCY  (STM32_VCO1_FREQUENCY / 1)
-#define STM32_CPUCLK_FREQUENCY  (STM32_SYSCLK_FREQUENCY / 1)
+#define STM32_VCO1_FREQUENCY     ((STM32_HSE_FREQUENCY / 4) * 200)
+#define STM32_SYSCLK_FREQUENCY   (STM32_VCO1_FREQUENCY / 1)
+#define STM32_CPUCLK_FREQUENCY   (STM32_SYSCLK_FREQUENCY / 1)
 
 /* Configure Clock Assignments */
 
@@ -241,6 +245,7 @@
 /************************************************************************************
  * Public Data
  ************************************************************************************/
+
 #ifndef __ASSEMBLY__
 
 #undef EXTERN
@@ -255,18 +260,6 @@ extern "C"
 /************************************************************************************
  * Public Function Prototypes
  ************************************************************************************/
-
-/************************************************************************************
- * Name: stm32_boardinitialize
- *
- * Description:
- *   All STM32 architectures must provide the following entry point.  This entry point
- *   is called early in the initialization -- after all memory has been configured
- *   and mapped but before any devices have been initialized.
- *
- ************************************************************************************/
-
-void stm32_boardinitialize(void);
 
 #undef EXTERN
 #if defined(__cplusplus)

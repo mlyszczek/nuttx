@@ -1,10 +1,8 @@
 /****************************************************************************
  * configs/nucleo-h743zi/scripts/flash.ld
  *
- *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- *       Modified 11/4/2013 for STM32F429 support
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -129,7 +127,8 @@ EXTERN(_vectors)
 ENTRY(_stext)
 SECTIONS
 {
-	.text : {
+	.text :
+	{
 		_stext = ABSOLUTE(.);
 		*(.vectors)
 		*(.text .text.*)
@@ -145,25 +144,29 @@ SECTIONS
 		_etext = ABSOLUTE(.);
 	} > flash
 
-	.init_section : {
+	.init_section :
+	{
 		_sinit = ABSOLUTE(.);
 		*(.init_array .init_array.*)
 		_einit = ABSOLUTE(.);
 	} > flash
 
-	.ARM.extab : {
+	.ARM.extab :
+	{
 		*(.ARM.extab*)
 	} > flash
 
 	__exidx_start = ABSOLUTE(.);
-	.ARM.exidx : {
+	.ARM.exidx :
+	{
 		*(.ARM.exidx*)
 	} > flash
 	__exidx_end = ABSOLUTE(.);
 
 	_eronly = ABSOLUTE(.);
 
-	.data : {
+	.data :
+	{
 		_sdata = ABSOLUTE(.);
 		*(.data .data.*)
 		*(.gnu.linkonce.d.*)
@@ -171,7 +174,8 @@ SECTIONS
 		_edata = ABSOLUTE(.);
 	} > sram AT > flash
 
-	.bss : {
+	.bss :
+	{
 		_sbss = ABSOLUTE(.);
 		*(.bss .bss.*)
 		*(.gnu.linkonce.b.*)
@@ -180,6 +184,7 @@ SECTIONS
 	} > sram
 
 	/* Stabs debugging sections. */
+
 	.stab 0 : { *(.stab) }
 	.stabstr 0 : { *(.stabstr) }
 	.stab.excl 0 : { *(.stab.excl) }
