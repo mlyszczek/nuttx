@@ -1,7 +1,7 @@
 /************************************************************************************
  * arch/arm/src/stm3fr2/chip/stm32h7x3xx_memorymap.h
  *
- *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>
  *            David Sidrane <david_s5@nscdg.com>
  *
