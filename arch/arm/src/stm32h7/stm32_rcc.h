@@ -1,7 +1,7 @@
 /************************************************************************************
  * arch/arm/src/stm32h7/stm32_rcc.h
  *
- *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.orgr>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -66,10 +66,10 @@ extern "C"
  ************************************************************************************/
 
 /* This symbol references the Cortex-M7 vector table (as positioned by the linker
- * script, ld.script or ld.script.dfu.  The standard location for the vector table is
- * at the beginning of FLASH at address 0x0800:0000.  If we are using the STMicro DFU
- * bootloader, then the vector table will be offset to a different location in FLASH
- * and we will need to set the NVIC vector location to this alternative location.
+ * script).  The standard location for the vector table is at the beginning of FLASH
+ * at address 0x0800:0000.  If we are using the STMicro DFU bootloader, then the
+ * vector table will be offset to a different location in FLASH and we will need to
+ * set the NVIC vector location to this alternative location.
  */
 
 extern uint32_t _vectors[];  /* See armv7-m/up_vectors.c */
@@ -82,8 +82,8 @@ extern uint32_t _vectors[];  /* See armv7-m/up_vectors.c */
  * Name: stm32_mco1config
  *
  * Description:
- *   Selects the clock source to output on MCO1 pin (PA8). PA8 should be configured in
- *   alternate function mode.
+ *   Selects the clock source to output on MCO1 pin (PA8). PA8 should be configured
+ *   in alternate function mode.
  *
  * Input Parameters:
  *   source - One of the definitions for the RCC_CFGR_MCO1 definitions from
@@ -112,8 +112,8 @@ static inline void stm32_mco1config(uint32_t source, uint32_t div)
  * Name: stm32_mco2config
  *
  * Description:
- *   Selects the clock source to output on MCO2 pin (PC9). PC9 should be configured in
- *   alternate function mode.
+ *   Selects the clock source to output on MCO2 pin (PC9). PC9 should be configured
+ *   in alternate function mode.
  *
  * Input Parameters:
  *   source - One of the definitions for the RCC_CFGR_MCO2 definitions from

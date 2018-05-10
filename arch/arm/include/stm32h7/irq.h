@@ -1,7 +1,7 @@
 /************************************************************************************
  * arch/arm/include/stm32h7/irq.h
  *
- *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,8 +33,8 @@
  *
  ************************************************************************************/
 
-/* This file should never be included directed but, rather,
- * only indirectly through nuttx/irq.h
+/* This file should never be included directed but, rather, only indirectly through
+ * nuttx/irq.h
  */
 
 #ifndef __ARCH_ARM_INCLUDE_STM32H7_IRQ_H
@@ -110,4 +110,3 @@ extern "C"
 #endif
 
 #endif /* __ARCH_ARM_INCLUDE_STM32H7_IRQ_H */
-

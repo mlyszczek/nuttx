@@ -1,7 +1,7 @@
 /************************************************************************************
  * arch/arm/include/stm32h7/chip.h
  *
- *   Copyright (C) 2015-2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>
  *            Simon Laube <simon@leitwert.ch>
  *
@@ -46,6 +46,7 @@
 /************************************************************************************
  * Pre-processor Definitions
  ************************************************************************************/
+
 /* STM32H7x3xx  Differences between family members:
  *
  *   ----------- ----------------
@@ -59,8 +60,8 @@
  *
  * The correct FLASH size will be set CONFIG_STM32H7_FLASH_CONFIG_x or overridden
  * with CONFIG_STM32H7_FLASH_OVERRIDE_x
- *
  */
+
 #if defined(CONFIG_ARCH_CHIP_STM32H743ZI)
 #else
 #  error STM32 H7 chip not identified
@@ -72,9 +73,9 @@
 #    define STM32H7_SRAM_SIZE             (512*1024)  /* 512Kb SRAM on AXI bus Matrix (D1) */
 #    define STM32H7_SRAM1_SIZE            (128*1024)  /* 128Kb SRAM1 on AHB bus Matrix (D2) */
 #    define STM32H7_SRAM2_SIZE            (128*1024)  /* 128Kb SRAM2 on AHB bus Matrix (D2) */
-#    define STM32H7_SRAM3_SIZE             (32*1024)  /*  32Kb SRAM3 on AHB bus Matrix (D2) */
+#    define STM32H7_SRAM3_SIZE            (32*1024)   /*  32Kb SRAM3 on AHB bus Matrix (D2) */
 #    define STM32H7_SRAM123_SIZE          (288*1024)  /* 128Kb SRAM123 on AHB bus Matrix (D2) */
-#    define STM32H7_SRAM4_SIZE             (64*1024)  /*  64Kb SRAM2 on AHB bus Matrix (D3) */
+#    define STM32H7_SRAM4_SIZE            (64*1024)   /*  64Kb SRAM2 on AHB bus Matrix (D3) */
 #  if defined(CONFIG_ARMV7M_HAVE_DTCM)
 #      define STM32H7_DTCM_SRAM_SIZE      (128*1024)  /* 128Kb DTCM SRAM on TCM interface */
 #  else
@@ -91,7 +92,7 @@
 
 /* Common to all Family members */
 
-// TODO: #  define STM32F7_NATIM                    2   /* Two advanced timers TIM1 and 8 */
+// TODO: #  define STM32F7_NATIM          2           /* Two advanced timers TIM1 and 8 */
 // TODO: etc ...
 
 /* TBD FPU Configuration */
@@ -108,9 +109,9 @@
 
 // TODO:
 // #if defined(CONFIG_STM32F7_HAVE_FMC)
-// #  define STM32F7_NFMC                     1   /* Have FMC memory controller */
+// #  define STM32F7_NFMC                 1           /* Have FMC memory controller */
 // #else
-// #  define STM32F7_NFMC                     0   /* No FMC memory controller */
+// #  define STM32F7_NFMC                 0           /* No FMC memory controller */
 // #endif
 
 /* NVIC priority levels *************************************************************/

@@ -1,7 +1,7 @@
 /****************************************************************************************************
  * arch/arm/include/stm32h7/stm32h7x3xx_irq.h.h
  *
- *   Copyright (C) 2009 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>
  *            David Sidrane <david_s5@nscdg.com>
  *

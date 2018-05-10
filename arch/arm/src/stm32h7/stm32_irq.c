@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/arm/src/stm32h7/stm32_irq.c
  *
- *   Copyright (C) 2015-2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -93,10 +93,6 @@ volatile uint32_t *g_current_regs[1];
  */
 
 extern uint32_t _vectors[];
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
 
 /****************************************************************************
  * Private Functions

@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/arm/src/stm32h7/stm32_rcc.c
  *
- *   Copyright (C) 2015, 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>
  *            David Sidrane <david_s5@nscdg.com>
  *
@@ -66,10 +66,6 @@
 #define HSERDY_TIMEOUT (100 * CONFIG_BOARD_LOOPSPERMSEC)
 
 /****************************************************************************
- * Private Data
- ****************************************************************************/
-
-/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -92,7 +88,7 @@
  *   Called to establish the clock settings based on the values in board.h.
  *   This function (by default) will reset most everything, enable the PLL,
  *   and enable peripheral clocking for all peripherals enabled in the NuttX
- *   configurationfile.
+ *   configuration file.
  *
  *   If CONFIG_STM32H7_CUSTOM_CLOCKCONFIG is defined, then clocking
  *   will be enabled by an externally provided, board-specific function called
@@ -149,7 +145,7 @@ void stm32_clockconfig(void)
  *
  *   This functional performs a subset of the operations performed by
  *   stm32_clockconfig():  It does not reset any devices, and it does not reset the
- *   currenlty enabled peripheral clocks.
+ *   currently enabled peripheral clocks.
  *
  *   If CONFIG_STM32H7_CUSTOM_CLOCKCONFIG is defined, then clocking will be enabled
  *   by an externally provided, board-specific function called

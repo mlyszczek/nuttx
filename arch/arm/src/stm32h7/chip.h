@@ -1,7 +1,7 @@
 /************************************************************************************
  * arch/arm/src/stm32h7/chip.h
  *
- *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,8 +48,6 @@
 
 #include <arch/irq.h>
 #include <arch/stm32h7/chip.h>
-// TODO: #include "chip/stm32_pinmap.h"
-// TODO: #include "chip/stm32_memorymap.h"
 
 /* If the common ARMv7-M vector handling logic is used, then it expects the
  * following definition in this file that provides the number of supported external
