@@ -1,7 +1,7 @@
 /****************************************************************************
  * include/nuttx/video/fb.h
  *
- *   Copyright (C) 2008-2011, 2013, 2016-2017 Gregory Nutt. All rights
+ *   Copyright (C) 2008-2011, 2013, 2016-2018 Gregory Nutt. All rights
  *     reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
@@ -250,6 +250,11 @@
 #  define FBIOSET_BLANK       _FBIOC(0x000e)  /* Blank or unblank
                                                * Argument: read-only struct
                                                *           fb_overlayinfo_s */
+#ifdef CONFIG_FB_OVERLAY_BLIT
+#  define FBIOSET_BLIT        _FBIOC(0x000f)  /* Blit area between overlays
+                                               * Argument: read-only struct
+                                               *           fb_overlayblit_s */
+#endif
 #endif
 
 /****************************************************************************
@@ -313,7 +318,29 @@ struct fb_overlayinfo_s
   uint32_t   color;           /* Background color */
   struct fb_transp_s transp;  /* Transparency */
 };
+
+#ifdef CONFIG_FB_OVERLAY_BLIT
+/* This structure describes an overlay area within a whole overlay */
+
+struct fb_overlayarea_s
+{
+  uint32_t overlay;      /* Number overlay */
+  uint32_t x;            /* x-offset of the area */
+  uint32_t y;            /* y-offset of the area */
+  uint32_t w;            /* Width of the area */
+  uint32_t h;            /* Height of the area */
+};
+
+/* This structure describes blit operation */
+
+struct fb_overlayblit_s
+{
+  struct fb_overlayarea_s dest;       /* The destination overlay area */
+  struct fb_overlayarea_s foreground; /* The foreground overlay area */
+  struct fb_overlayarea_s background; /* The background overlay area */
+};
 #endif
+#endif /* CONFIG_FB_OVERLAY */
 
 /* On video controllers that support mapping of a pixel palette value
  * to an RGB encoding, the following structure may be used to define
