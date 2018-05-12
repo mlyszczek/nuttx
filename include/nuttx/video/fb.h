@@ -231,6 +231,27 @@
 
 #define FBIO_WAITFORVSYNC     _FBIOC(0x0008)  /* Wait for vertical sync */
 
+#ifdef CONFIG_FB_OVERLAY
+#  define FBIOGET_OVERLAYINFO _FBIOC(0x0009)  /* Get video overlay info */
+                                              /* Argument: writable struct
+                                               *           fb_overlayinfo_s */
+#  define FBIO_SELECT_OVERLAY _FBIOC(0x000a)  /* Select overlay */
+                                              /* Argument: read-only
+                                               *           unsigned long */
+#  define FBIOSET_TRANSP      _FBIOC(0x000b)  /* Set opacity or transparency
+                                               * Argument: read-only struct
+                                               *           fb_overlayinfo_s */
+#  define FBIOSET_CHROMAKEY   _FBIOC(0x000c)  /* Set chroma key
+                                               * Argument: read-only struct
+                                               *           fb_overlayinfo_s */
+#  define FBIOSET_COLOR       _FBIOC(0x000d)  /* Set color
+                                               * Aŕgument: read-only struct
+                                               *           fb_overlayinfo_s */
+#  define FBIOSET_BLANK       _FBIOC(0x000e)  /* Blank or unblank
+                                               * Argument: read-only struct
+                                               *           fb_overlayinfo_s */
+#endif
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -249,6 +270,9 @@ struct fb_videoinfo_s
   fb_coord_t xres;        /* Horizontal resolution in pixel columns */
   fb_coord_t yres;        /* Vertical resolution in pixel rows */
   uint8_t    nplanes;     /* Number of color planes supported */
+#ifdef CONFIG_FB_OVERLAY
+  uint8_t    noverlays;   /* Number of overlays supported */
+#endif
 };
 
 /* This structure describes one color plane.  Some YUV formats may support
@@ -263,6 +287,33 @@ struct fb_planeinfo_s
   uint8_t    display;     /* Display number */
   uint8_t    bpp;         /* Bits per pixel */
 };
+
+#ifdef CONFIG_FB_OVERLAY
+/* This structure describes the transparency. */
+
+struct fb_transp_s
+{
+  uint8_t    transp;      /* Transparency */
+  uint8_t    transp_mode; /* Transparency type
+                           * 0 alpha by transp
+                           * 1 alpha by color, e.g. argb8888 */
+};
+
+/* This structure describes one overlay. */
+
+struct fb_overlayinfo_s
+{
+  FAR void   *fbmem;          /* Start of frame buffer memory */
+  uint32_t   fblen;           /* Length of frame buffer memory in bytes */
+  fb_coord_t stride;          /* Length of a line in bytes */
+  uint32_t   overlay;         /* Overlay number */
+  uint8_t    bpp;             /* Bits per pixel */
+  uint8_t    blank;           /* Blank or unblank */
+  uint32_t   chromakey;       /* Chroma key */
+  uint32_t   color;           /* Background color */
+  struct fb_transp_s transp;  /* Transparency */
+};
+#endif
 
 /* On video controllers that support mapping of a pixel palette value
  * to an RGB encoding, the following structure may be used to define
