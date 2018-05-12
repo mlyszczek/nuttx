@@ -343,6 +343,7 @@ struct fb_overlayblit_s
 };
 
 /* This structure describes blend operation */
+
 struct fb_overlayblend_s
 {
   struct fb_overlayarea_s dest;       /* The destination overlay area */
