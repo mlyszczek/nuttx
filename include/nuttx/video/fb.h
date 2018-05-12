@@ -197,36 +197,39 @@
 
 /* ioctls */
 
-#define FBIOGET_VIDEOINFO  _FBIOC(0x0001)  /* Get color plane info */
-                                           /* Argument: writable struct
-                                            *           fb_videoinfo_s */
-#define FBIOGET_PLANEINFO  _FBIOC(0x0002)  /* Get video plane info */
-                                           /* Argument: writable struct
-                                            *           fb_planeinfo_s */
+#define FBIOGET_VIDEOINFO     _FBIOC(0x0001)  /* Get color plane info */
+                                              /* Argument: writable struct
+                                               *           fb_videoinfo_s */
+#define FBIOGET_PLANEINFO     _FBIOC(0x0002)  /* Get video plane info */
+                                              /* Argument: writable struct
+                                               *           fb_planeinfo_s */
+
 #ifdef CONFIG_FB_CMAP
-#  define FBIOGET_CMAP     _FBIOC(0x0003)  /* Get RGB color mapping */
-                                           /* Argument: writable struct
-                                            *           fb_cmap_s */
-#  define FBIOPUT_CMAP     _FBIOC(0x0004)  /* Put RGB color mapping */
-                                           /* Argument: read-only struct
-                                            *           fb_cmap_s */
+#  define FBIOGET_CMAP        _FBIOC(0x0003)  /* Get RGB color mapping */
+                                              /* Argument: writable struct
+                                               *           fb_cmap_s */
+#  define FBIOPUT_CMAP        _FBIOC(0x0004)  /* Put RGB color mapping */
+                                              /* Argument: read-only struct
+                                               *           fb_cmap_s */
 #endif
 
 #ifdef CONFIG_FB_HWCURSOR
-#  define FBIOGET_CURSOR   _FBIOC(0x0005)  /* Get cursor attributes */
-                                           /* Argument: writable struct
-                                            *           fb_cursorattrib_s */
-#  define FBIOPUT_CURSOR   _FBIOC(0x0006)  /* Set cursor attributes */
-                                           /* Argument: read-only struct
-                                            *           fb_setcursor_s */
+#  define FBIOGET_CURSOR      _FBIOC(0x0005)  /* Get cursor attributes */
+                                              /* Argument: writable struct
+                                               *           fb_cursorattrib_s */
+#  define FBIOPUT_CURSOR      _FBIOC(0x0006)  /* Set cursor attributes */
+                                              /* Argument: read-only struct
+                                               *           fb_setcursor_s */
 #endif
 
 #ifdef CONFIG_LCD_UPDATE
-#  define FBIO_UPDATE      _FBIOC(0x0007)  /* Update a rectangular region in
-                                            * the framebuffer
-                                            * Argument: read-only struct
-                                            *           nxgl_rect_s */
+#  define FBIO_UPDATE         _FBIOC(0x0007)  /* Update a rectangular region in
+                                               * the framebuffer
+                                               * Argument: read-only struct
+                                               *           nxgl_rect_s */
 #endif
+
+#define FBIO_WAITFORVSYNC     _FBIOC(0x0008)  /* Wait for vertical sync */
 
 /****************************************************************************
  * Public Types
