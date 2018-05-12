@@ -254,7 +254,10 @@
 #  define FBIOSET_BLIT        _FBIOC(0x000f)  /* Blit area between overlays
                                                * Argument: read-only struct
                                                *           fb_overlayblit_s */
-#endif
+# define FBIOSET_BLEND        _FBIOC(0x0010)  /* Blend area between overlays
+                                               * Argument: read-only struct
+                                               *           fb_overlayblend_s */
+# endif
 #endif
 
 /****************************************************************************
@@ -334,6 +337,13 @@ struct fb_overlayarea_s
 /* This structure describes blit operation */
 
 struct fb_overlayblit_s
+{
+  struct fb_overlayarea_s dest;       /* The destination overlay area */
+  struct fb_overlayarea_s src;        /* The source overlay area */
+};
+
+/* This structure describes blend operation */
+struct fb_overlayblend_s
 {
   struct fb_overlayarea_s dest;       /* The destination overlay area */
   struct fb_overlayarea_s foreground; /* The foreground overlay area */
