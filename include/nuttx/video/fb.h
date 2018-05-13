@@ -473,6 +473,57 @@ struct fb_vtable_s
   int (*setcursor)(FAR struct fb_vtable_s *vtable,
                    FAR struct fb_setcursor_s *settings);
 #endif
+
+#ifdef CONFIG_FB_OVERLAY
+  /* Get information about the video controller configuration and the
+   * configuration of each overlay.
+   */
+
+  int (*getoverlayinfo)(FAR struct fb_vtable_s *vtable, int overlayno,
+                        FAR struct fb_overlayinfo_s *oinfo);
+
+  /* The following are provided only if the video hardware supports
+   * transparency
+   */
+
+  int (*settransp)(FAR struct fb_vtable_s *vtable,
+                   FAR const struct fb_overlayinfo_s *oinfo);
+
+  /* The following are provided only if the video hardware supports
+   * chromakey
+   */
+
+  int (*setchromakey)(FAR struct fb_vtable_s *vtable,
+                      FAR const struct fb_overlayinfo_s *oinfo);
+
+  /* The following are provided only if the video hardware supports
+   * filling the overlay with a color.
+   */
+
+  int (*setcolor)(FAR struct fb_vtable_s *vtable,
+                  FAR const struct fb_overlayinfo_s *oinfo);
+
+  /* The following allows to switch the overlay on or off */
+
+  int (*setblank)(FAR struct fb_vtable_s *vtable,
+                  FAR const struct fb_overlayinfo_s *oinfo);
+
+# ifdef CONFIG_FB_OVERLAY_BLIT
+  /* The following are provided only if the video hardware supports
+   * blit operation between overlays.
+   */
+
+  int (*blit)(FAR struct fb_vtable_s *vtable,
+              FAR const struct fb_overlayblit_s *blit);
+
+  /* The following are provided only if the video hardware supports
+   * blend operation between overlays.
+   */
+
+  int (*blend)(FAR struct fb_vtable_s *vtable,
+               FAR const struct fb_overlayblend_s *blend);
+# endif
+#endif
 };
 
 /****************************************************************************
