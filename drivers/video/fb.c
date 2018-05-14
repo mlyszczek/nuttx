@@ -425,6 +425,7 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       case FBIO_SELECT_OVERLAY:  /* Select video overlay */
         {
           struct fb_overlayinfo_s oinfo;
+
           DEBUGASSERT(fb->vtable != NULL && fb->vtable->getoverlayinfo != NULL);
           ret = fb->vtable->getoverlayinfo(fb->vtable, arg, &oinfo);
           if (ret == OK)
@@ -491,7 +492,7 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         }
         break;
 
-# ifdef CONFIG_FB_OVERLAY_BLIT
+#ifdef CONFIG_FB_OVERLAY_BLIT
       case FBIOSET_BLIT:  /* Blit operation between video overlays */
         {
           FAR struct fb_overlayblit_s *blit =
@@ -513,8 +514,9 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           ret = fb->vtable->blend(fb->vtable, blend);
         }
         break;
-# endif
 #endif
+#endif /* CONFIG_FB_OVERLAY */
+
       default:
         gerr("ERROR: Unsupported IOCTL command: %d\n", cmd);
         ret = -ENOTTY;
@@ -630,11 +632,11 @@ int fb_register(int display, int plane)
       goto errout_with_fb;
     }
 
-    /* Clear the overlay memory. Necessary when plane 0 and overlay 0
-     * different.
-     */
+  /* Clear the overlay memory. Necessary when plane 0 and overlay 0
+   * different.
+   */
 
-    memset(oinfo.fbmem, 0, oinfo.fblen);
+  memset(oinfo.fbmem, 0, oinfo.fblen);
 #endif
 
   /* Register the framebuffer device */
