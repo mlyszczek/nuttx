@@ -1,7 +1,7 @@
 /****************************************************************************
  * config/nucleo-l452re/src/stm32_bringup.c
  *
- *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2017-2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,10 +43,15 @@
 #include <sys/types.h>
 #include <debug.h>
 
+#include <nuttx/input/buttons.h>
 #include <nuttx/i2c/i2c_master.h>
+#include <nuttx/leds/userled.h>
+#include <nuttx/board.h>
 
 #include "stm32l4_i2c.h"
 #include "nucleo-l452re.h"
+
+#include <arch/board/board.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -91,6 +96,24 @@ int stm32_bringup(void)
       ferr("ERROR: Failed to mount procfs at /proc: %d\n", ret);
     }
 #endif
+
+#ifdef CONFIG_BUTTONS
+#ifdef CONFIG_BUTTONS_LOWER
+  iinfo("Initializing button driver\n");
+
+  /* Register the BUTTON driver */
+
+  ret = btn_lower_initialize("/dev/buttons");
+  if (ret < 0)
+    {
+      ierr("ERROR: btn_lower_initialize() failed: %d\n", ret);
+    }
+#else
+  /* Enable BUTTON support for some other purpose */
+
+  board_button_initialize();
+#endif
+#endif /* CONFIG_BUTTONS */
 
 #ifdef HAVE_I2C_DRIVER
   /* Get the I2C lower half instance */

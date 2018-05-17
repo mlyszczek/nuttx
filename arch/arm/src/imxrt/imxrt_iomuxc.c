@@ -213,7 +213,7 @@ static const uint8_t g_mux2ctl_map[IMXRT_PADMUX_NREGISTERS] =
 
 unsigned int imxrt_padmux_map(unsigned int padmux)
 {
-  DEBUGASSERT(padmux < IMX_PADMUX_NREGISTERS);
+  DEBUGASSERT(padmux < IMXRT_PADMUX_NREGISTERS);
   return (unsigned int)g_mux2ctl_map[padmux];
 }
 
@@ -241,9 +241,10 @@ int imxrt_iomux_configure(uintptr_t padctl, iomux_pinset_t ioset)
 
   /* Select CMOS input or Schmitt Trigger input */
 
+  regval = 0;
   if ((ioset & IOMUX_SCHMITT_TRIGGER) != 0)
     {
-      regval |= PADCTL_SRE;
+      regval |= PADCTL_HYS;
     }
 
   /* Select drive strength */
@@ -291,7 +292,7 @@ int imxrt_iomux_configure(uintptr_t padctl, iomux_pinset_t ioset)
 
   if ((ioset & IOMUX_SLEW_FAST) != 0)
     {
-      regval |= PADCTL_HYS;
+      regval |= PADCTL_SRE;
     }
 
   /* Write the result to the specified Pad Control register */

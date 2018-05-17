@@ -1,8 +1,8 @@
-/****************************************************************************
- * arch/arm/src/imxrt/imxrt_wdog.h
+/************************************************************************************
+ * arch/arm/src/imxrt/chip/imxrt_pinmux.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
- *   Author:  Janne Rosberg <janne@offcode.fi>
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,42 +31,21 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ****************************************************************************/
+ ************************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_IMXRT_IMXRT_WDOG_H
-#define __ARCH_ARM_SRC_IMXRT_IMXRT_WDOG_H
+#ifndef __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT_PINMUX_H
+#define __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT_PINMUX_H
 
-/****************************************************************************
+/************************************************************************************
  * Included Files
- ****************************************************************************/
+ ************************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/compiler.h>
 
-#include <sys/types.h>
-#include <stdint.h>
-#include <stdbool.h>
+#if defined(CONFIG_ARCH_FAMILY_IMXRT105x)
+#  include "chip/imxrt105x_pinmux.h"
+#else
+#  error Unrecognized i.MX RT architecture
+#endif
 
-#include "up_internal.h"
-#include "chip.h"
-#include "chip/imxrt_wdog.h"
-
-/****************************************************************************
- * Public Types
- ****************************************************************************/
-
-/****************************************************************************
- * Public Function Prototypes
- ****************************************************************************/
-
-/****************************************************************************
- * Name: imxrt_wdog_disable
- *
- * Description:
- *   Called at the very beginning of _start.  Disables all watchdogs
- *
- ****************************************************************************/
-
-void imxrt_wdog_disable_all(void);
-
-#endif /* __ARCH_ARM_SRC_IMXRT_IMXRT_WDOG_H */
+#endif /* __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT_PINMUX_H */
