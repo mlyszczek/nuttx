@@ -1,8 +1,8 @@
 /****************************************************************************
- * configs/imxrt1050-evk/scripts/flash-ocram.ld
+ * configs/stm32fldiscovery/scripts/stm32l152rc.ld
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
- *   Author: Ivan Ucherdzhiev <ivanucherdjiev@gmail.com>
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,43 +33,24 @@
  *
  ****************************************************************************/
 
-/* Specify the memory areas */
+/* The STM32L152RCT6 has 256KB of FLASH beginning at address 0x0800:0000 and
+ * 32Kb of SRAM at address 0x20000000.
+ *
+ * When booting from FLASH, FLASH memory is aliased to address 0x0000:0000
+ * where the code expects to begin execution by jumping to the entry point in
+ * the 0x0800:0000 address range.
+ */
 
 MEMORY
 {
-	flash (rx)  : ORIGIN = 0x60000000, LENGTH = 0x04000000
-	sram  (rwx) : ORIGIN = 0x20200000, LENGTH = 0x00040000
-	itcm  (rwx) : ORIGIN = 0x00000000, LENGTH = 0x00020000
-	dtcm  (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00020000
+	flash (rx) : ORIGIN = 0x08000000, LENGTH = 256K
+	sram (rwx) : ORIGIN = 0x20000000, LENGTH = 32K
 }
 
 OUTPUT_ARCH(arm)
-EXTERN(_vectors)
-EXTERN(flash_config)
-EXTERN(image_vector_table)
-EXTERN(boot_data)
-
 ENTRY(_stext)
-
 SECTIONS
 {
-	/* Image Vector Table and Boot Data for booting from external flash */
-
-	.boot_hdr : ALIGN(4)
-	{
-		FILL(0xff)
-		__boot_hdr_start__ = ABSOLUTE(.) ;
-		KEEP(*(.boot_hdr.conf))
-		. = 0x1000 ;
-		KEEP(*(.boot_hdr.ivt))
-		. = 0x1020 ;
-		KEEP(*(.boot_hdr.boot_data))
-		. = 0x1030 ;
-		KEEP(*(.boot_hdr.dcd_data))
-		__boot_hdr_end__ = ABSOLUTE(.) ;
-		. = 0x2000 ;
-	} >flash
-
 	.text :
 	{
 		_stext = ABSOLUTE(.);
@@ -100,7 +81,6 @@ SECTIONS
 	} > flash
 
 	__exidx_start = ABSOLUTE(.);
-
 	.ARM.exidx :
 	{
 		*(.ARM.exidx*)
@@ -117,15 +97,6 @@ SECTIONS
 		CONSTRUCTORS
 		_edata = ABSOLUTE(.);
 	} > sram AT > flash
-
-	.ramfunc ALIGN(4):
-	{
-		_sramfuncs = ABSOLUTE(.);
-		*(.ramfunc  .ramfunc.*)
-		_eramfuncs = ABSOLUTE(.);
-	} > sram AT > flash
-
-	_framfuncs = LOADADDR(.ramfunc);
 
 	.bss :
 	{
@@ -151,4 +122,3 @@ SECTIONS
 	.debug_pubnames 0 : { *(.debug_pubnames) }
 	.debug_aranges 0 : { *(.debug_aranges) }
 }
-

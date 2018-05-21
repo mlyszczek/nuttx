@@ -157,6 +157,20 @@ Olimex LPC1766-STK development board
   MISO0 and MOSI0 are join via a 1K ohm resistor so the LCD appears to be
   write only.
 
+  STATUS:  The LCD driver was never properly integrated.  It was awkward
+  to use because it relied on a 9-bit SPI inteface (the 9th bit being
+  the command/data bit which is normally a discrete input).  All support
+  for the Nokia 6100 was removed on May 19, 2018.  That obsoleted
+  driver can be viewed in the nuttx/drivers/lcd and configs/olimex-lpc1766stk
+  directories of the Obsoleted repository.
+
+  The obsoleted driver attempted to created the 9th bit on-they-flay in the
+  data by expanding the 8-bit data to 16-bits with the 9th bit managed.  I
+  no longer believe that is the correct technical approach.  I now believe
+  that the best solution would be to provide custom management of the 9th
+  data bit inside of the low-level MCU driver, the LPC17 SPI driver in thisi
+  case, via a configration option on the low-level driver.
+
 LEDs
 ^^^^
 
@@ -797,14 +811,6 @@ Configuration Sub-Directories
        COPYING file).
 
        CONFIG_FAT_LFN=y                    : Enables long file name support
-
-  nx:
-    An example using the NuttX graphics system (NX).  This example uses
-    the Nokia 6100 LCD driver.
-
-    NOTES:
-
-    1. The Nokia 6100 driver does not work on this board as of this writing.
 
   slip-httpd:
     This configuration is identical to the thttpd configuration except that

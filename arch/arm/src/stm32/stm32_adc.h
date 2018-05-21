@@ -1862,10 +1862,17 @@ enum adc_io_cmds_e
   IO_ENABLE_TEMPER_VOLT_CH = 0,
 };
 
-#elif defined(CONFIG_STM32_STM32F20XX)
+#elif defined(CONFIG_STM32_STM32F20XX) || defined(CONFIG_STM32_STM32F4XXX)
+/* On STM32F42xx and STM32F43xx devices,VBAT and temperature sensor are connected
+ * to the same ADC internal channel (ADC1_IN18). Only one conversion, either
+ * temperature sensor or VBAT, must be selected at a time. When both conversion are
+ * enabled simultaneously, only the VBAT conversion is performed.
+ */
+
 enum adc_io_cmds_e
 {
   IO_ENABLE_TEMPER_VOLT_CH = 0,
+  IO_ENABLE_DISABLE_VBAT_CH,
 };
 
 #elif defined(CONFIG_STM32_STM32L15XX)
