@@ -112,7 +112,7 @@
                          _IOMUX_PULL_ENABLE)
 #define GPIO_ENET_RST   (GPIO_OUTPUT | GPIO_OUTPUT_ZERO | \
                           GPIO_PORT1 | GPIO_PIN9 | IOMUX_ENET_RST)
-                           
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/

@@ -216,7 +216,7 @@ config IMXRT_ENET_PHYINIT
 		function one time before it first uses the PHY.
 
 endmenu # IMXRT_ENET
- 
+
 menu "Memory Configuration"
 
 config IMXRT_DTCM

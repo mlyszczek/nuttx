@@ -218,7 +218,7 @@
 #ifndef CONFIG_IMXRT_ENET_PRIO
 #  define CONFIG_IMXRT_ENET_PRIO  NVIC_SYSH_PRIORITY_DEFAULT
 #endif
-  
+
 /************************************************************************************
  * Public Functions
  ************************************************************************************/

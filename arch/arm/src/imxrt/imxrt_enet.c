@@ -168,7 +168,7 @@
  *             = 23
  */
 
-#define IMXRT_MII_SPEED  0x38 /* 100Mbs. Revisit and remove hardcoded value */ 
+#define IMXRT_MII_SPEED  0x38 /* 100Mbs. Revisit and remove hardcoded value */
 #if IMXRT_MII_SPEED > 63
 #  error "IMXRT_MII_SPEED is out-of-range"
 #endif
@@ -1720,7 +1720,7 @@ static inline int imxrt_initphy(struct imxrt_driver_s *priv)
   /* Reset PHY */
 
   imxrt_writemii(priv, phyaddr, MII_MCR, MII_MCR_RESET);
-                  
+
   /* Set RMII mode */
 
   ret = imxrt_readmii(priv, phyaddr, MII_KSZ8081_PHYCTRL2, &phydata);
@@ -1731,8 +1731,8 @@ static inline int imxrt_initphy(struct imxrt_driver_s *priv)
     }
 
   imxrt_writemii(priv, phyaddr, MII_KSZ8081_PHYCTRL2,
-                 (phydata | (1 << 7)));    
-   
+                 (phydata | (1 << 7)));
+
   /* Start auto negotiation */
 
   ninfo("%s: Start Autonegotiation...\n",  BOARD_PHY_NAME);
@@ -2076,7 +2076,7 @@ int imxrt_netinitialize(int intf)
       return -EAGAIN;
     }
 
- 
+
   /* Initialize the driver structure */
 
   memset(priv, 0, sizeof(struct imxrt_driver_s));
@@ -2104,7 +2104,7 @@ int imxrt_netinitialize(int intf)
   * 1st octet)
   */
 
-  /* REVISIT: temporary hardcode mac. Use chip's uniqe ID later' */ 
+  /* REVISIT: temporary hardcode mac. Use chip's uniqe ID later' */
 
   uidl   = 0x11223344;
   uidml  = 0x55667788;
