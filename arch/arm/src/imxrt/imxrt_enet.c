@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/arm/src/imxrt/imxrt_enet.c
  *
- *   Copyright (C) 2011-2012, 2014-2018 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -66,8 +66,9 @@
 #include "imxrt_config.h"
 #include "chip/imxrt_enet.h"
 #include "chip/imxrt_ccm.h"
+#include "chip/imxrt_pinmux.h"
+#include "imxrt_periphclks.h"
 #include "imxrt_gpio.h"
-#include "chip/imxrt105x_pinmux.h"
 
 #ifdef CONFIG_IMXRT_ENET
 
@@ -2019,12 +2020,10 @@ int imxrt_netinitialize(int intf)
   regval |= GPR_GPR1_ENET1_TX_CLK_OUT_EN;
   putreg32(regval, IMXRT_IOMUXC_GPR_GPR1);
 
-
   /* Enable the ENET clock */
+  /* Clock is on during all modes, except STOP mode.*/
 
-  regval  = getreg32(IMXRT_CCM_CCGR1);
-  regval |= CCM_CCGRX_CG5(CCM_CG_ALL);  /* Clock is on during all modes, except STOP mode.*/
-  putreg32(regval, IMXRT_CCM_CCGR1);
+  imxrt_clockall_enet();
 
   /* Configure all ENET/MII pins */
 
