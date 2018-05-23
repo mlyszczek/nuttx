@@ -69,6 +69,12 @@ config IMXRT_EDMA
 	default n
 	select ARCH_DMA
 
+config IMXRT_ENET
+	bool "Ethernet"
+	default n
+	select ARCH_HAVE_PHY
+	select ARCH_HAVE_NETDEV_STATISTICS
+
 menu "FlexIO Peripherals"
 
 endmenu # FlexIO Peripherals
@@ -179,6 +185,27 @@ config IMXRT_GPIO5_16_31_IRQ
 
 endif # IMXRT_GPIO_IRQ
 
+menu "Ethernet Configuration"
+	depends on IMXRT_ENET
+
+config MXRT_ENET_NRXBUFFERS
+	int "Number Rx buffers"
+	default 6
+
+config IMXRT_ENET_NTXBUFFERS
+	int "Number Tx buffers"
+	default 2
+
+config ENET_PHYADDR
+	int "PHY address"
+	default 1
+
+config IMXRT_ENET_NETHIFS
+	int  # Not optional
+	default 1
+
+endmenu # IMXRT_ENET
+ 
 menu "Memory Configuration"
 
 config IMXRT_DTCM
