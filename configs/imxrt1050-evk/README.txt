@@ -167,9 +167,14 @@ Configuration sub-directories
 -----------------------------
 
   netnsh:
+
     This configuration is similar to the nsh configuration except that is
     has networking enabled.  This NSH configuration is focused on network-
     related testing.
+
+    NOTES:
+    1. LED support is disabled because there is a conflict between the LED
+       GPIO and PHY pin usage.
 
   nsh:
 
