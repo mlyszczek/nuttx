@@ -103,6 +103,7 @@
                          _IOMUX_PULL_ENABLE)
 #define GPIO_ENET_INT   (GPIO_OUTPUT | GPIO_OUTPUT_ONE | \
                          GPIO_PORT1 | GPIO_PIN10 | IOMUX_ENET_INT)
+#define GPIO_ENET_IRQ   IMXRT_IRQ_GPIO1_10
 
 /* GPIOAD_B0_09 */
 
@@ -160,7 +161,7 @@ void imxrt_autoled_initialize(void);
  * Name: imxrt_spidev_initialize
  *
  * Description:
- *   Called to configure SPI chip select GPIO pins for the SAMV71-XULT board.
+ *   Called to configure SPI chip select GPIO pins for the i.MXRT1050 EVK.
  *
  ****************************************************************************/
 

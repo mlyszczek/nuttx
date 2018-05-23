@@ -69,6 +69,7 @@
 #include "chip/imxrt_pinmux.h"
 #include "imxrt_periphclks.h"
 #include "imxrt_gpio.h"
+#include "imxrt_enet.h"
 
 #ifdef CONFIG_IMXRT_ENET
 
