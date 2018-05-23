@@ -44,8 +44,6 @@
 
 #include "chip.h"
 
-#if defined(IMXRT_NENET) &&  IMXRT_NENET > 0
-
 /********************************************************************************************
  * Pre-processor Definitions
  ********************************************************************************************/
@@ -641,8 +639,8 @@ struct enet_desc_s
   uint32_t reserved1;   /* unused */
   uint32_t reserved2;   /* unused */
 };
-#endif
-#else
+#endif /* IMXRT_USE_DBSWAP */
+#else /* CONFIG_ENET_ENHANCEDBD */
 #ifdef IMXRT_USE_DBSWAP
 struct enet_desc_s
 {
@@ -657,8 +655,8 @@ struct enet_desc_s
   uint16_t length;      /* Data length */
   uint8_t  *data;       /* Buffer address */
 };
-#endif
-#endif
+#endif /* IMXRT_USE_DBSWAP */
+#endif /* CONFIG_ENET_ENHANCEDBD */
 
 /********************************************************************************************
  * Public Data
@@ -668,5 +666,4 @@ struct enet_desc_s
  * Public Functions
  ********************************************************************************************/
 
-#endif /* IMXRT_NENET &&  IMXRT_NENET > 0 */
 #endif /* __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT_ENET_H */

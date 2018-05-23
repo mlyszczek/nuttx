@@ -196,9 +196,9 @@ config IMXRT_ENET_NTXBUFFERS
 	int "Number Tx buffers"
 	default 2
 
-config ENET_PHYADDR
-	int "PHY address"
-	default 1
+config IMXRT_ENET_ENHANCEDBD
+	bool # not optional
+	default n
 
 config IMXRT_ENET_NETHIFS
 	int  # Not optional
