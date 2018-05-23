@@ -134,14 +134,14 @@ void weak_function imxrt_phy_boardinitialize(void)
 #ifdef CONFIG_IMXRT_GPIO1_0_15_IRQ
   /* Configure the PHY interrupt pin */
 
-  phyinfo("Configuring %08x\n", GPIO_ENET_INT);
+  phyinfo("Configuring interrupt: %08x\n", GPIO_ENET_INT);
   imxrt_config_gpio(GPIO_ENET_INT);
 #endif
 
-  /* Configure the PHY reset pin.  This will take the PHY out of reset. */
+  /* Configure the PHY reset pin.  This will also take the PHY out of reset. */
 
-  phyinfo("Configuring %08x\n", GPIO_PHY_IRQ);
-  imxrt_config_gpio(GPIO_PHY_IRQ);
+  phyinfo("Configuring reset: %08x\n", GPIO_ENET_RST);
+  imxrt_config_gpio(GPIO_ENET_RST);
 }
 
 /****************************************************************************
