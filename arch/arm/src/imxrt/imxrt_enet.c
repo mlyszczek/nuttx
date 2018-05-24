@@ -115,11 +115,11 @@
  * second.
  */
 
-#define IMXRT_WDDELAY   (1*CLK_TCK)
+#define IMXRT_WDDELAY     (1*CLK_TCK)
 
 /* TX timeout = 1 minute */
 
-#define IMXRT_TXTIMEOUT (60*CLK_TCK)
+#define IMXRT_TXTIMEOUT   (60*CLK_TCK)
 #define MII_MAXPOLLS      (0x1ffff)
 #define LINK_WAITUS       (500*1000)
 #define LINK_NLOOPS       (10)
@@ -246,6 +246,7 @@ static struct imxrt_driver_s g_enet[CONFIG_IMXRT_ENET_NETHIFS];
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
+
 /* Utility functions */
 
 #ifndef IMXRT_BUFFERS_SWAP
@@ -319,6 +320,7 @@ static void imxrt_reset(struct imxrt_driver_s *priv);
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
 /****************************************************************************
  * Function: imxrt_swap16/32
  *
