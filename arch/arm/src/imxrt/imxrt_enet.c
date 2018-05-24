@@ -1647,17 +1647,6 @@ static inline int imxrt_initphy(struct imxrt_driver_s *priv)
   int retries;
   int ret;
 
-#ifdef CONFIG_IMXRT_ENET_PHYINIT
-  /* Perform any necessary, board-specific PHY initialization */
-
-  ret = imxrt_phy_boardinitialize(0);
-  if (ret < 0)
-    {
-      nerr("ERROR: Failed to initialize the PHY: %d\n", ret);
-      return ret;
-    }
-#endif
-
   /* Loop (potentially infinitely?) until we successfully communicate with
    * the PHY.
    */
@@ -2008,6 +1997,7 @@ int imxrt_netinitialize(int intf)
   uint8_t *mac;
 #endif
   uint32_t regval;
+  int ret;
 
   /* Get the interface structure associated with this interface number. */
 
@@ -2087,7 +2077,6 @@ int imxrt_netinitialize(int intf)
       return -EAGAIN;
     }
 
-
   /* Initialize the driver structure */
 
   memset(priv, 0, sizeof(struct imxrt_driver_s));
@@ -2133,6 +2122,17 @@ int imxrt_netinitialize(int intf)
 
 #endif
 
+#ifdef CONFIG_IMXRT_ENET_PHYINIT
+  /* Perform any necessary, one-time, board-specific PHY initialization */
+
+  ret = imxrt_phy_boardinitialize(0);
+  if (ret < 0)
+    {
+      nerr("ERROR: Failed to initialize the PHY: %d\n", ret);
+      return ret;
+    }
+#endif
+
   /* Put the interface in the down state.  This usually amounts to resetting
    * the device and/or calling imxrt_ifdown().
    */
@@ -2142,6 +2142,8 @@ int imxrt_netinitialize(int intf)
   /* Register the device with the OS so that socket IOCTLs can be performed */
 
   (void)netdev_register(&priv->dev, NET_LL_ETHERNET);
+
+  UNUSED(ret);
   return OK;
 }
 
