@@ -798,8 +798,8 @@ static void imxrt_txdone(FAR struct imxrt_driver_s *priv)
       putreg32(regval, IMXRT_ENET_EIMR);
     }
 
-  /* There should be space for a new TX in any event.  Poll the network for new XMIT
-   * data
+  /* There should be space for a new TX in any event.  Poll the network for
+   * new XMIT data
    */
 
   (void)devif_poll(&priv->dev, imxrt_txpoll);
@@ -886,7 +886,6 @@ static void imxrt_enet_interrupt_work(FAR void *arg)
 #if 0
   up_enable_irq(IMXRT_IRQ_EMACTMR);
 #endif
-
   up_enable_irq(IMXRT_IRQ_ENET);
 }
 
@@ -964,8 +963,8 @@ static void imxrt_txtimeout_work(FAR void *arg)
   net_lock();
   NETDEV_TXTIMEOUTS(&priv->dev);
 
-  /* Take the interface down and bring it back up.  The is the most agressive
-   * hardware reset.
+  /* Take the interface down and bring it back up.  That is the most
+   * aggressive hardware reset.
    */
 
   (void)imxrt_ifdown(&priv->dev);
@@ -1208,11 +1207,12 @@ static int imxrt_ifup(struct net_driver_s *dev)
   /* Mark the interrupt "up" and enable interrupts at the NVIC */
 
   priv->bifup = true;
+
 #if 0
   up_enable_irq(IMXRT_IRQ_EMACTMR);
 #endif
-
   up_enable_irq(IMXRT_IRQ_ENET);
+
   return OK;
 }
 
