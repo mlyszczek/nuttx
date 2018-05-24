@@ -1647,6 +1647,17 @@ static inline int imxrt_initphy(struct imxrt_driver_s *priv)
   int retries;
   int ret;
 
+#ifdef CONFIG_IMXRT_ENET_PHYINIT
+  /* Perform any necessary, board-specific PHY initialization */
+
+  ret = imxrt_phy_boardinitialize(0);
+  if (ret < 0)
+    {
+      nerr("ERROR: Failed to initialize the PHY: %d\n", ret);
+      return ret;
+    }
+#endif
+
   /* Loop (potentially infinitely?) until we successfully communicate with
    * the PHY.
    */
