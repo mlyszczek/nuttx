@@ -38,7 +38,7 @@
 ASRCS =
 CSRCS = imxrt_boot.c imxrt_flexspi_nor_boot.c imxrt_flexspi_nor_flash.c
 
-ifeq ($(CONFIG_SAMV7_SDRAMC),y)
+ifeq ($(CONFIG_IMXRT_SDRAMC),y)
 CSRCS += imxrt_sdram.c
 endif
 
@@ -56,6 +56,10 @@ endif
 
 ifeq ($(CONFIG_ARCH_BUTTONS),y)
 CSRCS += imxrt_buttons.c
+endif
+
+ifeq ($(CONFIG_IMXRT_ENET),y)
+CSRCS += imxrt_ethernet.c
 endif
 
 include $(TOPDIR)/configs/Board.mk

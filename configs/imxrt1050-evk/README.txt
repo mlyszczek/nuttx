@@ -166,8 +166,19 @@ Configurations
 Configuration sub-directories
 -----------------------------
 
+  netnsh:
+
+    This configuration is similar to the nsh configuration except that is
+    has networking enabled, both IPv4 and IPv6.  This NSH configuration is
+    focused on network-related testing.
+
+    NOTES:
+    1. LED support is disabled because there is a conflict between the LED
+       GPIO and PHY pin usage.
+
   nsh:
 
     Configures the NuttShell (nsh) located at examples/nsh.  This NSH
     configuration is focused on low level, command-line driver testing.
-    It has no network.
+    Built-in applications are supported, but none are enabled.  This
+    configuration does not support a network.

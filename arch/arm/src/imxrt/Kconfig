@@ -64,17 +64,22 @@ config IMXRT_HAVE_LPUART
 
 menu "i.MX RT Peripheral Selection"
 
+config IMXRT_EDMA
+	bool "eDMA"
+	default n
+	select ARCH_DMA
+
+config IMXRT_ENET
+	bool "Ethernet"
+	default n
+	select ARCH_HAVE_PHY
+	select ARCH_HAVE_NETDEV_STATISTICS
+
 menu "FlexIO Peripherals"
 
 endmenu # FlexIO Peripherals
 
 menu "LPUART Peripherals"
-
-config IMXRT_EDMA
-	bool "eDMA"
-	default n
-	select ARCH_DMA
-	depends on EXPERIMENTAL
 
 config IMXRT_LPUART1
 	bool "LPUART1"
@@ -179,6 +184,38 @@ config IMXRT_GPIO5_16_31_IRQ
 	default n
 
 endif # IMXRT_GPIO_IRQ
+
+menu "Ethernet Configuration"
+	depends on IMXRT_ENET
+
+config MXRT_ENET_NRXBUFFERS
+	int "Number Rx buffers"
+	default 6
+
+config IMXRT_ENET_NTXBUFFERS
+	int "Number Tx buffers"
+	default 2
+
+config IMXRT_ENET_ENHANCEDBD
+	bool # not optional
+	default n
+
+config IMXRT_ENET_NETHIFS
+	int  # Not optional
+	default 1
+
+config IMXRT_ENET_PHYINIT
+	bool "Board-specific PHY Initialization"
+	default n
+	---help---
+		Some boards require specialized initialization of the PHY before it
+		can be used.  This may include such things as configuring GPIOs,
+		resetting the PHY, etc.  If CONFIG_IMXRT_ENET_PHYINIT is defined in
+		the configuration then the board specific logic must provide
+		imxrt_phy_boardinitialize();  The i.MXRT ENET driver will call this
+		function one time before it first uses the PHY.
+
+endmenu # IMXRT_ENET
 
 menu "Memory Configuration"
 
@@ -346,6 +383,26 @@ config IMXRT_EDMA_NTCD
 		which case only the TCD channel registers will be used and scatter-
 		will not be supported.
 
+config IMXRT_EDMA_ELINK
+	bool "Channeling Linking"
+	default n
+	---help---
+		This option enables optional minor or major loop channel linking:
+
+		Minor loop channel linking:  As the channel completes the minor
+		loop, this flag enables linking to another channel. The link target
+		channel initiates a channel service request via an internal
+		mechanism that sets the TCDn_CSR[START] bit of the specified
+		channel.
+
+		If minor loop channel linking is disabled, this link mechanism is
+		suppressed in favor of the major loop channel linking.
+
+		Major loop channel linking:  As the channel completes the minor
+		loop, this option enables the linking to another channel. The link
+		target channel initiates a channel service request via an internal
+		mechanism that sets the TCDn_CSR[START] bit of the linked channel.
+
 config IMXRT_EDMA_ERCA
 	bool "Round Robin Channel Arbitration"
 	default n
@@ -380,7 +437,7 @@ config IMXRT_EDMA_EMLIM
 	---help---
 		Normally TCD word 2 is a 32-bit NBYTES field.  When this option is
 		enabled, TCD word 2 is redefined to include individual enable fields,
-		an offset field, and the NBYTES field. The individual enable fields
+		an offset field, and the NBYTES field.  The individual enable fields
 		allow the minor loop offset to be applied to the source address, the
 		destination address, or both. The NBYTES field is reduced when either
 		offset is enabled.

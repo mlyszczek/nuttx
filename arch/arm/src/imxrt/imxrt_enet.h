@@ -1,8 +1,8 @@
-/****************************************************************************
- * configs/indium-f7/stc/stm32_dma_alloc.c
+/************************************************************************************
+ * arch/arm/src/imxrt/imxrt_enet.h
  *
- *   Copyright (C) 2016-2017 PX4 Development Team. All rights reserved.
- *     Modified by: Bob Feretich <bob.feretich@rafresearch.com>
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -14,7 +14,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- * 3. Neither the name PX4 nor the names of its contributors may be
+ * 3. Neither the name NuttX nor the names of its contributors may be
  *    used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,88 +31,94 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ****************************************************************************/
+ ************************************************************************************/
+
+#ifndef __ARCH_ARM_SRC_IMXRT_IMXRT_ENET_H
+#define __ARCH_ARM_SRC_IMXRT_IMXRT_ENET_H
 
 /************************************************************************************
  * Included Files
  ************************************************************************************/
 
 #include <nuttx/config.h>
-#include <syslog.h>
-#include <stdint.h>
-#include <errno.h>
-#include <nuttx/mm/gran.h>
 
-#include "indium-f7.h"
+#include "chip/imxrt_enet.h"
 
-#if defined(CONFIG_FAT_DMAMEMORY)
+#ifdef CONFIG_IMXRT_ENET
 
 /************************************************************************************
  * Pre-processor Definitions
  ************************************************************************************/
 
-#if !defined(CONFIG_GRAN)
-#  error microSD DMA support requires CONFIG_GRAN
-#endif
+/* Definitions for use with imxrt_phy_boardinitialize */
 
-#define BOARD_DMA_ALLOC_POOL_SIZE (8*512)
-
-/************************************************************************************
- * Private Data
- ************************************************************************************/
-
-static GRAN_HANDLE dma_allocator;
-
-/* The DMA heap size constrains the total number of things that can be
- * ready to do DMA at a time.
- *
- * For example, FAT DMA depends on one sector-sized buffer per filesystem plus
- * one sector-sized buffer per file.
- *
- * We use a fundamental alignment / granule size of 64B; this is sufficient
- * to guarantee alignment for the largest STM32 DMA burst (16 beats x 32bits).
- */
-
-static uint8_t g_dma_heap[BOARD_DMA_ALLOC_POOL_SIZE] __attribute__((aligned(64)));
+#define EMAC_INTF 0
 
 /************************************************************************************
  * Public Functions
  ************************************************************************************/
 
+#ifndef __ASSEMBLY__
+
+#undef EXTERN
+#if defined(__cplusplus)
+#define EXTERN extern "C"
+extern "C"
+{
+#else
+#define EXTERN extern
+#endif
+
 /************************************************************************************
- * Name: stm32_dma_alloc_init
+ * Function: up_netinitialize
  *
  * Description:
- *   All boards may optionally provide this API to instantiate a pool of
- *   memory for uses with FAST FS DMA operations.
+ *   Initialize the first network interface.  If there are more than one
+ *   interface in the chip, then board-specific logic will have to provide
+ *   this function to determine which, if any, Ethernet controllers should
+ *   be initialized.  Also prototyped in up_internal.h.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   OK on success; Negated errno on failure.
+ *
+ * Assumptions:
+ *   Called very early in the initialization sequence.
  *
  ************************************************************************************/
 
-int stm32_dma_alloc_init(void)
-{
-  dma_allocator = gran_initialize(g_dma_heap,
-                                  sizeof(g_dma_heap),
-                                  7,  /* 128B granule - must be > alignment (XXX bug?) */
-                                  6); /* 64B alignment */
+void up_netinitialize(void);
 
-  if (dma_allocator == NULL)
-    {
-      return -ENOMEM;
-    }
+/************************************************************************************
+ * Function: imxrt_phy_boardinitialize
+ *
+ * Description:
+ *   Some boards require specialized initialization of the PHY before it can be
+ *   used.  This may include such things as configuring GPIOs, resetting the PHY,
+ *   etc.  If CONFIG_IMXRT_ENET_PHYINIT is defined in the configuration then the
+ *   board specific logic must provide imxrt_phyinitialize();  The i.MX RT Ethernet
+ *   driver will call this function one time before it first uses the PHY.
+ *
+ * Input Parameters:
+ *   intf - Always zero for now.
+ *
+ * Returned Value:
+ *   OK on success; Negated errno on failure.
+ *
+ ************************************************************************************/
 
-  return OK;
+#ifdef CONFIG_IMXRT_ENET_PHYINIT
+int imxrt_phy_boardinitialize(int intf);
+#endif
+
+#undef EXTERN
+#if defined(__cplusplus)
 }
+#endif
 
-/* DMA-aware allocator stubs for the FAT filesystem. */
+#endif /* __ASSEMBLY__ */
+#endif /* CONFIG_IMXRT_ENET */
+#endif /* __ARCH_ARM_SRC_IMXRT_IMXRT_ENET_H */
 
-void *fat_dma_alloc(size_t size)
-{
-  return gran_alloc(dma_allocator, size);
-}
-
-void fat_dma_free(FAR void *memory, size_t size)
-{
-  gran_free(dma_allocator, memory, size);
-}
-
-#endif /* CONFIG_FAT_DMAMEMORY */
