@@ -367,11 +367,11 @@ must be is one of the following.
   nsh:
 
     This is the NuttShell (NSH) using the NSH startup logic at
-    apps/examples/nsh.
+    apps/examples/nsh
 
     NOTES:
 
-    1. USB host support for USB FLASH sticks is enbabled.  See the notes
+    1. USB host support for USB FLASH sticks is enabled.  See the notes
        above under "OTGFS Host".
 
        STATUS: I have seen this work with some FLASH sticks but not with
@@ -413,6 +413,89 @@ must be is one of the following.
          CONFIG_EXAMPLES_SOTEST_DEVMINOR=1
          CONFIG_EXAMPLES_SOTEST_DEVPATH="/dev/ram1"
 
+  zmodem:
+
+    This configuration was used to test the zmodem utilities at
+    apps/system/zmodem.  Two serial ports are used in this configuration:
+
+      1. USART6 (RS232_1) is the serial console (because it does not support
+         hardware flow control). It is configured 115200 8N1.
+      2. USART3 (RS232_2) is the zmodem port and does require that hardware
+         flow control be enabled for use.  It is configured 9600 8N1.
+
+    On the target these will correspond to /dev/ttyS0 and /dev/ttyS1,
+    respectively.
+
+    It is possible to configure a system without hardware flow control and
+    using the same USART for both the serial console and for zmodem.
+    However, you would have to take extreme care with buffering and data
+    throughput considerations to assure that there is no Rx data overrun.
+
+    General usage instructions:
+
+    1. Common Setup
+
+      [on target]
+      nsh> mount -t vfat /dev/sda /mnt
+
+      [on Linux host]
+      $ sudo stty -F /dev/ttyS0 9600
+      $ sudo stty -F /dev/ttyS0 crtscts *
+      $ sudo stty -F /dev/ttyS0 raw
+      $ sudo stty -F /dev/ttyS0
+
+      * Because hardware flow control will be enabled on the target side
+        in this configuration.
+
+    2. Host-to-Target File Transfer
+
+      [on target]
+      nsh> rz
+
+      [on host]
+      $ sudo sz <filename> [-l nnnn] </dev/ttyS0 >/dev/ttyS0
+
+    Where <filename> is the file that you want to transfer. If -l nnnn is
+    not specified, then there will likely be packet buffer overflow errors.
+    nnnn should be set to a value less than or equal to
+    CONFIG_SYSTEM_ZMODEM_PKTBUFSIZE
+
+    If you are using the NuttX implementation of rz and sz on the Linux host,
+    then the last command simplifies to just:
+
+      [on host]
+      $ cp README.txt /tmp/.
+      $ sudo ./sz -d /dev/ttyS1 README.txt
+
+    Assuming that /dev/ttyS0 is the serial and /dev/ttyS1 is the zmodem port
+    on the Linux host as well.  NOTE:  By default, files will be transferred
+    to and from the /tmp directory only.
+
+    Refer to the README file at apps/examples/zmodem for detailed information
+    about building rz/sz for the host and about zmodem usage in general.
+
+    3. Target-to-Host File Transfer
+
+      [on host]
+      $ rz </dev/ttyS0 >/dev/ttyS0
+
+    The transferred file will end up in the current directory.
+
+    If you are using the NuttX implementation of rz and sz on the Linux host,
+    then the last command simplifies to just:
+
+      [on host]
+      $ ./rz
+
+    The transferred file will lie in the /tmp directory.
+
+    Thn on the target side:
+
+      [on target]
+      nsh sz <filename>
+
+    Where <filename> is the file that you want to transfer.
+
 STATUS
 ======
 
@@ -427,5 +510,13 @@ STATUS
   CCM memory is not included in the heap (CONFIG_STM32_CCMEXCLUDE=y) because
   it does not suport DMA, leaving only 128KiB for program usage.
 
-2107-01-23:  Added the knsh configuration and support for the PROTECTED
+2017-01-23:  Added the knsh configuration and support for the PROTECTED
   build mode.
+
+2018-05-27:  Added the zmodem configuration.  Verified correct operation
+  with host-to-target transfers (using Linux sz command).  There appears
+  to be a problem using the NuttX sz command running on the host???
+
+2018-05-28:  Verified correct operation with target-to-host transfers (using
+  Linux rz command).  There appears to be a problem using the NuttX rz
+  command running on the host???
