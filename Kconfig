@@ -34,8 +34,8 @@ choice
 config HOST_LINUX
 	bool "Linux"
 
-config HOST_OSX
-	bool "OSX"
+config HOST_MACOS
+	bool "macOS"
 
 config HOST_WINDOWS
 	bool "Windows"
@@ -79,7 +79,7 @@ config WINDOWS_UBUNTU
 		POSIX style paths (like /mnt/c/Program Files)
 
 config WINDOWS_MSYS
-	bool "MSYS"
+	bool "MSYS or MSYS2"
 	select TOOLCHAIN_WINDOWS
 	---help---
 		Build natively in a Cygwin environment with POSIX style paths (like
@@ -1662,7 +1662,7 @@ endmenu
 
 menu "Graphics Support"
 source graphics/Kconfig
-source libnx/Kconfig
+source libs/libnx/Kconfig
 endmenu
 
 menu "Memory Management"
@@ -1682,8 +1682,12 @@ source binfmt/Kconfig
 endmenu
 
 menu "Library Routines"
-source libc/Kconfig
-source libxx/Kconfig
+source libs/libc/Kconfig
+source libs/libxx/Kconfig
+endmenu
+
+menu "DSP Library"
+source libs/libdsp/Kconfig
 endmenu
 
 menu "Application Configuration"

@@ -1,5 +1,5 @@
 #!/bin/bash
-# configure.sh
+# tools/configure.sh
 #
 #   Copyright (C) 2007, 2008, 2011, 2015, 2017-2018 Gregory Nutt. All rights
 #     reserved.
@@ -37,13 +37,14 @@ WD=`test -d ${0%/*} && cd ${0%/*}; pwd`
 TOPDIR="${WD}/.."
 USAGE="
 
-USAGE: ${0} [-d] [-l|m|c|u|n] [-a <app-dir>] <board-name>/<config-name>
+USAGE: ${0} [-d] [-l|m|c|u|g|n] [-a <app-dir>] <board-name>/<config-name>
 
 Where:
   -l selects the Linux (l) host environment.
   -m selects the macOS (m) host environment.
   -c selects the Windows host and Cygwin (c) environment.
   -u selects the Windows host and Ubuntu under Windows 10 (u) environment.
+  -g selects the Windows host and MinGW/MSYS environment.
   -n selects the Windows host and Windows native (n) environment.
   Default: Use host setup in the defconfig file
   Default Windows: Cygwin
@@ -81,6 +82,10 @@ while [ ! -z "$1" ]; do
       ;;
     -d )
       set -x
+      ;;
+    -g )
+      host=windows
+      wenv=msys
       ;;
     -h )
       echo "$USAGE"
@@ -274,7 +279,7 @@ fi
 if [ ! -z "$host" ]; then
   sed -i -e "/CONFIG_HOST_LINUX/d" ${dest_config}
   sed -i -e "/CONFIG_HOST_WINDOWS/d" ${dest_config}
-  sed -i -e "/CONFIG_HOST_OSX/d" ${dest_config}
+  sed -i -e "/CONFIG_HOST_MACOS/d" ${dest_config}
   sed -i -e "/CONFIG_HOST_OTHER/d" ${dest_config}
   sed -i -e "/CONFIG_WINDOWS_NATIVE/d" ${dest_config}
   sed -i -e "/CONFIG_WINDOWS_CYGWIN/d" ${dest_config}
@@ -293,8 +298,8 @@ if [ ! -z "$host" ]; then
       ;;
 
     "macos")
-      echo "  Select CONFIG_HOST_OSX=y"
-      echo "CONFIG_HOST_OSX=y" >> "${dest_config}"
+      echo "  Select CONFIG_HOST_MACOS=y"
+      echo "CONFIG_HOST_MACOS=y" >> "${dest_config}"
       ;;
 
     "windows")
@@ -306,6 +311,11 @@ if [ ! -z "$host" ]; then
           "cygwin")
             echo "  Select CONFIG_WINDOWS_CYGWIN=y"
             echo "CONFIG_WINDOWS_CYGWIN=y" >> "${dest_config}"
+            ;;
+
+          "msys")
+            echo "  Select CONFIG_WINDOWS_MSYS=y"
+            echo "CONFIG_WINDOWS_MSYS=y" >> "${dest_config}"
             ;;
 
           "ubuntu")

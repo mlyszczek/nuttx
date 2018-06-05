@@ -41,7 +41,7 @@ ENVIRONMENTS
 ^^^^^^^^^^^^
 
   NuttX requires a POSIX development environment such as you would find under
-  Linux or OSX.  NuttX may also be installed and built on Windows system
+  Linux or macOS.  NuttX may also be installed and built on Windows system
   if you also provide such a POSIX development environment.  Options for a
   POSIX development environment under Windows include:
 
@@ -72,20 +72,34 @@ ENVIRONMENTS
       Windows.  I need to update this section to include some mention of
       these alternatives.
 
-    - The MSYS environment.  I have no experience using the MSYS environment
-      and that configuration will not be discussed in this README file.
-      See http://www.mingw.org/wiki/MSYS if you are interested in
-      using MSYS.  People report to me that they have used MSYS
-      successfully.  I suppose that the advantages of the MSYS environment
-      is that it is closer to a native Windows environment and uses only a
-      minimal of add-on POSIX-land tools.
+    - The MSYS environment.  MSYS derives from an older version of Cygwin
+      simplified and adapted to work more naturally in the Windows
+      environment.  See http://www.mingw.org/wiki/MSYS if you are
+      interested in using MSYS.  The advantages of the MSYS environment is
+      that it is better integrted with the native Windows environment and
+      lighter weight; it uses only a  minimal number of add-on POSIX-land
+      tools.
+
+      The download link in that Wiki takes you to the SourceForge download
+      site.  The SourceForge MSYS project has been stagnant for some time.
+      The MSYS project has more recently moved to
+      http://odsn.net/projects/sfnet_mingwbundle.  Downloads of current .zip
+      files are available there but no instructions for the installation.
+
+    - MSYS2 appears to be a re-write of MSYS based on a newer version of
+      Cygwin.  Is it available at https://www.msys2.org.  A windows
+      installer is available at that site along with very good installation
+      instructions.  The download is relatively quick (at least compared to
+      Cygwin) and the 'pacman' package management tool supports supports
+      simple system updates.  For example, 'pacman -S git' will install the
+      GIT command line utilities.
 
     - Other POSIX environments.  Check out:
 
         UnxUtils: https://sourceforge.net/projects/unxutils/,
           https://en.wikipedia.org/wiki/UnxUtils
         MobaXterm: https://mobaxterm.mobatek.net/
-        Gow`: https://github.com/bmatzelle/gow/wiki
+        Gow: https://github.com/bmatzelle/gow/wiki
 
       Disclaimer:  In priniple, these should work.  However, I have never
       used any of these environments and cannot guarantee that there is
@@ -143,6 +157,68 @@ Installing Cygwin
   UPDATE: The last time I installed EVERYTHING, the download was
   about 5GiB.  The server I selected was also very slow so it took
   over a day to do the whole install!
+
+Using MSYS
+----------
+
+  MSYS is an environment the derives from Cygwin.  Thus, most things said
+  about Cygwin apply equally to MSYS.  This section will, then, focus on
+  the differences when using MSYS, specifically MSYS2.
+
+  Here is it assumed that you have already downloaded and installed MSYS2
+  from https://www.msys2.org using the windows installer available at that
+  location.  It is also assumed that you have brought in the necessary
+  tools using the 'pacman' package management tool Tools needed including:
+
+    pacman -S git
+    pacman -S make
+    pacman -S gcc
+
+  And possibly others depending upon your usage.  Then you will need to
+  build and install kconfig-frontends per the instructions of the top-level
+  README.txt file in the tools repository.  This required the following
+  additional tools:
+
+    pacman -S bison
+    pacman -S gperf
+    pacman -S ncurses-devel
+    pacman -S automake-wrapper
+    pacman -S autoconf
+    pacman -S pkg-config
+
+  Because of some versioning issues, I had to run 'aclocal' prior to
+  running the kconfig-frontends configure script.  See "Configuring NuttX"
+  below for futher information.ifq
+
+  Unlike Cygwin, MSYS does not support symbolic links.  The 'ln -s' commnad
+  will, in fact, copy a directory!  This means that you Make.defs file will
+  have to include  defintion like:
+
+    ifeq ($(CONFIG_WINDOWS_MSYS),y)
+      DIRLINK = $(TOPDIR)/tools/copydir.sh
+      DIRUNLINK = $(TOPDIR)/tools/unlink.sh
+    endif
+
+  This will force the directory copies to work in a way that can be handled
+  by the NuttX build system.
+
+  To build the simulator under MSYS, you also need:
+
+    pacman -S zlib-devel
+
+  It appears that you cannot use directory names with spaces in them like
+  "/c/Program\ Files \(86\)" in the MSYS path variable.  I worked around this
+  by create Windows junctions like this::
+
+    1. Open the a windows command terminal,
+    2. CD to c:\msys64, then
+    3. mklink /j programfiles "C:/Program\ Files" and
+    4. mklink /j programfiles86 "C:/Program\ Files\ \(x86\)"
+
+  They then show up as /programfiles and /programfiles86 with the MSYS2
+  sandbox.  Thos paths can then be used with the PATH variable.  I had
+  to do something similar for the path to the GNU Tools "ARM Embedded
+  Toolchain" which also has spaces in the path name.
 
 Ubuntu Bash under Windows 10
 ----------------------------
@@ -850,6 +926,10 @@ Make Sure that You are on the Right Platform
   Or, if you are on a Windows/Cygwin 64-bit platform:
 
     tools/sethost.sh -c
+
+  Or, for MSYS/MSYS2:
+
+    tools/sethost.sh -g
 
   Other options are available from the help option built into the
   script.  You can see all options with:
@@ -1975,17 +2055,19 @@ nuttx/
  |       `- README.txt
  |- graphics/
  |   `- README.txt
- |- lib/
- |   `- README.txt
- |- libc/
- |   |- zoneinfo
+ |- libs/
+ |   |- README.txt
+ |   |- libc/
+ |   |   |- zoneinfo
+ |   |   |   `- README.txt
  |   |   `- README.txt
- |   `- README.txt
- |- libnx/
- |   |- nxfongs
+ |   |- libdsp/
  |   |   `- README.txt
- |   `- README.txt
- |- libxx/
+ |   |- libnx/
+ |   |   |- nxfongs
+ |   |   |   `- README.txt
+ |   |   `- README.txt
+ |   |- libxx/
  |   `- README.txt
  |- mm/
  |   |- shm/
