@@ -50,31 +50,37 @@
  ************************************************************************************/
 
 /* Configuration ********************************************************************/
-
-/* LED.  User LD2: the green LED is a user LED connected to Arduino signal D13
- * corresponding to MCU I/O PA5 (pin 21).
+/* LED
  *
- * - When the I/O is HIGH value, the LED is on.
- * - When the I/O is LOW, the LED is off.
+ * The Nucleo-144 board has numerous LEDs but only three, LD1 a Green LED, LD2 a
+ * Blue LED and LD3 a Red LED, that can be controlled by software. The following
+ * definitions assume the default Solder Bridges are installed.
  */
 
-// TODO: adapt this stuff to the board
-//#define GPIO_LD2 \
-//  (GPIO_PORTA | GPIO_PIN5 | GPIO_OUTPUT_CLEAR | GPIO_OUTPUT | GPIO_PULLUP | \
-//   GPIO_SPEED_50MHz)
-//
-///* Buttons
-// *
-// * B1 USER: the user button is connected to the I/O PC13 (pin 2) of the STM32
-// * microcontroller.
-// */
-//
-//#define MIN_IRQBUTTON   BUTTON_USER
-//#define MAX_IRQBUTTON   BUTTON_USER
-//#define NUM_IRQBUTTONS  1
-//
-//#define GPIO_BTN_USER \
-//  (GPIO_INPUT | GPIO_FLOAT | GPIO_EXTI | GPIO_PORTC | GPIO_PIN13)
+#define GPIO_LD1       (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_50MHz | GPIO_OUTPUT_CLEAR | \
+                        GPIO_PORTB | GPIO_PIN0)
+#define GPIO_LD2       (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_50MHz | GPIO_OUTPUT_CLEAR | \
+                        GPIO_PORTB | GPIO_PIN7)
+#define GPIO_LD3       (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_50MHz | GPIO_OUTPUT_CLEAR | \
+                        GPIO_PORTB | GPIO_PIN14)
+
+#define GPIO_LED_GREEN GPIO_LD1
+#define GPIO_LED_BLUE  GPIO_LD2
+#define GPIO_LED_RED   GPIO_LD3
+
+#define LED_DRIVER_PATH "/dev/userleds"
+
+/* BUTTONS
+ *
+ * The Blue pushbutton B1, labeled "User", is connected to GPIO PC13.  A high value
+ * will be sensed when the button is depressed.
+ * Note:
+ *    1) That the EXTI is included in the definition to enable an interrupt on this
+ *       IO.
+ *    2) The following definitions assume the default Solder Bridges are installed.
+ */
+
+#define GPIO_BTN_USER  (GPIO_INPUT | GPIO_FLOAT | GPIO_EXTI | GPIO_PORTC | GPIO_PIN13)
 
 /************************************************************************************
  * Public Functions
