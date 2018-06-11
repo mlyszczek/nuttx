@@ -67,11 +67,16 @@
  * Pre-processor Definitions
  ************************************************************************************/
 
-#define FLASH_KEY1         0x45670123
-#define FLASH_KEY2         0xcdef89ab
-#define FLASH_OPTKEY1      0x08192a3b
-#define FLASH_OPTKEY2      0x4c5d6e7f
-#define FLASH_ERASEDVALUE  0xff
+#define FLASH_KEY1                 0x45670123
+#define FLASH_KEY2                 0xcdef89ab
+#define FLASH_OPTKEY1              0x08192a3b
+#define FLASH_OPTKEY2              0x4c5d6e7f
+#define FLASH_ERASEDVALUE          0xff
+
+#if !defined(STM32_FLASH_DUAL_BANK)
+#  define STM32_FLASH_BANK0_NPAGES STM32_FLASH_NPAGES
+#  define STM32_FLASH_BANK0_BASE   STM32_FLASH_BASE
+#endif
 
 /************************************************************************************
  * Private Data
@@ -107,44 +112,26 @@ static inline void sem_unlock(void)
   nxsem_post(&g_sem);
 }
 
-static void flash_unlock(void)
+static void flash_unlock(uintptr_t base)
 {
-  while (getreg32(STM32_FLASH_SR) & FLASH_SR_BSY)
+  while ((getreg32(base + STM32_FLASH_SR_OFFSET) & FLASH_SR_BSY) != 0)
     {
       up_waste();
     }
 
-  if (getreg32(STM32_FLASH_CR) & FLASH_CR_LOCK)
+  if ((getreg32(base + STM32_FLASH_CR_OFFSET) & FLASH_CR_LOCK) != 0)
     {
       /* Unlock sequence */
 
-      putreg32(FLASH_KEY1, STM32_FLASH_KEYR);
-      putreg32(FLASH_KEY2, STM32_FLASH_KEYR);
+      putreg32(FLASH_KEY1, base + STM32_FLASH_KEYR_OFFSET);
+      putreg32(FLASH_KEY2, base + STM32_FLASH_KEYR_OFFSET);
     }
 }
 
-static void flash_lock(void)
+static void flash_lock(uintptr_t base)
 {
-  modifyreg32(STM32_FLASH_CR, 0, FLASH_CR_LOCK);
+  modifyreg32(base + STM32_FLASH_CR_OFFSET, 0, FLASH_CR_LOCK);
 }
-
-#if defined(CONFIG_STM32_FLASH_WORKAROUND_DATA_CACHE_CORRUPTION_ON_RWW)
-static void data_cache_disable(void)
-{
-  modifyreg32(STM32_FLASH_ACR, FLASH_ACR_DCEN, 0);
-}
-
-static void data_cache_enable(void)
-{
-  /* Reset data cache */
-
-  modifyreg32(STM32_FLASH_ACR, 0, FLASH_ACR_DCRST);
-
-  /* Enable data cache */
-
-  modifyreg32(STM32_FLASH_ACR, 0, FLASH_ACR_DCEN);
-}
-#endif /* defined(CONFIG_STM32_FLASH_WORKAROUND_DATA_CACHE_CORRUPTION_ON_RWW) */
 
 /************************************************************************************
  * Public Functions
@@ -153,14 +140,20 @@ static void data_cache_enable(void)
 void stm32_flash_unlock(void)
 {
   sem_lock();
-  flash_unlock();
+  flash_unlock(STM32_FLASH_BANK0_BASE);
+#if defined(STM32_FLASH_DUAL_BANK)
+  flash_unlock(STM32_FLASH_BANK1_BASE);
+#endif
   sem_unlock();
 }
 
 void stm32_flash_lock(void)
 {
   sem_lock();
-  flash_lock();
+  flash_lock(STM32_FLASH_BANK0_BASE);
+#if defined(STM32_FLASH_DUAL_BANK)
+  flash_lock(STM32_FLASH_BANK1_BASE);
+#endif
   sem_unlock();
 }
 
@@ -240,6 +233,7 @@ ssize_t up_progmem_ispageerased(size_t page)
 
 ssize_t up_progmem_erasepage(size_t page)
 {
+  uintptr_t base;
   size_t page_address;
 
   if (page >= STM32_FLASH_NPAGES)
@@ -247,9 +241,22 @@ ssize_t up_progmem_erasepage(size_t page)
       return -EFAULT;
     }
 
+#if defined(STM32_FLASH_DUAL_BANK)
+  /* Handle paged FLASH */
+
+  if (page >= STM32_FLASH_BANK0_NPAGES)
+    {
+      base = STM32_FLASH_BANK1_BASE;
+    }
+  else
+#endif
+    {
+      base = STM32_FLASH_BANK0_BASE;
+    }
+
   sem_lock();
 
-  if (!(getreg32(STM32_RCC_CR) & RCC_CR_HSION))
+  if ((getreg32(base + STM32_RCC_CR_OFFSET) & RCC_CR_HSION) == 0)
     {
       sem_unlock();
       return -EPERM;
@@ -257,20 +264,23 @@ ssize_t up_progmem_erasepage(size_t page)
 
   /* Get flash ready and begin erasing single page */
 
-  flash_unlock();
+  flash_unlock(base);
 
-  modifyreg32(STM32_FLASH_CR, 0, FLASH_CR_PER);
+  modifyreg32(base + STM32_FLASH_CR_OFFSET, 0, FLASH_CR_PER);
 
   /* Must be valid - page index checked above */
 
   page_address = up_progmem_getaddress(page);
-  putreg32(page_address, STM32_FLASH_AR);
+  putreg32(page_address, base + STM32_FLASH_AR_OFFSET);
 
-  modifyreg32(STM32_FLASH_CR, 0, FLASH_CR_STRT);
+  modifyreg32(base + STM32_FLASH_CR_OFFSET, 0, FLASH_CR_STRT);
 
-  while (getreg32(STM32_FLASH_SR) & FLASH_SR_BSY) up_waste();
+  while ((getreg32(base + STM32_FLASH_SR_OFFSET) & FLASH_SR_BSY) != 0)
+    {
+      up_waste();
+    }
 
-  modifyreg32(STM32_FLASH_CR, FLASH_CR_PER, 0);
+  modifyreg32(base + STM32_FLASH_CR_OFFSET, FLASH_CR_PER, 0);
   sem_unlock();
 
   /* Verify */
@@ -287,8 +297,22 @@ ssize_t up_progmem_erasepage(size_t page)
 
 ssize_t up_progmem_write(size_t addr, const void *buf, size_t count)
 {
+  uintptr_t base;
   uint16_t *hword = (uint16_t *)buf;
   size_t written = count;
+
+#if defined(STM32_FLASH_DUAL_BANK)
+  /* Handle paged FLASH */
+
+  if (page >= STM32_FLASH_BANK0_NPAGES)
+    {
+      base = STM32_FLASH_BANK1_BASE;
+    }
+  else
+#endif
+    {
+      base = STM32_FLASH_BANK0_BASE;
+    }
 
   /* STM32 requires half-word access */
 
@@ -311,7 +335,7 @@ ssize_t up_progmem_write(size_t addr, const void *buf, size_t count)
 
   sem_lock();
 
-  if (!(getreg32(STM32_RCC_CR) & RCC_CR_HSION))
+  if ((getreg32(base + STM32_RCC_CR_OFFSET) & RCC_CR_HSION) == 0)
     {
       sem_unlock();
       return -EPERM;
@@ -319,13 +343,9 @@ ssize_t up_progmem_write(size_t addr, const void *buf, size_t count)
 
   /* Get flash ready and begin flashing */
 
-  flash_unlock();
+  flash_unlock(base);
 
-#if defined(CONFIG_STM32_FLASH_WORKAROUND_DATA_CACHE_CORRUPTION_ON_RWW)
-  data_cache_disable();
-#endif
-
-  modifyreg32(STM32_FLASH_CR, 0, FLASH_CR_PG);
+  modifyreg32(base + STM32_FLASH_CR_OFFSET, 0, FLASH_CR_PG);
 
   for (addr += STM32_FLASH_BASE; count; count -= 2, hword++, addr += 2)
     {
@@ -333,30 +353,29 @@ ssize_t up_progmem_write(size_t addr, const void *buf, size_t count)
 
       putreg16(*hword, addr);
 
-      while (getreg32(STM32_FLASH_SR) & FLASH_SR_BSY) up_waste();
+      while ((getreg32(base + STM32_FLASH_SR_OFFSET) & FLASH_SR_BSY) != 0)
+        {
+          up_waste();
+        }
 
       /* Verify */
 
-      if (getreg32(STM32_FLASH_SR) & FLASH_SR_WRPRT_ERR)
+      if ((getreg32(base + STM32_FLASH_SR_OFFSET) & FLASH_SR_WRPRT_ERR) != 0)
         {
-          modifyreg32(STM32_FLASH_CR, FLASH_CR_PG, 0);
+          modifyreg32(base + STM32_FLASH_CR_OFFSET, FLASH_CR_PG, 0);
           sem_unlock();
           return -EROFS;
         }
 
       if (getreg16(addr) != *hword)
         {
-          modifyreg32(STM32_FLASH_CR, FLASH_CR_PG, 0);
+          modifyreg32(base + STM32_FLASH_CR_OFFSET, FLASH_CR_PG, 0);
           sem_unlock();
           return -EIO;
         }
     }
 
-  modifyreg32(STM32_FLASH_CR, FLASH_CR_PG, 0);
-
-#if defined(CONFIG_STM32_FLASH_WORKAROUND_DATA_CACHE_CORRUPTION_ON_RWW)
-  data_cache_enable();
-#endif
+  modifyreg32(base + STM32_FLASH_CR_OFFSET, FLASH_CR_PG, 0);
 
   sem_unlock();
   return written;

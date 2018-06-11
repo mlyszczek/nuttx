@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/xtensa/src/common/arm_sigdeliver.c
  *
- *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2016, 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -80,6 +80,15 @@ void xtensa_sig_deliver(void)
 
   int saved_errno = rtcb->pterrno;
 
+#ifdef CONFIG_SMP
+  /* In the SMP case, we must terminate the critical section while the signal
+   * handler executes, but we also need to restore the irqcount when the
+   * we resume the main thread of the task.
+   */
+
+  int16_t saved_irqcount;
+#endif
+
   board_autoled_on(LED_SIGNAL);
 
   sinfo("rtcb=%p sigdeliver=%p sigpendactionq.head=%p\n",
@@ -100,9 +109,33 @@ void xtensa_sig_deliver(void)
   sigdeliver           = rtcb->xcp.sigdeliver;
   rtcb->xcp.sigdeliver = NULL;
 
-  /* Then restore the task interrupt state */
+#ifdef CONFIG_SMP
+  /* In the SMP case, up_schedule_sigaction(0) will have incremented
+   * 'irqcount' in order to force us into a critical section.  Save the
+   * pre-incremented irqcount.
+   */
 
-  up_irq_restore(regs[REG_PS]);
+  saved_irqcount       = rtcb->irqcount - 1;
+  DEBUGASSERT(saved_irqcount >= 0);
+
+  /* Now we need call leave_critical_section() repeatedly to get the irqcount
+   * to zero, freeing all global spinlocks that enforce the critical section.
+   */
+
+  do
+    {
+      leave_critical_section((regs[REG_PS]));
+    }
+  while (rtcb->irqcount > 0);
+#endif /* CONFIG_SMP */
+
+#ifndef CONFIG_SUPPRESS_INTERRUPTS
+  /* Then make sure that interrupts are enabled.  Signal handlers must always
+   * run with interrupts enabled.
+   */
+
+  up_irq_enable();
+#endif
 
   /* Deliver the signals */
 
@@ -115,7 +148,22 @@ void xtensa_sig_deliver(void)
 
   sinfo("Resuming\n");
   (void)up_irq_save();
+
+  /* Restore the saved errno value */
+
   rtcb->pterrno = saved_errno;
+
+#ifdef CONFIG_SMP
+  /* Restore the saved 'irqcount' and recover the critical section
+   * spinlocks.
+   */
+
+  DEBUGASSERT(rtcb->irqcount == 0);
+  while (rtcb->irqcount < saved_irqcount)
+    {
+      (void)enter_critical_section();
+    }
+#endif
 
   /* Then restore the correct state for this thread of execution.
    * NOTE: The co-processor state should already be correct.

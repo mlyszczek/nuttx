@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/netdb/lib_dnsclien.c
+ * libs/libc/netdb/lib_dnsbind.c
  *
  *   Copyright (C) 2007, 2009, 2012, 2014-2016 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>

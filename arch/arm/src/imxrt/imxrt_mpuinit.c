@@ -71,7 +71,7 @@
  * Name: imxrt_mpu_initialize
  *
  * Description:
- *   Configure the MPU to permit user-space access to only restricted SAM3/4
+ *   Configure the MPU to permit user-space access to only restricted i.MXRT
  *   resources.
  *
  ****************************************************************************/
@@ -92,10 +92,10 @@ void imxrt_mpu_initialize(void)
 
   ARM_DMB();
 
-#ifdef CONFIG_SAMV7_QSPI
+#ifdef CONFIG_IMXFT_QSPI
   /* Make QSPI memory region strongly ordered */
 
-  mpu_priv_stronglyordered(SAM_QSPIMEM_BASE, SAM_QSPIMEM_SIZE);
+  mpu_priv_stronglyordered(IMXRT_QSPIMEM_BASE, IMXRT_QSPIMEM_SIZE);
 
 #endif
 #endif

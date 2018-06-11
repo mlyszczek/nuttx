@@ -158,6 +158,11 @@ Status
   writing.  Insufficient stress testing has been done to prove that the
   solution is stable.
 
+2018:  Again revisited SMP.  There appears to be a memory corruption problem.
+  This is rarely seen with the SMP test but you enable the OS test in the smp
+  configuration, you will see a crash due to memory corruption consistently,
+  specially in the nested signal test (apps/examples/ostest/signest.c).
+
 Platform Features
 =================
 
@@ -542,7 +547,7 @@ A: Yes with the following modifications to the procedure above.
        gdb> mon halt
        gdb> load nuttx <-- Loads NuttX into RAM at 0x010800000
        gdb> file nuttx
-       gdb> mon set pc 0x10800040
+       gdb> mon reg pc 0x10800040
        gdb> s
 
 SMP
@@ -823,4 +828,5 @@ Configuration sub-directories
        is essentially the same all of those comments apply.
 
     2. See the STATUS and SMP sections above for detailed SMP-related
-       issues.
+       issues.  There are a some major problems with the current SMP
+       implementation.
