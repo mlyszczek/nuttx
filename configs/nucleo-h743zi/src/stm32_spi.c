@@ -101,7 +101,8 @@ void stm32_spidev_initialize(void)
 #ifdef CONFIG_STM32H7_SPI1
 void stm32_spi1select(FAR struct spi_dev_s *dev, uint32_t devid, bool selected)
 {
-  spiinfo("devid: %d CS: %s\n", (int)devid, selected ? "assert" : "de-assert");
+  spiinfo("devid: %08lx CS: %s\n",
+          (unsigned long)devid, selected ? "assert" : "de-assert");
 }
 
 uint8_t stm32_spi1status(FAR struct spi_dev_s *dev, uint32_t devid)
@@ -113,7 +114,8 @@ uint8_t stm32_spi1status(FAR struct spi_dev_s *dev, uint32_t devid)
 #ifdef CONFIG_STM32H7_SPI2
 void stm32_spi2select(FAR struct spi_dev_s *dev, uint32_t devid, bool selected)
 {
-  spiinfo("devid: %d CS: %s\n", (int)devid, selected ? "assert" : "de-assert");
+  spiinfo("devid: %08lx CS: %s\n",
+          (unsigned long)devid, selected ? "assert" : "de-assert");
 }
 
 uint8_t stm32_spi2status(FAR struct spi_dev_s *dev, uint32_t devid)
@@ -125,7 +127,8 @@ uint8_t stm32_spi2status(FAR struct spi_dev_s *dev, uint32_t devid)
 #ifdef CONFIG_STM32H7_SPI3
 void stm32_spi3select(FAR struct spi_dev_s *dev, uint32_t devid, bool selected)
 {
-  spiinfo("devid: %d CS: %s\n", (int)devid, selected ? "assert" : "de-assert");
+  spiinfo("devid: %08lx CS: %s\n",
+          (unsigned long)devid, selected ? "assert" : "de-assert");
 }
 
 uint8_t stm32_spi3status(FAR struct spi_dev_s *dev, uint32_t devid)
@@ -137,7 +140,8 @@ uint8_t stm32_spi3status(FAR struct spi_dev_s *dev, uint32_t devid)
 #ifdef CONFIG_STM32H7_SPI4
 void stm32_spi4select(FAR struct spi_dev_s *dev, uint32_t devid, bool selected)
 {
-  spiinfo("devid: %d CS: %s\n", (int)devid, selected ? "assert" : "de-assert");
+  spiinfo("devid: %08lx CS: %s\n",
+          (unsigned long)devid, selected ? "assert" : "de-assert");
 }
 
 uint8_t stm32_spi4status(FAR struct spi_dev_s *dev, uint32_t devid)
@@ -149,7 +153,8 @@ uint8_t stm32_spi4status(FAR struct spi_dev_s *dev, uint32_t devid)
 #ifdef CONFIG_STM32H7_SPI5
 void stm32_spi5select(FAR struct spi_dev_s *dev, uint32_t devid, bool selected)
 {
-  spiinfo("devid: %d CS: %s\n", (int)devid, selected ? "assert" : "de-assert");
+  spiinfo("devid: %08lx CS: %s\n",
+          (unsigned long)devid, selected ? "assert" : "de-assert");
 }
 
 uint8_t stm32_spi5status(FAR struct spi_dev_s *dev, uint32_t devid)
@@ -161,7 +166,8 @@ uint8_t stm32_spi5status(FAR struct spi_dev_s *dev, uint32_t devid)
 #ifdef CONFIG_STM32H7_SPI6
 void stm32_spi5select(FAR struct spi_dev_s *dev, uint32_t devid, bool selected)
 {
-  spiinfo("devid: %d CS: %s\n", (int)devid, selected ? "assert" : "de-assert");
+  spiinfo("devid: %08lx CS: %s\n",
+          (unsigned long)devid, selected ? "assert" : "de-assert");
 }
 
 uint8_t stm32_spi5status(FAR struct spi_dev_s *dev, uint32_t devid)
