@@ -315,14 +315,8 @@ int stm32_configgpio(uint32_t cfgset)
 
   if (pinmode != GPIO_MODER_OUTPUT && (cfgset & GPIO_EXTI) != 0)
     {
-      /* "In STM32 F1 the selection of the EXTI line source is performed through
-       *  the EXTIx bits in the AFIO_EXTICRx registers, while in F2 series this
-       *  selection is done through the EXTIx bits in the SYSCFG_EXTICRx registers.
-       *
-       * "Only the mapping of the EXTICRx registers has been changed, without any
-       *  changes to the meaning of the EXTIx bits. However, the range of EXTI
-       *  bits values has been extended to 0b1000 to support the two ports added
-       *  in F2, port H and I (in F1 series the maximum value is 0b0110)."
+      /* Selection of the EXTI line source is performed through the EXTIx
+       * bits in the SYSCFG_EXTICRx registers.
        */
 
       uint32_t regaddr;

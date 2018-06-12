@@ -86,6 +86,7 @@
 #  else
 #      define STM32H7_ITCM_SRAM_SIZE      (0)         /* No ITCM SRAM on TCM interface */
 #  endif
+#  define STM32H7_NGPIO                   (11)        /* GPIOA-GPIOK */
 #else
 #  error STM32 H7 chip Family not identified
 #endif
