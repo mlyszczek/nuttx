@@ -70,6 +70,8 @@
 /* Size SRAM */
 
 #if defined(CONFIG_STM32H7_STM32H7X3XX)
+/* Memory */
+
 #    define STM32H7_SRAM_SIZE             (512*1024)  /* 512Kb SRAM on AXI bus Matrix (D1) */
 #    define STM32H7_SRAM1_SIZE            (128*1024)  /* 128Kb SRAM1 on AHB bus Matrix (D2) */
 #    define STM32H7_SRAM2_SIZE            (128*1024)  /* 128Kb SRAM2 on AHB bus Matrix (D2) */
@@ -86,15 +88,15 @@
 #  else
 #      define STM32H7_ITCM_SRAM_SIZE      (0)         /* No ITCM SRAM on TCM interface */
 #  endif
+
+/* Peripherals */
+
 #  define STM32H7_NGPIO                   (11)        /* GPIOA-GPIOK */
+#  define STM32H7_NUSART                  (4)         /* USART1-3, 6 */
+#  define STM32H7_NUART                   (4)         /* UART4-5, 7-8 */
 #else
 #  error STM32 H7 chip Family not identified
 #endif
-
-/* Common to all Family members */
-
-// TODO: #  define STM32F7_NATIM          2           /* Two advanced timers TIM1 and 8 */
-// TODO: etc ...
 
 /* TBD FPU Configuration */
 
