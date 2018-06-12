@@ -94,65 +94,38 @@
 
 /* Register Addresses ***************************************************************/
 
-#define STM32_EXTI_RTSR1_OFFSET    0x0000  /* Rising Trigger selection register 1 */
-#define STM32_EXTI_RTSR1_OFFSET    0x0000  /* Rising Trigger selection register 1 */
-#define STM32_EXTI_FTSR1_OFFSET    0x0004  /* Falling Trigger selection register 1 */
-#define STM32_EXTI_FTSR1_OFFSET    0x0004  /* Falling Trigger selection register 1 */
-#define STM32_EXTI_SWIER1_OFFSET   0x0008  /* Software interrupt event register 1 */
-#define STM32_EXTI_SWIER1_OFFSET   0x0008  /* Software interrupt event register 1 */
-#define STM32_EXTI_D3PMR1_OFFSET   0x000c  /* D3 pending mask register 1 */
-#define STM32_EXTI_D3PMR1_OFFSET   0x000c  /* D3 pending mask register 1 */
-#define STM32_EXTI_D3PCR1L_OFFSET  0x0010  /* D3 pending clear selection register low 1 */
-#define STM32_EXTI_D3PCR1L_OFFSET  0x0010  /* D3 pending clear selection register low 1 */
-#define STM32_EXTI_D3PCR1H_OFFSET  0x0014  /* D3 pending clear selection register high 1 */
-#define STM32_EXTI_D3PCR1H_OFFSET  0x0014  /* D3 pending clear selection register high 1 */
+#define STM32_EXTI_RTSR1           (STM32_EXTI_BASE + STM32_EXTI_RTSR1_OFFSET)
+#define STM32_EXTI_FTSR1           (STM32_EXTI_BASE + STM32_EXTI_FTSR1_OFFSET)
+#define STM32_EXTI_SWIER1          (STM32_EXTI_BASE + STM32_EXTI_SWIER1_OFFSET)
+#define STM32_EXTI_D3PMR1          (STM32_EXTI_BASE + STM32_EXTI_D3PMR1_OFFSET)
+#define STM32_EXTI_D3PCR1L         (STM32_EXTI_BASE + STM32_EXTI_D3PCR1L_OFFSET)
+#define STM32_EXTI_D3PCR1H         (STM32_EXTI_BASE + STM32_EXTI_D3PCR1H_OFFSET)
 
-#define STM32_EXTI_RTSR2_OFFSET    0x0020  /* Rising Trigger selection register 2 */
-#define STM32_EXTI_RTSR2_OFFSET    0x0020  /* Rising Trigger selection register 2 */
-#define STM32_EXTI_FTSR2_OFFSET    0x0024  /* Falling Trigger selection register 2 */
-#define STM32_EXTI_FTSR2_OFFSET    0x0024  /* Falling Trigger selection register 2 */
-#define STM32_EXTI_WIER2_OFFSET    0x0028  /* Software interrupt event register 2 */
-#define STM32_EXTI_WIER2_OFFSET    0x0028  /* Software interrupt event register 2 */
-#define STM32_EXTI_D3PMR2_OFFSET   0x002c  /* D3 pending mask register 2 */
-#define STM32_EXTI_D3PMR2_OFFSET   0x002c  /* D3 pending mask register 2 */
-#define STM32_EXTI_D3PCR2L_OFFSET  0x0030  /* D3 pending clear selection register low 2 */
-#define STM32_EXTI_D3PCR2L_OFFSET  0x0030  /* D3 pending clear selection register low 2 */
-#define STM32_EXTI_D3PCR2H_OFFSET  0x0034  /* D3 pending clear selection register high 2 */
-#define STM32_EXTI_D3PCR2H_OFFSET  0x0034  /* D3 pending clear selection register high 2 */
+#define STM32_EXTI_RTSR2           (STM32_EXTI_BASE + STM32_EXTI_RTSR2_OFFSET)
+#define STM32_EXTI_FTSR2           (STM32_EXTI_BASE + STM32_EXTI_FTSR2_OFFSET)
+#define STM32_EXTI_WIER2           (STM32_EXTI_BASE + STM32_EXTI_WIER2_OFFSET)
+#define STM32_EXTI_D3PMR2          (STM32_EXTI_BASE + STM32_EXTI_D3PMR2_OFFSET)
+#define STM32_EXTI_D3PCR2L         (STM32_EXTI_BASE + STM32_EXTI_D3PCR2L_OFFSET)
+#define STM32_EXTI_D3PCR2H         (STM32_EXTI_BASE + STM32_EXTI_D3PCR2H_OFFSET)
 
-#define STM32_EXTI_RTSR3_OFFSET    0x0040  /* Rising Trigger selection register 3 */
-#define STM32_EXTI_RTSR3_OFFSET    0x0040  /* Rising Trigger selection register 3 */
-#define STM32_EXTI_FTSR3_OFFSET    0x0044  /* Falling Trigger selection register 3 */
-#define STM32_EXTI_FTSR3_OFFSET    0x0044  /* Falling Trigger selection register 3 */
-#define STM32_EXTI_WIER3_OFFSET    0x0048  /* Software interrupt event register 3 */
-#define STM32_EXTI_WIER3_OFFSET    0x0048  /* Software interrupt event register 3 */
-#define STM32_EXTI_D3PMR3_OFFSET   0x004c  /* D3 pending mask register 3 */
-#define STM32_EXTI_D3PMR3_OFFSET   0x004c  /* D3 pending mask register 3 */
-#define STM32_EXTI_D3PCR3L_OFFSET  0x0050  /* D3 pending clear selection register low 3 */
-#define STM32_EXTI_D3PCR3L_OFFSET  0x0050  /* D3 pending clear selection register low 3 */
-#define STM32_EXTI_D3PCR3H_OFFSET  0x0054  /* D3 pending clear selection register high 3 */
-#define STM32_EXTI_D3PCR3H_OFFSET  0x0054  /* D3 pending clear selection register high 3 */
+#define STM32_EXTI_RTSR3           (STM32_EXTI_BASE + STM32_EXTI_RTSR3_OFFSET)
+#define STM32_EXTI_FTSR3           (STM32_EXTI_BASE + STM32_EXTI_FTSR3_OFFSET)
+#define STM32_EXTI_WIER3           (STM32_EXTI_BASE + STM32_EXTI_WIER3_OFFSET)
+#define STM32_EXTI_D3PMR3          (STM32_EXTI_BASE + STM32_EXTI_D3PMR3_OFFSET)
+#define STM32_EXTI_D3PCR3L         (STM32_EXTI_BASE + STM32_EXTI_D3PCR3L_OFFSET)
+#define STM32_EXTI_D3PCR3H         (STM32_EXTI_BASE + STM32_EXTI_D3PCR3H_OFFSET)
 
-#define STM32_EXTI_CPUIMR1_OFFSET  0x0080  /* EXTI interrupt mask register 1 */
-#define STM32_EXTI_CPUIMR1_OFFSET  0x0080  /* EXTI interrupt mask register 1 */
-#define STM32_EXTI_CPUEMR1_OFFSET  0x0084  /* EXTI event mask register 1 */
-#define STM32_EXTI_CPUEMR1_OFFSET  0x0084  /* EXTI event mask register 1 */
-#define STM32_EXTI_CPUPR1_OFFSET   0x0088  /* EXTI pending register 1 */
-#define STM32_EXTI_CPUPR1_OFFSET   0x0088  /* EXTI pending register 1 */
+#define STM32_EXTI_CPUIMR1         (STM32_EXTI_BASE + STM32_EXTI_CPUIMR1_OFFSET)
+#define STM32_EXTI_CPUEMR1         (STM32_EXTI_BASE + STM32_EXTI_CPUEMR1_OFFSET)
+#define STM32_EXTI_CPUPR1          (STM32_EXTI_BASE + STM32_EXTI_CPUPR1_OFFSET)
 
-#define STM32_EXTI_CPUIMR2_OFFSET  0x0090  /* EXTI interrupt mask register 2 */
-#define STM32_EXTI_CPUIMR2_OFFSET  0x0090  /* EXTI interrupt mask register 2 */
-#define STM32_EXTI_CPUEMR2_OFFSET  0x0094  /* EXTI event mask register 2 */
-#define STM32_EXTI_CPUEMR2_OFFSET  0x0094  /* EXTI event mask register 2 */
-#define STM32_EXTI_CPUPR2_OFFSET   0x0098  /* EXTI pending register 2 */
-#define STM32_EXTI_CPUPR2_OFFSET   0x0098  /* EXTI pending register 2 */
+#define STM32_EXTI_CPUIMR2         (STM32_EXTI_BASE + STM32_EXTI_CPUIMR2_OFFSET)
+#define STM32_EXTI_CPUEMR2         (STM32_EXTI_BASE + STM32_EXTI_CPUEMR2_OFFSET)
+#define STM32_EXTI_CPUPR2          (STM32_EXTI_BASE + STM32_EXTI_CPUPR2_OFFSET)
 
-#define STM32_EXTI_CPUIMR3_OFFSET  0x00a0  /* EXTI interrupt mask register 3 */
-#define STM32_EXTI_CPUIMR3_OFFSET  0x00a0  /* EXTI interrupt mask register 3 */
-#define STM32_EXTI_CPUEMR3_OFFSET  0x00a4  /* EXTI event mask register 3 */
-#define STM32_EXTI_CPUEMR3_OFFSET  0x00a4  /* EXTI event mask register 3 */
-#define STM32_EXTI_CPUPR3_OFFSET   0x00a8  /* EXTI pending register 3 */
-#define STM32_EXTI_CPUPR3_OFFSET   0x00a8  /* EXTI pending register 3 */
+#define STM32_EXTI_CPUIMR3         (STM32_EXTI_BASE + STM32_EXTI_CPUIMR3_OFFSET)
+#define STM32_EXTI_CPUEMR3         (STM32_EXTI_BASE + STM32_EXTI_CPUEMR3_OFFSET)
+#define STM32_EXTI_CPUPR3          (STM32_EXTI_BASE + STM32_EXTI_CPUPR3_OFFSET)
 
 /* Register Bitfield Definitions ****************************************************/
 
