@@ -903,7 +903,7 @@ config ARCH_BOARD_NUCLEO_H743ZI
 	bool "STM32H743 Nucleo H743ZI"
 	depends on ARCH_CHIP_STM32H743ZI
 	select ARCH_HAVE_LEDS
-# TODO:	select ARCH_HAVE_BUTTONS
+	select ARCH_HAVE_BUTTONS
 # TODO:	select ARCH_HAVE_IRQBUTTONS
 	---help---
 		STMicro Nucleo H743ZI board based on the STMicro STM32H743ZI MCU.

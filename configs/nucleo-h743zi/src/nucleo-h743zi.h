@@ -103,6 +103,18 @@
 int stm32_bringup(void);
 
 /************************************************************************************
+ * Name: stm32_spidev_initialize
+ *
+ * Description:
+ *   Called to configure SPI chip select GPIO pins for the Nucleo-H743ZI board.
+ *
+ ************************************************************************************/
+
+#ifdef CONFIG_STM32H7_SPI
+void stm32_spidev_initialize(void);
+#endif
+
+/************************************************************************************
  * Name: stm32_adc_setup
  *
  * Description:
