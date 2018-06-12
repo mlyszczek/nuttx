@@ -42,6 +42,7 @@
 
 #include <nuttx/config.h>
 #include "chip.h"
+#include "chip/stm32_memorymap.h"
 
 /* Content of this file requires verification before it is used with other
  * families
@@ -172,11 +173,11 @@
 
 #define EXTI_D3PCRL_SHIFT(n)        (((n) & 0xf) << 1)  /* For (n & 31) < 16 */
 #define EXTI_D3PCRL_MASK(n)         (3 << EXTI_D3PCRL_SHIFT(n))
-#  define EXTI_D3PCRL_MASK(n,v)     ((uint32_t)(v) << EXTI_D3PCRL_SHIFT(n))
+#  define EXTI_D3PCRL(n,v)          ((uint32_t)(v) << EXTI_D3PCRL_SHIFT(n))
 
 #define EXTI_D3PCRH_SHIFT(n)        (((n) & 0xf) << 1)  /* For (n & 31) >= 16 */
 #define EXTI_D3PCRH_MASK(n)         (3 << EXTI_D3PCRL_SHIFT(n))
-#  define EXTI_D3PCRH_MASK(n,v)     ((uint32_t)(v) << EXTI_D3PCRL_SHIFT(n))
+#  define EXTI_D3PCRH(n,v)          ((uint32_t)(v) << EXTI_D3PCRL_SHIFT(n))
 
 /* EXTI event input mapping *********************************************************/
 
@@ -187,37 +188,37 @@
 #define EXTI_EVENT_RTCWKUP          19  /* RTC wakeup timer */
 #define EXTI_EVENT_COMP1            20  /* COMP1 */
 #define EXTI_EVENT_COMP2            21  /* COMP2 */
-#define EXTI_EVENT_I2C1             22  /* I2C1 wakeup */
-#define EXTI_EVENT_I2C2             23  /* I2C2 wakeup */
-#define EXTI_EVENT_I2C3             24  /* I2C3 wakeup */
-#define EXTI_EVENT_I2C4             25  /* I2C4 wakeup */
-#define EXTI_EVENT_USART1           26  /* USART1 wakeup */
-#define EXTI_EVENT_USART2           27  /* USART2 wakeup */
-#define EXTI_EVENT_USART3           28  /* USART3 wakeup */
-#define EXTI_EVENT_USART6           29  /* USART6 wakeup */
-#define EXTI_EVENT_UART4            30  /* UART4 wakeup */
-#define EXTI_EVENT_UART5            31  /* UART5 wakeup */
-#define EXTI_EVENT_UART7            32  /* UART7 wakeup */
-#define EXTI_EVENT_UART8            33  /* UART8 wakeup */
-#define EXTI_EVENT_LPUARTRX         34  /* LPUART1 RX wakeup */
-#define EXTI_EVENT_LPUARTTX         35  /* LPUART1 TX wakeup */
-#define EXTI_EVENT_SPI1             36  /* SPI1 wakeup */
-#define EXTI_EVENT_SPI2             37  /* SPI2 wakeup */
-#define EXTI_EVENT_SPI3             38  /* SPI3 wakeup */
-#define EXTI_EVENT_SPI4             39  /* SPI4 wakeup */
-#define EXTI_EVENT_SPI5             40  /* SPI5 wakeup */
-#define EXTI_EVENT_SPI6             41  /* SPI6 wakeup */
-#define EXTI_EVENT_MDIO             42  /* MDIO wakeup */
-#define EXTI_EVENT_USB1             43  /* USB1 wakeup */
-#define EXTI_EVENT_USB2             44  /* USB2 wakeup */
-#define EXTI_EVENT_LPTIM1           47  /* LPTIM1 wakeup */
-#define EXTI_EVENT_LPTIM2           48  /* LPTIM2 wakeup */
+#define EXTI_EVENT_I2C1WKUP         22  /* I2C1 wakeup */
+#define EXTI_EVENT_I2C2WKUP         23  /* I2C2 wakeup */
+#define EXTI_EVENT_I2C3WKUP         24  /* I2C3 wakeup */
+#define EXTI_EVENT_I2C4WKUP         25  /* I2C4 wakeup */
+#define EXTI_EVENT_USART1WKUP       26  /* USART1 wakeup */
+#define EXTI_EVENT_USART2WKUP       27  /* USART2 wakeup */
+#define EXTI_EVENT_USART3WKUP       28  /* USART3 wakeup */
+#define EXTI_EVENT_USART6WKUP       29  /* USART6 wakeup */
+#define EXTI_EVENT_UART4WKUP        30  /* UART4 wakeup */
+#define EXTI_EVENT_UART5WKUP        31  /* UART5 wakeup */
+#define EXTI_EVENT_UART7WKUP        32  /* UART7 wakeup */
+#define EXTI_EVENT_UART8WKUP        33  /* UART8 wakeup */
+#define EXTI_EVENT_LPUARTRXWKUP     34  /* LPUART1 RX wakeup */
+#define EXTI_EVENT_LPUARTTXWKUP     35  /* LPUART1 TX wakeup */
+#define EXTI_EVENT_SPI1WKUP         36  /* SPI1 wakeup */
+#define EXTI_EVENT_SPI2WKUP         37  /* SPI2 wakeup */
+#define EXTI_EVENT_SPI3WKUP         38  /* SPI3 wakeup */
+#define EXTI_EVENT_SPI4WKUP         39  /* SPI4 wakeup */
+#define EXTI_EVENT_SPI5WKUP         40  /* SPI5 wakeup */
+#define EXTI_EVENT_SPI6WKUP         41  /* SPI6 wakeup */
+#define EXTI_EVENT_MDIOWKUP         42  /* MDIO wakeup */
+#define EXTI_EVENT_USB1WKUP         43  /* USB1 wakeup */
+#define EXTI_EVENT_USB2WKUP         44  /* USB2 wakeup */
+#define EXTI_EVENT_LPTIM1WKUP       47  /* LPTIM1 wakeup */
+#define EXTI_EVENT_LPTIM2WKUP       48  /* LPTIM2 wakeup */
 #define EXTI_EVENT_LPTM2OUT         49  /* LPTIM2 output */
-#define EXTI_EVENT_LPTIM3           50  /* LPTIM3 wakeup */
+#define EXTI_EVENT_LPTIM3WKUP       50  /* LPTIM3 wakeup */
 #define EXTI_EVENT_LPTIM3OUT        51  /* LPTIM3 output */
-#define EXTI_EVENT_LPTIM4           52  /* LPTIM4 wakeup */
-#define EXTI_EVENT_LPTIM5           53  /* LPTIM5 wakeup */
-#define EXTI_EVENT_SWPMI            54  /* SWPMI wakeup */
+#define EXTI_EVENT_LPTIM4WKUP       52  /* LPTIM4 wakeup */
+#define EXTI_EVENT_LPTIM5WKUP       53  /* LPTIM5 wakeup */
+#define EXTI_EVENT_SWPMIWKUP        54  /* SWPMI wakeup */
 #define EXTI_EVENT_WKUP1            55  /* WKUP1 */
 #define EXTI_EVENT_WKUP2            56  /* WKUP2 */
 #define EXTI_EVENT_WKUP3            57  /* WKUP3 */
@@ -225,7 +226,7 @@
 #define EXTI_EVENT_WKUP5            59  /* WKUP5 */
 #define EXTI_EVENT_WKUP6            60  /* WKUP6 */
 #define EXTI_EVENT_RCC              61  /* RCC interrupt */
-#define EXTI_EVENT_I2C4             62  /* I2C4 Event interrupt */
+#define EXTI_EVENT_I2C4EV           62  /* I2C4 Event interrupt */
 #define EXTI_EVENT_I2C4ERR          63  /* I2C4 Error interrupt */
 #define EXTI_EVENT_LPUART1          64  /* LPUART1 global Interrupt */
 #define EXTI_EVENT_SPI6             65  /* SPI6 interrupt */
@@ -240,8 +241,8 @@
 #define EXTI_EVENT_DMAMUX2          74  /* DMAMUX2 interrupt */
 #define EXTI_EVENT_ADC3             75  /* ADC3 interrupt */
 #define EXTI_EVENT_SAI4             76  /* SAI4 interrupt */
-#define EXTI_EVENT_HDMICEC          85  /* HDMI-CEC wakeup */
-#define EXTI_EVENT_EMAC             86  /* Ethernet wakeup */
+#define EXTI_EVENT_CECWKUP          85  /* HDMI-CEC wakeup */
+#define EXTI_EVENT_ETHWKUP          86  /* Ethernet wakeup */
 #define EXTI_EVENT_HSECSS           87  /* HSECSS interrupt */
 
 #endif /* CONFIG_STM32H7_STM32H7X3XX */
