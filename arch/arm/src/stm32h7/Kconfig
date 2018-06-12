@@ -31,6 +31,11 @@ config STM32H7_STM32H7X3XX
 	select ARMV7M_HAVE_DCACHE
 	select ARMV7M_HAVE_ITCM
 	select ARMV7M_HAVE_DTCM
+	select STM32H7_HAVE_SPI4
+	select STM32H7_HAVE_SPI5
+	select STM32H7_HAVE_SPI6
+	bool
+	default n
 
 config STM32H7_FLASH_CONFIG_I
 	bool
@@ -73,14 +78,103 @@ menu "STM32H7 Peripheral Selection"
 # These "hidden" settings determine is a peripheral option is available for the
 # selection MCU
 
+config STM32H7_HAVE_SPI4
+	bool
+	default n
+
+config STM32H7_HAVE_SPI5
+	bool
+	default n
+
+config STM32H7_HAVE_SPI6
+	bool
+	default n
+
 # These "hidden" settings are the OR of individual peripheral selections
 # indicating that the general capability is required.
+
+config STM32H7_I2C
+	bool
+	default n
+
+config STM32H7_SPI
+	bool
+	default n
 
 config STM32H7_USART
 	bool
 	default n
 
 # These are the peripheral selections proper
+
+menu "STM32H7 I2C Selection"
+
+config STM32H7_I2C1
+	bool "I2C1"
+	default n
+	select STM32H7_I2C
+
+config STM32H7_I2C2
+	bool "I2C2"
+	default n
+	select STM32H7_I2C
+
+config STM32H7_I2C3
+	bool "I2C3"
+	default n
+	select STM32H7_I2C
+
+config STM32H7_I2C4
+	bool "I2C4"
+	default n
+	select STM32H7_I2C
+
+endmenu # STM32H7 I2C Selection
+
+menu "STM32H7 SPI Selection"
+
+config STM32H7_SPI1
+	bool "SPI1"
+	default n
+	select SPI
+	select STM32H7_SPI
+
+config STM32H7_SPI2
+	bool "SPI2"
+	default n
+	select SPI
+	select STM32H7_SPI
+
+config STM32H7_SPI3
+	bool "SPI3"
+	default n
+	select SPI
+	select STM32H7_SPI
+
+config STM32H7_SPI4
+	bool "SPI4"
+	default n
+	depends on STM32H7_HAVE_SPI4
+	select SPI
+	select STM32H7_SPI
+
+config STM32H7_SPI5
+	bool "SPI5"
+	default n
+	depends on STM32H7_HAVE_SPI5
+	select SPI
+	select STM32H7_SPI
+
+config STM32H7_SPI6
+	bool "SPI6"
+	default n
+	depends on STM32H7_HAVE_SPI6
+	select SPI
+	select STM32H7_SPI
+
+endmenu # STM32H7 SPI Selection
+
+menu "STM32H7 U[S]ART Selection"
 
 config STM32H7_USART1
 	bool "USART1"
@@ -138,7 +232,62 @@ config STM32H7_UART8
 	select UART8_SERIALDRIVER
 	select STM32H7_USART
 
+endmenu # STM32H7 U[S]ART Selection
 endmenu # STM32H7 Peripheral Selection
+
+menu "I2C Configuration"
+	depends on STM32H7_I2C
+
+config STM32H7_I2C_DYNTIMEO
+	bool "Use dynamic timeouts"
+	default n
+	depends on STM32H7_I2C
+
+config STM32H7_I2C_DYNTIMEO_USECPERBYTE
+	int "Timeout Microseconds per Byte"
+	default 500
+	depends on STM32H7_I2C_DYNTIMEO
+
+config STM32H7_I2C_DYNTIMEO_STARTSTOP
+	int "Timeout for Start/Stop (Milliseconds)"
+	default 1000
+	depends on STM32H7_I2C_DYNTIMEO
+
+config STM32H7_I2CTIMEOSEC
+	int "Timeout seconds"
+	default 0
+	depends on STM32H7_I2C
+
+config STM32H7_I2CTIMEOMS
+	int "Timeout Milliseconds"
+	default 500
+	depends on STM32H7_I2C && !STM32H7_I2C_DYNTIMEO
+
+config STM32H7_I2CTIMEOTICKS
+	int "Timeout for Done and Stop (ticks)"
+	default 500
+	depends on STM32H7_I2C && !STM32H7_I2C_DYNTIMEO
+
+endmenu # "I2C Configuration"
+
+menu "SPI Configuration"
+	depends on STM32H7_SPI
+
+config STM32H7_SPI_INTERRUPTS
+	bool "Interrupt driver SPI"
+	default n
+	---help---
+		Select to enable interrupt driven SPI support. Non-interrupt-driven,
+		poll-waiting is recommended if the interrupt rate would be to high in
+		the interrupt driven case.
+
+config STM32H7_SPI_DMA
+	bool "SPI DMA"
+	default n
+	---help---
+		Use DMA to improve SPI transfer performance.  Cannot be used with STM32H7_SPI_INTERRUPT.
+
+endmenu # "SPI Configuration"
 
 menu "U[S]ART Configuration"
 	depends on STM32H7_USART
