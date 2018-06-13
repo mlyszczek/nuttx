@@ -242,6 +242,17 @@
 #define NUM_BUTTONS        1
 #define BUTTON_USER_BIT    (1 << BUTTON_USER)
 
+/* Pin Disambiguation ***************************************************************/
+/* USART3 (Nucleo Virtual Console) */
+
+#define GPIO_USART3_RX     GPIO_USART3_RX_3  /* PD9 */
+#define GPIO_USART3_TX     GPIO_USART3_TX_3  /* PD8 */
+
+/* USART6 (Arduino Serial Shield) */
+
+#define GPIO_USART6_RX     GPIO_USART6_RX_2  /* PG9 */
+#define GPIO_USART6_TX     GPIO_USART6_TX_2  /* PG14 */
+
 /************************************************************************************
  * Public Data
  ************************************************************************************/
