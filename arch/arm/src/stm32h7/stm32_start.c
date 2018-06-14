@@ -238,7 +238,7 @@ static inline void stm32_tcmenable(void)
   /* Enabled/disabled DTCM */
 
 #ifdef CONFIG_ARMV7M_DTCM
-  /* As DTCM RAM on STM32F7 does not have ECC, so do not enable
+  /* As DTCM RAM on STM32H7 does not have ECC, so do not enable
    * read-modify-write.
    */
 

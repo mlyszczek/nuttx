@@ -1,5 +1,5 @@
 ############################################################################
-# configs/stm32f746g-disco/scripts/Make.defs
+# configs/nucleo-h743zi/scripts/Make.defs
 #
 #   Copyright (C) 2018 Gregory Nutt. All rights reserved.
 #   Author: Gregory Nutt <gnutt@nuttx.org>

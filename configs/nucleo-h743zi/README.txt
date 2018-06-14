@@ -47,7 +47,7 @@ Serial Console
     interface with RX on pin D0 and TX on pin D1 from USART6:
 
       -------- ---------------
-               STM32F7
+               STM32H7
       ARDUINO  FUNCTION  GPIO
       -- ----- --------- -----
       DO RX    USART6_RX PG9
