@@ -1,7 +1,7 @@
 /****************************************************************************
- * arch/arm/src/stm32/stm32_dma2d.c
+ * arch/arm/src/stm32f7/stm32_dma2d.c
  *
- *   Copyright (C) 2014-2015 Marco Krahl. All rights reserved.
+ *   Copyright (C) 2014-2015, 2018 Marco Krahl. All rights reserved.
  *   Author: Marco Krahl <ocram.lhark@gmail.com>
  *
  * References:
@@ -68,89 +68,48 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* output, foreground and background layer */
+/* DMA2D supported operation layer (output, foreground, background) */
 
-#define DMA2D_NLAYERS                   3
-
-/* DMA2D PFC value definitions */
-
-#define DMA2D_PF_ARGB8888               0
-#define DMA2D_PF_RGB888                 1
-#define DMA2D_PF_RGB565                 2
-#define DMA2D_PF_ARGB1555               3
-#define DMA2D_PF_ARGB14444              4
-#define DMA2D_PF_L8                     5
-#define DMA2D_PF_AL44                   6
-#define DMA2D_PF_AL88                   7
-#define DMA2D_PF_L4                     8
-#define DMA2D_PF_A8                     9
-#define DMA2D_PF_A4                     10
+#define DMA2D_NLAYERS                       3
 
 /* DMA2D blender control */
 
-#define STM32_DMA2D_CR_MODE_BLIT        DMA2D_CR_MODE(0)
-#define STM32_DMA2D_CR_MODE_BLITPFC     DMA2D_CR_MODE(1)
-#define STM32_DMA2D_CR_MODE_BLEND       DMA2D_CR_MODE(2)
-#define STM32_DMA2D_CR_MODE_COLOR       DMA2D_CR_MODE(3)
-#define STM32_DMA2D_CR_MODE_CLEAR       STM32_DMA2D_CR_MODE_COLOR
-
-/* DMA2D PFC alpha mode */
-
-#define STM32_DMA2D_PFCCR_AM_NONE       0
-#define STM32_DMA2D_PFCCR_AM_CONST      1
-#define STM32_DMA2D_PFCCR_AM_PIXEL      10
+#define STM32F7_DMA2D_CR_MODE_BLIT          DMA2D_CR_MODE(0)
+#define STM32F7_DMA2D_CR_MODE_BLITPFC       DMA2D_CR_MODE(1)
+#define STM32F7_DMA2D_CR_MODE_BLEND         DMA2D_CR_MODE(2)
+#define STM32F7_DMA2D_CR_MODE_COLOR         DMA2D_CR_MODE(3)
+#define STM32F7_DMA2D_CR_MODE_CLEAR         STM32_DMA2D_CR_MODE_BLITPFC | \
+                                            STM32_DMA2D_CR_MODE_BLEND   | \
+                                            STM32_DMA2D_CR_MODE_COLOR
 
 /* Only 8 bit per pixel overal supported */
 
-#define DMA2D_PF_BYPP(n)                ((n) / 8)
+#define DMA2D_PF_BYPP(n)                    ((n) / 8)
 
-#define DMA2D_CLUT_SIZE                 STM32_LTDC_NCLUT - 1
+/* CC clut size */
+
+#define DMA2D_CLUT_SIZE                     STM32F7_DMA2D_NCLUT - 1
 
 /* Layer argb cmap conversion */
 
-#define DMA2D_CLUT_ALPHA(n)          ((uint32_t)(n) << 24)
-#define DMA2D_CLUT_RED(n)            ((uint32_t)(n) << 16)
-#define DMA2D_CLUT_GREEN(n)          ((uint32_t)(n) << 8)
-#define DMA2D_CLUT_BLUE(n)           ((uint32_t)(n) << 0)
+#define DMA2D_CLUT_ALPHA(n)                 ((uint32_t)(n) << 24)
+#define DMA2D_CLUT_RED(n)                   ((uint32_t)(n) << 16)
+#define DMA2D_CLUT_GREEN(n)                 ((uint32_t)(n) << 8)
+#define DMA2D_CLUT_BLUE(n)                  ((uint32_t)(n) << 0)
 
-#define DMA2D_CMAP_ALPHA(n)          ((uint32_t)(n) >> 24)
-#define DMA2D_CMAP_RED(n)            ((uint32_t)(n) >> 16)
-#define DMA2D_CMAP_GREEN(n)          ((uint32_t)(n) >> 8)
-#define DMA2D_CMAP_BLUE(n)           ((uint32_t)(n) >> 0)
-
-/* Define shadow layer for ltdc interface */
-
-#ifdef CONFIG_STM32F7_LTDC_INTERFACE
-#  ifdef CONFIG_STM32F7_LTDC_L2
-#    define DMA2D_SHADOW_LAYER    2
-#    define DMA2D_SHADOW_LAYER_L1 0
-#    define DMA2D_SHADOW_LAYER_L2 1
-#  else
-#    define DMA2D_SHADOW_LAYER    1
-#    define DMA2D_SHADOW_LAYER_L1 0
-#  endif
-#  define DMA2D_LAYER_NSIZE    CONFIG_STM32F7_DMA2D_NLAYERS + DMA2D_SHADOW_LAYER
-#else
-#  define DMA2D_LAYER_NSIZE    CONFIG_STM32F7_DMA2D_NLAYERS
-#  define DMA2D_SHADOW_LAYER   0
-#endif
+#define DMA2D_CMAP_ALPHA(n)                 ((uint32_t)(n) >> 24)
+#define DMA2D_CMAP_RED(n)                   ((uint32_t)(n) >> 16)
+#define DMA2D_CMAP_GREEN(n)                 ((uint32_t)(n) >> 8)
+#define DMA2D_CMAP_BLUE(n)                  ((uint32_t)(n) >> 0)
 
 /* Debug option */
 
 #ifdef CONFIG_STM32F7_DMA2D_REGDEBUG
-#  define regerr       lcderr
-#  define reginfo      lcdinfo
+#  define regerr                            lcderr
+#  define reginfo                           lcdinfo
 #else
 #  define regerr(x...)
 #  define reginfo(x...)
-#endif
-
-/* check clut support */
-
-#ifdef CONFIG_STM32F7_DMA2D_L8
-#  ifndef CONFIG_FB_CMAP
-#    error "Enable cmap to support the configured layer formats!"
-#  endif
 #endif
 
 /****************************************************************************
@@ -161,58 +120,22 @@
 
 struct stm32_dma2d_s
 {
-  struct dma2d_layer_s dma2d;   /* public dma2d interface */
+  struct dma2d_layer_s dma2d;  /* Public dma2d interface */
 
-  /* Fixed settings */
-
-  int lid;                      /* Layer identifier */
-  struct fb_videoinfo_s vinfo;  /* Layer videoinfo */
-  struct fb_planeinfo_s pinfo;  /* Layer planeinfo */
-
-  /* Blending */
-
-  uint32_t blendmode;           /* the interface blendmode */
-  uint8_t  alpha;               /* the alpha value */
-
-  /* Coloring */
-
-#ifdef CONFIG_STM32F7_DMA2D_L8
-  uint32_t *clut;               /* Color lookup table */
+#ifdef CONFIG_FB_CMAP
+  uint32_t *clut;              /* Color lookup table */
 #endif
 
-  /* Operation */
-  uint8_t  fmt;                 /* the controller pixel format */
-  sem_t    *lock;               /* Ensure mutually exclusive access */
+  sem_t *lock;                 /* Ensure mutually exclusive access */
 };
-
-#ifdef CONFIG_STM32F7_LTDC_INTERFACE
-
-/* This structures provides the DMA2D layer for each LTDC layer */
-
-struct stm32_ltdc_dma2d_s
-{
-  struct stm32_dma2d_s dma2ddev;
-#ifdef CONFIG_STM32F7_DMA2D_L8
-  FAR struct ltdc_layer_s *ltdc;
-#endif
-};
-
-struct stm32_ltdc_layer_s
-{
-  /* Layer state */
-
-  struct stm32_ltdc_dma2d_s layer[DMA2D_SHADOW_LAYER];
-};
-#endif
 
 /* Interrupt handling */
 
 struct stm32_interrupt_s
 {
-  bool  wait;       /* Informs that the task is waiting for the irq */
-  bool  handled;    /* Informs that an irq was handled */
-  int   irq;        /* irq number */
-  sem_t *sem;       /* Semaphore for waiting for irq */
+  int irq;                     /* irq number */
+  int error;                   /* Interrupt error */
+  sem_t *sem;                  /* Semaphore for waiting for irq */
 };
 
 /* This enumeration foreground and background layer supported by the dma2d
@@ -262,7 +185,7 @@ static const uintptr_t stm32_color_layer_t[DMA2D_NLAYERS] =
   STM32_DMA2D_OCOLR
 };
 
-#if defined(CONFIG_STM32F7_DMA2D_L8)
+#ifdef CONFIG_FB_CMAP
 /* DMA2D clut memory address register */
 
 static const uintptr_t stm32_cmar_layer_t[DMA2D_NLAYERS - 1] =
@@ -278,94 +201,68 @@ static const uintptr_t stm32_cmar_layer_t[DMA2D_NLAYERS - 1] =
 
 /* Private functions */
 
-static int stm32_dma2d_pixelformat(uint8_t fmt, uint8_t *fmtmap);
-static int stm32_dma2d_bpp(uint8_t fmt, uint8_t *bpp);
 static void stm32_dma2d_control(uint32_t setbits, uint32_t clrbits);
 static int stm32_dma2dirq(int irq, void *context, FAR void *arg);
 static int stm32_dma2d_waitforirq(void);
 static int stm32_dma2d_start(void);
-#ifdef CONFIG_STM32F7_DMA2D_L8
+#ifdef CONFIG_FB_CMAP
 static int stm32_dma2d_loadclut(uintptr_t reg);
 #endif
-static uint32_t stm32_dma2d_memaddress(FAR const struct stm32_dma2d_s *layer,
-                                        fb_coord_t xpos, fb_coord_t ypos);
-static fb_coord_t stm32_dma2d_lineoffset(FAR const struct stm32_dma2d_s *layer,
-                                          FAR const struct ltdc_area_s *area);
+static uint32_t stm32_dma2d_memaddress(FAR struct stm32_dma2d_overlay_s *oinfo,
+                                       uint32_t xpos, uint32_t ypos);
+static uint32_t stm32_dma2d_lineoffset(FAR struct stm32_dma2d_overlay_s *oinfo,
+                                       FAR const struct fb_area_s *area);
+static void stm32_dma2d_lfifo(FAR struct stm32_dma2d_overlay_s *oinfo, int lid,
+                              uint32_t xpos, uint32_t ypos,
+                              FAR const struct fb_area_s *area);
+static void stm32_dma2d_lcolor(int lid, uint32_t argb);
+static void stm32_dma2d_llnr(FAR const struct fb_area_s *area);
+static int stm32_dma2d_loutpfc(uint8_t fmt);
+static void stm32_dma2d_lpfc(int lid, uint32_t blendmode, uint8_t alpha,
+                             uint8_t fmt);
 
-static int stm32_dma2d_lfreelid(void);
-static FAR struct stm32_dma2d_s * stm32_dma2d_lalloc(void);
-static void stm32_dma2d_lfree(FAR struct stm32_dma2d_s *layer);
-static void stm32_dma2d_llayerscleanup(void);
-static bool stm32_dma2d_lvalidate(FAR const struct stm32_dma2d_s *layer);
-static bool stm32_dma2d_lvalidatesize(FAR const struct stm32_dma2d_s *layer,
-                                      fb_coord_t xpos, fb_coord_t ypos,
-                                      FAR const struct ltdc_area_s *area);
-static void stm32_dma2d_linit(FAR struct stm32_dma2d_s *layer,
-                                int lid, uint8_t fmt);
-
-static void stm32_dma2d_lfifo(FAR const struct stm32_dma2d_s *layer, int lid,
-                              fb_coord_t xpos, fb_coord_t ypos,
-                              FAR const struct ltdc_area_s *area);
-static void stm32_dma2d_lcolor(FAR const struct stm32_dma2d_s *layer,
-                               int lid, uint32_t color);
-static void stm32_dma2d_llnr(FAR struct stm32_dma2d_s *layer,
-                                FAR const struct ltdc_area_s *area);
-static int stm32_dma2d_loutpfc(FAR const struct stm32_dma2d_s *layer);
-static void stm32_dma2d_lpfc(FAR const struct stm32_dma2d_s *layer,
-                              int lid, uint32_t blendmode);
 /* Public functions */
 
-static int stm32_dma2dgetvideoinfo(FAR struct dma2d_layer_s *layer,
-                                  FAR struct fb_videoinfo_s *vinfo);
-static int stm32_dma2dgetplaneinfo(FAR struct dma2d_layer_s *layer, int planeno,
-                                  FAR struct fb_planeinfo_s *pinfo);
-static int stm32_dma2dgetlid(FAR struct dma2d_layer_s *layer, int *lid);
-#ifdef CONFIG_STM32F7_DMA2D_L8
-static int stm32_dma2dsetclut(FAR struct dma2d_layer_s *layer,
-                            const FAR struct fb_cmap_s *cmap);
-static int stm32_dma2dgetclut(FAR struct dma2d_layer_s *layer,
-                            FAR struct fb_cmap_s *cmap);
+#ifdef CONFIG_FB_CMAP
+static int stm32_dma2d_setclut(FAR const struct fb_cmap_s *cmap);
 #endif
-static int stm32_dma2dsetalpha(FAR struct dma2d_layer_s *layer, uint8_t alpha);
-static int stm32_dma2dgetalpha(FAR struct dma2d_layer_s *layer, uint8_t *alpha);
-static int stm32_dma2dsetblendmode(FAR struct dma2d_layer_s *layer,
-                                    uint32_t mode);
-static int stm32_dma2dgetblendmode(FAR struct dma2d_layer_s *layer,
-                                    uint32_t *mode);
-static int stm32_dma2dblit(FAR struct dma2d_layer_s *dest,
-                            fb_coord_t destxpos, fb_coord_t destypos,
-                            FAR const struct dma2d_layer_s *src,
-                            FAR const struct ltdc_area_s *srcarea);
-static int stm32_dma2dblend(FAR struct dma2d_layer_s *dest,
-                            fb_coord_t destxpos, fb_coord_t destypos,
-                            FAR const struct dma2d_layer_s *fore,
-                            fb_coord_t forexpos, fb_coord_t foreypos,
-                            FAR const struct dma2d_layer_s *back,
-                            FAR const struct ltdc_area_s *backarea);
-static int stm32_dma2dfillarea(FAR struct dma2d_layer_s *layer,
-                            FAR const struct ltdc_area_s *area, uint32_t color);
+static int stm32_dma2d_fillcolor(FAR struct stm32_dma2d_overlay_s *oinfo,
+                                 FAR const struct fb_area_s *area,
+                                 uint32_t argb);
+static int stm32_dma2d_blit(FAR struct stm32_dma2d_overlay_s *doverlay,
+                            uint32_t destxpos, uint32_t destypos,
+                            FAR struct stm32_dma2d_overlay_s *soverlay,
+                            FAR const struct fb_area_s *sarea);
+static int stm32_dma2d_blend(FAR struct stm32_dma2d_overlay_s *doverlay,
+                             uint32_t destxpos, uint32_t destypos,
+                             FAR struct stm32_dma2d_overlay_s *foverlay,
+                             uint32_t forexpos, uint32_t foreypos,
+                             FAR struct stm32_dma2d_overlay_s *boverlay,
+                             FAR const struct fb_area_s *barea);
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-/* Remember the layer references for alloc/deallocation */
+/* The initialized state of the driver */
 
-static struct stm32_dma2d_s *g_layers[DMA2D_LAYER_NSIZE];
+static bool g_initialized;
+
+/* Allocate clut */
+
+#ifdef CONFIG_FB_CMAP
+static uint32_t g_clut[STM32_DMA2D_NCLUT *
+#  ifdef CONFIG_FB_TRANSPARENCY
+                      4
+#  else
+                      3
+#  endif
+                      / 4 ];
+#endif /* CONFIG_FB_CMAP */
 
 /* The DMA2D semaphore that enforces mutually exclusive access */
 
 static sem_t g_lock;
-
-#ifdef CONFIG_STM32F7_LTDC_INTERFACE
-/* This structure provides the DMA2D layer for each LTDC layer */
-
-static struct stm32_ltdc_layer_s g_ltdc_layer;
-#endif
-
-/* The initalized state of the driver */
-
-static bool g_initialized;
 
 /* Semaphore for interrupt handling */
 
@@ -375,10 +272,26 @@ static sem_t g_semirq;
 
 static struct stm32_interrupt_s g_interrupt =
 {
-  .wait    = false,
-  .handled = true,
   .irq     = STM32_IRQ_DMA2D,
+  .error   = OK,
   .sem     = &g_semirq
+};
+
+static struct stm32_dma2d_s g_dma2ddev =
+{
+  .dma2d =
+  {
+#ifdef CONFIG_FB_CMAP
+    .setclut   = stm32_dma2d_setclut,
+#endif
+    .fillcolor = stm32_dma2d_fillcolor,
+    .blit      = stm32_dma2d_blit,
+    .blend     = stm32_dma2d_blend
+  },
+#ifdef CONFIG_FB_CMAP
+  .clut = g_clut,
+#endif
+  .lock = &g_lock
 };
 
 /****************************************************************************
