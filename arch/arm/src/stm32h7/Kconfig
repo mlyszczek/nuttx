@@ -26,7 +26,7 @@ config STM32H7_STM32H7X3XX
 	bool
 	default n
 	select ARCH_HAVE_FPU
-# TODO:	select ARCH_HAVE_DPFPU
+	select ARCH_HAVE_DPFPU
 	select ARMV7M_HAVE_ICACHE
 	select ARMV7M_HAVE_DCACHE
 	select ARMV7M_HAVE_ITCM
