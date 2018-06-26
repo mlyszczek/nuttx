@@ -44,19 +44,27 @@
 
 #include "chip.h"
 
-#ifdef CONFIG_IMXRT_SNVS_HPRTC
-
 /****************************************************************************
  * Preprocessor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_RTC_DATETIME
-#  error CONFIG_RTC_DATETIME should not be select with this driver
-#endif
+#ifdef CONFIG_IMXRT_SNVS_HPRTC
+#  ifdef CONFIG_RTC_DATETIME
+#    error CONFIG_RTC_DATETIME should not be selected with this driver
+#  endif
 
-#ifdef CONFIG_RTC_PERIODIC
-#  error CONFIG_RTC_PERIODIC should not be select with this driver
-#endif
+#  ifdef CONFIG_RTC_PERIODIC
+#    error CONFIG_RTC_PERIODIC should not be selected with this driver
+#  endif
+
+/* REVISIT: This is probably supportable.  The 47 bit timer does have
+ * accuracy greater than 1 second.
+ */
+
+#  ifdef CONFIG_RTC_HIRES
+#    error CONFIG_RTC_PERIODIC should not be selected with this driver
+#  endif
+#endif /* CONFIG_IMXRT_SNVS_HPRTC */
 
 /****************************************************************************
  * Public Function Prototypes
@@ -72,6 +80,12 @@ extern "C"
 #else
 #define EXTERN extern
 #endif
+
+/************************************************************************************
+ * Functions used only for HPRTC
+ ************************************************************************************/
+
+#ifdef CONFIG_IMXRT_SNVS_HPRTC
 
 /****************************************************************************
  * Name: imxrt_hprtc_irqinitialize
@@ -117,10 +131,125 @@ struct rtc_lowerhalf_s;
 FAR struct rtc_lowerhalf_s *imxrt_hprtc_lowerhalf(void);
 #endif
 
+#endif /* CONFIG_IMXRT_SNVS_HPRTC */
+
+/************************************************************************************
+ * Logic Common to LPSRTC and HPRTC
+ ************************************************************************************/
+
+/************************************************************************************
+ * Name: imxrt_hprtc_synchronize
+ *
+ * Description:
+ *   Synchronize the HPRTC to the LPSRTC.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
+ ************************************************************************************/
+
+#ifdef CONFIG_IMXRT_SNVS_LPSRTC
+void imxrt_hprtc_synchronize(void);
+#endif
+
+/************************************************************************************
+ * Name: imxrt_hprtc_enable
+ *
+ * Description:
+ *   Enable/start the HPRTC time counter.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
+ ************************************************************************************/
+
+void imxrt_hprtc_enable(void);
+
+/************************************************************************************
+ * Name: imxrt_hprtc_time
+ *
+ * Description:
+ *   Get the current time in seconds.  This is the underlying implementation of the
+ *   up_rtc_tim() function that is used by the RTOS during initialization to set up
+ *   the system time.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   The current time in seconds
+ *
+ ************************************************************************************/
+
+uint32_t imxrt_hprtc_time(void);
+
+/************************************************************************************
+ * Name: imxrt_hprtc_getalarm
+ *
+ * Description:
+ *   Get the current alarm setting in seconds.  This is only used by the lower half
+ *   RTC driver.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   The current alarm setting in seconds
+ *
+ ************************************************************************************/
+
+#if defined(CONFIG_RTC_ALARM) && defined(CONFIG_RTC_DRIVER)
+uint32_t imxrt_hprtc_getalarm(void);
+#endif
+
+/************************************************************************************
+ * Name: imxrt_hprtc_setalarm
+ *
+ * Description:
+ *   Set the alarm (in seconds) and enable alarm interrupts.  This is only used by
+ *   the lower half RTC driver.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   The current alarm setting in seconds
+ *
+ ************************************************************************************/
+
+#if defined(CONFIG_RTC_ALARM) && defined(CONFIG_RTC_DRIVER)
+int imxrt_hprtc_setalarm(uint32_t sec);
+#endif
+
+/************************************************************************************
+ * Name: imxrt_hprtc_alarmdisable
+ *
+ * Description:
+ *    Disable alarm interrupts.  Used internally after the receipt of the alarm
+ *    interrupt.  Also called by the lower-half RTC driver in order to cancel an
+ *    alarm.
+ *
+ * Input Parameters:
+ *    None
+ *
+ * Returned Value:
+ *    None
+ *
+ ************************************************************************************/
+
+#if defined(CONFIG_RTC_ALARM) && defined(CONFIG_RTC_DRIVER)
+void imxrt_hprtc_alarmdisable(SNVS_Type *base, uint32_t mask);
+#endif
+
 #undef EXTERN
 #if defined(__cplusplus)
 }
 #endif
 #endif /* __ASSEMBLY__ */
-#endif /* CONFIG_IMXRT_SNVS_HPRTC */
 #endif /* __ARCH_ARM_SRC_IMXRT_IMXRT_HPRTC_H */

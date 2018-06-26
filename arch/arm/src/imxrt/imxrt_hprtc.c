@@ -53,6 +53,7 @@
 
 #include "up_arch.h"
 
+#include "chip/imxrt_snvs.h"
 #include "imxrt_hprtc.h"
 
 /************************************************************************************
@@ -118,6 +119,38 @@ static int imxrt_rtc_interrupt(int irq, void *context, FAR void *arg)
 #endif /* CONFIG_IMXRT_SNVS_HPRTC */
 
 /************************************************************************************
+ * Name: imxrt_hprtc_alarmenable
+ *
+ * Description:
+ *    Enable alarm interrupts.  This is currently only used internally at the time
+ *    that alarm interrupts are enabled.
+ *
+ * Input Parameters:
+ *    None
+ *
+ * Returned Value:
+ *    None
+ *
+ ************************************************************************************/
+
+#if defined(CONFIG_RTC_ALARM) && defined(CONFIG_RTC_DRIVER)
+static void imxrt_hprtc_alarmenable(void)
+{
+  uint32_t regval;
+
+  /* Enable the alarm */
+
+  regval  = getreg32(IMXRT_SNVS_HPCR);
+  regval |= SNVS_HPCR_HPTAEN;
+  putreg32(regval, IMXRT_SNVS_HPCR);
+
+  /* Enable alarm interrupts at the NVIC */
+
+  up_enable_irq(IMXRT_IRQ_SNVS);
+}
+#endif
+
+/************************************************************************************
  * Public Functions
  ************************************************************************************/
 
@@ -166,37 +199,12 @@ int imxrt_hprtc_irqinitialize(void)
  *
  ************************************************************************************/
 
-#ifndef CONFIG_RTC_HIRES
 time_t up_rtc_time(void)
 {
-#warning Missing logic
-  return 0;
-}
-#endif
+  /* Delegate to imxrt_hprtc_time() */
 
-/************************************************************************************
- * Name: up_rtc_gettime
- *
- * Description:
- *   Get the current time from the high resolution RTC clock/counter.  This interface
- *   is only supported by the high-resolution RTC/counter hardware implementation.
- *   It is used to replace the system timer.
- *
- * Input Parameters:
- *   tp - The location to return the high resolution time value.
- *
- * Returned Value:
- *   Zero (OK) on success; a negated errno on failure
- *
- ************************************************************************************/
-
-#ifdef CONFIG_RTC_HIRES
-int up_rtc_gettime(FAR struct timespec *tp)
-{
-#warning Missing logic
-  return OK;
+  return imxrt_hprtc_time();
 }
-#endif
 
 /************************************************************************************
  * Name: up_rtc_settime
@@ -218,51 +226,6 @@ int up_rtc_settime(FAR const struct timespec *tp)
 #warning Missing logic
   return OK;
 }
-
-/************************************************************************************
- * Name: imxrt_rtc_setalarm
- *
- * Description:
- *   Set up an alarm.
- *
- * Input Parameters:
- *   tp - the time to set the alarm
- *   callback - the function to call when the alarm expires.
- *
- * Returned Value:
- *   Zero (OK) on success; a negated errno on failure
- *
- ************************************************************************************/
-
-#ifdef CONFIG_RTC_ALARM
-int imxrt_rtc_setalarm(FAR const struct timespec *tp, alarmcb_t callback)
-{
-#warning Missing logic
-  return OK;
-}
-#endif
-
-/************************************************************************************
- * Name: imxrt_rtc_cancelalarm
- *
- * Description:
- *   Cancel a pending alarm alarm
- *
- * Input Parameters:
- *   none
- *
- * Returned Value:
- *   Zero (OK) on success; a negated errno on failure
- *
- ************************************************************************************/
-
-#ifdef CONFIG_RTC_ALARM
-int imxrt_rtc_cancelalarm(void)
-{
-#warning Missing logic
-  return OK;
-}
-#endif
 
 #endif /* CONFIG_IMXRT_SNVS_HPRTC */
 
@@ -287,8 +250,258 @@ int imxrt_rtc_cancelalarm(void)
 
 int up_rtc_initialize(void)
 {
+  /* Perform HPRTC initialization */
 #warning Missing logic
+
+#ifdef CONFIG_IMXRT_SNVS_LPSRTC
+  /* Perform LPSRTC initialization */
+
+  return imxrt_lpsrtc_initialize();
+#else
+  return OK;
+#endif
+}
+
+/************************************************************************************
+ * Name: imxrt_hprtc_synchronize
+ *
+ * Description:
+ *   Synchronize the HPRTC to the LPSRTC.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
+ ************************************************************************************/
+
+#ifdef CONFIG_IMXRT_SNVS_LPSRTC
+void imxrt_hprtc_synchronize(void)
+{
+  uint32_t regval;
+  uint32_t hpcr;
+
+  /* Disable the RTC */
+
+  hpcr    = getreg32(IMXRT_SNVS_HPCR);
+  regval  = hpcr;
+  regval &= ~SNVS_HPCR_RTCEN;
+  putreg32(regval, IMXRT_SNVS_HPCR);
+
+  while ((getreg32(IMXRT_SNVS_HPCR) & SNVS_HPCR_RTCEN) != 0)
+    {
+    }
+
+  /* Synchronize to the LPSRTC */
+
+  regval  = getreg32(IMXRT_SNVS_HPCR);
+  regval |= SNVS_HPCR_HPTS;
+  putreg32(regval, IMXRT_SNVS_HPCR);
+
+  /* Re-enable the HPRTC if it was enabled on entry. */
+
+  if ((hpcr & SNVS_HPCR_RTCEN) != 0)
+    {
+      imxrt_hprtc_enable();
+    }
+}
+#endif
+
+/************************************************************************************
+ * Name: imxrt_hprtc_enable
+ *
+ * Description:
+ *   Enable/start the HPRTC time counter.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
+ ************************************************************************************/
+
+void imxrt_hprtc_enable(void)
+{
+  uint32_t regval;
+
+  /* Enable the HPRTC */
+
+  regval  = getreg32(IMXRT_SNVS_HPCR);
+  regval |= SNVS_HPCR_RTCEN;
+  putreg32(regval, IMXRT_SNVS_HPCR);
+
+  while ((getreg32(IMXRT_SNVS_HPCR) & SNVS_HPCR_RTCEN) == 0)
+    {
+    }
+}
+
+/************************************************************************************
+ * Name: imxrt_hprtc_time
+ *
+ * Description:
+ *   Get the current time in seconds.  This is the underlying implementation of the
+ *   up_rtc_time() function that is used by the RTOS during initialization to set up
+ *   the system time.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   The current time in seconds
+ *
+ ************************************************************************************/
+
+uint32_t imxrt_hprtc_time(void)
+{
+  uint32_t seconds;
+  uint32_t verify = 0;
+
+  /* Do consecutive reads until value is correct */
+
+  do
+    {
+      /* IMXRT_SNVS_HPRTCMR: Bits 9-14 = 15-bit MSB of counter.
+       * IMXRT_SNVS_HPRTCLR: 32-bit LSB of counter.
+       *
+       * REVISIT:  This could be modified to support CONFIG_RTC_HI_RES
+       */
+
+      seconds = verify;
+      verify  = (getreg32(IMXRT_SNVS_HPRTCMR) << 17) |
+                (getreg32(IMXRT_SNVS_HPRTCLR) >> 15);
+    }
+  while (tmp != seconds);
+
+  return seconds;
+}
+
+/************************************************************************************
+ * Name: imxrt_hprtc_getalarm
+ *
+ * Description:
+ *   Get the current alarm setting in seconds.  This is only used by the lower half
+ *   RTC driver.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   The current alarm setting in seconds
+ *
+ ************************************************************************************/
+
+#if defined(CONFIG_RTC_ALARM) && defined(CONFIG_RTC_DRIVER)
+uint32_t imxrt_hprtc_getalarm(void)
+{
+  /* Return the alarm setting in seconds
+   *
+   * IMXRT_SNVS_HPTAMR Bits 9-14 = 15-bit MSB of alarm setting.
+   * IMXRT_SNVS_HPTALR 32-bit LSB of alarm setting.
+   */
+
+  return (getreg32(IMXRT_SNVS_HPTAMR) << 17) |
+         (getreg32(IMXRT_SNVS_HPTALR) >> 15);
+}
+#endif
+
+/************************************************************************************
+ * Name: imxrt_hprtc_setalarm
+ *
+ * Description:
+ *   Set the alarm (in seconds) and enable alarm interrupts.  This is only used by
+ *   the lower half RTC driver.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   The current alarm setting in seconds
+ *
+ ************************************************************************************/
+
+#if defined(CONFIG_RTC_ALARM) && defined(CONFIG_RTC_DRIVER)
+int imxrt_hprtc_setalarm(uint32_t sec)
+{
+  irqstate_t flags;
+  uint32_t regval;
+  uint32_t now;
+
+  /* Disable interrupts so that the following sequence of events will not be
+   * interrupted or preempted.
+   */
+
+  flags = spin_lock_irqsave();
+
+  now = imxrt_hprtc_time();
+
+  /* Return error if the alarm time has passed.
+   * NOTE:  This will fail, of course, when the number of seconds since epoch
+   * wraps.
+   */
+
+  if (sec < now)
+    {
+      return -EINVAL;
+    }
+
+  /* Disable the RTC alarm interrupt */
+
+  regval  = getreg32(IMXRT_SNVS_HPCR);
+  regval  = hcpr & ~SNVS_HPCR_HPTAEN;
+  putreg32(regval, IMXRT_SNVS_HPCR);
+
+  while ((getreg32(IMXRT_SNVS_HPCR) & SNVS_HPCR_HPTAEN) != 0)
+    {
+    }
+
+  /* Set alarm in seconds
+   *
+   * IMXRT_SNVS_HPTAMR Bits 9-14 = 15-bit MSB of alarm setting.
+   * IMXRT_SNVS_HPTALR 32-bit LSB of alarm setting.
+   */
+
+  putreg32(sec >> 17, IMXRT_SNVS_HPTAMR);
+  putreg32(sec << 15, IMXRT_SNVS_HPTALR);
+
+  /* Unconditionally enable the RTC alarm interrupt */
+
+  imxrt_hprtc_alarmenable();
+  spin_unlock_irqrestore(flags);
   return OK;
 }
+#endif
+
+/************************************************************************************
+ * Name: imxrt_hprtc_alarmdisable
+ *
+ * Description:
+ *    Disable alarm interrupts.  Used internally after the receipt of the alarm
+ *    interrupt.  Also called by the lower-half RTC driver in order to cancel an
+ *    alarm.
+ *
+ * Input Parameters:
+ *    None
+ *
+ * Returned Value:
+ *    None
+ *
+ ************************************************************************************/
+
+#if defined(CONFIG_RTC_ALARM) && defined(CONFIG_RTC_DRIVER)
+void imxrt_hprtc_alarmdisable(SNVS_Type *base, uint32_t mask)
+{
+  /* Disable alarm interrupts at the NVIC */
+
+  up_disable_irq(IMXRT_IRQ_SNVS);
+
+  /* Enable the alarm */
+
+  regval  = getreg32(IMXRT_SNVS_HPCR);
+  regval &= ~SNVS_HPCR_HPTAEN;
+  putreg32(regval, IMXRT_SNVS_HPCR);
+}
+#endif
 
 #endif /* CONFIG_IMXRT_SNVS_HPRTC */

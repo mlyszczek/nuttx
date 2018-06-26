@@ -53,6 +53,7 @@
 
 #include "up_arch.h"
 
+#include "chip/imxrt_snvs.h"
 #include "imxrt_lpsrtc.h"
 
 #ifdef CONFIG_IMXRT_SNVS_LPSRTC
@@ -116,11 +117,11 @@ static int imxrt_lpsrtc_interrupt(int irq, void *context, FAR void *arg)
  ************************************************************************************/
 
 /************************************************************************************
- * Name: up_rtc_initialize
+ * Name: mxrt_lpsrtc_initialize
  *
  * Description:
- *   Initialize the hardware RTC per the selected configuration.  This function is
- *   called once during the OS initialization sequence
+ *   Initialize the LPSRTC per the selected configuration.  This function is called
+ *   via up_rtc_initialize (see imxrt_hprtc.c).
  *
  * Input Parameters:
  *   None
@@ -130,7 +131,7 @@ static int imxrt_lpsrtc_interrupt(int irq, void *context, FAR void *arg)
  *
  ************************************************************************************/
 
-int up_rtc_initialize(void)
+int mxrt_lpsrtc_initialize(void)
 {
 #warning Missing logic
   return OK;
@@ -178,32 +179,9 @@ int imxrt_lpsrtc_irqinitialize(void)
 #ifndef CONFIG_RTC_HIRES
 time_t up_rtc_time(void)
 {
-#warning Missing logic
-  return 0;
-}
-#endif
+  /* Delegate to imxrt_hprtc_time() */
 
-/************************************************************************************
- * Name: up_rtc_gettime
- *
- * Description:
- *   Get the current time from the high resolution RTC clock/counter.  This interface
- *   is only supported by the high-resolution RTC/counter hardware implementation.
- *   It is used to replace the system timer.
- *
- * Input Parameters:
- *   tp - The location to return the high resolution time value.
- *
- * Returned Value:
- *   Zero (OK) on success; a negated errno on failure
- *
- ************************************************************************************/
-
-#ifdef CONFIG_RTC_HIRES
-int up_rtc_gettime(FAR struct timespec *tp)
-{
-#warning Missing logic
-  return OK;
+  return imxrt_hprtc_time();
 }
 #endif
 
@@ -227,50 +205,5 @@ int up_rtc_settime(FAR const struct timespec *tp)
 #warning Missing logic
   return OK;
 }
-
-/************************************************************************************
- * Name: imxrt_lpsrtc_setalarm
- *
- * Description:
- *   Set up an alarm.
- *
- * Input Parameters:
- *   tp - the time to set the alarm
- *   callback - the function to call when the alarm expires.
- *
- * Returned Value:
- *   Zero (OK) on success; a negated errno on failure
- *
- ************************************************************************************/
-
-#ifdef CONFIG_RTC_ALARM
-int imxrt_lpsrtc_setalarm(FAR const struct timespec *tp, alarmcb_t callback)
-{
-#warning Missing logic
-  return OK;
-}
-#endif
-
-/************************************************************************************
- * Name: imxrt_lpsrtc_cancelalarm
- *
- * Description:
- *   Cancel a pending alarm alarm
- *
- * Input Parameters:
- *   none
- *
- * Returned Value:
- *   Zero (OK) on success; a negated errno on failure
- *
- ************************************************************************************/
-
-#ifdef CONFIG_RTC_ALARM
-int imxrt_lpsrtc_cancelalarm(void)
-{
-#warning Missing logic
-  return OK;
-}
-#endif
 
 #endif /* CONFIG_IMXRT_SNVS_LPSRTC */

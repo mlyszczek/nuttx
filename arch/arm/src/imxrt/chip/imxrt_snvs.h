@@ -151,7 +151,9 @@
 #  define SNVS_HPCR_HPCALBVAL_M15     (17 << SNVS_HPCR_HPCALBVAL_SHIFT) /* -15 counts per 32768 ticks */
 #  define SNVS_HPCR_HPCALBVAL_M2      (30 << SNVS_HPCR_HPCALBVAL_SHIFT) /* -2  counts per 32768 ticks */
 #  define SNVS_HPCR_HPCALBVAL_M1      (31 << SNVS_HPCR_HPCALBVAL_SHIFT) /* -1  counts per 32768 ticks */
-                                                /* Bits 15-23: Reserved */
+                                                /* Bits 15: Reserved */
+#define SNVS_HPCR_HPTS                (1 << 16) /* Bit 16: LPSRTC time sychronization */
+                                                /* Bits 17-23: Reserved */
 #define SNVS_HPCR_BTNCONFIG_SHIFT     (24)      /* Bits 24-26: Button Configuration */
 #define SNVS_HPCR_BTNCONFIG_MASK      (7 << SNVS_HPCR_BTNCONFIG_SHIFT)
 #  define SNVS_HPCR_BTNCONFIG_ LOW    (0 << SNVS_HPCR_BTNCONFIG_SHIFT) /* Button signal active low */
