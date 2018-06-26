@@ -136,6 +136,15 @@ config IMXRT_SEMC
 	bool "Smart External Memory Controller (SEMC)"
 	default n
 
+config IMXRT_SNVS_LPSRTC
+	bool "LP SRTC"
+	default n
+	select IMXRT_SNVS_HPRTC
+
+config IMXRT_SNVS_HPRTC
+	bool "HP RTC"
+	default n
+
 endmenu # i.MX RT Peripheral Selection
 
 menuconfig IMXRT_GPIO_IRQ

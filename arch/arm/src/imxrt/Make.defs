@@ -120,6 +120,20 @@ ifeq ($(CONFIG_IMXRT_EDMA),y)
 CHIP_CSRCS += imxrt_edma.c
 endif
 
+ifeq ($(CONFIG_IMXRT_SNVS_LPSRTC),y)
+CHIP_CSRCS += imxrt_lpsrtc.c
+ifeq ($(CONFIG_RTC_DRIVER),y)
+CHIP_CSRCS += imxrt_lpsrtc_lowerhalf.c
+endif
+endif
+
+ifeq ($(CONFIG_IMXRT_SNVS_HPRTC),y)
+CHIP_CSRCS += imxrt_hprtc.c
+ifeq ($(CONFIG_RTC_DRIVER),y)
+CHIP_CSRCS += imxrt_hprtc_lowerhalf.c
+endif
+endif
+
 ifeq ($(CONFIG_IMXRT_ENET),y)
 CHIP_CSRCS += imxrt_enet.c
 endif
