@@ -54,6 +54,10 @@
 #  error CONFIG_RTC_DATETIME should not be select with this driver
 #endif
 
+#ifdef CONFIG_RTC_PERIODIC
+#  error CONFIG_RTC_PERIODIC should not be select with this driver
+#endif
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/

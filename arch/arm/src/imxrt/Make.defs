@@ -122,16 +122,13 @@ endif
 
 ifeq ($(CONFIG_IMXRT_SNVS_LPSRTC),y)
 CHIP_CSRCS += imxrt_lpsrtc.c
-ifeq ($(CONFIG_RTC_DRIVER),y)
-CHIP_CSRCS += imxrt_lpsrtc_lowerhalf.c
-endif
+CHIP_CSRCS += imxrt_hprtc.c
+else ifeq ($(CONFIG_IMXRT_SNVS_HPRTC),y)
+CHIP_CSRCS += imxrt_hprtc.c
 endif
 
-ifeq ($(CONFIG_IMXRT_SNVS_HPRTC),y)
-CHIP_CSRCS += imxrt_hprtc.c
 ifeq ($(CONFIG_RTC_DRIVER),y)
-CHIP_CSRCS += imxrt_hprtc_lowerhalf.c
-endif
+CHIP_CSRCS += imxrt_rtc_lowerhalf.c
 endif
 
 ifeq ($(CONFIG_IMXRT_ENET),y)
