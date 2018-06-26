@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/imxrt/imxrt_lpsrtc.h
+ * arch/arm/src/imxrt/imxrt_hprtc.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -37,14 +37,14 @@
  * Included Files
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_IMXRT_IMXRT_LPSRTC_H
-#define __ARCH_ARM_SRC_IMXRT_IMXRT_LPSRTC_H
+#ifndef __ARCH_ARM_SRC_IMXRT_IMXRT_HPRTC_H
+#define __ARCH_ARM_SRC_IMXRT_IMXRT_HPRTC_H
 
 #include <nuttx/config.h>
 
 #include "chip.h"
 
-#ifdef CONFIG_IMXRT_SNVS_LPSRTC
+#ifdef CONFIG_IMXRT_SNVS_HPRTC
 
 /****************************************************************************
  * Preprocessor Definitions
@@ -70,7 +70,7 @@ extern "C"
 #endif
 
 /****************************************************************************
- * Name: imxrt_lpsrtc_irqinitialize
+ * Name: imxrt_hprtc_irqinitialize
  *
  * Description:
  *   Initialize IRQs for RTC, not possible during up_rtc_initialize because
@@ -84,19 +84,19 @@ extern "C"
  *
  ****************************************************************************/
 
-int imxrt_lpsrtc_irqinitialize(void);
+int imxrt_hprtc_irqinitialize(void);
 
 /****************************************************************************
- * Name: imxrt_lpsrtc_lowerhalf
+ * Name: imxrt_hprtc_lowerhalf
  *
  * Description:
  *   Instantiate the RTC lower half driver for the STM32.  General usage:
  *
  *     #include <nuttx/timers/rtc.h>
- *     #include "imxrt_lpsrtc.h"
+ *     #include "imxrt_hprtc.h"
  *
  *     struct rtc_lowerhalf_s *lower;
- *     lower = imxrt_lpsrtc_lowerhalf();
+ *     lower = imxrt_hprtc_lowerhalf();
  *     rtc_initialize(0, lower);
  *
  * Input Parameters:
@@ -110,7 +110,7 @@ int imxrt_lpsrtc_irqinitialize(void);
 
 #ifdef CONFIG_RTC_DRIVER
 struct rtc_lowerhalf_s;
-FAR struct rtc_lowerhalf_s *imxrt_lpsrtc_lowerhalf(void);
+FAR struct rtc_lowerhalf_s *imxrt_hprtc_lowerhalf(void);
 #endif
 
 #undef EXTERN
@@ -118,5 +118,5 @@ FAR struct rtc_lowerhalf_s *imxrt_lpsrtc_lowerhalf(void);
 }
 #endif
 #endif /* __ASSEMBLY__ */
-#endif /* CONFIG_IMXRT_SNVS_LPSRTC */
-#endif /* __ARCH_ARM_SRC_IMXRT_IMXRT_LPSRTC_H */
+#endif /* CONFIG_IMXRT_SNVS_HPRTC */
+#endif /* __ARCH_ARM_SRC_IMXRT_IMXRT_HPRTC_H */
