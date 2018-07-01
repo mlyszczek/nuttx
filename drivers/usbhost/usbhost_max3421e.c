@@ -54,6 +54,7 @@
 #include <nuttx/clock.h>
 #include <nuttx/signal.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/wqueue.h>
 #include <nuttx/spi/spi.h>
 #include <nuttx/usb/usb.h>
 #include <nuttx/usb/usbhost.h>
@@ -127,6 +128,18 @@
 
 #ifndef CONFIG_MAX3421E_OTGFS_DESCSIZE
 #  define CONFIG_MAX3421E_OTGFS_DESCSIZE 128
+#endif
+
+/* High priority work queue support is required */
+
+#ifndef CONFIG_SCHED_HPWORK
+#  error High priority work thread support required (CONFIG_SCHED_HPWORK)
+#endif
+
+/* No hub support */
+
+#ifdef CONFIG_USBHOST_HUB
+#  warning MAX3421E has insufficient endpoints for hub support (CONFIG_USBHOST_HUB)
 #endif
 
 /* Register/packet debug depends on CONFIG_DEBUG_FEATURES */
@@ -255,7 +268,7 @@ struct max3421e_usbhost_s
 
   /* This is the interface to the max3421e lower-half driver */
 
-  FAR const struct m3421e_lowerhalf_s *lower;
+  FAR const struct max3421e_lowerhalf_s *lower;
 
   /* This is the hub port description understood by class drivers */
 
@@ -266,12 +279,14 @@ struct max3421e_usbhost_s
   volatile uint8_t  smstate;   /* The state of the USB host state machine */
   uint8_t           chidx;     /* ID of channel waiting for space in Tx FIFO */
   uint8_t           ackstat;   /* See MAX3421E_ACKSTAT_* definitions */
+  uint8_t           enabled;   /* Set of enabled interrupts */
   volatile bool     connected; /* Connected to device */
   volatile bool     change;    /* Connection change */
   volatile bool     pscwait;   /* True: Thread is waiting for a port event */
   sem_t             exclsem;   /* Support mutually exclusive access */
   sem_t             pscsem;    /* Semaphore to wait for a port event */
   struct max3421e_ctrlinfo_s ep0;  /* Root hub port EP0 description */
+  struct work_s     irqwork;   /* Used to process interrupts */
 
 #ifdef CONFIG_USBHOST_HUB
   /* Used to pass external hub port events */
@@ -414,38 +429,21 @@ static int max3421e_out_asynch(FAR struct max3421e_usbhost_s *priv, int chidx,
 #endif
 
 /* Interrupt handling **********************************************************/
-/* Lower level interrupt handlers */
 
-static void max3421e_int_wrpacket(FAR struct max3421e_usbhost_s *priv,
-                                FAR uint8_t *buffer, int chidx, int buflen);
-static inline void max3421e_int_hcinisr(FAR struct max3421e_usbhost_s *priv,
-                                      int chidx);
-static inline void max3421e_int_hcoutisr(FAR struct max3421e_usbhost_s *priv,
-                                       int chidx);
-static void max3421e_int_connected(FAR struct max3421e_usbhost_s *priv);
-static void max3421e_int_disconnected(FAR struct max3421e_usbhost_s *priv);
-
-/* Second level interrupt handlers */
-
-#ifdef CONFIG_MAX3421E_OTGFS_SOFINTR
-static inline void max3421e_int_sofisr(FAR struct max3421e_usbhost_s *priv);
-#endif
-static inline void max3421e_int_rxflvlisr(FAR struct max3421e_usbhost_s *priv);
-static inline void max3421e_int_nptxfeisr(FAR struct max3421e_usbhost_s *priv);
-static inline void max3421e_int_ptxfeisr(FAR struct max3421e_usbhost_s *priv);
-static inline void max3421e_int_hcisr(FAR struct max3421e_usbhost_s *priv);
-static inline void max3421e_int_hprtisr(FAR struct max3421e_usbhost_s *priv);
-static inline void max3421e_int_discisr(FAR struct max3421e_usbhost_s *priv);
-static inline void max3421e_int_ipxfrisr(FAR struct max3421e_usbhost_s *priv);
-
-/* First level, global interrupt handler */
-
-static int max3421e_int_isr(int irq, FAR void *context, FAR void *arg);
+static void max3421e_connect_event(FAR struct max3421e_usbhost_s *priv)
+static void max3421e_disconnect_event(FAR struct max3421e_usbhost_s *priv)
+static inline void max3421e_connected(FAR struct max3421e_usbhost_s *priv);
+static inline void max3421e_disconnected(FAR struct max3421e_usbhost_s *priv);
+static int max3421e_irqwork(FAR void *arg);
+static int max3421e_interrupt(int irq, FAR void *context, FAR void *arg);
 
 /* Interrupt controls */
 
-static void max3421e_int_enable(FAR struct max3421e_usbhost_s *priv);
-static void max3421e_int_disable(FAR struct max3421e_usbhost_s *priv);
+static inline void max3421e_int_enable(FAR struct max3421e_usbhost_s *priv,
+              uint8_t irqbits);
+static inline void max3421e_int_disable(FAR struct max3421e_usbhost_s *priv,
+              uint8_t irqbits);
+static inline uint8_t max3421e_int_status(FAR struct max3421e_usbhost_s *priv);
 static inline void max3421e_hostinit_enable(void);
 static void max3421e_txfe_enable(FAR struct max3421e_usbhost_s *priv, int chidx);
 
@@ -492,7 +490,7 @@ static void max3421e_disconnect(FAR struct usbhost_driver_s *drvr,
 
 /* Initialization **************************************************************/
 
-static void max3421e_portreset(FAR struct max3421e_usbhost_s *priv);
+static void max3421e_busreset(FAR struct max3421e_usbhost_s *priv);
 static void max3421e_flush_txfifos(uint32_t txfnum);
 static void max3421e_flush_rxfifo(void);
 static void max3421e_vbusdrive(FAR struct max3421e_usbhost_s *priv, bool state);
@@ -515,7 +513,7 @@ static inline int max3421e_hw_initialize(FAR struct max3421e_usbhost_s *priv);
 
 static void max3421e_lock(FAR struct max3421e_usbhost_s *priv)
 {
-  FAR const struct m3421e_lowerhalf_s *lower = priv->lower;
+  FAR const struct max3421e_lowerhalf_s *lower = priv->lower;
   FAR struct spi_dev_s *spi = priv->spi;
 
   DEBUGASSERT(lower != NULL && lower->spi != NULL);
@@ -538,7 +536,7 @@ static void max3421e_lock(FAR struct max3421e_usbhost_s *priv)
 
 static void max3421e_unlock(FAR struct max3421e_usbhost_s *priv)
 {
-  FAR const struct m3421e_lowerhalf_s *lower = priv->lower;
+  FAR const struct max3421e_lowerhalf_s *lower = priv->lower;
 
   DEBUGASSERT(lower != NULL && lower->spi != NULL);
   (void)SPI_LOCK(lower->spi, false);
@@ -660,7 +658,7 @@ static inline uint8_t max3421e_fmtcmd(FAR struct max3421e_usbhost_s *priv,
 static uint32_t max3421e_getreg(FAR struct max3421e_usbhost_s *priv,
                                 uint8_t addr)
 {
-  FAR const struct m3421e_lowerhalf_s *lower = priv->lower;
+  FAR const struct max3421e_lowerhalf_s *lower = priv->lower;
   FAR struct spi_dev_s *spi = priv->spi;
   uint8_t cmd;
   uint8_t value;
@@ -708,7 +706,7 @@ static uint32_t max3421e_getreg(FAR struct max3421e_usbhost_s *priv,
 static void max3421e_putreg(FAR struct max3421e_usbhost_s *priv,
                             uint8_t addr, uint8_t value)
 {
-  FAR const struct m3421e_lowerhalf_s *lower = priv->lower;
+  FAR const struct max3421e_lowerhalf_s *lower = priv->lower;
   FAR struct spi_dev_s *spi = priv->spi;
   uint8_t cmd;
 
@@ -777,7 +775,7 @@ static void max3421e_recvblock(FAR struct max3421e_usbhost_s *priv,
                                uint8_t addr, FAR void *buffer, size_t buflen)
 {
 
-  FAR const struct m3421e_lowerhalf_s *lower = priv->lower;
+  FAR const struct max3421e_lowerhalf_s *lower = priv->lower;
   FAR struct spi_dev_s *spi = priv->spi;
   uint8_t cmd;
   uint8_t value;
@@ -824,7 +822,7 @@ static void max3421e_sndblock(FAR struct max3421e_usbhost_s *priv,
                               uint8_t addr, FAR const void *buffer,
                               size_t buflen)
 {
-  FAR const struct m3421e_lowerhalf_s *lower = priv->lower;
+  FAR const struct max3421e_lowerhalf_s *lower = priv->lower;
   FAR struct spi_dev_s *spi = priv->spi;
   uint8_t cmd;
 
@@ -2460,492 +2458,14 @@ static void max3421e_int_wrpacket(FAR struct max3421e_usbhost_s *priv,
 }
 
 /****************************************************************************
- * Name: max3421e_int_hcinisr
- *
- * Description:
- *   USB host IN channels interrupt handler
- *
- *   One the completion of the transfer, the channel result byte may be set as
- *   follows:
- *
- *     OK     - Transfer completed successfully
- *     EAGAIN - If devices NAKs the transfer or NYET occurs
- *     EPERM  - If the endpoint stalls
- *     EIO    - On a TX or data toggle error
- *     EPIPE  - Frame overrun
- *
- *   EBUSY in the result field indicates that the transfer has not completed.
- *
- ****************************************************************************/
-
-static inline void max3421e_int_hcinisr(FAR struct max3421e_usbhost_s *priv,
-                                      int chidx)
-{
-  FAR struct max3421e_chan_s *chan = &priv->chan[chidx];
-  uin8_t regval;
-  uint32_t pending;
-
-  /* Read the HCINT register to get the pending HC interrupts.  Read the
-   * HCINTMSK register to get the set of enabled HC interrupts.
-   */
-
-  pending = max3421e_getreg(priv, MAX3421E_OTGFS_HCINT(chidx));
-  regval  = max3421e_getreg(priv, MAX3421E_OTGFS_HCINTMSK(chidx));
-
-  /* AND the two to get the set of enabled, pending HC interrupts */
-
-  pending &= regval;
-  uinfo("HCINTMSK%d: %08x pending: %08x\n", chidx, regval, pending);
-
-  /* Check for a pending ACK response received/transmitted (ACK) interrupt */
-
-  if ((pending & OTGFS_HCINT_ACK) != 0)
-    {
-      /* Clear the pending the ACK response received/transmitted (ACK) interrupt */
-
-      max3421e_putreg(MAX3421E_OTGFS_HCINT(chidx), OTGFS_HCINT_ACK);
-    }
-
-  /* Check for a pending STALL response receive (STALL) interrupt */
-
-  else if ((pending & OTGFS_HCINT_STALL) != 0)
-    {
-      /* Clear the NAK and STALL Conditions. */
-
-      max3421e_putreg(MAX3421E_OTGFS_HCINT(chidx), (OTGFS_HCINT_NAK | OTGFS_HCINT_STALL));
-
-      /* Halt the channel when a STALL, TXERR, BBERR or DTERR interrupt is
-       * received on the channel.
-       */
-
-      max3421e_chan_halt(priv, chidx, CHREASON_STALL);
-
-      /* When there is a STALL, clear any pending NAK so that it is not
-       * processed below.
-       */
-
-      pending &= ~OTGFS_HCINT_NAK;
-    }
-
-  /* Check for a pending Data Toggle ERRor (DTERR) interrupt */
-
-  else if ((pending & OTGFS_HCINT_DTERR) != 0)
-    {
-      /* Halt the channel when a STALL, TXERR, BBERR or DTERR interrupt is
-       * received on the channel.
-       */
-
-      max3421e_chan_halt(priv, chidx, CHREASON_DTERR);
-
-      /* Clear the NAK and data toggle error conditions */
-
-      max3421e_putreg(MAX3421E_OTGFS_HCINT(chidx), (OTGFS_HCINT_NAK | OTGFS_HCINT_DTERR));
-    }
-
-  /* Check for a pending FRaMe OverRun (FRMOR) interrupt */
-
-  if ((pending & OTGFS_HCINT_FRMOR) != 0)
-    {
-      /* Halt the channel -- the CHH interrupt is expected next */
-
-      max3421e_chan_halt(priv, chidx, CHREASON_FRMOR);
-
-      /* Clear the FRaMe OverRun (FRMOR) condition */
-
-      max3421e_putreg(MAX3421E_OTGFS_HCINT(chidx), OTGFS_HCINT_FRMOR);
-    }
-
-  /* Check for a pending TransFeR Completed (XFRC) interrupt */
-
-  else if ((pending & OTGFS_HCINT_XFRC) != 0)
-    {
-      /* Clear the TransFeR Completed (XFRC) condition */
-
-      max3421e_putreg(MAX3421E_OTGFS_HCINT(chidx), OTGFS_HCINT_XFRC);
-
-      /* Then handle the transfer completion event based on the endpoint type */
-
-      if (chan->eptype == OTGFS_EPTYPE_CTRL || chan->eptype == OTGFS_EPTYPE_BULK)
-        {
-          /* Halt the channel -- the CHH interrupt is expected next */
-
-          max3421e_chan_halt(priv, chidx, CHREASON_XFRC);
-
-          /* Clear any pending NAK condition.  The 'indata1' data toggle
-           * should have been appropriately updated by the RxFIFO
-           * logic as each packet was received.
-           */
-
-          max3421e_putreg(MAX3421E_OTGFS_HCINT(chidx), OTGFS_HCINT_NAK);
-        }
-      else if (chan->eptype == OTGFS_EPTYPE_INTR)
-        {
-          /* Force the next transfer on an ODD frame */
-
-          regval = max3421e_getreg(priv, MAX3421E_OTGFS_HCCHAR(chidx));
-          regval |= OTGFS_HCCHAR_ODDFRM;
-          max3421e_putreg(MAX3421E_OTGFS_HCCHAR(chidx), regval);
-
-          /* Set the request done state */
-
-          chan->result = OK;
-        }
-    }
-
-  /* Check for a pending CHannel Halted (CHH) interrupt */
-
-  else if ((pending & OTGFS_HCINT_CHH) != 0)
-    {
-      /* Mask the CHannel Halted (CHH) interrupt */
-
-      regval  = max3421e_getreg(priv, MAX3421E_OTGFS_HCINTMSK(chidx));
-      regval &= ~OTGFS_HCINT_CHH;
-      max3421e_putreg(MAX3421E_OTGFS_HCINTMSK(chidx), regval);
-
-      /* Update the request state based on the host state machine state */
-
-      if (chan->chreason == CHREASON_XFRC)
-        {
-          /* Set the request done result */
-
-          chan->result = OK;
-        }
-      else if (chan->chreason == CHREASON_STALL)
-        {
-          /* Set the request stall result */
-
-          chan->result = EPERM;
-        }
-      else if ((chan->chreason == CHREASON_TXERR) ||
-               (chan->chreason == CHREASON_DTERR))
-        {
-          /* Set the request I/O error result */
-
-          chan->result = EIO;
-        }
-      else if (chan->chreason == CHREASON_NAK)
-        {
-          /* Set the NAK error result */
-
-          chan->result = EAGAIN;
-        }
-      else /* if (chan->chreason == CHREASON_FRMOR) */
-        {
-          /* Set the frame overrun error result */
-
-          chan->result = EPIPE;
-        }
-
-      /* Clear the CHannel Halted (CHH) condition */
-
-      max3421e_putreg(MAX3421E_OTGFS_HCINT(chidx), OTGFS_HCINT_CHH);
-    }
-
-  /* Check for a pending Transaction ERror (TXERR) interrupt */
-
-  else if ((pending & OTGFS_HCINT_TXERR) != 0)
-    {
-      /* Halt the channel when a STALL, TXERR, BBERR or DTERR interrupt is
-       * received on the channel.
-       */
-
-      max3421e_chan_halt(priv, chidx, CHREASON_TXERR);
-
-      /* Clear the Transaction ERror (TXERR) condition */
-
-      max3421e_putreg(MAX3421E_OTGFS_HCINT(chidx), OTGFS_HCINT_TXERR);
-    }
-
-  /* Check for a pending NAK response received (NAK) interrupt */
-
-  else if ((pending & OTGFS_HCINT_NAK) != 0)
-    {
-      /* For a BULK transfer, the hardware is capable of retrying
-       * automatically on a NAK.  However, this is not always
-       * what we need to do.  So we always halt the transfer and
-       * return control to high level logic in the event of a NAK.
-       */
-
-#if 1
-      /* Halt the interrupt channel */
-
-      if (chan->eptype == OTGFS_EPTYPE_INTR ||
-          chan->eptype == OTGFS_EPTYPE_BULK)
-        {
-          /* Halt the channel -- the CHH interrupt is expected next */
-
-          max3421e_chan_halt(priv, chidx, CHREASON_NAK);
-        }
-
-      /* Re-activate CTRL and BULK channels.
-       * REVISIT: This can cause a lot of interrupts!
-       */
-
-      else if (chan->eptype == OTGFS_EPTYPE_CTRL /*||
-               chan->eptype == OTGFS_EPTYPE_BULK*/)
-        {
-          /* Re-activate the channel by clearing CHDIS and assuring that
-           * CHENA is set
-           *
-           * TODO: set channel reason to NACK?
-           */
-
-          regval  = max3421e_getreg(priv, MAX3421E_OTGFS_HCCHAR(chidx));
-          regval |= OTGFS_HCCHAR_CHENA;
-          regval &= ~OTGFS_HCCHAR_CHDIS;
-          max3421e_putreg(MAX3421E_OTGFS_HCCHAR(chidx), regval);
-        }
-
-#else
-      /* Halt all transfers on the NAK -- the CHH interrupt is expected next */
-
-      max3421e_chan_halt(priv, chidx, CHREASON_NAK);
-#endif
-
-      /* Clear the NAK condition */
-
-      max3421e_putreg(MAX3421E_OTGFS_HCINT(chidx), OTGFS_HCINT_NAK);
-    }
-
-  /* Check for a transfer complete event */
-
-  max3421e_chan_wakeup(priv, chan);
-}
-
-/****************************************************************************
- * Name: max3421e_int_hcoutisr
- *
- * Description:
- *   USB host OUT channels interrupt handler
- *
- *   One the completion of the transfer, the channel result byte may be set as
- *   follows:
- *
- *     OK     - Transfer completed successfully
- *     EAGAIN - If devices NAKs the transfer or NYET occurs
- *     EPERM  - If the endpoint stalls
- *     EIO    - On a TX or data toggle error
- *     EPIPE  - Frame overrun
- *
- *   EBUSY in the result field indicates that the transfer has not completed.
- *
- ****************************************************************************/
-
-static inline void max3421e_int_hcoutisr(FAR struct max3421e_usbhost_s *priv,
-                                       int chidx)
-{
-  FAR struct max3421e_chan_s *chan = &priv->chan[chidx];
-  uin8_t regval;
-  uint32_t pending;
-
-  /* Read the HCINT register to get the pending HC interrupts.  Read the
-   * HCINTMSK register to get the set of enabled HC interrupts.
-   */
-
-  pending = max3421e_getreg(priv, MAX3421E_OTGFS_HCINT(chidx));
-  regval  = max3421e_getreg(priv, MAX3421E_OTGFS_HCINTMSK(chidx));
-
-  /* AND the two to get the set of enabled, pending HC interrupts */
-
-  pending &= regval;
-  uinfo("HCINTMSK%d: %08x pending: %08x\n", chidx, regval, pending);
-
-  /* Check for a pending ACK response received/transmitted (ACK) interrupt */
-
-  if ((pending & OTGFS_HCINT_ACK) != 0)
-    {
-      /* Clear the pending the ACK response received/transmitted (ACK) interrupt */
-
-      max3421e_putreg(MAX3421E_OTGFS_HCINT(chidx), OTGFS_HCINT_ACK);
-    }
-
-  /* Check for a pending FRaMe OverRun (FRMOR) interrupt */
-
-  else if ((pending & OTGFS_HCINT_FRMOR) != 0)
-    {
-      /* Halt the channel (probably not necessary for FRMOR) */
-
-      max3421e_chan_halt(priv, chidx, CHREASON_FRMOR);
-
-      /* Clear the pending the FRaMe OverRun (FRMOR) interrupt */
-
-      max3421e_putreg(MAX3421E_OTGFS_HCINT(chidx), OTGFS_HCINT_FRMOR);
-    }
-
-  /* Check for a pending TransFeR Completed (XFRC) interrupt */
-
-  else if ((pending & OTGFS_HCINT_XFRC) != 0)
-    {
-      /* Decrement the number of bytes remaining by the number of
-       * bytes that were "in-flight".
-       */
-
-      priv->chan[chidx].buffer  += priv->chan[chidx].inflight;
-      priv->chan[chidx].xfrd    += priv->chan[chidx].inflight;
-      priv->chan[chidx].inflight = 0;
-
-      /* Halt the channel -- the CHH interrupt is expected next */
-
-      max3421e_chan_halt(priv, chidx, CHREASON_XFRC);
-
-      /* Clear the pending the TransFeR Completed (XFRC) interrupt */
-
-      max3421e_putreg(MAX3421E_OTGFS_HCINT(chidx), OTGFS_HCINT_XFRC);
-    }
-
-  /* Check for a pending STALL response receive (STALL) interrupt */
-
-  else if ((pending & OTGFS_HCINT_STALL) != 0)
-    {
-      /* Clear the pending the STALL response receiv (STALL) interrupt */
-
-      max3421e_putreg(MAX3421E_OTGFS_HCINT(chidx), OTGFS_HCINT_STALL);
-
-      /* Halt the channel when a STALL, TXERR, BBERR or DTERR interrupt is
-       * received on the channel.
-       */
-
-      max3421e_chan_halt(priv, chidx, CHREASON_STALL);
-    }
-
-  /* Check for a pending NAK response received (NAK) interrupt */
-
-  else if ((pending & OTGFS_HCINT_NAK) != 0)
-    {
-      /* Halt the channel  -- the CHH interrupt is expected next */
-
-      max3421e_chan_halt(priv, chidx, CHREASON_NAK);
-
-      /* Clear the pending the NAK response received (NAK) interrupt */
-
-      max3421e_putreg(MAX3421E_OTGFS_HCINT(chidx), OTGFS_HCINT_NAK);
-    }
-
-  /* Check for a pending Transaction ERror (TXERR) interrupt */
-
-  else if ((pending & OTGFS_HCINT_TXERR) != 0)
-    {
-      /* Halt the channel when a STALL, TXERR, BBERR or DTERR interrupt is
-       * received on the channel.
-       */
-
-      max3421e_chan_halt(priv, chidx, CHREASON_TXERR);
-
-      /* Clear the pending the Transaction ERror (TXERR) interrupt */
-
-      max3421e_putreg(MAX3421E_OTGFS_HCINT(chidx), OTGFS_HCINT_TXERR);
-    }
-
-  /* Check for a NYET interrupt */
-
-#if 0 /* NYET is a reserved bit in the HCINT register */
-  else if ((pending & OTGFS_HCINT_NYET) != 0)
-    {
-      /* Halt the channel */
-
-      max3421e_chan_halt(priv, chidx, CHREASON_NYET);
-
-      /* Clear the pending the NYET interrupt */
-
-      max3421e_putreg(MAX3421E_OTGFS_HCINT(chidx), OTGFS_HCINT_NYET);
-    }
-#endif
-
-  /* Check for a pending Data Toggle ERRor (DTERR) interrupt */
-
-  else if (pending & OTGFS_HCINT_DTERR)
-    {
-      /* Halt the channel when a STALL, TXERR, BBERR or DTERR interrupt is
-       * received on the channel.
-       */
-
-      max3421e_chan_halt(priv, chidx, CHREASON_DTERR);
-
-      /* Clear the pending the Data Toggle ERRor (DTERR) and NAK interrupts */
-
-      max3421e_putreg(MAX3421E_OTGFS_HCINT(chidx), (OTGFS_HCINT_DTERR | OTGFS_HCINT_NAK));
-    }
-
-  /* Check for a pending CHannel Halted (CHH) interrupt */
-
-  else if ((pending & OTGFS_HCINT_CHH) != 0)
-    {
-      /* Mask the CHannel Halted (CHH) interrupt */
-
-      regval  = max3421e_getreg(priv, MAX3421E_OTGFS_HCINTMSK(chidx));
-      regval &= ~OTGFS_HCINT_CHH;
-      max3421e_putreg(MAX3421E_OTGFS_HCINTMSK(chidx), regval);
-
-      if (chan->chreason == CHREASON_XFRC)
-        {
-          /* Set the request done result */
-
-          chan->result = OK;
-
-          /* Read the HCCHAR register to get the HCCHAR register to get
-           * the endpoint type.
-           */
-
-          regval = max3421e_getreg(priv, MAX3421E_OTGFS_HCCHAR(chidx));
-
-          /* Is it a bulk endpoint?  Were an odd number of packets
-           * transferred?
-           */
-
-          if ((regval & OTGFS_HCCHAR_EPTYP_MASK) == OTGFS_HCCHAR_EPTYP_BULK &&
-              (chan->npackets & 1) != 0)
-            {
-              /* Yes to both... toggle the data out PID */
-
-              chan->outdata1 ^= true;
-            }
-        }
-      else if (chan->chreason == CHREASON_NAK ||
-               chan->chreason == CHREASON_NYET)
-        {
-          /* Set the try again later result */
-
-          chan->result = EAGAIN;
-        }
-      else if (chan->chreason == CHREASON_STALL)
-        {
-          /* Set the request stall result */
-
-          chan->result = EPERM;
-        }
-      else if ((chan->chreason == CHREASON_TXERR) ||
-               (chan->chreason == CHREASON_DTERR))
-        {
-          /* Set the I/O failure result */
-
-          chan->result = EIO;
-        }
-      else /* if (chan->chreason == CHREASON_FRMOR) */
-        {
-          /* Set the frame error result */
-
-          chan->result = EPIPE;
-        }
-
-      /* Clear the pending the CHannel Halted (CHH) interrupt */
-
-      max3421e_putreg(MAX3421E_OTGFS_HCINT(chidx), OTGFS_HCINT_CHH);
-    }
-
-  /* Check for a transfer complete event */
-
-  max3421e_chan_wakeup(priv, chan);
-}
-
-/****************************************************************************
- * Name: max3421e_int_connected
+ * Name: max3421e_connect_event
  *
  * Description:
  *   Handle a connection event.
  *
  ****************************************************************************/
 
-static void max3421e_int_connected(FAR struct max3421e_usbhost_s *priv)
+static void max3421e_connect_event(FAR struct max3421e_usbhost_s *priv)
 {
   /* We we previously disconnected? */
 
@@ -2970,14 +2490,14 @@ static void max3421e_int_connected(FAR struct max3421e_usbhost_s *priv)
 }
 
 /****************************************************************************
- * Name: max3421e_int_disconnected
+ * Name: max3421e_disconnect_event
  *
  * Description:
  *   Handle a disconnection event.
  *
  ****************************************************************************/
 
-static void max3421e_int_disconnected(FAR struct max3421e_usbhost_s *priv)
+static void max3421e_disconnect_event(FAR struct max3421e_usbhost_s *priv)
 {
   /* Were we previously connected? */
 
@@ -3018,547 +2538,65 @@ static void max3421e_int_disconnected(FAR struct max3421e_usbhost_s *priv)
 }
 
 /****************************************************************************
- * Name: max3421e_int_sofisr
- *
- * Description:
- *   USB start-of-frame interrupt handler
- *
- ****************************************************************************/
-
-#ifdef CONFIG_MAX3421E_OTGFS_SOFINTR
-static inline void max3421e_int_sofisr(FAR struct max3421e_usbhost_s *priv)
-{
-  /* Handle SOF interrupt */
-#warning "Do what?"
-
-  /* Clear pending SOF interrupt */
-
-  max3421e_putreg(MAX3421E_OTGFS_GINTSTS, OTGFS_GINT_SOF);
-}
-#endif
-
-/****************************************************************************
- * Name: max3421e_int_rxflvlisr
- *
- * Description:
- *   USB RxFIFO non-empty interrupt handler
- *
- ****************************************************************************/
-
-static inline void max3421e_int_rxflvlisr(FAR struct max3421e_usbhost_s *priv)
-{
-  FAR uint32_t *dest;
-  uint32_t grxsts;
-  uint32_t intmsk;
-  uint32_t hcchar;
-  uint32_t hctsiz;
-  uint32_t fifo;
-  int bcnt;
-  int bcnt32;
-  int chidx;
-  int i;
-
-  /* Disable the RxFIFO non-empty interrupt */
-
-  intmsk  = max3421e_getreg(priv, MAX3421E_OTGFS_GINTMSK);
-  intmsk &= ~OTGFS_GINT_RXFLVL;
-  max3421e_putreg(MAX3421E_OTGFS_GINTMSK, intmsk);
-
-  /* Read and pop the next status from the Rx FIFO */
-
-  grxsts = max3421e_getreg(priv, MAX3421E_OTGFS_GRXSTSP);
-  uinfo("GRXSTS: %08x\n", grxsts);
-
-  /* Isolate the channel number/index in the status word */
-
-  chidx = (grxsts & OTGFS_GRXSTSH_CHNUM_MASK) >> OTGFS_GRXSTSH_CHNUM_SHIFT;
-
-  /* Get the host channel characteristics register (HCCHAR) for this channel */
-
-  hcchar = max3421e_getreg(priv, MAX3421E_OTGFS_HCCHAR(chidx));
-
-  /* Then process the interrupt according to the packet status */
-
-  switch (grxsts & OTGFS_GRXSTSH_PKTSTS_MASK)
-    {
-    case OTGFS_GRXSTSH_PKTSTS_INRECVD: /* IN data packet received */
-      {
-        /* Read the data into the host buffer. */
-
-        bcnt = (grxsts & OTGFS_GRXSTSH_BCNT_MASK) >> OTGFS_GRXSTSH_BCNT_SHIFT;
-        if (bcnt > 0 && priv->chan[chidx].buffer != NULL)
-          {
-            /* Transfer the packet from the Rx FIFO into the user buffer */
-
-            dest   = (FAR uint32_t *)priv->chan[chidx].buffer;
-            fifo   = MAX3421E_OTGFS_DFIFO_HCH(0);
-            bcnt32 = (bcnt + 3) >> 2;
-
-            for (i = 0; i < bcnt32; i++)
-              {
-                *dest++ = max3421e_getreg(priv, fifo);
-              }
-
-            max3421e_pktdump("Received", priv->chan[chidx].buffer, bcnt);
-
-            /* Toggle the IN data pid (Used by Bulk and INTR only) */
-
-            priv->chan[chidx].indata1 ^= true;
-
-            /* Manage multiple packet transfers */
-
-            priv->chan[chidx].buffer += bcnt;
-            priv->chan[chidx].xfrd   += bcnt;
-
-            /* Check if more packets are expected */
-
-            hctsiz = max3421e_getreg(priv, MAX3421E_OTGFS_HCTSIZ(chidx));
-            if ((hctsiz & OTGFS_HCTSIZ_PKTCNT_MASK) != 0)
-              {
-                /* Re-activate the channel when more packets are expected */
-
-                hcchar |= OTGFS_HCCHAR_CHENA;
-                hcchar &= ~OTGFS_HCCHAR_CHDIS;
-                max3421e_putreg(MAX3421E_OTGFS_HCCHAR(chidx), hcchar);
-              }
-          }
-      }
-      break;
-
-    case OTGFS_GRXSTSH_PKTSTS_INDONE:  /* IN transfer completed */
-    case OTGFS_GRXSTSH_PKTSTS_DTOGERR: /* Data toggle error */
-    case OTGFS_GRXSTSH_PKTSTS_HALTED:  /* Channel halted */
-    default:
-      break;
-    }
-
-  /* Re-enable the RxFIFO non-empty interrupt */
-
-  intmsk |= OTGFS_GINT_RXFLVL;
-  max3421e_putreg(MAX3421E_OTGFS_GINTMSK, intmsk);
-}
-
-/****************************************************************************
- * Name: max3421e_int_nptxfeisr
- *
- * Description:
- *   USB non-periodic TxFIFO empty interrupt handler
- *
- ****************************************************************************/
-
-static inline void max3421e_int_nptxfeisr(FAR struct max3421e_usbhost_s *priv)
-{
-  FAR struct max3421e_chan_s *chan;
-  uint32_t     regval;
-  unsigned int wrsize;
-  unsigned int avail;
-  unsigned int chidx;
-
-  /* Recover the index of the channel that is waiting for space in the Tx
-   * FIFO.
-   */
-
-  chidx = priv->chidx;
-  chan  = &priv->chan[chidx];
-
-  /* Reduce the buffer size by the number of bytes that were previously placed
-   * in the Tx FIFO.
-   */
-
-  chan->buffer  += chan->inflight;
-  chan->xfrd    += chan->inflight;
-  chan->inflight = 0;
-
-  /* If we have now transferred the entire buffer, then this transfer is
-   * complete (this case really should never happen because we disable
-   * the NPTXFE interrupt on the final packet).
-   */
-
-  if (chan->xfrd >= chan->buflen)
-    {
-      /* Disable further Tx FIFO empty interrupts and bail. */
-
-      max3421e_modifyreg(priv, MAX3421E_OTGFS_GINTMSK, OTGFS_GINT_NPTXFE, 0);
-      return;
-    }
-
-  /* Read the status from the top of the non-periodic TxFIFO */
-
-  regval = max3421e_getreg(priv, MAX3421E_OTGFS_HNPTXSTS);
-
-  /* Extract the number of bytes available in the non-periodic Tx FIFO. */
-
-  avail = ((regval & OTGFS_HNPTXSTS_NPTXFSAV_MASK) >> OTGFS_HNPTXSTS_NPTXFSAV_SHIFT) << 2;
-
-  /* Get the size to put in the Tx FIFO now */
-
-  wrsize = chan->buflen - chan->xfrd;
-
-  /* Get minimal size packet that can be sent.  Something is seriously
-   * configured wrong if one packet will not fit into the empty Tx FIFO.
-   */
-
-  DEBUGASSERT(wrsize > 0 && avail >= MIN(wrsize, chan->maxpacket));
-  if (wrsize > avail)
-    {
-      /* Clip the write size to the number of full, max sized packets
-       * that will fit in the Tx FIFO.
-       */
-
-      unsigned int wrpackets = avail / chan->maxpacket;
-      wrsize = wrpackets * chan->maxpacket;
-    }
-
-  /* Otherwise, this will be the last packet to be sent in this transaction.
-   * We now need to disable further NPTXFE interrupts.
-   */
-
-  else
-    {
-      max3421e_modifyreg(priv, MAX3421E_OTGFS_GINTMSK, OTGFS_GINT_NPTXFE, 0);
-    }
-
-  /* Write the next group of packets into the Tx FIFO */
-
-  uinfo("HNPTXSTS: %08x chidx: %d avail: %d buflen: %d xfrd: %d wrsize: %d\n",
-         regval, chidx, avail, chan->buflen, chan->xfrd, wrsize);
-
-  max3421e_int_wrpacket(priv, chan->buffer, chidx, wrsize);
-}
-
-/****************************************************************************
- * Name: max3421e_int_ptxfeisr
- *
- * Description:
- *   USB periodic TxFIFO empty interrupt handler
- *
- ****************************************************************************/
-
-static inline void max3421e_int_ptxfeisr(FAR struct max3421e_usbhost_s *priv)
-{
-  FAR struct max3421e_chan_s *chan;
-  uint32_t     regval;
-  unsigned int wrsize;
-  unsigned int avail;
-  unsigned int chidx;
-
-  /* Recover the index of the channel that is waiting for space in the Tx
-   * FIFO.
-   */
-
-  chidx = priv->chidx;
-  chan  = &priv->chan[chidx];
-
-  /* Reduce the buffer size by the number of bytes that were previously placed
-   * in the Tx FIFO.
-   */
-
-  chan->buffer  += chan->inflight;
-  chan->xfrd    += chan->inflight;
-  chan->inflight = 0;
-
-  /* If we have now transfered the entire buffer, then this transfer is
-   * complete (this case really should never happen because we disable
-   * the PTXFE interrupt on the final packet).
-   */
-
-  if (chan->xfrd >= chan->buflen)
-    {
-      /* Disable further Tx FIFO empty interrupts and bail. */
-
-      max3421e_modifyreg(priv, MAX3421E_OTGFS_GINTMSK, OTGFS_GINT_PTXFE, 0);
-      return;
-    }
-
-  /* Read the status from the top of the periodic TxFIFO */
-
-  regval = max3421e_getreg(priv, MAX3421E_OTGFS_HPTXSTS);
-
-  /* Extract the number of bytes available in the periodic Tx FIFO. */
-
-  avail = ((regval & OTGFS_HPTXSTS_PTXFSAVL_MASK) >> OTGFS_HPTXSTS_PTXFSAVL_SHIFT) << 2;
-
-  /* Get the size to put in the Tx FIFO now */
-
-  wrsize = chan->buflen - chan->xfrd;
-
-  /* Get minimal size packet that can be sent.  Something is seriously
-   * configured wrong if one packet will not fit into the empty Tx FIFO.
-   */
-
-  DEBUGASSERT(wrsize && avail >= MIN(wrsize, chan->maxpacket));
-  if (wrsize > avail)
-    {
-      /* Clip the write size to the number of full, max sized packets
-       * that will fit in the Tx FIFO.
-       */
-
-      unsigned int wrpackets = avail / chan->maxpacket;
-      wrsize = wrpackets * chan->maxpacket;
-    }
-
-  /* Otherwise, this will be the last packet to be sent in this transaction.
-   * We now need to disable further PTXFE interrupts.
-   */
-
-  else
-    {
-      max3421e_modifyreg(priv, MAX3421E_OTGFS_GINTMSK, OTGFS_GINT_PTXFE, 0);
-    }
-
-  /* Write the next group of packets into the Tx FIFO */
-
-  uinfo("HPTXSTS: %08x chidx: %d avail: %d buflen: %d xfrd: %d wrsize: %d\n",
-         regval, chidx, avail, chan->buflen, chan->xfrd, wrsize);
-
-  max3421e_int_wrpacket(priv, chan->buffer, chidx, wrsize);
-}
-
-/****************************************************************************
- * Name: max3421e_int_hcisr
- *
- * Description:
- *   USB host channels interrupt handler
- *
- ****************************************************************************/
-
-static inline void max3421e_int_hcisr(FAR struct max3421e_usbhost_s *priv)
-{
-  uint32_t haint;
-  uint32_t hcchar;
-  int i = 0;
-
-  /* Read the Host all channels interrupt register and test each bit in the
-   * register. Each bit i, i=0...(MAX3421E_NHOST_CHANNELS-1), corresponds to
-   * a pending interrupt on channel i.
-   */
-
-  haint = max3421e_getreg(priv, MAX3421E_OTGFS_HAINT);
-  for (i = 0; i < MAX3421E_NHOST_CHANNELS; i++)
-    {
-      /* Is an interrupt pending on this channel? */
-
-      if ((haint & OTGFS_HAINT(i)) != 0)
-        {
-          /* Yes... read the HCCHAR register to get the direction bit */
-
-          hcchar = max3421e_getreg(priv, MAX3421E_OTGFS_HCCHAR(i));
-
-          /* Was this an interrupt on an IN or an OUT channel? */
-
-          if ((hcchar & OTGFS_HCCHAR_EPDIR) != 0)
-            {
-              /* Handle the HC IN channel interrupt */
-
-              max3421e_int_hcinisr(priv, i);
-            }
-          else
-            {
-              /* Handle the HC OUT channel interrupt */
-
-              max3421e_int_hcoutisr(priv, i);
-            }
-        }
-    }
-}
-
-/****************************************************************************
- * Name: max3421e_int_hprtisr
+ * Name: max3421e_irq_connected
  *
  * Description:
  *   USB host port interrupt handler
  *
  ****************************************************************************/
 
-static inline void max3421e_int_hprtisr(FAR struct max3421e_usbhost_s *priv)
+static inline void max3421e_irq_connected(FAR struct max3421e_usbhost_s *priv)
 {
-  uint32_t hprt;
-  uint32_t newhprt;
-  uint32_t hcfg;
+  usbhost_vtrace1(OTGFS_VTRACE1_GINT_HPRT_PCDET, 0);
 
-  usbhost_vtrace1(OTGFS_VTRACE1_GINT_HPRT, 0);
-  /* Read the port status and control register (HPRT) */
+  /* Reset the bus */
 
-  hprt = max3421e_getreg(priv, MAX3421E_OTGFS_HPRT);
+  max3421e_busreset(priv);
+  sleep(1);
 
-  /* Setup to clear the interrupt bits in GINTSTS by setting the corresponding
-   * bits in the HPRT.  The HCINT interrupt bit is cleared when the appropriate
-   * status bits in the HPRT register are cleared.
-   */
+  /* Were we previously disconnected? */
 
-  newhprt = hprt & ~(OTGFS_HPRT_PENA    | OTGFS_HPRT_PCDET  |
-                     OTGFS_HPRT_PENCHNG | OTGFS_HPRT_POCCHNG);
-
-  /* Check for Port Overcurrent CHaNGe (POCCHNG) */
-
-  if ((hprt & OTGFS_HPRT_POCCHNG) != 0)
-    {
-      /* Set up to clear the POCCHNG status in the new HPRT contents. */
-
-      usbhost_vtrace1(OTGFS_VTRACE1_GINT_HPRT_POCCHNG, 0);
-      newhprt |= OTGFS_HPRT_POCCHNG;
-    }
-
-  /* Check for Port Connect DETected (PCDET).  The core sets this bit when a
-   * device connection is detected.
-   */
-
-  if ((hprt & OTGFS_HPRT_PCDET) != 0)
-    {
-      /* Set up to clear the PCDET status in the new HPRT contents. Then
-       * process the new connection event.
-       */
-
-      usbhost_vtrace1(OTGFS_VTRACE1_GINT_HPRT_PCDET, 0);
-      newhprt |= OTGFS_HPRT_PCDET;
-      max3421e_portreset(priv);
-      max3421e_int_connected(priv);
-    }
-
-  /* Check for Port Enable CHaNGed (PENCHNG) */
-
-  if ((hprt & OTGFS_HPRT_PENCHNG) != 0)
-    {
-      /* Set up to clear the PENCHNG status in the new HPRT contents. */
-
-      usbhost_vtrace1(OTGFS_VTRACE1_GINT_HPRT_PENCHNG, 0);
-      newhprt |= OTGFS_HPRT_PENCHNG;
-
-      /* Was the port enabled? */
-
-      if ((hprt & OTGFS_HPRT_PENA) != 0)
-        {
-          /* Yes.. handle the new connection event */
-
-          max3421e_int_connected(priv);
-
-          /* Check the Host ConFiGuration register (HCFG) */
-
-          hcfg = max3421e_getreg(priv, MAX3421E_OTGFS_HCFG);
-
-          /* Is this a low speed or full speed connection (MAX3421E does not
-           * support high speed)
-           */
-
-          if ((hprt & OTGFS_HPRT_PSPD_MASK) == OTGFS_HPRT_PSPD_LS)
-            {
-              /* Set the Host Frame Interval Register for the 6KHz speed */
-
-              usbhost_vtrace1(OTGFS_VTRACE1_GINT_HPRT_LSDEV, 0);
-              max3421e_putreg(MAX3421E_OTGFS_HFIR, 6000);
-
-              /* Are we switching from FS to LS? */
-
-              if ((hcfg & OTGFS_HCFG_FSLSPCS_MASK) != OTGFS_HCFG_FSLSPCS_LS6MHz)
-                {
-                  usbhost_vtrace1(OTGFS_VTRACE1_GINT_HPRT_FSLSSW, 0);
-
-                  /* Yes... configure for LS */
-
-                  hcfg &= ~OTGFS_HCFG_FSLSPCS_MASK;
-                  hcfg |= OTGFS_HCFG_FSLSPCS_LS6MHz;
-                  max3421e_putreg(MAX3421E_OTGFS_HCFG, hcfg);
-
-                  /* And reset the port */
-
-                  max3421e_portreset(priv);
-                }
-            }
-          else /* if ((hprt & OTGFS_HPRT_PSPD_MASK) == OTGFS_HPRT_PSPD_FS) */
-            {
-
-              usbhost_vtrace1(OTGFS_VTRACE1_GINT_HPRT_FSDEV, 0);
-              max3421e_putreg(MAX3421E_OTGFS_HFIR, 48000);
-
-              /* Are we switching from LS to FS? */
-
-              if ((hcfg & OTGFS_HCFG_FSLSPCS_MASK) != OTGFS_HCFG_FSLSPCS_FS48MHz)
-                {
-
-                  usbhost_vtrace1(OTGFS_VTRACE1_GINT_HPRT_LSFSSW, 0);
-                  /* Yes... configure for FS */
-
-                  hcfg &= ~OTGFS_HCFG_FSLSPCS_MASK;
-                  hcfg |= OTGFS_HCFG_FSLSPCS_FS48MHz;
-                  max3421e_putreg(MAX3421E_OTGFS_HCFG, hcfg);
-
-                  /* And reset the port */
-
-                  max3421e_portreset(priv);
-                }
-            }
-        }
-    }
-
-  /* Clear port interrupts by setting bits in the HPRT */
-
-  max3421e_putreg(MAX3421E_OTGFS_HPRT, newhprt);
+  max3221e_connect_event(priv);
 }
 
 /****************************************************************************
- * Name: max3421e_int_discisr
+ * Name: max3421e_disconnected
  *
  * Description:
  *   USB disconnect detected interrupt handler
  *
  ****************************************************************************/
 
-static inline void max3421e_int_discisr(FAR struct max3421e_usbhost_s *priv)
+static inline void max3421e_disconnected(FAR struct max3421e_usbhost_s *priv)
 {
+  /* Disable the SOF generator */
+
+  max3421e_modifyreg(priv, MAX3421E_USBHOST_MODE, USBHOST_MODE_SOFKAENAB, 0);
+
   /* Handle the disconnection event */
 
-  max3421e_int_disconnected(priv);
-
-  /* Clear the dicsonnect interrupt */
-
-  max3421e_putreg(MAX3421E_OTGFS_GINTSTS, OTGFS_GINT_DISC);
+  max3421e_disconnect_event(priv);
 }
 
 /****************************************************************************
- * Name: max3421e_int_ipxfrisr
+ * Name: max3421e_irqwork
  *
  * Description:
- *   USB incomplete periodic interrupt handler
+ *   MAX3421E interrupt worker.  Perform MAX3421E interrupt processing on the
+ *   high priority work queue thread.  Interrupts were disabled by the
+ *   interrupt handler when the interrupt was received.  This worker must
+ *   re-enable MAX3421E interrupts when interrupt processing is complete.
  *
  ****************************************************************************/
 
-static inline void max3421e_int_ipxfrisr(FAR struct max3421e_usbhost_s *priv)
-{
-  uin8_t regval;
-
-  /* CHENA : Set to enable the channel
-   * CHDIS : Set to stop transmitting/receiving data on a channel
-   */
-
-  regval = max3421e_getreg(priv, MAX3421E_OTGFS_HCCHAR(0));
-  regval |= (OTGFS_HCCHAR_CHDIS | OTGFS_HCCHAR_CHENA);
-  max3421e_putreg(MAX3421E_OTGFS_HCCHAR(0), regval);
-
-  /* Clear the incomplete isochronous OUT interrupt */
-
-  max3421e_putreg(MAX3421E_OTGFS_GINTSTS, OTGFS_GINT_IPXFR);
-}
-
-/****************************************************************************
- * Name: max3421e_int_isr
- *
- * Description:
- *   USB global interrupt handler
- *
- ****************************************************************************/
-
-static int max3421e_int_isr(int irq, FAR void *context, FAR void *arg)
+static int max3421e_irqwork(FAR void *arg)
 {
   FAR struct max3421e_usbhost_s *priv;
-  uint32_t pending;
+  uint8_t pending;
+  uint8_t regval;
 
   priv = (FAR struct max3421e_usbhost_s *)arg;
   DEBUGASSERT(priv != NULL && priv-lower != NULL);
-
-  /* If OTG were supported, we would need to check if we are in host or
-   * device mode when the global interrupt occurs.  Here we support only
-   * host mode
-   */
 
   /* Loop while there are pending interrupts to process.  This loop may save a
    * little interrupt handling overhead.
@@ -3568,111 +2606,120 @@ static int max3421e_int_isr(int irq, FAR void *context, FAR void *arg)
     {
       /* Get the unmasked bits in the GINT status */
 
-      pending  = max3421e_getreg(priv, MAX3421E_OTGFS_GINTSTS);
-      pending &= max3421e_getreg(priv, MAX3421E_OTGFS_GINTMSK);
+      pending = max3421e_int_status(priv);
+      lower->acknowledge(lower);
 
-      /* Return from the interrupt when there are no further pending
-       * interrupts.
-       */
+      /* Break out of the loop when there are no further pending interrupts. */
 
       if (pending == 0)
         {
-          return OK;
+          break;
         }
 
-      /* Otherwise, process each pending, unmasked GINT interrupts */
+      /* Possibilities:
+       *
+       *   HXFRDNIRQ
+       *   FRAMEIRQ
+       *   CONNIRQ
+       *   SUSDNIRQ
+       *   SNDBAVIRQ
+       *   RCVDAVIRQ
+       *   RSMREQIRQ
+       *   BUSEVENTIRQ
+       *
+       * Only CONNIRQ handled here.
+       */
 
-      /* Handle the start of frame interrupt */
+      /* CONNIRQ: Has a peripheral been connected or disconnected */
 
-#ifdef CONFIG_MAX3421E_OTGFS_SOFINTR
-      if ((pending & OTGFS_GINT_SOF) != 0)
+      if ((pending & USBHOST_HIRQ_CONNIRQ) != 0)
         {
-          usbhost_vtrace1(OTGFS_VTRACE1_GINT_SOF, 0);
-          max3421e_int_sofisr(priv);
-        }
-#endif
+          regval = max3421e_getreg(priv, MAX3421E_USBHOST_HRSL);
+          if ( regval & (USBHOST_HRSL_KSTATUS | USBHOST_HRSL_JSTATUS) )
+            {
+              max3421e_dconnected(priv);
+            }
+          else
+            {
+              max3421e_disconnected(priv);
+            }
 
-      /* Handle the RxFIFO non-empty interrupt */
+          /* Clear the pending CONNIRQ interrupt */
 
-      if ((pending & OTGFS_GINT_RXFLVL) != 0)
-        {
-          usbhost_vtrace1(OTGFS_VTRACE1_GINT_RXFLVL, 0);
-          max3421e_int_rxflvlisr(priv);
-        }
-
-      /* Handle the non-periodic TxFIFO empty interrupt */
-
-      if ((pending & OTGFS_GINT_NPTXFE) != 0)
-        {
-          usbhost_vtrace1(OTGFS_VTRACE1_GINT_NPTXFE, 0);
-          max3421e_int_nptxfeisr(priv);
-        }
-
-      /* Handle the periodic TxFIFO empty interrupt */
-
-      if ((pending & OTGFS_GINT_PTXFE) != 0)
-        {
-          usbhost_vtrace1(OTGFS_VTRACE1_GINT_PTXFE, 0);
-          max3421e_int_ptxfeisr(priv);
-        }
-
-      /* Handle the host channels interrupt */
-
-      if ((pending & OTGFS_GINT_HC) != 0)
-        {
-          usbhost_vtrace1(OTGFS_VTRACE1_GINT_HC, 0);
-          max3421e_int_hcisr(priv);
-        }
-
-      /* Handle the host port interrupt */
-
-      if ((pending & OTGFS_GINT_HPRT) != 0)
-        {
-          max3421e_int_hprtisr(priv);
-        }
-
-      /* Handle the disconnect detected interrupt */
-
-      if ((pending & OTGFS_GINT_DISC) != 0)
-        {
-          usbhost_vtrace1(OTGFS_VTRACE1_GINT_DISC, 0);
-          max3421e_int_discisr(priv);
-        }
-
-      /* Handle the incomplete periodic transfer */
-
-      if ((pending & OTGFS_GINT_IPXFR) != 0)
-        {
-          usbhost_vtrace1(OTGFS_VTRACE1_GINT_IPXFR, 0);
-          max3421e_int_ipxfrisr(priv);
+          max3421e_putreg(priv, MAX3421E_USBHOST_HIRQ, USBHOST_HIRQ_CONNIRQ);
         }
     }
 
-  /* We won't get here */
+  /* Re-enable interrupts */
 
+  lower->enable(lower, true);
+}
+
+/****************************************************************************
+ * Name: max3421e_interrupt
+ *
+ * Description:
+ *   MAX3421E interrupt handler.  This interrupt handler simply defers
+ *   interrupt processing to the high priority work queue thread.  This is
+ *   necessary because we cannot perform interrupt/DMA driven SPI accesses
+ *   from an interrupt handler.
+ *
+ ****************************************************************************/
+
+static int max3421e_interrupt(int irq, FAR void *context, FAR void *arg)
+{
+  FAR struct max3421e_usbhost_s *priv;
+  FAR const struct max3421e_lowerhalf_s *lower;
+
+  priv = (FAR struct max3421e_usbhost_s *)arg;
+  DEBUGASSERT(priv != NULL && priv-lower != NULL);
+  lower = (FAR const struct max3421e_lowerhalf_s *)priv->lower;
+
+  /* Disable further interrupts until work associated with this interrupt
+   * has been processed.
+   */
+
+  lower->enable(lower, false);
+
+  /* And defer interrupt processing to the high priority work queue thread */
+
+  (void)work_queue(HPWORK, &priv->irqwork, max3421e_irqwork, priv, 0);
   return OK;
 }
 
 /****************************************************************************
- * Name: max3421e_int_enable and max3421e_int_disable
+ * Name: max3421e_int_enable, max3421e_int_disable, and max3421e_int_status
  *
  * Description:
- *   Respectively enable or disable the global USB host interrupt.
+ *   Respectively enable, disable, or get status of the USB host interrupt
+ *   (HIRQ) and a mask of enabled interrupts.
  *
  * Input Parameters:
- *   None
+ *   priv - Private state data
+ *   irqbits - IRQ bits to be set (max3421e_int_status only)
  *
  * Returned Value:
- *   None
+ *   The current unmasks interrupt status  (max3421e_int_status only)
  *
  ****************************************************************************/
 
-static void max3421e_int_enable(FAR struct max3421e_usbhost_s *priv)
+static inline void max3421e_int_enable(FAR struct max3421e_usbhost_s *priv,
+                                       uint8_t irqbits)
 {
+  priv->enabled |= irqset;
+  max3421e_puttreg(priv, MAX3421E_USBHOST_HIRQ, priv->enabled);
 }
 
-static void max3421e_int_disable(FAR struct max3421e_usbhost_s *priv)
+static inline void max3421e_int_disable(FAR struct max3421e_usbhost_s *priv,
+                                        uint8_t irqbits)
 {
+  priv->enabled &= ~irqset;
+  max3421e_puttreg(priv, MAX3421E_USBHOST_HIRQ, priv->enabled);
+}
+
+static inline uint8_t max3421e_int_status(FAR struct max3421e_usbhost_s *priv)
+{
+  return max3421e_getreg(priv, MAX3421E_USBHOST_HIRQ) & priv->enabled;
 }
 
 /****************************************************************************
@@ -3834,9 +2881,14 @@ static void max3421e_txfe_enable(FAR struct max3421e_usbhost_s *priv, int chidx)
 static int max3421e_wait(FAR struct usbhost_connection_s *conn,
                          FAR struct usbhost_hubport_s **hport)
 {
-  FAR struct max3421e_usbhost_s *priv = &g_usbhost;
+  FAR struct max3421e_connection_s *maxconn;
+  FAR struct max3421e_usbhost_s *priv;
   struct usbhost_hubport_s *connport;
   irqstate_t flags;
+
+  maxconn = (FAR struct max3421e_connection_s *)conn;
+  DEBUGASSERT(maxconn != NULL && maxconn->priv != NULL);
+  priv = maxconn->priv;
 
   /* Loop until a change in connection state is detected */
 
@@ -3949,7 +3001,7 @@ static int max3421e_rh_enumerate(FAR struct max3421e_usbhost_s *priv,
 
   /* Reset the host port */
 
-  max3421e_portreset(priv);
+  max3421e_busreset(priv);
 
   /* Get the current device speed */
 
@@ -4018,7 +3070,7 @@ static int max3421e_enumerate(FAR struct usbhost_connection_s *conn,
       /* Return to the disconnected state */
 
       uerr("ERROR: Enumeration failed: %d\n", ret);
-      max3421e_int_disconnected(priv);
+      max3421e_disconnect_event(priv);
     }
 
   return ret;
@@ -4886,16 +3938,10 @@ static void max3421e_disconnect(FAR struct usbhost_driver_s *drvr,
  * Initialization
  ****************************************************************************/
 /****************************************************************************
- * Name: max3421e_portreset
+ * Name: max3421e_busreset
  *
  * Description:
  *   Reset the USB host port.
- *
- *   NOTE: "Before starting to drive a USB reset, the application waits for the
- *   OTG interrupt triggered by the debounce done bit (DBCDNE bit in
- *   OTG_FS_GOTGINT), which indicates that the bus is stable again after the
- *   electrical debounce caused by the attachment of a pull-up resistor on DP
- *   (FS) or DM (LS).
  *
  * Input Parameters:
  *   priv -- USB host driver private data structure.
@@ -4905,22 +3951,32 @@ static void max3421e_disconnect(FAR struct usbhost_driver_s *drvr,
  *
  ****************************************************************************/
 
-static void max3421e_portreset(FAR struct max3421e_usbhost_s *priv)
+static void max3421e_busreset(FAR struct max3421e_usbhost_s *priv)
 {
-  uin8_t regval;
+  uint8_t regval;
 
-  regval  = max3421e_getreg(priv, MAX3421E_OTGFS_HPRT);
-  regval &= ~(OTGFS_HPRT_PENA | OTGFS_HPRT_PCDET | OTGFS_HPRT_PENCHNG |
-              OTGFS_HPRT_POCCHNG);
-  regval |= OTGFS_HPRT_PRST;
-  max3421e_putreg(MAX3421E_OTGFS_HPRT, regval);
+  /* Disable the SOF generator */
 
-  up_mdelay(20);
+  max3421e_modifyreg(priv, MAX3421E_USBHOST_MODE, USBHOST_MODE_SOFKAENAB, 0);
 
-  regval &= ~OTGFS_HPRT_PRST;
-  max3421e_putreg(MAX3421E_OTGFS_HPRT, regval);
+  /* Perform the reset */
 
-  up_mdelay(20);
+  max3421e_modifyreg(priv, MAX3421E_USBHOST_HCTL, 0, USBHOST_HCTL_BUSRST);
+  while ((max3421e_regreg(priv, MAX3421E_USBHOST_HCTL) & MAX3421E_USBHOST_HCTL) == 0)
+    {
+      usleep(250);
+    }
+
+  /* Restart the SOF generator */
+
+  max3421e_modifyreg(priv, MAX3421E_USBHOST_MODE, 0, USBHOST_MODE_SOFKAENAB);
+
+  /* Wait until the first SOF is transmitted */
+
+  while ((max3421e_regreg(priv, MAX3421E_USBHOST_HIRQ) & USBHOST_HIRQ_FRAMEIRQ) == 0)
+    {
+      usleep(3);
+    }
 }
 
 /****************************************************************************
@@ -5084,7 +4140,7 @@ static void max3421e_host_initialize(FAR struct max3421e_usbhost_s *priv)
 
   /* Reset the host port */
 
-  max3421e_portreset(priv);
+  max3421e_busreset(priv);
 
   /* Clear the FS-/LS-only support bit in the HCFG register */
 
@@ -5289,7 +4345,7 @@ static inline int max3421e_hw_initialize(FAR struct max3421e_usbhost_s *priv)
  ****************************************************************************/
 
 FAR struct usbhost_connection_s *
-max3421e_usbhost_initialize(FAR const struct m3421e_lowerhalf_s *lower)
+max3421e_usbhost_initialize(FAR const struct max3421e_lowerhalf_s *lower)
 {
   FAR struct usbhost_alloc_s *alloc;
   FAR struct max3421e_usbhost_s *priv;
@@ -5326,7 +4382,7 @@ max3421e_usbhost_initialize(FAR const struct m3421e_lowerhalf_s *lower)
 
   /* Attach USB host controller interrupt handler */
 
-  lower->attach(lower, max3421e_int_isr, priv) < 0)
+  lower->attach(lower, max3421e_interrupt, priv) < 0)
     {
       usbhost_trace1(OTGFS_TRACE1_IRQATTACH, 0);
       goto errout_with_alloc;
