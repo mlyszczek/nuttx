@@ -85,14 +85,14 @@
  *
  * Options:
  *
- *  CONFIG_MAX3421E_OTGFS_RXFIFO_SIZE - Size of the RX FIFO in 32-bit words.
+ *  CONFIG_MAX3421E_MAX3421E_RXFIFO_SIZE - Size of the RX FIFO in 32-bit words.
  *    Default 128 (512 bytes)
- *  CONFIG_MAX3421E_OTGFS_NPTXFIFO_SIZE - Size of the non-periodic Tx FIFO
+ *  CONFIG_MAX3421E_MAX3421E_NPTXFIFO_SIZE - Size of the non-periodic Tx FIFO
  *    in 32-bit words.  Default 96 (384 bytes)
- *  CONFIG_MAX3421E_OTGFS_PTXFIFO_SIZE - Size of the periodic Tx FIFO in 32-bit
+ *  CONFIG_MAX3421E_MAX3421E_PTXFIFO_SIZE - Size of the periodic Tx FIFO in 32-bit
  *    words.  Default 96 (384 bytes)
- *  CONFIG_MAX3421E_OTGFS_DESCSIZE - Maximum size of a descriptor.  Default: 128
- *  CONFIG_MAX3421E_OTGFS_SOFINTR - Enable SOF interrupts.  Why would you ever
+ *  CONFIG_MAX3421E_MAX3421E_DESCSIZE - Maximum size of a descriptor.  Default: 128
+ *  CONFIG_MAX3421E_MAX3421E_SOFINTR - Enable SOF interrupts.  Why would you ever
  *    want to do that?
  *  CONFIG_MAX3421E_USBHOST_REGDEBUG - Enable very low-level register access
  *    debug.  Depends on CONFIG_DEBUG_FEATURES.
@@ -108,26 +108,26 @@
 
 /* Default RxFIFO size */
 
-#ifndef CONFIG_MAX3421E_OTGFS_RXFIFO_SIZE
-#  define CONFIG_MAX3421E_OTGFS_RXFIFO_SIZE 128
+#ifndef CONFIG_MAX3421E_MAX3421E_RXFIFO_SIZE
+#  define CONFIG_MAX3421E_MAX3421E_RXFIFO_SIZE 128
 #endif
 
 /* Default host non-periodic Tx FIFO size */
 
-#ifndef CONFIG_MAX3421E_OTGFS_NPTXFIFO_SIZE
-#  define CONFIG_MAX3421E_OTGFS_NPTXFIFO_SIZE 96
+#ifndef CONFIG_MAX3421E_MAX3421E_NPTXFIFO_SIZE
+#  define CONFIG_MAX3421E_MAX3421E_NPTXFIFO_SIZE 96
 #endif
 
 /* Default host periodic Tx fifo size register */
 
-#ifndef CONFIG_MAX3421E_OTGFS_PTXFIFO_SIZE
-#  define CONFIG_MAX3421E_OTGFS_PTXFIFO_SIZE 96
+#ifndef CONFIG_MAX3421E_MAX3421E_PTXFIFO_SIZE
+#  define CONFIG_MAX3421E_MAX3421E_PTXFIFO_SIZE 96
 #endif
 
 /* Maximum size of a descriptor */
 
-#ifndef CONFIG_MAX3421E_OTGFS_DESCSIZE
-#  define CONFIG_MAX3421E_OTGFS_DESCSIZE 128
+#ifndef CONFIG_MAX3421E_MAX3421E_DESCSIZE
+#  define CONFIG_MAX3421E_MAX3421E_DESCSIZE 128
 #endif
 
 /* High priority work queue support is required */
@@ -222,7 +222,7 @@ struct max3421e_chan_s
   volatile uint8_t  chreason;  /* Channel halt reason. See enum max3421e_chreason_e */
   uint8_t           chidx;     /* Channel index */
   uint8_t           epno;      /* Device endpoint number (0-127) */
-  uint8_t           eptype;    /* See OTGFS_EPTYPE_* definitions */
+  uint8_t           eptype;    /* See MAX3421E_EPTYPE_* definitions */
   uint8_t           funcaddr;  /* Device function address */
   uint8_t           speed;     /* Device speed */
   uint8_t           interval;  /* Interrupt/isochronous EP polling interval */
@@ -432,7 +432,7 @@ static int max3421e_out_asynch(FAR struct max3421e_usbhost_s *priv, int chidx,
 
 static void max3421e_connect_event(FAR struct max3421e_usbhost_s *priv)
 static void max3421e_disconnect_event(FAR struct max3421e_usbhost_s *priv)
-static inline void max3421e_connected(FAR struct max3421e_usbhost_s *priv);
+static inline int max3421e_connected(FAR struct max3421e_usbhost_s *priv);
 static inline void max3421e_disconnected(FAR struct max3421e_usbhost_s *priv);
 static int max3421e_irqwork(FAR void *arg);
 static int max3421e_interrupt(int irq, FAR void *context, FAR void *arg);
@@ -491,6 +491,7 @@ static void max3421e_disconnect(FAR struct usbhost_driver_s *drvr,
 /* Initialization **************************************************************/
 
 static void max3421e_busreset(FAR struct max3421e_usbhost_s *priv);
+static int  max3421e_startsof(FAR struct max3421e_usbhost_s *priv);
 static void max3421e_flush_txfifos(uint32_t txfnum);
 static void max3421e_flush_rxfifo(void);
 static void max3421e_vbusdrive(FAR struct max3421e_usbhost_s *priv, bool state);
@@ -1188,8 +1189,8 @@ static void max3421e_chan_wakeup(FAR struct max3421e_usbhost_s *priv,
 #endif
           /* Wake'em up! */
 
-          usbhost_vtrace2(chan->in ? OTGFS_VTRACE2_CHANWAKEUP_IN :
-                                     OTGFS_VTRACE2_CHANWAKEUP_OUT,
+          usbhost_vtrace2(chan->in ? MAX3421E_VTRACE2_CHANWAKEUP_IN :
+                                     MAX3421E_VTRACE2_CHANWAKEUP_OUT,
                           chan->epno, chan->result);
 
           max3421e_givesem(&chan->waitsem);
@@ -1244,7 +1245,7 @@ static int max3421e_ctrlchan_alloc(FAR struct max3421e_usbhost_s *priv,
   chan            = &priv->chan[outndx];
   chan->epno      = epno;
   chan->in        = false;
-  chan->eptype    = OTGFS_EPTYPE_CTRL;
+  chan->eptype    = MAX3421E_EPTYPE_CTRL;
   chan->funcaddr  = funcaddr;
   chan->speed     = speed;
   chan->interval  = 0;
@@ -1269,7 +1270,7 @@ static int max3421e_ctrlchan_alloc(FAR struct max3421e_usbhost_s *priv,
   chan            = &priv->chan[inndx];
   chan->epno      = epno;
   chan->in        = true;
-  chan->eptype    = OTGFS_EPTYPE_CTRL;
+  chan->eptype    = MAX3421E_EPTYPE_CTRL;
   chan->funcaddr  = funcaddr;
   chan->speed     = speed;
   chan->interval  = 0;
@@ -1439,7 +1440,7 @@ static void max3421e_transfer_start(FAR struct max3421e_usbhost_s *priv, int chi
 
   chan           = &priv->chan[chidx];
 
-  usbhost_vtrace2(OTGFS_VTRACE2_STARTTRANSFER, chidx, chan->buflen);
+  usbhost_vtrace2(MAX3421E_VTRACE2_STARTTRANSFER, chidx, chan->buflen);
 
   chan->result   = EBUSY;
   chan->inflight = 0;
@@ -1470,7 +1471,7 @@ static void max3421e_transfer_start(FAR struct max3421e_usbhost_s *priv, int chi
         {
           npackets = MAX3421E_MAX_PKTCOUNT;
           chan->buflen = MAX3421E_MAX_PKTCOUNT * maxpacket;
-          usbhost_trace2(OTGFS_TRACE2_CLIP, chidx, chan->buflen);
+          usbhost_trace2(MAX3421E_TRACE2_CLIP, chidx, chan->buflen);
         }
     }
   else
@@ -1503,32 +1504,32 @@ static void max3421e_transfer_start(FAR struct max3421e_usbhost_s *priv, int chi
 
   /* Setup the HCTSIZn register */
 
-  regval = ((uint32_t)chan->buflen << OTGFS_HCTSIZ_XFRSIZ_SHIFT) |
-           ((uint32_t)npackets << OTGFS_HCTSIZ_PKTCNT_SHIFT) |
-           ((uint32_t)chan->pid << OTGFS_HCTSIZ_DPID_SHIFT);
-  max3421e_putreg(MAX3421E_OTGFS_HCTSIZ(chidx), regval);
+  regval = ((uint32_t)chan->buflen << MAX3421E_HCTSIZ_XFRSIZ_SHIFT) |
+           ((uint32_t)npackets << MAX3421E_HCTSIZ_PKTCNT_SHIFT) |
+           ((uint32_t)chan->pid << MAX3421E_HCTSIZ_DPID_SHIFT);
+  max3421e_putreg(MAX3421E_MAX3421E_HCTSIZ(chidx), regval);
 
   /* Setup the HCCHAR register: Frame oddness and host channel enable */
 
-  regval = max3421e_getreg(priv, MAX3421E_OTGFS_HCCHAR(chidx));
+  regval = max3421e_getreg(priv, MAX3421E_MAX3421E_HCCHAR(chidx));
 
   /* Set/clear the Odd Frame bit.  Check for an even frame; if so set Odd
    * Frame. This field is applicable for only periodic (isochronous and
    * interrupt) channels.
    */
 
-  if ((max3421e_getreg(priv, MAX3421E_OTGFS_HFNUM) & 1) == 0)
+  if ((max3421e_getreg(priv, MAX3421E_MAX3421E_HFNUM) & 1) == 0)
     {
-      regval |= OTGFS_HCCHAR_ODDFRM;
+      regval |= MAX3421E_HCCHAR_ODDFRM;
     }
   else
     {
-      regval &= ~OTGFS_HCCHAR_ODDFRM;
+      regval &= ~MAX3421E_HCCHAR_ODDFRM;
     }
 
-  regval &= ~OTGFS_HCCHAR_CHDIS;
-  regval |= OTGFS_HCCHAR_CHENA;
-  max3421e_putreg(MAX3421E_OTGFS_HCCHAR(chidx), regval);
+  regval &= ~MAX3421E_HCCHAR_CHDIS;
+  regval |= MAX3421E_HCCHAR_CHENA;
+  max3421e_putreg(MAX3421E_MAX3421E_HCCHAR(chidx), regval);
 
   /* If this is an out transfer, then we need to do more.. we need to copy
    * the outgoing data into the correct TxFIFO.
@@ -1544,25 +1545,25 @@ static void max3421e_transfer_start(FAR struct max3421e_usbhost_s *priv, int chi
 
       switch (chan->eptype)
         {
-        case OTGFS_EPTYPE_CTRL: /* Non periodic transfer */
-        case OTGFS_EPTYPE_BULK:
+        case MAX3421E_EPTYPE_CTRL: /* Non periodic transfer */
+        case MAX3421E_EPTYPE_BULK:
           {
             /* Read the Non-periodic Tx FIFO status register */
 
-            regval = max3421e_getreg(priv, MAX3421E_OTGFS_HNPTXSTS);
-            avail  = ((regval & OTGFS_HNPTXSTS_NPTXFSAV_MASK) >> OTGFS_HNPTXSTS_NPTXFSAV_SHIFT) << 2;
+            regval = max3421e_getreg(priv, MAX3421E_MAX3421E_HNPTXSTS);
+            avail  = ((regval & MAX3421E_HNPTXSTS_NPTXFSAV_MASK) >> MAX3421E_HNPTXSTS_NPTXFSAV_SHIFT) << 2;
           }
           break;
 
         /* Periodic transfer */
 
-        case OTGFS_EPTYPE_INTR:
-        case OTGFS_EPTYPE_ISOC:
+        case MAX3421E_EPTYPE_INTR:
+        case MAX3421E_EPTYPE_ISOC:
           {
             /* Read the Non-periodic Tx FIFO status register */
 
-            regval = max3421e_getreg(priv, MAX3421E_OTGFS_HPTXSTS);
-            avail  = ((regval & OTGFS_HPTXSTS_PTXFSAVL_MASK) >> OTGFS_HPTXSTS_PTXFSAVL_SHIFT) << 2;
+            regval = max3421e_getreg(priv, MAX3421E_MAX3421E_HPTXSTS);
+            avail  = ((regval & MAX3421E_HPTXSTS_PTXFSAVL_MASK) >> MAX3421E_HPTXSTS_PTXFSAVL_SHIFT) << 2;
           }
           break;
 
@@ -1633,7 +1634,7 @@ static int max3421e_ctrl_sendsetup(FAR struct max3421e_usbhost_s *priv,
     {
       /* Send the  SETUP packet */
 
-      chan->pid    = OTGFS_PID_SETUP;
+      chan->pid    = MAX3421E_PID_SETUP;
       chan->buffer = (FAR uint8_t *)req;
       chan->buflen = USB_SIZEOF_CTRLREQ;
       chan->xfrd   = 0;
@@ -1643,7 +1644,7 @@ static int max3421e_ctrl_sendsetup(FAR struct max3421e_usbhost_s *priv,
       ret = max3421e_chan_waitsetup(priv, chan);
       if (ret < 0)
         {
-          usbhost_trace1(OTGFS_TRACE1_DEVDISCONN, 0);
+          usbhost_trace1(MAX3421E_TRACE1_DEVDISCONN, 0);
           return ret;
         }
 
@@ -1666,7 +1667,7 @@ static int max3421e_ctrl_sendsetup(FAR struct max3421e_usbhost_s *priv,
 
           if (ret < 0)
             {
-              usbhost_trace1(OTGFS_TRACE1_TRNSFRFAILED, ret);
+              usbhost_trace1(MAX3421E_TRACE1_TRNSFRFAILED, ret);
             }
 
           /* Return the result in any event */
@@ -1716,14 +1717,14 @@ static int max3421e_ctrl_senddata(FAR struct max3421e_usbhost_s *priv,
 
   /* Set the Data PID as per the outdata1 boolean */
 
-  chan->pid = chan->outdata1 ? OTGFS_PID_DATA1 : OTGFS_PID_DATA0;
+  chan->pid = chan->outdata1 ? MAX3421E_PID_DATA1 : MAX3421E_PID_DATA0;
 
   /* Set up for the wait BEFORE starting the transfer */
 
   ret = max3421e_chan_waitsetup(priv, chan);
   if (ret < 0)
     {
-      usbhost_trace1(OTGFS_TRACE1_DEVDISCONN, 0);
+      usbhost_trace1(MAX3421E_TRACE1_DEVDISCONN, 0);
       return ret;
     }
 
@@ -1754,7 +1755,7 @@ static int max3421e_ctrl_recvdata(FAR struct max3421e_usbhost_s *priv,
 
   /* Save buffer information */
 
-  chan->pid    = OTGFS_PID_DATA1;
+  chan->pid    = MAX3421E_PID_DATA1;
   chan->buffer = buffer;
   chan->buflen = buflen;
   chan->xfrd   = 0;
@@ -1764,7 +1765,7 @@ static int max3421e_ctrl_recvdata(FAR struct max3421e_usbhost_s *priv,
   ret = max3421e_chan_waitsetup(priv, chan);
   if (ret < 0)
     {
-      usbhost_trace1(OTGFS_TRACE1_DEVDISCONN, 0);
+      usbhost_trace1(MAX3421E_TRACE1_DEVDISCONN, 0);
       return ret;
     }
 
@@ -1795,7 +1796,7 @@ static int max3421e_in_setup(FAR struct max3421e_usbhost_s *priv, int chidx)
   switch (chan->eptype)
     {
     default:
-    case OTGFS_EPTYPE_CTRL: /* Control */
+    case MAX3421E_EPTYPE_CTRL: /* Control */
       {
         /* This kind of transfer on control endpoints other than EP0 are not
          * currently supported
@@ -1804,30 +1805,30 @@ static int max3421e_in_setup(FAR struct max3421e_usbhost_s *priv, int chidx)
         return -ENOSYS;
       }
 
-    case OTGFS_EPTYPE_ISOC: /* Isochronous */
+    case MAX3421E_EPTYPE_ISOC: /* Isochronous */
       {
         /* Set up the IN data PID */
 
-        usbhost_vtrace2(OTGFS_VTRACE2_ISOCIN, chidx, chan->buflen);
-        chan->pid = OTGFS_PID_DATA0;
+        usbhost_vtrace2(MAX3421E_VTRACE2_ISOCIN, chidx, chan->buflen);
+        chan->pid = MAX3421E_PID_DATA0;
       }
       break;
 
-    case OTGFS_EPTYPE_BULK: /* Bulk */
+    case MAX3421E_EPTYPE_BULK: /* Bulk */
       {
         /* Setup the IN data PID */
 
-        usbhost_vtrace2(OTGFS_VTRACE2_BULKIN, chidx, chan->buflen);
-        chan->pid = chan->indata1 ? OTGFS_PID_DATA1 : OTGFS_PID_DATA0;
+        usbhost_vtrace2(MAX3421E_VTRACE2_BULKIN, chidx, chan->buflen);
+        chan->pid = chan->indata1 ? MAX3421E_PID_DATA1 : MAX3421E_PID_DATA0;
       }
       break;
 
-    case OTGFS_EPTYPE_INTR: /* Interrupt */
+    case MAX3421E_EPTYPE_INTR: /* Interrupt */
       {
         /* Setup the IN data PID */
 
-        usbhost_vtrace2(OTGFS_VTRACE2_INTRIN, chidx, chan->buflen);
-        chan->pid = chan->indata1 ? OTGFS_PID_DATA1 : OTGFS_PID_DATA0;
+        usbhost_vtrace2(MAX3421E_VTRACE2_INTRIN, chidx, chan->buflen);
+        chan->pid = chan->indata1 ? MAX3421E_PID_DATA1 : MAX3421E_PID_DATA0;
       }
       break;
     }
@@ -1873,7 +1874,7 @@ static ssize_t max3421e_in_transfer(FAR struct max3421e_usbhost_s *priv, int chi
       ret = max3421e_chan_waitsetup(priv, chan);
       if (ret < 0)
         {
-          usbhost_trace1(OTGFS_TRACE1_DEVDISCONN, 0);
+          usbhost_trace1(MAX3421E_TRACE1_DEVDISCONN, 0);
           return (ssize_t)ret;
         }
 
@@ -1934,7 +1935,7 @@ static ssize_t max3421e_in_transfer(FAR struct max3421e_usbhost_s *priv, int chi
 
                   /* Wait a bit before retrying after a NAK. */
 
-                  if (chan->eptype == OTGFS_HCCHAR_EPTYP_INTR)
+                  if (chan->eptype == MAX3421E_HCCHAR_EPTYP_INTR)
                     {
                       /* For interrupt (and isochronous) endpoints, the
                        * polling rate is determined by the bInterval field
@@ -1996,7 +1997,7 @@ static ssize_t max3421e_in_transfer(FAR struct max3421e_usbhost_s *priv, int chi
             {
               /* Some unexpected, fatal error occurred. */
 
-              usbhost_trace1(OTGFS_TRACE1_TRNSFRFAILED, ret);
+              usbhost_trace1(MAX3421E_TRACE1_TRNSFRFAILED, ret);
 
               /* Break out and return the error */
 
@@ -2149,7 +2150,7 @@ static int max3421e_out_setup(FAR struct max3421e_usbhost_s *priv, int chidx)
   switch (chan->eptype)
     {
     default:
-    case OTGFS_EPTYPE_CTRL: /* Control */
+    case MAX3421E_EPTYPE_CTRL: /* Control */
       {
         /* This kind of transfer on control endpoints other than EP0 are not
          * currently supported
@@ -2158,30 +2159,30 @@ static int max3421e_out_setup(FAR struct max3421e_usbhost_s *priv, int chidx)
         return -ENOSYS;
       }
 
-    case OTGFS_EPTYPE_ISOC: /* Isochronous */
+    case MAX3421E_EPTYPE_ISOC: /* Isochronous */
       {
         /* Set up the OUT data PID */
 
-        usbhost_vtrace2(OTGFS_VTRACE2_ISOCOUT, chidx, chan->buflen);
-        chan->pid = OTGFS_PID_DATA0;
+        usbhost_vtrace2(MAX3421E_VTRACE2_ISOCOUT, chidx, chan->buflen);
+        chan->pid = MAX3421E_PID_DATA0;
       }
       break;
 
-    case OTGFS_EPTYPE_BULK: /* Bulk */
+    case MAX3421E_EPTYPE_BULK: /* Bulk */
       {
         /* Setup the OUT data PID */
 
-        usbhost_vtrace2(OTGFS_VTRACE2_BULKOUT, chidx, chan->buflen);
-        chan->pid = chan->outdata1 ? OTGFS_PID_DATA1 : OTGFS_PID_DATA0;
+        usbhost_vtrace2(MAX3421E_VTRACE2_BULKOUT, chidx, chan->buflen);
+        chan->pid = chan->outdata1 ? MAX3421E_PID_DATA1 : MAX3421E_PID_DATA0;
       }
       break;
 
-    case OTGFS_EPTYPE_INTR: /* Interrupt */
+    case MAX3421E_EPTYPE_INTR: /* Interrupt */
       {
         /* Setup the OUT data PID */
 
-        usbhost_vtrace2(OTGFS_VTRACE2_INTROUT, chidx, chan->buflen);
-        chan->pid = chan->outdata1 ? OTGFS_PID_DATA1 : OTGFS_PID_DATA0;
+        usbhost_vtrace2(MAX3421E_VTRACE2_INTROUT, chidx, chan->buflen);
+        chan->pid = chan->outdata1 ? MAX3421E_PID_DATA1 : MAX3421E_PID_DATA0;
 
         /* Toggle the OUT data PID for the next transfer */
 
@@ -2239,7 +2240,7 @@ static ssize_t max3421e_out_transfer(FAR struct max3421e_usbhost_s *priv, int ch
       ret = max3421e_chan_waitsetup(priv, chan);
       if (ret < 0)
         {
-          usbhost_trace1(OTGFS_TRACE1_DEVDISCONN, 0);
+          usbhost_trace1(MAX3421E_TRACE1_DEVDISCONN, 0);
           return (ssize_t)ret;
         }
 
@@ -2260,7 +2261,7 @@ static ssize_t max3421e_out_transfer(FAR struct max3421e_usbhost_s *priv, int ch
 
       if (ret < 0)
         {
-          usbhost_trace1(OTGFS_TRACE1_TRNSFRFAILED, ret);
+          usbhost_trace1(MAX3421E_TRACE1_TRNSFRFAILED, ret);
 
           /* Check for a special case:  If (1) the transfer was NAKed and (2)
            * no Tx FIFO empty or Rx FIFO not-empty event occurred, then we
@@ -2284,7 +2285,7 @@ static ssize_t max3421e_out_transfer(FAR struct max3421e_usbhost_s *priv, int ch
            * data in the FIFO when the NAK occurs?  Does it discard it?
            */
 
-          max3421e_flush_txfifos(OTGFS_GRSTCTL_TXFNUM_HALL);
+          max3421e_flush_txfifos(MAX3421E_GRSTCTL_TXFNUM_HALL);
 
           /* Get the device a little time to catch up.  Then retry the transfer
            * using the same buffer pointer and length.
@@ -2441,7 +2442,7 @@ static void max3421e_int_wrpacket(FAR struct max3421e_usbhost_s *priv,
 
   /* Get the address of the Tx FIFO associated with this channel */
 
-  fifo = MAX3421E_OTGFS_DFIFO_HCH(chidx);
+  fifo = MAX3421E_MAX3421E_DFIFO_HCH(chidx);
 
   /* Transfer all of the data into the Tx FIFO */
 
@@ -2473,7 +2474,7 @@ static void max3421e_connect_event(FAR struct max3421e_usbhost_s *priv)
     {
       /* Yes.. then now we are connected */
 
-      usbhost_vtrace1(OTGFS_VTRACE1_CONNECTED, 0);
+      usbhost_vtrace1(MAX3421E_VTRACE1_CONNECTED, 0);
       priv->connected = true;
       priv->change    = true;
       DEBUGASSERT(priv->smstate == SMSTATE_DETACHED);
@@ -2505,7 +2506,7 @@ static void max3421e_disconnect_event(FAR struct max3421e_usbhost_s *priv)
     {
       /* Yes.. then we no longer connected */
 
-      usbhost_vtrace1(OTGFS_VTRACE1_DISCONNECTED, 0);
+      usbhost_vtrace1(MAX3421E_VTRACE1_DISCONNECTED, 0);
 
       /* Are we bound to a class driver? */
 
@@ -2538,25 +2539,37 @@ static void max3421e_disconnect_event(FAR struct max3421e_usbhost_s *priv)
 }
 
 /****************************************************************************
- * Name: max3421e_irq_connected
+ * Name: max3421e_connected
  *
  * Description:
  *   USB host port interrupt handler
  *
  ****************************************************************************/
 
-static inline void max3421e_irq_connected(FAR struct max3421e_usbhost_s *priv)
+static inline int max3421e_connected(FAR struct max3421e_usbhost_s *priv)
 {
-  usbhost_vtrace1(OTGFS_VTRACE1_GINT_HPRT_PCDET, 0);
+  int ret;
 
-  /* Reset the bus */
+  /* Stop SOF generation and reset the bus */
 
   max3421e_busreset(priv);
   sleep(1);
 
+  /* Check for low- or full-speed and restart SOF generation. */
+
+  ret = max3421e_startsof(priv);
+  if (ret < 0)
+    {
+      usbhost_vtrace1(MAX3421E_VTRACE1_INT_DISCONNECTED, 0);
+      return ret;
+    }
+
+  usbhost_vtrace1(MAX3421E_VTRACE1_INT_CONNECTED, 0);
+
   /* Were we previously disconnected? */
 
-  max3221e_connect_event(priv);
+  max3421e_connect_event(priv);
+  return OK;
 }
 
 /****************************************************************************
@@ -2569,6 +2582,8 @@ static inline void max3421e_irq_connected(FAR struct max3421e_usbhost_s *priv)
 
 static inline void max3421e_disconnected(FAR struct max3421e_usbhost_s *priv)
 {
+  usbhost_vtrace1(MAX3421E_VTRACE1_INT_DISCONNECTED, 0);
+
   /* Disable the SOF generator */
 
   max3421e_modifyreg(priv, MAX3421E_USBHOST_MODE, USBHOST_MODE_SOFKAENAB, 0);
@@ -2634,19 +2649,20 @@ static int max3421e_irqwork(FAR void *arg)
 
       if ((pending & USBHOST_HIRQ_CONNIRQ) != 0)
         {
-          regval = max3421e_getreg(priv, MAX3421E_USBHOST_HRSL);
-          if ( regval & (USBHOST_HRSL_KSTATUS | USBHOST_HRSL_JSTATUS) )
+          /* Check if a peripheral device has been connected */
+
+          ret = max3421e_connected(priv);
+          if (ret < 0)
             {
-              max3421e_dconnected(priv);
-            }
-          else
-            {
+              /* No.. then a device must have been disconnected. */
+
               max3421e_disconnected(priv);
             }
 
           /* Clear the pending CONNIRQ interrupt */
 
-          max3421e_putreg(priv, MAX3421E_USBHOST_HIRQ, USBHOST_HIRQ_CONNIRQ);
+          max3421e_putreg(priv, MAX3421E_USBHOST_HIRQ,
+                          USBHOST_HIRQ_CONNIRQ);
         }
     }
 
@@ -2742,54 +2758,54 @@ static inline void max3421e_hostinit_enable(void)
 
   /* Disable all interrupts. */
 
-  max3421e_putreg(MAX3421E_OTGFS_GINTMSK, 0);
+  max3421e_putreg(MAX3421E_MAX3421E_GINTMSK, 0);
 
   /* Clear any pending interrupts. */
 
-  max3421e_putreg(MAX3421E_OTGFS_GINTSTS, 0xffffffff);
+  max3421e_putreg(MAX3421E_MAX3421E_GINTSTS, 0xffffffff);
 
   /* Clear any pending USB OTG Interrupts (should be done elsewhere if OTG is supported) */
 
-  max3421e_putreg(MAX3421E_OTGFS_GOTGINT, 0xffffffff);
+  max3421e_putreg(MAX3421E_MAX3421E_GOTGINT, 0xffffffff);
 
   /* Clear any pending USB OTG interrupts */
 
-  max3421e_putreg(MAX3421E_OTGFS_GINTSTS, 0xbfffffff);
+  max3421e_putreg(MAX3421E_MAX3421E_GINTSTS, 0xbfffffff);
 
   /* Enable the host interrupts */
   /* Common interrupts:
    *
-   *   OTGFS_GINT_WKUP     : Resume/remote wakeup detected interrupt
-   *   OTGFS_GINT_USBSUSP  : USB suspend
+   *   MAX3421E_GINT_WKUP     : Resume/remote wakeup detected interrupt
+   *   MAX3421E_GINT_USBSUSP  : USB suspend
    */
 
-  regval = (OTGFS_GINT_WKUP | OTGFS_GINT_USBSUSP);
+  regval = (MAX3421E_GINT_WKUP | MAX3421E_GINT_USBSUSP);
 
   /* If OTG were supported, we would need to enable the following as well:
    *
-   *   OTGFS_GINT_OTG      : OTG interrupt
-   *   OTGFS_GINT_SRQ      : Session request/new session detected interrupt
-   *   OTGFS_GINT_CIDSCHG  : Connector ID status change
+   *   MAX3421E_GINT_OTG      : OTG interrupt
+   *   MAX3421E_GINT_SRQ      : Session request/new session detected interrupt
+   *   MAX3421E_GINT_CIDSCHG  : Connector ID status change
    */
 
   /* Host-specific interrupts
    *
-   *   OTGFS_GINT_SOF      : Start of frame
-   *   OTGFS_GINT_RXFLVL   : RxFIFO non-empty
-   *   OTGFS_GINT_IISOOXFR : Incomplete isochronous OUT transfer
-   *   OTGFS_GINT_HPRT     : Host port interrupt
-   *   OTGFS_GINT_HC       : Host channels interrupt
-   *   OTGFS_GINT_DISC     : Disconnect detected interrupt
+   *   MAX3421E_GINT_SOF      : Start of frame
+   *   MAX3421E_GINT_RXFLVL   : RxFIFO non-empty
+   *   MAX3421E_GINT_IISOOXFR : Incomplete isochronous OUT transfer
+   *   MAX3421E_GINT_HPRT     : Host port interrupt
+   *   MAX3421E_GINT_HC       : Host channels interrupt
+   *   MAX3421E_GINT_DISC     : Disconnect detected interrupt
    */
 
-#ifdef CONFIG_MAX3421E_OTGFS_SOFINTR
-  regval |= (OTGFS_GINT_SOF    | OTGFS_GINT_RXFLVL   | OTGFS_GINT_IISOOXFR |
-             OTGFS_GINT_HPRT   | OTGFS_GINT_HC       | OTGFS_GINT_DISC);
+#ifdef CONFIG_MAX3421E_MAX3421E_SOFINTR
+  regval |= (MAX3421E_GINT_SOF    | MAX3421E_GINT_RXFLVL   | MAX3421E_GINT_IISOOXFR |
+             MAX3421E_GINT_HPRT   | MAX3421E_GINT_HC       | MAX3421E_GINT_DISC);
 #else
-  regval |= (OTGFS_GINT_RXFLVL | OTGFS_GINT_IPXFR    | OTGFS_GINT_HPRT     |
-             OTGFS_GINT_HC     | OTGFS_GINT_DISC);
+  regval |= (MAX3421E_GINT_RXFLVL | MAX3421E_GINT_IPXFR    | MAX3421E_GINT_HPRT     |
+             MAX3421E_GINT_HC     | MAX3421E_GINT_DISC);
 #endif
-  max3421e_putreg(MAX3421E_OTGFS_GINTMSK, regval);
+  max3421e_putreg(MAX3421E_MAX3421E_GINTMSK, regval);
 }
 
 /****************************************************************************
@@ -2828,24 +2844,24 @@ static void max3421e_txfe_enable(FAR struct max3421e_usbhost_s *priv, int chidx)
 
   /* Should we enable the periodic or non-peridic Tx FIFO empty interrupts */
 
-  regval = max3421e_getreg(priv, MAX3421E_OTGFS_GINTMSK);
+  regval = max3421e_getreg(priv, MAX3421E_MAX3421E_GINTMSK);
   switch (chan->eptype)
     {
     default:
-    case OTGFS_EPTYPE_CTRL: /* Non periodic transfer */
-    case OTGFS_EPTYPE_BULK:
-      regval |= OTGFS_GINT_NPTXFE;
+    case MAX3421E_EPTYPE_CTRL: /* Non periodic transfer */
+    case MAX3421E_EPTYPE_BULK:
+      regval |= MAX3421E_GINT_NPTXFE;
       break;
 
-    case OTGFS_EPTYPE_INTR: /* Periodic transfer */
-    case OTGFS_EPTYPE_ISOC:
-      regval |= OTGFS_GINT_PTXFE;
+    case MAX3421E_EPTYPE_INTR: /* Periodic transfer */
+    case MAX3421E_EPTYPE_ISOC:
+      regval |= MAX3421E_GINT_PTXFE;
       break;
     }
 
   /* Enable interrupts */
 
-  max3421e_putreg(MAX3421E_OTGFS_GINTMSK, regval);
+  max3421e_putreg(MAX3421E_MAX3421E_GINTMSK, regval);
   leave_critical_section(flags);
 }
 
@@ -2987,7 +3003,7 @@ static int max3421e_rh_enumerate(FAR struct max3421e_usbhost_s *priv,
     {
       /* No, return an error */
 
-      usbhost_trace1(OTGFS_TRACE1_DEVDISCONN, 0);
+      usbhost_trace1(MAX3421E_TRACE1_DEVDISCONN, 0);
       return -ENODEV;
     }
 
@@ -2999,20 +3015,18 @@ static int max3421e_rh_enumerate(FAR struct max3421e_usbhost_s *priv,
 
   nxsig_usleep(100*1000);
 
-  /* Reset the host port */
+  /* Stop SOF generation and reset the host port */
 
   max3421e_busreset(priv);
+  sleep(1);
 
   /* Get the current device speed */
 
-  regval = max3421e_getreg(priv, MAX3421E_OTGFS_HPRT);
-  if ((regval & OTGFS_HPRT_PSPD_MASK) == OTGFS_HPRT_PSPD_LS)
+  ret = max3421e_startsof(priv);
+  if (ret < 0)
     {
-      priv->rhport.hport.speed = USB_SPEED_LOW;
-    }
-  else
-    {
-      priv->rhport.hport.speed = USB_SPEED_FULL;
+      usbhost_vtrace1(MAX3421E_VTRACE1_INT_DISCONNECTED, 0);
+      return ret;
     }
 
   /* Allocate and initialize the root hub port EP0 channels */
@@ -3090,7 +3104,7 @@ static int max3421e_enumerate(FAR struct usbhost_connection_s *conn,
  *   ep0 - The (opaque) EP0 endpoint instance
  *   funcaddr - The USB address of the function containing the endpoint that EP0
  *     controls
- *   speed - The speed of the port USB_SPEED_LOW, _FULL, or _HIGH
+ *   speed - The speed of the port USB_SPEED_LOW or _FULL
  *   maxpacketsize - The maximum number of bytes that can be sent to or
  *    received from the endpoint in a single data packet
  *
@@ -3185,7 +3199,7 @@ static int max3421e_epalloc(FAR struct usbhost_driver_s *drvr,
    * and require two channels, one for the IN and one for the OUT direction.
    */
 
-  if (epdesc->xfrtype == OTGFS_EPTYPE_CTRL)
+  if (epdesc->xfrtype == MAX3421E_EPTYPE_CTRL)
     {
       ret = max3421e_ctrlep_alloc(priv, epdesc, ep);
     }
@@ -3296,7 +3310,7 @@ static int max3421e_alloc(FAR struct usbhost_driver_s *drvr,
 
   /* There is no special memory requirement for the MAX3421E. */
 
-  alloc = (FAR uint8_t *)kmm_malloc(CONFIG_MAX3421E_OTGFS_DESCSIZE);
+  alloc = (FAR uint8_t *)kmm_malloc(CONFIG_MAX3421E_MAX3421E_DESCSIZE);
   if (!alloc)
     {
       return -ENOMEM;
@@ -3305,7 +3319,7 @@ static int max3421e_alloc(FAR struct usbhost_driver_s *drvr,
   /* Return the allocated address and size of the descriptor buffer */
 
   *buffer = alloc;
-  *maxlen = CONFIG_MAX3421E_OTGFS_DESCSIZE;
+  *maxlen = CONFIG_MAX3421E_MAX3421E_DESCSIZE;
   return OK;
 }
 
@@ -3469,7 +3483,7 @@ static int max3421e_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
   int ret;
 
   DEBUGASSERT(priv != NULL && ep0info != NULL && req != NULL);
-  usbhost_vtrace2(OTGFS_VTRACE2_CTRLIN, req->type, req->req);
+  usbhost_vtrace2(MAX3421E_VTRACE2_CTRLIN, req->type, req->req);
   uinfo("type:%02x req:%02x value:%02x%02x index:%02x%02x len:%02x%02x\n",
         req->type, req->req, req->value[1], req->value[0],
         req->index[1], req->index[0], req->len[1], req->len[0]);
@@ -3491,7 +3505,7 @@ static int max3421e_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
       ret = max3421e_ctrl_sendsetup(priv, ep0info, req);
       if (ret < 0)
         {
-          usbhost_trace1(OTGFS_TRACE1_SENDSETUP, -ret);
+          usbhost_trace1(MAX3421E_TRACE1_SENDSETUP, -ret);
           continue;
         }
 
@@ -3507,7 +3521,7 @@ static int max3421e_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
               ret = max3421e_ctrl_recvdata(priv, ep0info, buffer, buflen);
               if (ret < 0)
                 {
-                  usbhost_trace1(OTGFS_TRACE1_RECVDATA, -ret);
+                  usbhost_trace1(MAX3421E_TRACE1_RECVDATA, -ret);
                 }
             }
 
@@ -3525,7 +3539,7 @@ static int max3421e_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
                   return OK;
                 }
 
-              usbhost_trace1(OTGFS_TRACE1_SENDDATA, ret < 0 ? -ret : ret);
+              usbhost_trace1(MAX3421E_TRACE1_SENDDATA, ret < 0 ? -ret : ret);
             }
 
           /* Get the elapsed time (in frames) */
@@ -3554,7 +3568,7 @@ static int max3421e_ctrlout(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
   int ret;
 
   DEBUGASSERT(priv != NULL && ep0info != NULL && req != NULL);
-  usbhost_vtrace2(OTGFS_VTRACE2_CTRLOUT, req->type, req->req);
+  usbhost_vtrace2(MAX3421E_VTRACE2_CTRLOUT, req->type, req->req);
   uinfo("type:%02x req:%02x value:%02x%02x index:%02x%02x len:%02x%02x\n",
         req->type, req->req, req->value[1], req->value[0],
         req->index[1], req->index[0], req->len[1], req->len[0]);
@@ -3576,7 +3590,7 @@ static int max3421e_ctrlout(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
       ret = max3421e_ctrl_sendsetup(priv, ep0info, req);
       if (ret < 0)
         {
-          usbhost_trace1(OTGFS_TRACE1_SENDSETUP, -ret);
+          usbhost_trace1(MAX3421E_TRACE1_SENDSETUP, -ret);
           continue;
         }
 
@@ -3595,7 +3609,7 @@ static int max3421e_ctrlout(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
               ret = max3421e_ctrl_senddata(priv, ep0info, NULL, 0);
               if (ret < 0)
                 {
-                  usbhost_trace1(OTGFS_TRACE1_SENDDATA, -ret);
+                  usbhost_trace1(MAX3421E_TRACE1_SENDDATA, -ret);
                 }
             }
 
@@ -3612,7 +3626,7 @@ static int max3421e_ctrlout(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
                   return OK;
                 }
 
-              usbhost_trace1(OTGFS_TRACE1_RECVDATA, ret < 0 ? -ret : ret);
+              usbhost_trace1(MAX3421E_TRACE1_RECVDATA, ret < 0 ? -ret : ret);
             }
 
           /* Get the elapsed time (in frames) */
@@ -3966,17 +3980,105 @@ static void max3421e_busreset(FAR struct max3421e_usbhost_s *priv)
     {
       usleep(250);
     }
+}
+
+/****************************************************************************
+ * Name: max3421e_startsof
+ *
+ * Description:
+ *   Called after bus reset.  Determine bus speed and restart SOFs.
+ *
+ * Input Parameters:
+ *   priv -- USB host driver private data structure.
+ *
+ * Returned Value:
+ *   OK if successfully connect; -ENODEV if not connected.
+ *
+ ****************************************************************************/
+
+static int max3421e_startsof(FAR struct max3421e_usbhost_s *priv)
+{
+  uint8_t clrbits;
+  uint8_t setbits;
+  uint8_t regval;
+  bool lowspeed;
+
+  /* Check if we are already in low- or full-speed mode */
+
+  regval = max3421e_getreg(priv, MAX3421E_USBHOST_MODE);
+  lowspeed = ((regval & USBHOST_MODE_SPEED) != 0);
+
+  /* Enable SAMPLEBUS */
+
+  max3421e_modifyreg(MAX3421E_USBHOST_HCTL, 0, USBHOST_HCTL_BUSSAMPLE);
+  while (max3421e_getreg(priv, MAX3421E_USBHOST_HCTL) & USBHOST_HCTL_BUSSAMPLE)
+         == 0)
+    {
+      usleep(5);
+    }
+
+  /* Check for low- or full-speed and start SOF (actually already started
+   * by max3421e_busreset).
+   */
+
+  clrbits   = 0;
+  startbits = USBHOST_MODE_HOST | USBHOST_MODE_DMPULLD | USBHOST_MODE_DPPULLDN;
+
+  regval = max3421e_getreg(priv, MAX3421E_USBHOST_HSRL);
+  switch (regval & (USBHOST_HRSL_KSTATUS | USBHOST_HRSL_JSTATUS)
+    {
+      default:
+      case (USBHOST_HRSL_KSTATUS | USBHOST_HRSL_JSTATUS):
+        /* Invalid state */
+
+        usbhost_vtrace1(MAX3421E_BAD_JKSTATE, 0);
+
+        /* Fall through */
+
+      case 0:
+        /* 0:  Not connected */
+
+        return -ENODEV;
+
+      case USBHOST_HRSL_KSTATUS:
+        /* J=0, K=1: low-speed in full-speed (or vice versa) */
+
+        if (lowspeed)
+          {
+            /* Full speed in low speed */
+
+            clrbits = USBHOST_MODE_SPEED;
+          }
+        else
+          {
+            /* Low speed in full speed */
+
+            setbits = USBHOST_MODE_SPEED;
+          }
+        break;
+
+      case USBHOST_HRSL_JSTATUS:
+        /* J=1,K=0: full-speed in full-speed (or vice versa) */
+
+        if (lowspeed)
+          {
+            /* Low speed in low speed */
+
+            setbits = USBHOST_MODE_SPEED;
+          }
+        else
+          {
+            /* Full speed in full speed */
+
+            clrbits = USBHOST_MODE_SPEED;
+          }
+        break;
+    }
 
   /* Restart the SOF generator */
 
   max3421e_modifyreg(priv, MAX3421E_USBHOST_MODE, 0, USBHOST_MODE_SOFKAENAB);
-
-  /* Wait until the first SOF is transmitted */
-
-  while ((max3421e_regreg(priv, MAX3421E_USBHOST_HIRQ) & USBHOST_HIRQ_FRAMEIRQ) == 0)
-    {
-      usleep(3);
-    }
+  return OK;
 }
 
 /****************************************************************************
@@ -4000,15 +4102,15 @@ static void max3421e_flush_txfifos(uint32_t txfnum)
 
   /* Initiate the TX FIFO flush operation */
 
-  regval = OTGFS_GRSTCTL_TXFFLSH | txfnum;
-  max3421e_putreg(MAX3421E_OTGFS_GRSTCTL, regval);
+  regval = MAX3421E_GRSTCTL_TXFFLSH | txfnum;
+  max3421e_putreg(MAX3421E_MAX3421E_GRSTCTL, regval);
 
   /* Wait for the FLUSH to complete */
 
   for (timeout = 0; timeout < MAX3421E_FLUSH_DELAY; timeout++)
     {
-      regval = max3421e_getreg(priv, MAX3421E_OTGFS_GRSTCTL);
-      if ((regval & OTGFS_GRSTCTL_TXFFLSH) == 0)
+      regval = max3421e_getreg(priv, MAX3421E_MAX3421E_GRSTCTL);
+      if ((regval & MAX3421E_GRSTCTL_TXFFLSH) == 0)
         {
           break;
         }
@@ -4040,14 +4142,14 @@ static void max3421e_flush_rxfifo(void)
 
   /* Initiate the RX FIFO flush operation */
 
-  max3421e_putreg(MAX3421E_OTGFS_GRSTCTL, OTGFS_GRSTCTL_RXFFLSH);
+  max3421e_putreg(MAX3421E_MAX3421E_GRSTCTL, MAX3421E_GRSTCTL_RXFFLSH);
 
   /* Wait for the FLUSH to complete */
 
   for (timeout = 0; timeout < MAX3421E_FLUSH_DELAY; timeout++)
     {
-      regval = max3421e_getreg(priv, MAX3421E_OTGFS_GRSTCTL);
-      if ((regval & OTGFS_GRSTCTL_RXFFLSH) == 0)
+      regval = max3421e_getreg(priv, MAX3421E_MAX3421E_GRSTCTL);
+      if ((regval & MAX3421E_GRSTCTL_RXFFLSH) == 0)
         {
           break;
         }
@@ -4077,7 +4179,7 @@ static void max3421e_vbusdrive(FAR struct max3421e_usbhost_s *priv, bool state)
 {
   uin8_t regval;
 
-#ifdef CONFIG_MAX3421E_OTGFS_VBUS_CONTROL
+#ifdef CONFIG_MAX3421E_MAX3421E_VBUS_CONTROL
   /* Enable/disable the external charge pump */
 
   max3421e_usbhost_vbusdrive(0, state);
@@ -4085,20 +4187,20 @@ static void max3421e_vbusdrive(FAR struct max3421e_usbhost_s *priv, bool state)
 
   /* Turn on the Host port power. */
 
-  regval = max3421e_getreg(priv, MAX3421E_OTGFS_HPRT);
-  regval &= ~(OTGFS_HPRT_PENA | OTGFS_HPRT_PCDET | OTGFS_HPRT_PENCHNG |
-              OTGFS_HPRT_POCCHNG);
+  regval = max3421e_getreg(priv, MAX3421E_MAX3421E_HPRT);
+  regval &= ~(MAX3421E_HPRT_PENA | MAX3421E_HPRT_PCDET | MAX3421E_HPRT_PENCHNG |
+              MAX3421E_HPRT_POCCHNG);
 
-  if (((regval & OTGFS_HPRT_PPWR) == 0) && state)
+  if (((regval & MAX3421E_HPRT_PPWR) == 0) && state)
     {
-      regval |= OTGFS_HPRT_PPWR;
-      max3421e_putreg(MAX3421E_OTGFS_HPRT, regval);
+      regval |= MAX3421E_HPRT_PPWR;
+      max3421e_putreg(MAX3421E_MAX3421E_HPRT, regval);
     }
 
-  if (((regval & OTGFS_HPRT_PPWR) != 0) && !state)
+  if (((regval & MAX3421E_HPRT_PPWR) != 0) && !state)
     {
-      regval &= ~OTGFS_HPRT_PPWR;
-      max3421e_putreg(MAX3421E_OTGFS_HPRT, regval);
+      regval &= ~MAX3421E_HPRT_PPWR;
+      max3421e_putreg(MAX3421E_MAX3421E_HPRT, regval);
     }
 
   up_mdelay(200);
@@ -4127,62 +4229,17 @@ static void max3421e_host_initialize(FAR struct max3421e_usbhost_s *priv)
   uint32_t offset;
   int i;
 
-  /* Restart the PHY Clock */
+  /* Restart MAX34121E clocking */
+#warning Missing logic
 
-  max3421e_putreg(MAX3421E_OTGFS_PCGCCTL, 0);
-
-  /* Initialize Host Configuration (HCFG) register */
-
-  regval  = max3421e_getreg(priv, MAX3421E_OTGFS_HCFG);
-  regval &= ~OTGFS_HCFG_FSLSPCS_MASK;
-  regval |= OTGFS_HCFG_FSLSPCS_FS48MHz;
-  max3421e_putreg(MAX3421E_OTGFS_HCFG, regval);
-
-  /* Reset the host port */
+  /* Disable SOF generation and reset the host port */
 
   max3421e_busreset(priv);
 
-  /* Clear the FS-/LS-only support bit in the HCFG register */
+  /* Clear all pending interrupts */
+#warning Missing logic
 
-  regval = max3421e_getreg(priv, MAX3421E_OTGFS_HCFG);
-  regval &= ~OTGFS_HCFG_FSLSS;
-  max3421e_putreg(MAX3421E_OTGFS_HCFG, regval);
-
-  /* Carve up FIFO memory for the Rx FIFO and the periodic and non-periodic Tx FIFOs */
-  /* Configure Rx FIFO size (GRXFSIZ) */
-
-  max3421e_putreg(MAX3421E_OTGFS_GRXFSIZ, CONFIG_MAX3421E_OTGFS_RXFIFO_SIZE);
-  offset = CONFIG_MAX3421E_OTGFS_RXFIFO_SIZE;
-
-  /* Setup the host non-periodic Tx FIFO size (HNPTXFSIZ) */
-
-  regval = (offset | (CONFIG_MAX3421E_OTGFS_NPTXFIFO_SIZE << OTGFS_HNPTXFSIZ_NPTXFD_SHIFT));
-  max3421e_putreg(MAX3421E_OTGFS_HNPTXFSIZ, regval);
-  offset += CONFIG_MAX3421E_OTGFS_NPTXFIFO_SIZE;
-
-  /* Set up the host periodic Tx fifo size register (HPTXFSIZ) */
-
-  regval = (offset | (CONFIG_MAX3421E_OTGFS_PTXFIFO_SIZE << OTGFS_HPTXFSIZ_PTXFD_SHIFT));
-  max3421e_putreg(MAX3421E_OTGFS_HPTXFSIZ, regval);
-
-  /* If OTG were supported, we sould need to clear HNP enable bit in the
-   * USB_OTG control register about here.
-   */
-
-  /* Flush all FIFOs */
-
-  max3421e_flush_txfifos(OTGFS_GRSTCTL_TXFNUM_HALL);
-  max3421e_flush_rxfifo();
-
-  /* Clear all pending HC Interrupts */
-
-  for (i = 0; i < MAX3421E_NHOST_CHANNELS; i++)
-    {
-      max3421e_putreg(MAX3421E_OTGFS_HCINT(i), 0xffffffff);
-      max3421e_putreg(MAX3421E_OTGFS_HCINTMSK(i), 0);
-    }
-
-  /* Driver Vbus +5V (the smoke test).  Should be done elsewhere in OTG
+  /* Drive Vbus +5V (the smoke test).  Should be done elsewhere in OTG
    * mode.
    */
 
@@ -4384,7 +4441,7 @@ max3421e_usbhost_initialize(FAR const struct max3421e_lowerhalf_s *lower)
 
   lower->attach(lower, max3421e_interrupt, priv) < 0)
     {
-      usbhost_trace1(OTGFS_TRACE1_IRQATTACH, 0);
+      usbhost_trace1(MAX3421E_TRACE1_IRQATTACH, 0);
       goto errout_with_alloc;
     }
 
