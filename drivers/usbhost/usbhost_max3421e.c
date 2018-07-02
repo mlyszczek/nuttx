@@ -279,7 +279,7 @@ struct max3421e_usbhost_s
   volatile uint8_t  smstate;   /* The state of the USB host state machine */
   uint8_t           chidx;     /* ID of channel waiting for space in Tx FIFO */
   uint8_t           ackstat;   /* See MAX3421E_ACKSTAT_* definitions */
-  uint8_t           enabled;   /* Set of enabled interrupts */
+  uint8_t           irqset;    /* Set of enabled interrupts */
   volatile bool     connected; /* Connected to device */
   volatile bool     change;    /* Connection change */
   volatile bool     pscwait;   /* True: Thread is waiting for a port event */
@@ -432,17 +432,17 @@ static int max3421e_out_asynch(FAR struct max3421e_usbhost_s *priv, int chidx,
 
 static void max3421e_connect_event(FAR struct max3421e_usbhost_s *priv)
 static void max3421e_disconnect_event(FAR struct max3421e_usbhost_s *priv)
-static inline int max3421e_connected(FAR struct max3421e_usbhost_s *priv);
-static inline void max3421e_disconnected(FAR struct max3421e_usbhost_s *priv);
-static int max3421e_irqwork(FAR void *arg);
-static int max3421e_interrupt(int irq, FAR void *context, FAR void *arg);
+static int  max3421e_connected(FAR struct max3421e_usbhost_s *priv);
+static void max3421e_disconnected(FAR struct max3421e_usbhost_s *priv);
+static int  max3421e_irqwork(FAR void *arg);
+static int  max3421e_interrupt(int irq, FAR void *context, FAR void *arg);
 
 /* Interrupt controls */
 
 static inline void max3421e_int_enable(FAR struct max3421e_usbhost_s *priv,
-              uint8_t irqbits);
+              uint8_t irqset);
 static inline void max3421e_int_disable(FAR struct max3421e_usbhost_s *priv,
-              uint8_t irqbits);
+              uint8_t irqset);
 static inline uint8_t max3421e_int_status(FAR struct max3421e_usbhost_s *priv);
 static inline void max3421e_hostinit_enable(void);
 static void max3421e_txfe_enable(FAR struct max3421e_usbhost_s *priv, int chidx);
@@ -495,9 +495,10 @@ static int  max3421e_startsof(FAR struct max3421e_usbhost_s *priv);
 static void max3421e_flush_txfifos(uint32_t txfnum);
 static void max3421e_flush_rxfifo(void);
 static void max3421e_vbusdrive(FAR struct max3421e_usbhost_s *priv, bool state);
-static void max3421e_host_initialize(FAR struct max3421e_usbhost_s *priv);
 
-static inline void max3421e_sw_initialize(FAR struct max3421e_usbhost_s *priv);
+static inline int max3421e_sw_initialize(FAR struct max3421e_usbhost_s *priv,
+              FAR struct usbhost_connection_s conn *conn,
+              FAR const struct max3421e_lowerhalf_s *lower);
 static inline int max3421e_hw_initialize(FAR struct max3421e_usbhost_s *priv);
 
 /****************************************************************************
@@ -2450,7 +2451,7 @@ static void max3421e_int_wrpacket(FAR struct max3421e_usbhost_s *priv,
   for (; buflen32 > 0; buflen32--)
     {
       uint32_t data = *src++;
-      max3421e_putreg(fifo, data);
+      max3421e_putreg(priv, data, fifo);
     }
 
   /* Increment the count of bytes "in-flight" in the Tx FIFO */
@@ -2546,7 +2547,7 @@ static void max3421e_disconnect_event(FAR struct max3421e_usbhost_s *priv)
  *
  ****************************************************************************/
 
-static inline int max3421e_connected(FAR struct max3421e_usbhost_s *priv)
+static int max3421e_connected(FAR struct max3421e_usbhost_s *priv)
 {
   int ret;
 
@@ -2580,7 +2581,7 @@ static inline int max3421e_connected(FAR struct max3421e_usbhost_s *priv)
  *
  ****************************************************************************/
 
-static inline void max3421e_disconnected(FAR struct max3421e_usbhost_s *priv)
+static void max3421e_disconnected(FAR struct max3421e_usbhost_s *priv)
 {
   usbhost_vtrace1(MAX3421E_VTRACE1_INT_DISCONNECTED, 0);
 
@@ -2712,7 +2713,7 @@ static int max3421e_interrupt(int irq, FAR void *context, FAR void *arg)
  *
  * Input Parameters:
  *   priv - Private state data
- *   irqbits - IRQ bits to be set (max3421e_int_status only)
+ *   irqset - IRQ bits to be set (max3421e_int_status only)
  *
  * Returned Value:
  *   The current unmasks interrupt status  (max3421e_int_status only)
@@ -2720,22 +2721,22 @@ static int max3421e_interrupt(int irq, FAR void *context, FAR void *arg)
  ****************************************************************************/
 
 static inline void max3421e_int_enable(FAR struct max3421e_usbhost_s *priv,
-                                       uint8_t irqbits)
+                                       uint8_t irqset)
 {
-  priv->enabled |= irqset;
-  max3421e_puttreg(priv, MAX3421E_USBHOST_HIRQ, priv->enabled);
+  priv->irqset |= irqset;
+  max3421e_puttreg(priv, MAX3421E_USBHOST_HIEN, priv->irqset);
 }
 
 static inline void max3421e_int_disable(FAR struct max3421e_usbhost_s *priv,
-                                        uint8_t irqbits)
+                                        uint8_t irqset)
 {
-  priv->enabled &= ~irqset;
-  max3421e_puttreg(priv, MAX3421E_USBHOST_HIRQ, priv->enabled);
+  priv->irqset &= ~irqset;
+  max3421e_puttreg(priv, MAX3421E_USBHOST_HIEN, priv->irqset);
 }
 
 static inline uint8_t max3421e_int_status(FAR struct max3421e_usbhost_s *priv)
 {
-  return max3421e_getreg(priv, MAX3421E_USBHOST_HIRQ) & priv->enabled;
+  return max3421e_getreg(priv, MAX3421E_USBHOST_HIEN) & priv->irqset;
 }
 
 /****************************************************************************
@@ -2758,19 +2759,19 @@ static inline void max3421e_hostinit_enable(void)
 
   /* Disable all interrupts. */
 
-  max3421e_putreg(MAX3421E_MAX3421E_GINTMSK, 0);
+  max3421e_putreg(priv, MAX3421E_MAX3421E_GINTMSK, 0);
 
   /* Clear any pending interrupts. */
 
-  max3421e_putreg(MAX3421E_MAX3421E_GINTSTS, 0xffffffff);
+  max3421e_putreg(priv, MAX3421E_MAX3421E_GINTSTS, 0xffffffff);
 
   /* Clear any pending USB OTG Interrupts (should be done elsewhere if OTG is supported) */
 
-  max3421e_putreg(MAX3421E_MAX3421E_GOTGINT, 0xffffffff);
+  max3421e_putreg(priv, MAX3421E_MAX3421E_GOTGINT, 0xffffffff);
 
   /* Clear any pending USB OTG interrupts */
 
-  max3421e_putreg(MAX3421E_MAX3421E_GINTSTS, 0xbfffffff);
+  max3421e_putreg(priv, MAX3421E_MAX3421E_GINTSTS, 0xbfffffff);
 
   /* Enable the host interrupts */
   /* Common interrupts:
@@ -2805,7 +2806,7 @@ static inline void max3421e_hostinit_enable(void)
   regval |= (MAX3421E_GINT_RXFLVL | MAX3421E_GINT_IPXFR    | MAX3421E_GINT_HPRT     |
              MAX3421E_GINT_HC     | MAX3421E_GINT_DISC);
 #endif
-  max3421e_putreg(MAX3421E_MAX3421E_GINTMSK, regval);
+  max3421e_putreg(priv, MAX3421E_MAX3421E_GINTMSK, regval);
 }
 
 /****************************************************************************
@@ -4011,8 +4012,8 @@ static int max3421e_startsof(FAR struct max3421e_usbhost_s *priv)
   /* Enable SAMPLEBUS */
 
   max3421e_modifyreg(MAX3421E_USBHOST_HCTL, 0, USBHOST_HCTL_BUSSAMPLE);
-  while (max3421e_getreg(priv, MAX3421E_USBHOST_HCTL) & USBHOST_HCTL_BUSSAMPLE)
-         == 0)
+  while (max3421e_getreg(priv, MAX3421E_USBHOST_HCTL) &
+         USBHOST_HCTL_BUSSAMPLE) == 0)
     {
       usleep(5);
     }
@@ -4078,6 +4079,15 @@ static int max3421e_startsof(FAR struct max3421e_usbhost_s *priv)
   /* Restart the SOF generator */
 
   max3421e_modifyreg(priv, MAX3421E_USBHOST_MODE, 0, USBHOST_MODE_SOFKAENAB);
+
+ /* Wait for the first SOF received and 20ms has passed */
+
+ while ((max3421e_getreg(priv, MAX3421E_USBHOST_HIRQ) &
+         USBHOST_HIRQ_FRAMEIRQ) == 0)
+   {
+   }
+
+  usleep(20*1000);
   return OK;
 }
 
@@ -4097,28 +4107,7 @@ static int max3421e_startsof(FAR struct max3421e_usbhost_s *priv)
 
 static void max3421e_flush_txfifos(uint32_t txfnum)
 {
-  uin8_t regval;
-  uint32_t timeout;
-
-  /* Initiate the TX FIFO flush operation */
-
-  regval = MAX3421E_GRSTCTL_TXFFLSH | txfnum;
-  max3421e_putreg(MAX3421E_MAX3421E_GRSTCTL, regval);
-
-  /* Wait for the FLUSH to complete */
-
-  for (timeout = 0; timeout < MAX3421E_FLUSH_DELAY; timeout++)
-    {
-      regval = max3421e_getreg(priv, MAX3421E_MAX3421E_GRSTCTL);
-      if ((regval & MAX3421E_GRSTCTL_TXFFLSH) == 0)
-        {
-          break;
-        }
-    }
-
-  /* Wait for 3 PHY Clocks */
-
-  up_udelay(3);
+#warning Missing logic
 }
 
 /****************************************************************************
@@ -4137,27 +4126,7 @@ static void max3421e_flush_txfifos(uint32_t txfnum)
 
 static void max3421e_flush_rxfifo(void)
 {
-  uin8_t regval;
-  uint32_t timeout;
-
-  /* Initiate the RX FIFO flush operation */
-
-  max3421e_putreg(MAX3421E_MAX3421E_GRSTCTL, MAX3421E_GRSTCTL_RXFFLSH);
-
-  /* Wait for the FLUSH to complete */
-
-  for (timeout = 0; timeout < MAX3421E_FLUSH_DELAY; timeout++)
-    {
-      regval = max3421e_getreg(priv, MAX3421E_MAX3421E_GRSTCTL);
-      if ((regval & MAX3421E_GRSTCTL_RXFFLSH) == 0)
-        {
-          break;
-        }
-    }
-
-  /* Wait for 3 PHY Clocks */
-
-  up_udelay(3);
+#warning Missing logic
 }
 
 /****************************************************************************
@@ -4177,77 +4146,7 @@ static void max3421e_flush_rxfifo(void)
 
 static void max3421e_vbusdrive(FAR struct max3421e_usbhost_s *priv, bool state)
 {
-  uin8_t regval;
-
-#ifdef CONFIG_MAX3421E_MAX3421E_VBUS_CONTROL
-  /* Enable/disable the external charge pump */
-
-  max3421e_usbhost_vbusdrive(0, state);
-#endif
-
-  /* Turn on the Host port power. */
-
-  regval = max3421e_getreg(priv, MAX3421E_MAX3421E_HPRT);
-  regval &= ~(MAX3421E_HPRT_PENA | MAX3421E_HPRT_PCDET | MAX3421E_HPRT_PENCHNG |
-              MAX3421E_HPRT_POCCHNG);
-
-  if (((regval & MAX3421E_HPRT_PPWR) == 0) && state)
-    {
-      regval |= MAX3421E_HPRT_PPWR;
-      max3421e_putreg(MAX3421E_MAX3421E_HPRT, regval);
-    }
-
-  if (((regval & MAX3421E_HPRT_PPWR) != 0) && !state)
-    {
-      regval &= ~MAX3421E_HPRT_PPWR;
-      max3421e_putreg(MAX3421E_MAX3421E_HPRT, regval);
-    }
-
-  up_mdelay(200);
-}
-
-/****************************************************************************
- * Name: max3421e_host_initialize
- *
- * Description:
- *   Initialize/re-initialize hardware for host mode operation.  At present,
- *   this function is called only from max3421e_hw_initialize().  But if OTG mode
- *   were supported, this function would also be called to swtich between
- *   host and device modes on a connector ID change interrupt.
- *
- * Input Parameters:
- *   priv -- USB host driver private data structure.
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-static void max3421e_host_initialize(FAR struct max3421e_usbhost_s *priv)
-{
-  uin8_t regval;
-  uint32_t offset;
-  int i;
-
-  /* Restart MAX34121E clocking */
 #warning Missing logic
-
-  /* Disable SOF generation and reset the host port */
-
-  max3421e_busreset(priv);
-
-  /* Clear all pending interrupts */
-#warning Missing logic
-
-  /* Drive Vbus +5V (the smoke test).  Should be done elsewhere in OTG
-   * mode.
-   */
-
-  max3421e_vbusdrive(priv, true);
-
-  /* Enable host interrupts */
-
-  max3421e_hostinit_enable();
 }
 
 /****************************************************************************
@@ -4257,17 +4156,22 @@ static void max3421e_host_initialize(FAR struct max3421e_usbhost_s *priv)
  *   One-time setup of the host driver state structure.
  *
  * Input Parameters:
- *   priv -- USB host driver private data structure.
+ *   priv  -- USB host driver private data structure.
+ *   conn  -- Custom USB host connection structure.
+ *   lower -- The lower half driver instance.
  *
  * Returned Value:
  *   None.
  *
  ****************************************************************************/
 
-static inline void max3421e_sw_initialize(FAR struct max3421e_usbhost_s *priv)
+static inline int max3421e_sw_initialize(FAR struct max3421e_usbhost_s *priv,
+              FAR struct usbhost_connection_s conn *conn,
+              FAR const struct max3421e_lowerhalf_s *lower);
 {
   FAR struct usbhost_driver_s *drvr;
   FAR struct usbhost_hubport_s *hport;
+  int ret;
   int i;
 
   /* Initialize the device operations */
@@ -4319,13 +4223,17 @@ static inline void max3421e_sw_initialize(FAR struct max3421e_usbhost_s *priv)
 
   /* Initialize the driver state data */
 
+  priv->lower     = lower;
   priv->smstate   = SMSTATE_DETACHED;
   priv->connected = false;
+  priv->ackstat   = MAX3421E_ACKSTAT_FALSE;
+  priv->irqset    = 0;
   priv->change    = false;
 
   /* Put all of the channels back in their initial, allocated state */
 
-  memset(priv->chan, 0, MAX3421E_MAX_TX_FIFOS * sizeof(struct max3421e_chan_s));
+  memset(priv->chan, 0,
+         MAX3421E_MAX_TX_FIFOS * sizeof(struct max3421e_chan_s));
 
   /* Initialize each channel */
 
@@ -4342,6 +4250,23 @@ static inline void max3421e_sw_initialize(FAR struct max3421e_usbhost_s *priv)
       nxsem_init(&chan->waitsem,  0, 0);
       nxsem_setprotocol(&chan->waitsem, SEM_PRIO_NONE);
     }
+
+  /* Initialize the connection structure */
+
+  conn->conn.wait = max3421e_wait;
+  conn->conn.wait = max3421e_enumerate;
+  conn->priv      = priv;
+
+  /* Attach USB host controller interrupt handler */
+
+  ret = lower->attach(lower, max3421e_interrupt, priv)'
+  if (ret < 0)
+    {
+      usbhost_trace1(MAX3421E_TRACE1_IRQATTACH, 0);
+      return ret;
+    }
+
+  return OK;
 }
 
 /****************************************************************************
@@ -4360,17 +4285,78 @@ static inline void max3421e_sw_initialize(FAR struct max3421e_usbhost_s *priv)
 
 static inline int max3421e_hw_initialize(FAR struct max3421e_usbhost_s *priv)
 {
-  /* Reset the MAX3421E. */
+  uint8_t revision;
+  int ret;
 
-  /* Deactivate the power down */
+  /* Get exclusive access to the SPI bus */
 
-  /* Initialize USB host features */
+  max3421e_lock(priv);
 
-  /* Force Host Mode */
+  /* Reset the MAX3421E by toggling the CHIPRES bit in the USBCTRL register. */
 
-  /* Initialize host mode and return success */
+  max3421e_putreg(priv, MAX3421E_USBHOST_USBCTL, USBHOST_USBCTL_CHIPRES);
+  max3421e_putreg(priv, MAX3421E_USBHOST_USBCTL, 0);
 
-  max3421e_host_initialize(priv);
+  /* Wait for the oscillator to become stable */
+
+  while ((max3421e_gutreg(priv, MAX3421E_USBHOST_USBIRQ) &
+                          USBHOST_USBIRQ_OSCOKIRQ) == 0)
+    {
+    }
+
+  /* Disable interrupts, clear pending interrupts, and reset the interrupt
+   * state
+   */
+
+  max3421e_modifyreg(priv, MAX3421E_USBHOST_CPUCTL, USBHOST_CPUCTL_IE, 0);
+  max3421e_putreg(priv, MAX3421E_USBHOST_HIEN, 0);
+  max3421e_putreg(priv, MAX3421E_USBHOST_HIRQ, 0xff);
+
+  priv->irqset  = 0;
+  priv->ackstat = MAX3421E_ACKSTAT_FALSE;
+
+  /* Configure full duplex SPI, edge-active rising edge interrupt */
+
+  max3421e_putreg(priv, MAX3421E_USBHOST_PINCTL,
+                  USBHOST_PINCTL_FDUPSPI | USBHOST_PINCTL_POSINT);
+
+  /* Configure as full-speed USB host */
+
+  max3421e_modifyreg(priv, MAX3421E_USBHOST_MODE,
+                     USBHOST_MODE_SPEED | USBHOST_MODE_SOFKAENAB,
+                     USBHOST_MODE_HOST | USBHOST_MODE_DMPULLD |
+                     USBHOST_MODE_DPPULLDN);
+
+  /* Enable and clear the connection detected (CONDIRQ) interrupt */
+
+  max3421e_int_enable(priv, USBHOST_HIRQ_CONNIRQ);
+  max3421e_putreg(priv, MAX3421E_USBHOST_HIRQ, USBHOST_HIRQ_CONNIRQ);
+
+  /* Enable MAX3412E interrupts */
+
+  max3421e_modifyreg(priv, MAX3421E_USBHOST_CPUCTL, 0, USBHOST_CPUCTL_IE);
+
+  usbhost_trace1(MAX3421E_TRACE1_INITIALIZED, 0);
+
+  revision = max3421e_getreg(priv, MAX3421E_USBHOST_REVISION);
+  if (revision != USBHOST_REVISION)
+    {
+      usbhost_trace1(MAX3421E_TRACE1_BADREVISION, revision);
+      max3421e_unlock(priv);
+      return -ENODEV;
+    }
+
+  /* Perform a bus reset to reconnect after a power down */
+
+  ret = max3421e_connected(priv);
+  if (ret < 0)
+    {
+      /* Nothing connected. */
+
+      max3421e_disconnected(priv);
+    }
+
+  max3421e_unlock(priv);
   return OK;
 }
 
@@ -4407,6 +4393,7 @@ max3421e_usbhost_initialize(FAR const struct max3421e_lowerhalf_s *lower)
   FAR struct usbhost_alloc_s *alloc;
   FAR struct max3421e_usbhost_s *priv;
   FAR struct usbhost_connection_s conn *conn;
+  int ret;
 
   DEBUGASSERT(lower != NULL && lower->spi != NULL && lower->attach != NULL &&
               lower->attach != NULL && lower->acknowledge != NULL);
@@ -4425,35 +4412,21 @@ max3421e_usbhost_initialize(FAR const struct max3421e_lowerhalf_s *lower)
   priv = &alloc->priv;
   conn = &alloc->conn;
 
-  /* Make sure that MAX3421E interrupts are disabled */
+  /* Initialize the state of the host driver */
 
-  max3421e_int_disable(priv);
-
-  /* Reset the state of the host driver */
-
-  max3421e_sw_initialize(priv);
-
-  /* Initialize the USB OTG FS core */
-
-  max3421e_hw_initialize(priv);
-
-  /* Attach USB host controller interrupt handler */
-
-  lower->attach(lower, max3421e_interrupt, priv) < 0)
+  ret = max3421e_sw_initialize(priv, conn, lower);
+  if (ret < 0)
     {
-      usbhost_trace1(MAX3421E_TRACE1_IRQATTACH, 0);
       goto errout_with_alloc;
     }
 
-  /* Enable MAX3421E interrupts */
+  /* Initialize the MAX3421E, putting it into full operational state. */
 
-  max3421e_int_enable(priv);
-
-  /* Initialize the connection structure */
-
-  conn->conn.wait = max3421e_wait;
-  conn->conn.wait = max3421e_enumerate;
-  conn->priv      = priv;
+  ret = max3421e_hw_initialize(priv);
+  if (ret < 0)
+    {
+      goto errout_with_alloc;
+    }
 
   /* Enable interrupts at the interrupt controller */
 

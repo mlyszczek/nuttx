@@ -373,6 +373,9 @@ struct max3421e_lowerhalf_s
    *   attach      - Attach the interrupt handler to the GPIO interrupt
    *   enable      - Enable or disable the GPIO interrupt
    *   acknowledge - Acknowledge/clear any pending GPIO interrupt
+   *
+   * NOTE: The MAX3421E host driver will configure the interrupt pin
+   * as rising edge triggered.
    */
 
   CODE int (*attach)(FAR struct max3421e_lowerhalf_s *lower, xcpt_t isr,
