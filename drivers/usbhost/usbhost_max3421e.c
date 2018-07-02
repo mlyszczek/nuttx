@@ -91,7 +91,7 @@
  *    in 32-bit words.  Default 96 (384 bytes)
  *  CONFIG_MAX3421E_MAX3421E_PTXFIFO_SIZE - Size of the periodic Tx FIFO in 32-bit
  *    words.  Default 96 (384 bytes)
- *  CONFIG_MAX3421E_MAX3421E_DESCSIZE - Maximum size of a descriptor.  Default: 128
+ *  CONFIG_MAX3421E_DESCSIZE - Maximum size of a descriptor.  Default: 128
  *  CONFIG_MAX3421E_MAX3421E_SOFINTR - Enable SOF interrupts.  Why would you ever
  *    want to do that?
  *  CONFIG_MAX3421E_USBHOST_REGDEBUG - Enable very low-level register access
@@ -126,20 +126,17 @@
 
 /* Maximum size of a descriptor */
 
-#ifndef CONFIG_MAX3421E_MAX3421E_DESCSIZE
-#  define CONFIG_MAX3421E_MAX3421E_DESCSIZE 128
+#ifndef CONFIG_MAX3421E_DESCSIZE
+#  define CONFIG_MAX3421E_DESCSIZE 128
 #endif
 
-/* High priority work queue support is required */
+/* Low-priority work queue support is required.  The high priority work
+ * queue is not used because this driver requires SPI access and may
+ * block or wait for a variety of reasons.
+ */
 
-#ifndef CONFIG_SCHED_HPWORK
-#  error High priority work thread support required (CONFIG_SCHED_HPWORK)
-#endif
-
-/* No hub support */
-
-#ifdef CONFIG_USBHOST_HUB
-#  warning MAX3421E has insufficient endpoints for hub support (CONFIG_USBHOST_HUB)
+#ifndef CONFIG_SCHED_LPWORK
+#  warning Low priority work thread support is necessary (CONFIG_SCHED_LPWORK)
 #endif
 
 /* Register/packet debug depends on CONFIG_DEBUG_FEATURES */
@@ -152,13 +149,18 @@
 /* HCD Setup *******************************************************************/
 /* Hardware capabilities */
 
-#define MAX3421E_NHOST_CHANNELS      8   /* Number of host channels */
 #define MAX3421E_MAX_PACKET_SIZE     64  /* Full speed max packet size */
 #define MAX3421E_EP0_DEF_PACKET_SIZE 8   /* EP0 default packet size */
 #define MAX3421E_EP0_MAX_PACKET_SIZE 64  /* EP0 FS max packet size */
-#define MAX3421E_MAX_TX_FIFOS        15  /* Max number of TX FIFOs */
 #define MAX3421E_MAX_PKTCOUNT        256 /* Max packet count */
 #define MAX3421E_RETRY_COUNT         3   /* Number of ctrl transfer retries */
+
+/* Endpoints */
+
+#define EP0                          0
+#define EP1                          1
+#define EP2                          2
+#define EP3                          3
 
 /* Delays **********************************************************************/
 
@@ -193,22 +195,6 @@ enum max3421e_smstate_e
   SMSTATE_CLASS_BOUND,   /* Enumeration complete, class bound */
 };
 
-/* This enumeration provides the reason for the channel halt. */
-
-enum max3421e_chreason_e
-{
-  CHREASON_IDLE = 0,     /* Inactive (initial state) */
-  CHREASON_FREED,        /* Channel is no longer in use */
-  CHREASON_XFRC,         /* Transfer complete */
-  CHREASON_NAK,          /* NAK received */
-  CHREASON_NYET,         /* NotYet received */
-  CHREASON_STALL,        /* Endpoint stalled */
-  CHREASON_TXERR,        /* Transfer error received */
-  CHREASON_DTERR,        /* Data toggle error received */
-  CHREASON_FRMOR,        /* Frame overrun */
-  CHREASON_CANCELLED     /* Transfer canceled */
-};
-
 /* This structure retains the state of one host channel.  NOTE: Since there
  * is only one channel operation active at a time, some of the fields in
  * in the structure could be moved in struct max3421e_ubhost_s to achieve
@@ -219,8 +205,7 @@ struct max3421e_chan_s
 {
   sem_t             waitsem;   /* Channel wait semaphore */
   volatile uint8_t  result;    /* The result of the transfer */
-  volatile uint8_t  chreason;  /* Channel halt reason. See enum max3421e_chreason_e */
-  uint8_t           chidx;     /* Channel index */
+  uint8_t           chidx;     /* Channel index (0-3) */
   uint8_t           epno;      /* Device endpoint number (0-127) */
   uint8_t           eptype;    /* See MAX3421E_EPTYPE_* definitions */
   uint8_t           funcaddr;  /* Device function address */
@@ -242,17 +227,6 @@ struct max3421e_chan_s
   usbhost_asynch_t  callback;  /* Transfer complete callback */
   FAR void         *arg;       /* Argument that accompanies the callback */
 #endif
-};
-
-/* A channel represents on uni-directional endpoint.  So, in the case of the
- * bi-directional, control endpoint, there must be two channels to represent
- * the endpoint.
- */
-
-struct max3421e_ctrlinfo_s
-{
-  uint8_t           inndx;     /* EP0 IN control channel index */
-  uint8_t           outndx;    /* EP0 OUT control channel index */
 };
 
 /* This structure retains the state of the USB host controller */
@@ -285,7 +259,6 @@ struct max3421e_usbhost_s
   volatile bool     pscwait;   /* True: Thread is waiting for a port event */
   sem_t             exclsem;   /* Support mutually exclusive access */
   sem_t             pscsem;    /* Semaphore to wait for a port event */
-  struct max3421e_ctrlinfo_s ep0;  /* Root hub port EP0 description */
   struct work_s     irqwork;   /* Used to process interrupts */
 
 #ifdef CONFIG_USBHOST_HUB
@@ -294,9 +267,9 @@ struct max3421e_usbhost_s
   volatile struct usbhost_hubport_s *hport;
 #endif
 
-  /* The state of each host channel */
+  /* The state of each host channel, one for each device endpoint. */
 
-  struct max3421e_chan_s chan[MAX3421E_MAX_TX_FIFOS];
+  struct max3421e_chan_s chan[MAX3421E_NHOST_CHANNELS];
 };
 
 /* This is the MAX3421E connection structure */
@@ -370,11 +343,8 @@ static inline uint16_t max3421e_getle16(const uint8_t *val);
 /* Channel management **********************************************************/
 
 static int max3421e_chan_alloc(FAR struct max3421e_usbhost_s *priv);
-static inline void max3421e_chan_free(FAR struct max3421e_usbhost_s *priv, int chidx);
-static inline void max3421e_chan_freeall(FAR struct max3421e_usbhost_s *priv);
-static void max3421e_chan_configure(FAR struct max3421e_usbhost_s *priv, int chidx);
-static void max3421e_chan_halt(FAR struct max3421e_usbhost_s *priv, int chidx,
-              enum max3421e_chreason_e chreason);
+static inline void max3421e_chan_free(FAR struct max3421e_usbhost_s *priv,
+              int chidx);
 static int max3421e_chan_waitsetup(FAR struct max3421e_usbhost_s *priv,
               FAR struct max3421e_chan_s *chan);
 #ifdef CONFIG_USBHOST_ASYNCH
@@ -386,27 +356,17 @@ static int max3421e_chan_wait(FAR struct max3421e_usbhost_s *priv,
               FAR struct max3421e_chan_s *chan);
 static void max3421e_chan_wakeup(FAR struct max3421e_usbhost_s *priv,
               FAR struct max3421e_chan_s *chan);
-static int max3421e_ctrlchan_alloc(FAR struct max3421e_usbhost_s *priv,
-              uint8_t epno, uint8_t funcaddr, uint8_t speed,
-              FAR struct max3421e_ctrlinfo_s *ctrlep);
-static int max3421e_ctrlep_alloc(FAR struct max3421e_usbhost_s *priv,
-              FAR const struct usbhost_epdesc_s *epdesc, FAR usbhost_ep_t *ep);
-static int max3421e_xfrep_alloc(FAR struct max3421e_usbhost_s *priv,
-              FAR const struct usbhost_epdesc_s *epdesc, FAR usbhost_ep_t *ep);
 
 /* Control/data transfer logic *************************************************/
 
 static void max3421e_transfer_start(FAR struct max3421e_usbhost_s *priv,
               int chidx);
-static int max3421e_ctrl_sendsetup(FAR struct max3421e_usbhost_s *priv,
-              FAR struct max3421e_ctrlinfo_s *ep0,
+static int max3421e_ep0_sendsetup(FAR struct max3421e_usbhost_s *priv,
               FAR const struct usb_ctrlreq_s *req);
-static int max3421e_ctrl_senddata(FAR struct max3421e_usbhost_s *priv,
-              FAR struct max3421e_ctrlinfo_s *ep0, FAR uint8_t *buffer,
-              unsigned int buflen);
-static int max3421e_ctrl_recvdata(FAR struct max3421e_usbhost_s *priv,
-              FAR struct max3421e_ctrlinfo_s *ep0, FAR uint8_t *buffer,
-              unsigned int buflen);
+static int max3421e_ep0_senddata(FAR struct max3421e_usbhost_s *priv,
+              FAR uint8_t *buffer, unsigned int buflen);
+static int max3421e_ep0_recvdata(FAR struct max3421e_usbhost_s *priv,
+              FAR uint8_t *buffer, unsigned int buflen);
 static int max3421e_in_setup(FAR struct max3421e_usbhost_s *priv, int chidx);
 static ssize_t max3421e_in_transfer(FAR struct max3421e_usbhost_s *priv, int chidx,
               FAR uint8_t *buffer, size_t buflen);
@@ -444,14 +404,12 @@ static inline void max3421e_int_enable(FAR struct max3421e_usbhost_s *priv,
 static inline void max3421e_int_disable(FAR struct max3421e_usbhost_s *priv,
               uint8_t irqset);
 static inline uint8_t max3421e_int_status(FAR struct max3421e_usbhost_s *priv);
-static inline void max3421e_hostinit_enable(void);
-static void max3421e_txfe_enable(FAR struct max3421e_usbhost_s *priv, int chidx);
 
 /* USB host controller operations **********************************************/
 
 static int max3421e_wait(FAR struct usbhost_connection_s *conn,
               FAR struct usbhost_hubport_s **hport);
-static int max3421e_rh_enumerate(FAR struct max3421e_usbhost_s *priv,
+static int max3421e_getspeed(FAR struct max3421e_usbhost_s *priv,
               FAR struct usbhost_connection_s *conn,
               FAR struct usbhost_hubport_s *hport);
 static int max3421e_enumerate(FAR struct usbhost_connection_s *conn,
@@ -482,7 +440,7 @@ static int max3421e_asynch(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep,
 #endif
 static int max3421e_cancel(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep);
 #ifdef CONFIG_USBHOST_HUB
-static int max3421e_connect(FAR struct usbhost_driver_s *drvr,
+static int max3421e_connect(FAR struct max3421e_usbhost_s *priv,
               FAR struct usbhost_hubport_s *hport, bool connected);
 #endif
 static void max3421e_disconnect(FAR struct usbhost_driver_s *drvr,
@@ -938,7 +896,7 @@ static int max3421e_chan_alloc(FAR struct max3421e_usbhost_s *priv)
 
 static void max3421e_chan_free(FAR struct max3421e_usbhost_s *priv, int chidx)
 {
-  DEBUGASSERT((unsigned)chidx < MAX3421E_NHOST_CHANNELS);
+  DEBUGASSERT((unsigned)chidx < STM32_NHOST_CHANNELS);
 
   /* Halt the channel */
 
@@ -947,80 +905,6 @@ static void max3421e_chan_free(FAR struct max3421e_usbhost_s *priv, int chidx)
   /* Mark the channel available */
 
   priv->chan[chidx].inuse = false;
-}
-
-/****************************************************************************
- * Name: max3421e_chan_freeall
- *
- * Description:
- *   Free all channels.
- *
- ****************************************************************************/
-
-static inline void max3421e_chan_freeall(FAR struct max3421e_usbhost_s *priv)
-{
-  uint8_t chidx;
-
-  /* Free all host channels */
-
-  for (chidx = 2; chidx < MAX3421E_NHOST_CHANNELS; chidx ++)
-    {
-      max3421e_chan_free(priv, chidx);
-    }
-}
-
-/****************************************************************************
- * Name: max3421e_chan_configure
- *
- * Description:
- *   Configure or re-configure a host channel.  Host channels are configured
- *   when endpoint is allocated and EP0 (only) is re-configured with the
- *   max packet size or device address changes.
- *
- ****************************************************************************/
-
-static void max3421e_chan_configure(FAR struct max3421e_usbhost_s *priv, int chidx)
-{
-  FAR struct max3421e_chan_s *chan = &priv->chan[chidx];
-  uin8_t regval;
-
-  /* Clear any old pending interrupts for this host channel. */
-#warning Missing logic
-
-  /* Enable channel interrupts required for transfers on this channel. */
-#warning Missing logic
-
-  /* Enable the top level host channel interrupt. */
-#warning Missing logic
-
-  /* Make sure host channel interrupts are enabled. */
-#warning Missing logic
-}
-
-/****************************************************************************
- * Name: max3421e_chan_halt
- *
- * Description:
- *   Halt the channel associated with 'chidx' by setting the CHannel DISable
- *   (CHDIS) bit in in the HCCHAR register.
- *
- ****************************************************************************/
-
-static void max3421e_chan_halt(FAR struct max3421e_usbhost_s *priv, int chidx,
-                               enum max3421e_chreason_e chreason)
-{
-  uint32_t hcchar;
-  uint32_t intmsk;
-  uint32_t eptype;
-  unsigned int avail;
-
-  /* Save the reason for the halt.  We need this in the channel halt interrupt
-   * handling logic to know what to do next.
-   */
-#warning Missing logic
-
-  /* Disable/halt the channel */
-#warning Missing logic
 }
 
 /****************************************************************************
@@ -1221,205 +1105,6 @@ static void max3421e_chan_wakeup(FAR struct max3421e_usbhost_s *priv,
 }
 
 /****************************************************************************
- * Name: max3421e_ctrlchan_alloc
- *
- * Description:
- *   Allocate and configured channels for a control pipe.
- *
- ****************************************************************************/
-
-static int max3421e_ctrlchan_alloc(FAR struct max3421e_usbhost_s *priv,
-                                uint8_t epno, uint8_t funcaddr, uint8_t speed,
-                                FAR struct max3421e_ctrlinfo_s *ctrlep)
-{
-  FAR struct max3421e_chan_s *chan;
-  int inndx;
-  int outndx;
-
-  outndx = max3421e_chan_alloc(priv);
-  if (outndx < 0)
-    {
-      return -ENOMEM;
-    }
-
-  ctrlep->outndx  = outndx;
-  chan            = &priv->chan[outndx];
-  chan->epno      = epno;
-  chan->in        = false;
-  chan->eptype    = MAX3421E_EPTYPE_CTRL;
-  chan->funcaddr  = funcaddr;
-  chan->speed     = speed;
-  chan->interval  = 0;
-  chan->maxpacket = MAX3421E_EP0_DEF_PACKET_SIZE;
-  chan->indata1   = false;
-  chan->outdata1  = false;
-
-  /* Configure control OUT channels */
-
-  max3421e_chan_configure(priv, outndx);
-
-  /* Allocate and initialize the control IN channel */
-
-  inndx = max3421e_chan_alloc(priv);
-  if (inndx < 0)
-    {
-      max3421e_chan_free(priv, outndx);
-      return -ENOMEM;
-    }
-
-  ctrlep->inndx   = inndx;
-  chan            = &priv->chan[inndx];
-  chan->epno      = epno;
-  chan->in        = true;
-  chan->eptype    = MAX3421E_EPTYPE_CTRL;
-  chan->funcaddr  = funcaddr;
-  chan->speed     = speed;
-  chan->interval  = 0;
-  chan->maxpacket = MAX3421E_EP0_DEF_PACKET_SIZE;
-  chan->indata1   = false;
-  chan->outdata1  = false;
-
-  /* Configure control IN channels */
-
-  max3421e_chan_configure(priv, inndx);
-  return OK;
-}
-
-/****************************************************************************
- * Name: max3421e_ctrlep_alloc
- *
- * Description:
- *   Allocate a container and channels for control pipe.
- *
- * Input Parameters:
- *   priv - The private USB host driver state.
- *   epdesc - Describes the endpoint to be allocated.
- *   ep - A memory location provided by the caller in which to receive the
- *      allocated endpoint descriptor.
- *
- * Returned Value:
- *   On success, zero (OK) is returned. On a failure, a negated errno value is
- *   returned indicating the nature of the failure
- *
- * Assumptions:
- *   This function will *not* be called from an interrupt handler.
- *
- ****************************************************************************/
-
-static int max3421e_ctrlep_alloc(FAR struct max3421e_usbhost_s *priv,
-                              FAR const struct usbhost_epdesc_s *epdesc,
-                              FAR usbhost_ep_t *ep)
-{
-  FAR struct usbhost_hubport_s *hport;
-  FAR struct max3421e_ctrlinfo_s *ctrlep;
-  int ret;
-
-  /* Sanity check.  NOTE that this method should only be called if a device is
-   * connected (because we need a valid low speed indication).
-   */
-
-  DEBUGASSERT(epdesc->hport != NULL);
-  hport = epdesc->hport;
-
-  /* Allocate a container for the control endpoint */
-
-  ctrlep = (FAR struct max3421e_ctrlinfo_s *)kmm_malloc(sizeof(struct max3421e_ctrlinfo_s));
-  if (ctrlep == NULL)
-    {
-      uerr("ERROR: Failed to allocate control endpoint container\n");
-      return -ENOMEM;
-    }
-
-  /* Then allocate and configure the IN/OUT channnels  */
-
-  ret = max3421e_ctrlchan_alloc(priv, epdesc->addr & USB_EPNO_MASK,
-                             hport->funcaddr, hport->speed, ctrlep);
-  if (ret < 0)
-    {
-      uerr("ERROR: max3421e_ctrlchan_alloc failed: %d\n", ret);
-      kmm_free(ctrlep);
-      return ret;
-    }
-
-  /* Return a pointer to the control pipe container as the pipe "handle" */
-
-  *ep = (usbhost_ep_t)ctrlep;
-  return OK;
-}
-
-/************************************************************************************
- * Name: max3421e_xfrep_alloc
- *
- * Description:
- *   Allocate and configure one unidirectional endpoint.
- *
- * Input Parameters:
- *   priv - The private USB host driver state.
- *   epdesc - Describes the endpoint to be allocated.
- *   ep - A memory location provided by the caller in which to receive the
- *      allocated endpoint descriptor.
- *
- * Returned Value:
- *   On success, zero (OK) is returned. On a failure, a negated errno value is
- *   returned indicating the nature of the failure
- *
- * Assumptions:
- *   This function will *not* be called from an interrupt handler.
- *
- ************************************************************************************/
-
-static int max3421e_xfrep_alloc(FAR struct max3421e_usbhost_s *priv,
-                              FAR const struct usbhost_epdesc_s *epdesc,
-                              FAR usbhost_ep_t *ep)
-{
-  struct usbhost_hubport_s *hport;
-  FAR struct max3421e_chan_s *chan;
-  int chidx;
-
-  /* Sanity check.  NOTE that this method should only be called if a device is
-   * connected (because we need a valid low speed indication).
-   */
-
-  DEBUGASSERT(epdesc->hport != NULL);
-  hport = epdesc->hport;
-
-  /* Allocate a host channel for the endpoint */
-
-  chidx = max3421e_chan_alloc(priv);
-  if (chidx < 0)
-    {
-      uerr("ERROR: Failed to allocate a host channel\n");
-      return -ENOMEM;
-    }
-
-  /* Decode the endpoint descriptor to initialize the channel data structures.
-   * Note:  Here we depend on the fact that the endpoint point type is
-   * encoded in the same way in the endpoint descriptor as it is in the OTG
-   * HS hardware.
-   */
-
-  chan            = &priv->chan[chidx];
-  chan->epno      = epdesc->addr & USB_EPNO_MASK;
-  chan->in        = epdesc->in;
-  chan->eptype    = epdesc->xfrtype;
-  chan->funcaddr  = hport->funcaddr;
-  chan->speed     = hport->speed;
-  chan->interval  = epdesc->interval;
-  chan->maxpacket = epdesc->mxpacketsize;
-  chan->indata1   = false;
-  chan->outdata1  = false;
-
-  /* Then configure the endpoint */
-
-  max3421e_chan_configure(priv, chidx);
-
-  /* Return the index to the allocated channel as the endpoint "handle" */
-
-  *ep = (usbhost_ep_t)chidx;
-  return OK;
-}
-
-/****************************************************************************
  * Name: max3421e_transfer_start
  *
  * Description:
@@ -1603,22 +1288,20 @@ static void max3421e_transfer_start(FAR struct max3421e_usbhost_s *priv, int chi
            * Enable the Tx FIFO interrupt to handle the transfer when the Tx
            * FIFO becomes empty.
            */
-
-           max3421e_txfe_enable(priv, chidx);
+#warning Missing logic
         }
     }
 }
 
 /****************************************************************************
- * Name: max3421e_ctrl_sendsetup
+ * Name: max3421e_ep0_sendsetup
  *
  * Description:
  *   Send an IN/OUT SETUP packet.
  *
  ****************************************************************************/
 
-static int max3421e_ctrl_sendsetup(FAR struct max3421e_usbhost_s *priv,
-                                FAR struct max3421e_ctrlinfo_s *ep0,
+static int max3421e_ep0_sendsetup(FAR struct max3421e_usbhost_s *priv,
                                 FAR const struct usb_ctrlreq_s *req)
 {
   FAR struct max3421e_chan_s *chan;
@@ -1628,7 +1311,7 @@ static int max3421e_ctrl_sendsetup(FAR struct max3421e_usbhost_s *priv,
 
   /* Loop while the device reports NAK (and a timeout is not exceeded */
 
-  chan  = &priv->chan[ep0->outndx];
+  chan  = &priv->chan[EP0];
   start = clock_systimer();
 
   do
@@ -1651,7 +1334,7 @@ static int max3421e_ctrl_sendsetup(FAR struct max3421e_usbhost_s *priv,
 
       /* Start the transfer */
 
-      max3421e_transfer_start(priv, ep0->outndx);
+      max3421e_transfer_start(priv, EP0);
 
       /* Wait for the transfer to complete */
 
@@ -1686,7 +1369,7 @@ static int max3421e_ctrl_sendsetup(FAR struct max3421e_usbhost_s *priv,
 }
 
 /****************************************************************************
- * Name: max3421e_ctrl_senddata
+ * Name: max3421e_ep0_senddata
  *
  * Description:
  *   Send data in the data phase of an OUT control transfer.  Or send status
@@ -1694,11 +1377,10 @@ static int max3421e_ctrl_sendsetup(FAR struct max3421e_usbhost_s *priv,
  *
  ****************************************************************************/
 
-static int max3421e_ctrl_senddata(FAR struct max3421e_usbhost_s *priv,
-                               FAR struct max3421e_ctrlinfo_s *ep0,
+static int max3421e_ep0_senddata(FAR struct max3421e_usbhost_s *priv,
                                FAR uint8_t *buffer, unsigned int buflen)
 {
-  FAR struct max3421e_chan_s *chan = &priv->chan[ep0->outndx];
+  FAR struct max3421e_chan_s *chan = &priv->chan[EP0];
   int ret;
 
   /* Save buffer information */
@@ -1731,7 +1413,7 @@ static int max3421e_ctrl_senddata(FAR struct max3421e_usbhost_s *priv,
 
   /* Start the transfer */
 
-  max3421e_transfer_start(priv, ep0->outndx);
+  max3421e_transfer_start(priv, EP0);
 
   /* Wait for the transfer to complete and return the result */
 
@@ -1739,7 +1421,7 @@ static int max3421e_ctrl_senddata(FAR struct max3421e_usbhost_s *priv,
 }
 
 /****************************************************************************
- * Name: max3421e_ctrl_recvdata
+ * Name: max3421e_ep0_recvdata
  *
  * Description:
  *   Receive data in the data phase of an IN control transfer.  Or receive status
@@ -1747,11 +1429,10 @@ static int max3421e_ctrl_senddata(FAR struct max3421e_usbhost_s *priv,
  *
  ****************************************************************************/
 
-static int max3421e_ctrl_recvdata(FAR struct max3421e_usbhost_s *priv,
-                               FAR struct max3421e_ctrlinfo_s *ep0,
+static int max3421e_ep0_recvdata(FAR struct max3421e_usbhost_s *priv,
                                FAR uint8_t *buffer, unsigned int buflen)
 {
-  FAR struct max3421e_chan_s *chan = &priv->chan[ep0->inndx];
+  FAR struct max3421e_chan_s *chan = &priv->chan[EP0];
   int ret;
 
   /* Save buffer information */
@@ -1772,7 +1453,7 @@ static int max3421e_ctrl_recvdata(FAR struct max3421e_usbhost_s *priv,
 
   /* Start the transfer */
 
-  max3421e_transfer_start(priv, ep0->inndx);
+  max3421e_transfer_start(priv, EP0);
 
   /* Wait for the transfer to complete and return the result */
 
@@ -2463,6 +2144,64 @@ static void max3421e_int_wrpacket(FAR struct max3421e_usbhost_s *priv,
  * Name: max3421e_connect_event
  *
  * Description:
+ *   Send a token to the device.
+ *
+ ****************************************************************************/
+
+static int max4321e_sendtoken(FAR struct max3421e_usbhost_s *priv,
+                              uint8_t epno, uint8_t token)
+{
+  uint16_t timeout;
+  uint_t regval;
+  int ret;
+
+  /* Send the specified token */
+
+  max3421e_putreg(priv, MAX3421E_USBHOST_HXFR, token | epno);
+  usleep(23);
+
+  timeout = 0xffff;
+  while (timeout > 0)
+    {
+      /* Get the result */
+
+      regval  = max3421e_getreg(priv, MAX3421E_USBHOST_HRSL);
+      regval &= USBHOST_HRSL_HRSLT_MASK;
+
+      if (regval == USBHOST_HRSL_HRSLT_BUSY)
+        {
+          /* The result is not yet available */
+
+          usleep(3);
+        }
+      else if (regval == USBHOST_HRSL_HRSLT_NAK)
+        {
+          /* The request was NAKed */
+
+          timeout--;
+
+          /* Send the token again */
+
+          max3421e_putreg(priv, MAX3421E_USBHOST_HXFR, token | epno);
+          usleep(5);
+        }
+      else if (regval != USBHOST_HRSL_HRSLT_SUCCESS)
+        {
+          return -EIO;
+        }
+      else
+        {
+          return OK;
+        }
+    }
+
+    return -ETIMEDOUT;
+}
+
+/****************************************************************************
+ * Name: max3421e_connect_event
+ *
+ * Description:
  *   Handle a connection event.
  *
  ****************************************************************************/
@@ -2524,7 +2263,6 @@ static void max3421e_disconnect_event(FAR struct max3421e_usbhost_s *priv)
       priv->smstate   = SMSTATE_DETACHED;
       priv->connected = false;
       priv->change    = true;
-      max3421e_chan_freeall(priv);
 
       priv->rhport.hport.speed = USB_SPEED_FULL;
       priv->rhport.hport.funcaddr = 0;
@@ -2700,7 +2438,7 @@ static int max3421e_interrupt(int irq, FAR void *context, FAR void *arg)
 
   /* And defer interrupt processing to the high priority work queue thread */
 
-  (void)work_queue(HPWORK, &priv->irqwork, max3421e_irqwork, priv, 0);
+  (void)work_queue(LPWORK, &priv->irqwork, max3421e_irqwork, priv, 0);
   return OK;
 }
 
@@ -2738,137 +2476,6 @@ static inline uint8_t max3421e_int_status(FAR struct max3421e_usbhost_s *priv)
 {
   return max3421e_getreg(priv, MAX3421E_USBHOST_HIEN) & priv->irqset;
 }
-
-/****************************************************************************
- * Name: max3421e_hostinit_enable
- *
- * Description:
- *   Enable host interrupts.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-static inline void max3421e_hostinit_enable(void)
-{
-  uin8_t regval;
-
-  /* Disable all interrupts. */
-
-  max3421e_putreg(priv, MAX3421E_MAX3421E_GINTMSK, 0);
-
-  /* Clear any pending interrupts. */
-
-  max3421e_putreg(priv, MAX3421E_MAX3421E_GINTSTS, 0xffffffff);
-
-  /* Clear any pending USB OTG Interrupts (should be done elsewhere if OTG is supported) */
-
-  max3421e_putreg(priv, MAX3421E_MAX3421E_GOTGINT, 0xffffffff);
-
-  /* Clear any pending USB OTG interrupts */
-
-  max3421e_putreg(priv, MAX3421E_MAX3421E_GINTSTS, 0xbfffffff);
-
-  /* Enable the host interrupts */
-  /* Common interrupts:
-   *
-   *   MAX3421E_GINT_WKUP     : Resume/remote wakeup detected interrupt
-   *   MAX3421E_GINT_USBSUSP  : USB suspend
-   */
-
-  regval = (MAX3421E_GINT_WKUP | MAX3421E_GINT_USBSUSP);
-
-  /* If OTG were supported, we would need to enable the following as well:
-   *
-   *   MAX3421E_GINT_OTG      : OTG interrupt
-   *   MAX3421E_GINT_SRQ      : Session request/new session detected interrupt
-   *   MAX3421E_GINT_CIDSCHG  : Connector ID status change
-   */
-
-  /* Host-specific interrupts
-   *
-   *   MAX3421E_GINT_SOF      : Start of frame
-   *   MAX3421E_GINT_RXFLVL   : RxFIFO non-empty
-   *   MAX3421E_GINT_IISOOXFR : Incomplete isochronous OUT transfer
-   *   MAX3421E_GINT_HPRT     : Host port interrupt
-   *   MAX3421E_GINT_HC       : Host channels interrupt
-   *   MAX3421E_GINT_DISC     : Disconnect detected interrupt
-   */
-
-#ifdef CONFIG_MAX3421E_MAX3421E_SOFINTR
-  regval |= (MAX3421E_GINT_SOF    | MAX3421E_GINT_RXFLVL   | MAX3421E_GINT_IISOOXFR |
-             MAX3421E_GINT_HPRT   | MAX3421E_GINT_HC       | MAX3421E_GINT_DISC);
-#else
-  regval |= (MAX3421E_GINT_RXFLVL | MAX3421E_GINT_IPXFR    | MAX3421E_GINT_HPRT     |
-             MAX3421E_GINT_HC     | MAX3421E_GINT_DISC);
-#endif
-  max3421e_putreg(priv, MAX3421E_MAX3421E_GINTMSK, regval);
-}
-
-/****************************************************************************
- * Name: max3421e_txfe_enable
- *
- * Description:
- *   Enable Tx FIFO empty interrupts.  This is necessary when the entire
- *   transfer will not fit into Tx FIFO.  The transfer will then be completed
- *   when the Tx FIFO is empty.  NOTE:  The Tx FIFO interrupt is disabled
- *   the fifo empty interrupt handler when the transfer is complete.
- *
- * Input Parameters:
- *   priv - Driver state structure reference
- *   chidx - The channel that requires the Tx FIFO empty interrupt
- *
- * Returned Value:
- *   None
- *
- * Assumptions:
- *   Called from user task context.  Interrupts must be disabled to assure
- *   exclusive access to the GINTMSK register.
- *
- ****************************************************************************/
-
-static void max3421e_txfe_enable(FAR struct max3421e_usbhost_s *priv, int chidx)
-{
-  FAR struct max3421e_chan_s *chan = &priv->chan[chidx];
-  irqstate_t flags;
-  uin8_t regval;
-
-  /* Disable all interrupts so that we have exclusive access to the GINTMSK
-   * (it would be sufficent just to disable the GINT interrupt).
-   */
-
-  flags = enter_critical_section();
-
-  /* Should we enable the periodic or non-peridic Tx FIFO empty interrupts */
-
-  regval = max3421e_getreg(priv, MAX3421E_MAX3421E_GINTMSK);
-  switch (chan->eptype)
-    {
-    default:
-    case MAX3421E_EPTYPE_CTRL: /* Non periodic transfer */
-    case MAX3421E_EPTYPE_BULK:
-      regval |= MAX3421E_GINT_NPTXFE;
-      break;
-
-    case MAX3421E_EPTYPE_INTR: /* Periodic transfer */
-    case MAX3421E_EPTYPE_ISOC:
-      regval |= MAX3421E_GINT_PTXFE;
-      break;
-    }
-
-  /* Enable interrupts */
-
-  max3421e_putreg(MAX3421E_MAX3421E_GINTMSK, regval);
-  leave_critical_section(flags);
-}
-
-/****************************************************************************
- * USB Host Controller Operations
- ****************************************************************************/
 
 /****************************************************************************
  * Name: max3421e_wait
@@ -2960,19 +2567,13 @@ static int max3421e_wait(FAR struct usbhost_connection_s *conn,
 }
 
 /****************************************************************************
- * Name: max3421e_enumerate
+ * Name: max3421e_getspeed
  *
  * Description:
- *   Enumerate the connected device.  As part of this enumeration process,
- *   the driver will (1) get the device's configuration descriptor, (2)
- *   extract the class ID info from the configuration descriptor, (3) call
- *   usbhost_findclass() to find the class that supports this device, (4)
- *   call the create() method on the struct usbhost_registry_s interface
- *   to get a class instance, and finally (5) call the connect() method
- *   of the struct usbhost_class_s interface.  After that, the class is in
- *   charge of the sequence of operations.
+ *   Get the speed of the connected device.
  *
  * Input Parameters:
+ *   priv - Driver private state structure
  *   conn - The USB host connection instance obtained as a parameter from
  *      the call to the USB driver initialization logic.
  *   hport - The descriptor of the hub port that has the newly connected
@@ -2987,9 +2588,9 @@ static int max3421e_wait(FAR struct usbhost_connection_s *conn,
  *
  ****************************************************************************/
 
-static int max3421e_rh_enumerate(FAR struct max3421e_usbhost_s *priv,
-                                 FAR struct usbhost_connection_s *conn,
-                                 FAR struct usbhost_hubport_s *hport)
+static int max3421e_getspeed(FAR struct max3421e_usbhost_s *priv,
+                             FAR struct usbhost_connection_s *conn,
+                             FAR struct usbhost_hubport_s *hport)
 {
   uin8_t regval;
   int ret;
@@ -3027,15 +2628,6 @@ static int max3421e_rh_enumerate(FAR struct max3421e_usbhost_s *priv,
   if (ret < 0)
     {
       usbhost_vtrace1(MAX3421E_VTRACE1_INT_DISCONNECTED, 0);
-      return ret;
-    }
-
-  /* Allocate and initialize the root hub port EP0 channels */
-
-  ret = max3421e_ctrlchan_alloc(priv, 0, 0, priv->rhport.hport.speed, &priv->ep0);
-  if (ret < 0)
-    {
-      uerr("ERROR: Failed to allocate a control endpoint: %d\n", ret);
     }
 
   return ret;
@@ -3056,15 +2648,16 @@ static int max3421e_enumerate(FAR struct usbhost_connection_s *conn,
    * little more effort to get the device speed.  If it is a connection
    * on an external hub, then we already have that information.
    */
+#warning REVISIT:  Isn't this already done?
 
-#ifdef CONFIG_USBHOST_HUB
+ifdef CONFIG_USBHOST_HUB
   if (ROOTHUB(hport))
 #endif
     {
-      ret = max3421e_rh_enumerate(priv, conn, hport);
+      ret = max3421e_getspeed(priv, conn, hport);
       if (ret < 0)
         {
-          return ret;
+           return ret;
         }
     }
 
@@ -3123,33 +2716,20 @@ static int max3421e_ep0configure(FAR struct usbhost_driver_s *drvr, usbhost_ep_t
                                  uint16_t maxpacketsize)
 {
   FAR struct max3421e_usbhost_s *priv = (FAR struct max3421e_usbhost_s *)drvr;
-  FAR struct max3421e_ctrlinfo_s *ep0info = (FAR struct max3421e_ctrlinfo_s *)ep0;
   FAR struct max3421e_chan_s *chan;
 
-  DEBUGASSERT(drvr != NULL && ep0info != NULL && funcaddr < 128 &&
-              maxpacketsize <= 64);
+  DEBUGASSERT(drvr != NULL && funcaddr < 128 && maxpacketsize <= 64);
 
   /* We must have exclusive access to the USB host hardware and state structures */
 
   max3421e_takesem(&priv->exclsem);
 
-  /* Configure the EP0 OUT channel */
+  /* Configure the EP0 channel */
 
-  chan            = &priv->chan[ep0info->outndx];
+  chan            = &priv->chan[EP0];
   chan->funcaddr  = funcaddr;
   chan->speed     = speed;
   chan->maxpacket = maxpacketsize;
-
-  max3421e_chan_configure(priv, ep0info->outndx);
-
-  /* Configure the EP0 IN channel */
-
-  chan            = &priv->chan[ep0info->inndx];
-  chan->funcaddr  = funcaddr;
-  chan->speed     = speed;
-  chan->maxpacket = maxpacketsize;
-
-  max3421e_chan_configure(priv, ep0info->inndx);
 
   max3421e_givesem(&priv->exclsem);
   return OK;
@@ -3182,6 +2762,9 @@ static int max3421e_epalloc(FAR struct usbhost_driver_s *drvr,
                             FAR usbhost_ep_t *ep)
 {
   FAR struct max3421e_usbhost_s *priv = (FAR struct max3421e_usbhost_s *)drvr;
+  struct usbhost_hubport_s *hport;
+  FAR struct max3421e_chan_s *chan;
+  uint8_t epno;
   int ret;
 
   /* Sanity check.  NOTE that this method should only be called if a device is
@@ -3189,28 +2772,45 @@ static int max3421e_epalloc(FAR struct usbhost_driver_s *drvr,
    */
 
   DEBUGASSERT(drvr != 0 && epdesc != NULL && ep != NULL);
+  hport = epdesc->hport;
+  DEBUGASSERT(hport != NULL);
 
   /* We must have exclusive access to the USB host hardware and state structures */
 
   max3421e_takesem(&priv->exclsem);
 
-  /* Handler control pipes differently from other endpoint types.  This is
-   * because the normal, "transfer" endpoints are unidirectional an require
-   * only a single channel.  Control endpoints, however, are bi-diretional
-   * and require two channels, one for the IN and one for the OUT direction.
+  /* Allocate a host channel for the endpoint */
+
+  chidx = max3421e_chan_alloc(priv);
+  if (chidx < 0)
+    {
+      uerr("ERROR: Failed to allocate a host channel\n");
+      max3421e_givesem(&priv->exclsem);
+      return chidx;
+    }
+
+  /* Decode the endpoint descriptor to initialize the channel data structures.
+   * Note:  Here we depend on the fact that the endpoint point type is
+   * encoded in the same way in the endpoint descriptor as it is in the OTG
+   * HS hardware.
    */
 
-  if (epdesc->xfrtype == MAX3421E_EPTYPE_CTRL)
-    {
-      ret = max3421e_ctrlep_alloc(priv, epdesc, ep);
-    }
-  else
-    {
-      ret = max3421e_xfrep_alloc(priv, epdesc, ep);
-    }
+  chan            = &priv->chan[epno];
+  chan->epno      = epdesc->addr & USB_EPNO_MASK;
+  chan->in        = epdesc->in;
+  chan->eptype    = epdesc->xfrtype;
+  chan->funcaddr  = hport->funcaddr;
+  chan->speed     = hport->speed;
+  chan->interval  = epdesc->interval;
+  chan->maxpacket = epdesc->mxpacketsize;
+  chan->indata1   = false;
+  chan->outdata1  = false;
 
+  /* Return the endpoint number as the endpoint "handle" */
+
+  *ep = (usbhost_ep_t)chidx;
   max3421e_givesem(&priv->exclsem);
-  return ret;
+  return OK;
 }
 
 /************************************************************************************
@@ -3243,29 +2843,9 @@ static int max3421e_epfree(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
 
   max3421e_takesem(&priv->exclsem);
 
-  /* A single channel is represent by an index in the range of 0 to MAX3421E_MAX_TX_FIFOS.
-   * Otherwise, the ep must be a pointer to an allocated control endpoint structure.
-   */
+  /* Halt the channel and mark the channel available */
 
-  if ((uintptr_t)ep < MAX3421E_MAX_TX_FIFOS)
-    {
-      /* Halt the channel and mark the channel available */
-
-      max3421e_chan_free(priv, (int)ep);
-    }
-  else
-    {
-      /* Halt both control channel and mark the channels available */
-
-      FAR struct max3421e_ctrlinfo_s *ctrlep = (FAR struct max3421e_ctrlinfo_s *)ep;
-      max3421e_chan_free(priv, ctrlep->inndx);
-      max3421e_chan_free(priv, ctrlep->outndx);
-
-      /* And free the control endpoint container */
-
-      kmm_free(ctrlep);
-    }
-
+  max3421e_chan_free(priv, (int)ep);
   max3421e_givesem(&priv->exclsem);
   return OK;
 }
@@ -3311,7 +2891,7 @@ static int max3421e_alloc(FAR struct usbhost_driver_s *drvr,
 
   /* There is no special memory requirement for the MAX3421E. */
 
-  alloc = (FAR uint8_t *)kmm_malloc(CONFIG_MAX3421E_MAX3421E_DESCSIZE);
+  alloc = (FAR uint8_t *)kmm_malloc(CONFIG_MAX3421E_DESCSIZE);
   if (!alloc)
     {
       return -ENOMEM;
@@ -3320,7 +2900,7 @@ static int max3421e_alloc(FAR struct usbhost_driver_s *drvr,
   /* Return the allocated address and size of the descriptor buffer */
 
   *buffer = alloc;
-  *maxlen = CONFIG_MAX3421E_MAX3421E_DESCSIZE;
+  *maxlen = CONFIG_MAX3421E_DESCSIZE;
   return OK;
 }
 
@@ -3476,7 +3056,6 @@ static int max3421e_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
                            FAR uint8_t *buffer)
 {
   FAR struct max3421e_usbhost_s *priv = (FAR struct max3421e_usbhost_s *)drvr;
-  FAR struct max3421e_ctrlinfo_s *ep0info = (FAR struct max3421e_ctrlinfo_s *)ep0;
   uint16_t buflen;
   clock_t start;
   clock_t elapsed;
@@ -3503,7 +3082,7 @@ static int max3421e_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
     {
       /* Send the SETUP request */
 
-      ret = max3421e_ctrl_sendsetup(priv, ep0info, req);
+      ret = max3421e_ep0_sendsetup(priv, req);
       if (ret < 0)
         {
           usbhost_trace1(MAX3421E_TRACE1_SENDSETUP, -ret);
@@ -3519,7 +3098,7 @@ static int max3421e_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
 
           if (buflen > 0)
             {
-              ret = max3421e_ctrl_recvdata(priv, ep0info, buffer, buflen);
+              ret = max3421e_ep0_recvdata(priv, ep0info, buffer, buflen);
               if (ret < 0)
                 {
                   usbhost_trace1(MAX3421E_TRACE1_RECVDATA, -ret);
@@ -3531,7 +3110,7 @@ static int max3421e_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
           if (ret == OK)
             {
               priv->chan[ep0info->outndx].outdata1 ^= true;
-              ret = max3421e_ctrl_senddata(priv, ep0info, NULL, 0);
+              ret = max3421e_ep0_senddata(priv, ep0info, NULL, 0);
               if (ret == OK)
                 {
                   /* All success transactions exit here */
@@ -3561,14 +3140,13 @@ static int max3421e_ctrlout(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
                             FAR const uint8_t *buffer)
 {
   FAR struct max3421e_usbhost_s *priv = (FAR struct max3421e_usbhost_s *)drvr;
-  FAR struct max3421e_ctrlinfo_s *ep0info = (FAR struct max3421e_ctrlinfo_s *)ep0;
   uint16_t buflen;
   clock_t start;
   clock_t elapsed;
   int retries;
   int ret;
 
-  DEBUGASSERT(priv != NULL && ep0info != NULL && req != NULL);
+  DEBUGASSERT(priv != NULL && ep0 != EP0 && req != NULL);
   usbhost_vtrace2(MAX3421E_VTRACE2_CTRLOUT, req->type, req->req);
   uinfo("type:%02x req:%02x value:%02x%02x index:%02x%02x len:%02x%02x\n",
         req->type, req->req, req->value[1], req->value[0],
@@ -3588,7 +3166,7 @@ static int max3421e_ctrlout(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
     {
       /* Send the SETUP request */
 
-      ret = max3421e_ctrl_sendsetup(priv, ep0info, req);
+      ret = max3421e_ep0_sendsetup(priv, req);
       if (ret < 0)
         {
           usbhost_trace1(MAX3421E_TRACE1_SENDSETUP, -ret);
@@ -3606,8 +3184,8 @@ static int max3421e_ctrlout(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
             {
               /* Start DATA out transfer (only one DATA packet) */
 
-              priv->chan[ep0info->outndx].outdata1 = true;
-              ret = max3421e_ctrl_senddata(priv, ep0info, NULL, 0);
+              priv->chan[EP0].outdata1 = true;
+              ret = max3421e_ep0_senddata(priv, NULL, 0);
               if (ret < 0)
                 {
                   usbhost_trace1(MAX3421E_TRACE1_SENDDATA, -ret);
@@ -3618,10 +3196,10 @@ static int max3421e_ctrlout(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
 
           if (ret == OK)
             {
-              ret = max3421e_ctrl_recvdata(priv, ep0info, NULL, 0);
+              ret = max3421e_ep0_recvdata(priv, NULL, 0);
               if (ret == OK)
                 {
-                  /* All success transactins exit here */
+                  /* All success transactions exit here */
 
                   max3421e_givesem(&priv->exclsem);
                   return OK;
@@ -3690,7 +3268,7 @@ static ssize_t max3421e_transfer(FAR struct usbhost_driver_s *drvr, usbhost_ep_t
 
   uinfo("chidx: %d buflen: %d\n",  (unsigned int)ep, buflen);
 
-  DEBUGASSERT(priv && buffer && chidx < MAX3421E_MAX_TX_FIFOS && buflen > 0);
+  DEBUGASSERT(priv && buffer && chidx < MAX3421E_NHOST_CHANNELS && buflen > 0);
 
   /* We must have exclusive access to the USB host hardware and state structures */
 
@@ -3757,7 +3335,7 @@ static int max3421e_asynch(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep,
 
   uinfo("chidx: %d buflen: %d\n",  (unsigned int)ep, buflen);
 
-  DEBUGASSERT(priv && buffer && chidx < MAX3421E_MAX_TX_FIFOS && buflen > 0);
+  DEBUGASSERT(priv && buffer && chidx < MAX3421E_NHOST_CHANNELS && buflen > 0);
 
   /* We must have exclusive access to the USB host hardware and state structures */
 
@@ -3783,7 +3361,7 @@ static int max3421e_asynch(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep,
  * Name: max3421e_cancel
  *
  * Description:
- *   Cancel a pending transfer on an endpoint.  Cancelled synchronous or
+ *   Cancel a pending transfer on an endpoint.  Canceled synchronous or
  *   asynchronous transfer will complete normally with the error -ESHUTDOWN.
  *
  * Input Parameters:
@@ -3807,7 +3385,7 @@ static int max3421e_cancel(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
 
   uinfo("chidx: %u: %d\n",  chidx);
 
-  DEBUGASSERT(priv && chidx < MAX3421E_MAX_TX_FIFOS);
+  DEBUGASSERT(priv && chidx < MAX3421E_NHOST_CHANNELS);
   chan = &priv->chan[chidx];
 
   /* We need to disable interrupts to avoid race conditions with the asynchronous
@@ -3817,8 +3395,8 @@ static int max3421e_cancel(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
   flags = enter_critical_section();
 
   /* Halt the channel */
+#warning Missing logic
 
-  max3421e_chan_halt(priv, chidx, CHREASON_CANCELLED);
   chan->result = -ESHUTDOWN;
 
   /* Is there a thread waiting for this transfer to complete? */
@@ -4233,11 +3811,11 @@ static inline int max3421e_sw_initialize(FAR struct max3421e_usbhost_s *priv,
   /* Put all of the channels back in their initial, allocated state */
 
   memset(priv->chan, 0,
-         MAX3421E_MAX_TX_FIFOS * sizeof(struct max3421e_chan_s));
+         MAX3421E_NHOST_CHANNELS * sizeof(struct max3421e_chan_s));
 
   /* Initialize each channel */
 
-  for (i = 0; i < MAX3421E_MAX_TX_FIFOS; i++)
+  for (i = 0; i < MAX3421E_NHOST_CHANNELS; i++)
     {
       FAR struct max3421e_chan_s *chan = &priv->chan[i];
 

@@ -197,19 +197,41 @@
 #define USBHOST_HCTL_SNDTOG0            (1 << 6)
 #define USBHOST_HCTL_SNDTOG1            (1 << 7)
 
-#define USBHOST_HXFR_EP0                (1 << 0)
-#define USBHOST_HXFR_EP1                (1 << 1)
-#define USBHOST_HXFR_EP2                (1 << 2)
-#define USBHOST_HXFR_EP3                (1 << 3)
-#define USBHOST_HXFR_SETUP              (1 << 4)
-#define USBHOST_HXFR_OUTNIN             (1 << 5)
-#define USBHOST_HXFR_ISO                (1 << 6)
-#define USBHOST_HXFR_HS                 (1 << 7)
+#define USBHOST_HXFR_EP_SHIFT           (0)      /* Bits 0-3:  Endpoint number */
+#define USBHOST_HXFR_EP_MASK            (15 << USBHOST_HXFR_EP_SHIFT)
+#  define USBHOST_HXFR_EP(n)            ((uint8_t)(n) << USBHOST_HXFR_EP_SHIFT)
+#define USBHOST_HXFR_TOKEN_SHIFT        (4)      /* Bits 4-7:  Token */
+#define USBHOST_HXFR_TOKEN_MASK         (15 << USBHOST_HXFR_EP_SHIFT)
+#  define USBHOST_HXFR_SETUP            (1 << 4)
+#  define USBHOST_HXFR_OUTNIN           (1 << 5)
+#  define USBHOST_HXFR_ISO              (1 << 6)
+#  define USBHOST_HXFR_HS               (1 << 7)
+#  define USBHOST_HXFR_TOKEN_IN         (0)
+#  define USBHOST_HXFR_TOKEN_SETUP      USBHOST_HXFR_SETUP
+#  define USBHOST_HXFR_TOKEN_OUT        USBHOST_HXFR_OUTNIN
+#  define USBHOST_HXFR_TOKEN_INHS       USBHOST_HXFR_HS
+#  define USBHOST_HXFR_TOKEN_OUTHS      (USBHOST_HXFR_OUTNIN | USBHOST_HXFR_HS)
+#  define USBHOST_HXFR_TOKEN_ISOIN      USBHOST_HXFR_ISO
+#  define USBHOST_HXFR_TOKEN_ISOOUT     (USBHOST_HXFR_OUTNIN | USBHOST_HXFR_ISO)
 
-#define USBHOST_HRSL_HRSLT0             (1 << 0)
-#define USBHOST_HRSL_HRSLT1             (1 << 1)
-#define USBHOST_HRSL_HRSLT2             (1 << 2)
-#define USBHOST_HRSL_HRSLT3             (1 << 3)
+#define USBHOST_HRSL_HRSLT_SHIFT        (0)       /* Bits 0-3: Host result error code */
+#define USBHOST_HRSL_HRSLT_MASK         (15 << USBHOST_HRSL_HRSLT_SHIFT)
+#  define USBHOST_HRSL_HRSLT_SUCCESS    (0  << USBHOST_HRSL_HRSLT_SHIFT)
+#  define USBHOST_HRSL_HRSLT_BUSY       (1  << USBHOST_HRSL_HRSLT_SHIFT)
+#  define USBHOST_HRSL_HRSLT_BADREQ     (2  << USBHOST_HRSL_HRSLT_SHIFT)
+#  define USBHOST_HRSL_HRSLT_UNDEF      (3  << USBHOST_HRSL_HRSLT_SHIFT)
+#  define USBHOST_HRSL_HRSLT_NAK        (4  << USBHOST_HRSL_HRSLT_SHIFT)
+#  define USBHOST_HRSL_HRSLT_STALL      (5  << USBHOST_HRSL_HRSLT_SHIFT)
+#  define USBHOST_HRSL_HRSLT_TOGERR     (6  << USBHOST_HRSL_HRSLT_SHIFT)
+#  define USBHOST_HRSL_HRSLT_WRONGPID   (7  << USBHOST_HRSL_HRSLT_SHIFT)
+#  define USBHOST_HRSL_HRSLT_BADBC      (8  << USBHOST_HRSL_HRSLT_SHIFT)
+#  define USBHOST_HRSL_HRSLT_PIDERR     (9  << USBHOST_HRSL_HRSLT_SHIFT)
+#  define USBHOST_HRSL_HRSLT_PKTERR     (10 << USBHOST_HRSL_HRSLT_SHIFT)
+#  define USBHOST_HRSL_HRSLT_CRCERR     (11 << USBHOST_HRSL_HRSLT_SHIFT)
+#  define USBHOST_HRSL_HRSLT_KERR       (12 << USBHOST_HRSL_HRSLT_SHIFT)
+#  define USBHOST_HRSL_HRSLT_JERR       (13 << USBHOST_HRSL_HRSLT_SHIFT)
+#  define USBHOST_HRSL_HRSLT_TIMEOUT    (14 << USBHOST_HRSL_HRSLT_SHIFT)
+#  define USBHOST_HRSL_HRSLT_BABBLE     (15 << USBHOST_HRSL_HRSLT_SHIFT)
 #define USBHOST_HRSL_RCVTOGRD           (1 << 4)
 #define USBHOST_HRSL_SNDTOGRD           (1 << 5)
 #define USBHOST_HRSL_KSTATUS            (1 << 6)
@@ -322,14 +344,24 @@
 #define MAX3421E_ACKSTAT_TRUE           0x01
 #define MAX3421E_ACKSTAT_FALSE          0x00
 
-/* Sizes and numbers of things */
+/* Sizes and numbers of things -- Peripheral mode */
 
-#define MAX3421E_NENDPOINTS             4       /* EP0..EP3 */
-#define MAX3421E_DBLBUF_SET             0x06    /* EP2, EP3 double buffered */
+#define MAX3421E_NENDPOINTS             4       /* EP0-EP3 */
+#define MAX3421E_ALLEP_SET              0x0f    /* EP0-EP3 */
+#define MAX3421E_CONTROL_SET            0x01    /* EP0 is the only control EP */
+#define MAX3421E_BULK_SET               0x0e    /* EP1-3 can be bulk EPs */
+#define MAX3421E_INTERUPT_SET           0x0e    /* EP1-3 can be interrupt EPs */
+#define MAX3421E_OUTEP_SET              0x02    /* EP1 is the only OUT endpoint */
+#define MAX3421E_INEP_SET               0x0c    /* EP2-3 are IN endpoints */
+#define MAX3421E_DBLBUF_SET             0x06    /* EP1-2 are double buffered */
 
-#define MAX3421E_SNDFIFO_SIZE           64
-#define MAX3421E_RCVFIFO_SIZE           64
 #define MAX3421E_SETUPFIFO_SIZE         8
+
+/* Sizes and numbers of things -- Host mode */
+
+#define MAX3421E_NHOST_CHANNELS         16      /* Number of host channels */
+#define MAX3421E_SNDFIFO_SIZE           64      /* Send FIFO, double-buffered */
+#define MAX3421E_RCVFIFO_SIZE           64      /* Receive FIFO, double-buffered */
 
 /* Value of the MODE register HOST bit */
 
