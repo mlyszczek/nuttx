@@ -896,7 +896,7 @@ static int max3421e_chan_alloc(FAR struct max3421e_usbhost_s *priv)
 
 static void max3421e_chan_free(FAR struct max3421e_usbhost_s *priv, int chidx)
 {
-  DEBUGASSERT((unsigned)chidx < STM32_NHOST_CHANNELS);
+  DEBUGASSERT((unsigned)chidx < MAX3421E_NHOST_CHANNELS);
 
   /* Halt the channel */
 
