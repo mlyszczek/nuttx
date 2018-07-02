@@ -362,6 +362,7 @@
 #define MAX3421E_NHOST_CHANNELS         16      /* Number of host channels */
 #define MAX3421E_SNDFIFO_SIZE           64      /* Send FIFO, double-buffered */
 #define MAX3421E_RCVFIFO_SIZE           64      /* Receive FIFO, double-buffered */
+#define MAX3421E_SUDFIFO_SIZE           8       /* Setup FIFO */
 
 /* Value of the MODE register HOST bit */
 

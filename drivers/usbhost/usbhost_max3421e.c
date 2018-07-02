@@ -146,22 +146,6 @@
 #  undef CONFIG_MAX3421E_USBHOST_PKTDUMP
 #endif
 
-/* HCD Setup *******************************************************************/
-/* Hardware capabilities */
-
-#define MAX3421E_MAX_PACKET_SIZE     64  /* Full speed max packet size */
-#define MAX3421E_EP0_DEF_PACKET_SIZE 8   /* EP0 default packet size */
-#define MAX3421E_EP0_MAX_PACKET_SIZE 64  /* EP0 FS max packet size */
-#define MAX3421E_MAX_PKTCOUNT        256 /* Max packet count */
-#define MAX3421E_RETRY_COUNT         3   /* Number of ctrl transfer retries */
-
-/* Endpoints */
-
-#define EP0                          0
-#define EP1                          1
-#define EP2                          2
-#define EP3                          3
-
 /* Delays **********************************************************************/
 
 #define MAX3421E_READY_DELAY         200000 /* In loop counts */
@@ -361,12 +345,12 @@ static void max3421e_chan_wakeup(FAR struct max3421e_usbhost_s *priv,
 
 static void max3421e_transfer_start(FAR struct max3421e_usbhost_s *priv,
               int chidx);
-static int max3421e_ep0_sendsetup(FAR struct max3421e_usbhost_s *priv,
-              FAR const struct usb_ctrlreq_s *req);
-static int max3421e_ep0_senddata(FAR struct max3421e_usbhost_s *priv,
-              FAR uint8_t *buffer, unsigned int buflen);
-static int max3421e_ep0_recvdata(FAR struct max3421e_usbhost_s *priv,
-              FAR uint8_t *buffer, unsigned int buflen);
+static int max3421e_ctrl_sendsetup(FAR struct max3421e_usbhost_s *priv,
+              int chidx, FAR const struct usb_ctrlreq_s *req);
+static int max3421e_ctrl_senddata(FAR struct max3421e_usbhost_s *priv,
+              int chidx, FAR uint8_t *buffer, unsigned int buflen, in);
+static int max3421e_ctrl_recvdata(FAR struct max3421e_usbhost_s *priv,
+              int chidx, FAR uint8_t *buffer, unsigned int buflen);
 static int max3421e_in_setup(FAR struct max3421e_usbhost_s *priv, int chidx);
 static ssize_t max3421e_in_transfer(FAR struct max3421e_usbhost_s *priv, int chidx,
               FAR uint8_t *buffer, size_t buflen);
@@ -683,7 +667,7 @@ static void max3421e_putreg(FAR struct max3421e_usbhost_s *priv,
 
   SPI_SELECT(spi, lower->devid, true);
 
-  /* Send the wrte command byte */
+  /* Send the write command byte */
 
   cmd = max3421e_fmtcmd(priv, addr, MAX3421E_DIR_WRITE);
   (void)SPI_SEND(spi, cmd);
@@ -1108,19 +1092,19 @@ static void max3421e_chan_wakeup(FAR struct max3421e_usbhost_s *priv,
  * Name: max3421e_transfer_start
  *
  * Description:
- *   Start at transfer on the select IN or OUT channel.
+ *   Start at transfer on the selected IN or OUT channel.
  *
  ****************************************************************************/
 
-static void max3421e_transfer_start(FAR struct max3421e_usbhost_s *priv, int chidx)
+static void max3421e_transfer_start(FAR struct max3421e_usbhost_s *priv,
+                                    int chidx)
 {
   FAR struct max3421e_chan_s *chan;
   uin8_t regval;
   unsigned int npackets;
   unsigned int maxpacket;
-  unsigned int avail;
-  unsigned int wrsize;
-  unsigned int minsize;
+
+  max3421e_pktdump("Sending", chan->buffer, chan->buflen);
 
   /* Set up the initial state of the transfer */
 
@@ -1133,11 +1117,6 @@ static void max3421e_transfer_start(FAR struct max3421e_usbhost_s *priv, int chi
   chan->xfrd     = 0;
   priv->chidx    = chidx;
 
-  /* Compute the expected number of packets associated to the transfer.
-   * If the transfer length is zero (or less than the size of one maximum
-   * size packet), then one packet is expected.
-   */
-
   /* If the transfer size is greater than one packet, then calculate the
    * number of packets that will be received/sent, including any partial
    * final packet.
@@ -1148,38 +1127,11 @@ static void max3421e_transfer_start(FAR struct max3421e_usbhost_s *priv, int chi
   if (chan->buflen > maxpacket)
     {
       npackets = (chan->buflen + maxpacket - 1) / maxpacket;
-
-      /* Clip if the buffer length if it exceeds the maximum number of
-       * packets that can be transferred (this should not happen).
-       */
-
-      if (npackets > MAX3421E_MAX_PKTCOUNT)
-        {
-          npackets = MAX3421E_MAX_PKTCOUNT;
-          chan->buflen = MAX3421E_MAX_PKTCOUNT * maxpacket;
-          usbhost_trace2(MAX3421E_TRACE2_CLIP, chidx, chan->buflen);
-        }
     }
   else
     {
-      /* One packet will be sent/received (might be a zero length packet) */
-
       npackets = 1;
     }
-
-  /* If it is an IN transfer, then adjust the size of the buffer UP to
-   * a full number of packets.  Hmmm... couldn't this cause an overrun
-   * into unallocated memory?
-   */
-
-#if 0 /* Think about this */
-  if (chan->in)
-    {
-      /* Force the buffer length to an even multiple of maxpacket */
-
-      chan->buflen = npackets * maxpacket;
-    }
-#endif
 
   /* Save the number of packets in the transfer.  We will need this in
    * order to set the next data toggle correctly when the transfer
@@ -1188,121 +1140,62 @@ static void max3421e_transfer_start(FAR struct max3421e_usbhost_s *priv, int chi
 
   chan->npackets = (uint8_t)npackets;
 
-  /* Setup the HCTSIZn register */
-
-  regval = ((uint32_t)chan->buflen << MAX3421E_HCTSIZ_XFRSIZ_SHIFT) |
-           ((uint32_t)npackets << MAX3421E_HCTSIZ_PKTCNT_SHIFT) |
-           ((uint32_t)chan->pid << MAX3421E_HCTSIZ_DPID_SHIFT);
-  max3421e_putreg(MAX3421E_MAX3421E_HCTSIZ(chidx), regval);
-
-  /* Setup the HCCHAR register: Frame oddness and host channel enable */
-
-  regval = max3421e_getreg(priv, MAX3421E_MAX3421E_HCCHAR(chidx));
-
-  /* Set/clear the Odd Frame bit.  Check for an even frame; if so set Odd
-   * Frame. This field is applicable for only periodic (isochronous and
-   * interrupt) channels.
-   */
-
-  if ((max3421e_getreg(priv, MAX3421E_MAX3421E_HFNUM) & 1) == 0)
-    {
-      regval |= MAX3421E_HCCHAR_ODDFRM;
-    }
-  else
-    {
-      regval &= ~MAX3421E_HCCHAR_ODDFRM;
-    }
-
-  regval &= ~MAX3421E_HCCHAR_CHDIS;
-  regval |= MAX3421E_HCCHAR_CHENA;
-  max3421e_putreg(MAX3421E_MAX3421E_HCCHAR(chidx), regval);
-
-  /* If this is an out transfer, then we need to do more.. we need to copy
-   * the outgoing data into the correct TxFIFO.
+  /* If this is an out transfer, then we need to copy the outgoing data into
+   * SNDFIFO.
    */
 
   if (!chan->in && chan->buflen > 0)
     {
-      /* Handle non-periodic (CTRL and BULK) OUT transfers differently than
-       * periodic (INTR and ISOC) OUT transfers.
-       */
+      FAR const uint8_t *src;
+      unsigned int wrsize;
+      unsigned int maxfifo;
 
-      minsize = MIN(chan->buflen, chan->maxpacket);
+      /* Yes.. Get the size of the biggest thing that we can put in the Tx FIFO now */
 
-      switch (chan->eptype)
+      wrsize  = chan->buflen;
+      maxfifo = 2 * maxpacket; /* Double buffered */
+
+      if (wrsize > maxfifo)
         {
-        case MAX3421E_EPTYPE_CTRL: /* Non periodic transfer */
-        case MAX3421E_EPTYPE_BULK:
-          {
-            /* Read the Non-periodic Tx FIFO status register */
-
-            regval = max3421e_getreg(priv, MAX3421E_MAX3421E_HNPTXSTS);
-            avail  = ((regval & MAX3421E_HNPTXSTS_NPTXFSAV_MASK) >> MAX3421E_HNPTXSTS_NPTXFSAV_SHIFT) << 2;
-          }
-          break;
-
-        /* Periodic transfer */
-
-        case MAX3421E_EPTYPE_INTR:
-        case MAX3421E_EPTYPE_ISOC:
-          {
-            /* Read the Non-periodic Tx FIFO status register */
-
-            regval = max3421e_getreg(priv, MAX3421E_MAX3421E_HPTXSTS);
-            avail  = ((regval & MAX3421E_HPTXSTS_PTXFSAVL_MASK) >> MAX3421E_HPTXSTS_PTXFSAVL_SHIFT) << 2;
-          }
-          break;
-
-        default:
-          DEBUGASSERT(false);
-          return;
+          wrsize = maxfifo;
         }
 
-      /* Is there space in the TxFIFO to hold the minimum size packet? */
+      /* Write packet into the SNDFIFO. */
 
-      if (minsize <= avail)
-        {
-          /* Yes.. Get the size of the biggest thing that we can put in the Tx FIFO now */
+      max3421e_sndblock(priv, MAX3421E_USBHOST_SUDFIFO, chan->buffer, wrsize);
 
-          wrsize = chan->buflen;
-          if (wrsize > avail)
-            {
-              /* Clip the write size to the number of full, max sized packets
-               * that will fit in the Tx FIFO.
-               */
+      /* Increment the count of bytes "in-flight" in the Tx FIFO */
 
-              unsigned int wrpackets = avail / chan->maxpacket;
-              wrsize = wrpackets * chan->maxpacket;
-            }
-
-          /* Write packet into the Tx FIFO. */
-
-          max3421e_int_wrpacket(priv, chan->buffer, chidx, wrsize);
-        }
+      chan->inflight += wrsize;
 
       /* Did we put the entire buffer into the Tx FIFO? */
 
-      if (chan->buflen > avail)
+      if (wrsize < chan->buflen)
         {
           /* No, there was insufficient space to hold the entire transfer ...
-           * Enable the Tx FIFO interrupt to handle the transfer when the Tx
-           * FIFO becomes empty.
+           * Enable the Tx FIFO interrupt to handle the transfer when the
+           * SNDFIFO becomes empty.
            */
-#warning Missing logic
+
+          max3421e_int_enable(priv, USBHOST_HIRQ_SNDBAVIRQ);
         }
     }
 }
 
 /****************************************************************************
- * Name: max3421e_ep0_sendsetup
+ * Name: max3421e_ctrl_sendsetup
  *
  * Description:
  *   Send an IN/OUT SETUP packet.
  *
+ * Assumptions:
+ *   Caller has the SPI locked
+ *
  ****************************************************************************/
 
-static int max3421e_ep0_sendsetup(FAR struct max3421e_usbhost_s *priv,
-                                FAR const struct usb_ctrlreq_s *req)
+static int max3421e_ctrl_sendsetup(FAR struct max3421e_usbhost_s *priv,
+                                   int chidx,
+                                   FAR const struct usb_ctrlreq_s *req)
 {
   FAR struct max3421e_chan_s *chan;
   clock_t start;
@@ -1311,7 +1204,7 @@ static int max3421e_ep0_sendsetup(FAR struct max3421e_usbhost_s *priv,
 
   /* Loop while the device reports NAK (and a timeout is not exceeded */
 
-  chan  = &priv->chan[EP0];
+  chan  = &priv->chan[chidx];
   start = clock_systimer();
 
   do
@@ -1334,7 +1227,7 @@ static int max3421e_ep0_sendsetup(FAR struct max3421e_usbhost_s *priv,
 
       /* Start the transfer */
 
-      max3421e_transfer_start(priv, EP0);
+      max3421e_transfer_start(priv, chidx);
 
       /* Wait for the transfer to complete */
 
@@ -1369,18 +1262,22 @@ static int max3421e_ep0_sendsetup(FAR struct max3421e_usbhost_s *priv,
 }
 
 /****************************************************************************
- * Name: max3421e_ep0_senddata
+ * Name: max3421e_ctrl_senddata
  *
  * Description:
  *   Send data in the data phase of an OUT control transfer.  Or send status
  *   in the status phase of an IN control transfer
  *
+ * Assumptions:
+ *   Caller has the SPI locked
+ *
  ****************************************************************************/
 
-static int max3421e_ep0_senddata(FAR struct max3421e_usbhost_s *priv,
-                               FAR uint8_t *buffer, unsigned int buflen)
+static int max3421e_ctrl_senddata(FAR struct max3421e_usbhost_s *priv,
+                                  int chidx, FAR uint8_t *buffer,
+                                  unsigned int buflen)
 {
-  FAR struct max3421e_chan_s *chan = &priv->chan[EP0];
+  FAR struct max3421e_chan_s *chan = &priv->chan[chidx];
   int ret;
 
   /* Save buffer information */
@@ -1413,7 +1310,7 @@ static int max3421e_ep0_senddata(FAR struct max3421e_usbhost_s *priv,
 
   /* Start the transfer */
 
-  max3421e_transfer_start(priv, EP0);
+  max3421e_transfer_start(priv, chidx);
 
   /* Wait for the transfer to complete and return the result */
 
@@ -1421,18 +1318,21 @@ static int max3421e_ep0_senddata(FAR struct max3421e_usbhost_s *priv,
 }
 
 /****************************************************************************
- * Name: max3421e_ep0_recvdata
+ * Name: max3421e_ctrl_recvdata
  *
  * Description:
  *   Receive data in the data phase of an IN control transfer.  Or receive status
  *   in the status phase of an OUT control transfer
  *
+ * Assumptions:
+ *   Caller has the SPI locked
+ *
  ****************************************************************************/
 
-static int max3421e_ep0_recvdata(FAR struct max3421e_usbhost_s *priv,
-                               FAR uint8_t *buffer, unsigned int buflen)
+static int max3421e_ctrl_recvdata(FAR struct max3421e_usbhost_s *priv,
+                                  FAR uint8_t *buffer, unsigned int buflen)
 {
-  FAR struct max3421e_chan_s *chan = &priv->chan[EP0];
+  FAR struct max3421e_chan_s *chan = &priv->chan[chidx];
   int ret;
 
   /* Save buffer information */
@@ -1453,7 +1353,7 @@ static int max3421e_ep0_recvdata(FAR struct max3421e_usbhost_s *priv,
 
   /* Start the transfer */
 
-  max3421e_transfer_start(priv, EP0);
+  max3421e_transfer_start(priv, chidx);
 
   /* Wait for the transfer to complete and return the result */
 
@@ -1478,7 +1378,7 @@ static int max3421e_in_setup(FAR struct max3421e_usbhost_s *priv, int chidx)
   switch (chan->eptype)
     {
     default:
-    case MAX3421E_EPTYPE_CTRL: /* Control */
+    case USB_EP_ATTR_XFER_CONTROL: /* Control */
       {
         /* This kind of transfer on control endpoints other than EP0 are not
          * currently supported
@@ -1487,7 +1387,7 @@ static int max3421e_in_setup(FAR struct max3421e_usbhost_s *priv, int chidx)
         return -ENOSYS;
       }
 
-    case MAX3421E_EPTYPE_ISOC: /* Isochronous */
+    case USB_EP_ATTR_XFER_ISOC: /* Isochronous */
       {
         /* Set up the IN data PID */
 
@@ -1496,7 +1396,7 @@ static int max3421e_in_setup(FAR struct max3421e_usbhost_s *priv, int chidx)
       }
       break;
 
-    case MAX3421E_EPTYPE_BULK: /* Bulk */
+    case USB_EP_ATTR_XFER_BULK: /* Bulk */
       {
         /* Setup the IN data PID */
 
@@ -1505,7 +1405,7 @@ static int max3421e_in_setup(FAR struct max3421e_usbhost_s *priv, int chidx)
       }
       break;
 
-    case MAX3421E_EPTYPE_INTR: /* Interrupt */
+    case USB_EP_ATTR_XFER_INT: /* Interrupt */
       {
         /* Setup the IN data PID */
 
@@ -1832,7 +1732,7 @@ static int max3421e_out_setup(FAR struct max3421e_usbhost_s *priv, int chidx)
   switch (chan->eptype)
     {
     default:
-    case MAX3421E_EPTYPE_CTRL: /* Control */
+    case USB_EP_ATTR_XFER_CONTROL: /* Control */
       {
         /* This kind of transfer on control endpoints other than EP0 are not
          * currently supported
@@ -1841,7 +1741,7 @@ static int max3421e_out_setup(FAR struct max3421e_usbhost_s *priv, int chidx)
         return -ENOSYS;
       }
 
-    case MAX3421E_EPTYPE_ISOC: /* Isochronous */
+    case USB_EP_ATTR_XFER_ISOC: /* Isochronous */
       {
         /* Set up the OUT data PID */
 
@@ -1850,7 +1750,7 @@ static int max3421e_out_setup(FAR struct max3421e_usbhost_s *priv, int chidx)
       }
       break;
 
-    case MAX3421E_EPTYPE_BULK: /* Bulk */
+    case USB_EP_ATTR_XFER_BULK: /* Bulk */
       {
         /* Setup the OUT data PID */
 
@@ -1859,7 +1759,7 @@ static int max3421e_out_setup(FAR struct max3421e_usbhost_s *priv, int chidx)
       }
       break;
 
-    case MAX3421E_EPTYPE_INTR: /* Interrupt */
+    case USB_EP_ATTR_XFER_INT: /* Interrupt */
       {
         /* Setup the OUT data PID */
 
@@ -2099,46 +1999,6 @@ static int max3421e_out_asynch(FAR struct max3421e_usbhost_s *priv, int chidx,
   return ret;
 }
 #endif
-
-/****************************************************************************
- * Name: max3421e_int_wrpacket
- *
- * Description:
- *   Transfer the 'buflen' bytes in 'buffer' to the Tx FIFO associated with
- *   'chidx' (non-DMA).
- *
- ****************************************************************************/
-
-static void max3421e_int_wrpacket(FAR struct max3421e_usbhost_s *priv,
-                                  FAR uint8_t *buffer, int chidx, int buflen)
-{
-  FAR uint32_t *src;
-  uint32_t fifo;
-  int buflen32;
-
-  max3421e_pktdump("Sending", buffer, buflen);
-
-  /* Get the number of 32-byte words associated with this byte size */
-
-  buflen32 = (buflen + 3) >> 2;
-
-  /* Get the address of the Tx FIFO associated with this channel */
-
-  fifo = MAX3421E_MAX3421E_DFIFO_HCH(chidx);
-
-  /* Transfer all of the data into the Tx FIFO */
-
-  src = (FAR uint32_t *)buffer;
-  for (; buflen32 > 0; buflen32--)
-    {
-      uint32_t data = *src++;
-      max3421e_putreg(priv, data, fifo);
-    }
-
-  /* Increment the count of bytes "in-flight" in the Tx FIFO */
-
-  priv->chan[chidx].inflight += buflen;
-}
 
 /****************************************************************************
  * Name: max3421e_connect_event
@@ -2402,6 +2262,25 @@ static int max3421e_irqwork(FAR void *arg)
 
           max3421e_putreg(priv, MAX3421E_USBHOST_HIRQ,
                           USBHOST_HIRQ_CONNIRQ);
+        }
+
+      /* SNDBAV: The SNDFIFO is available */
+
+      else if ((pending & USBHOST_HIRQ_SNDBAVIRQ) != 0)
+        {
+          /* Disable furtherSNDBAV interrupts */
+
+           max3421e_int_disable(priv, USBHOST_HIRQ_SNDBAVIRQ);
+
+          /* Finish long transfer, possibly re-enabling the SNDBAV
+           * interrupt (see max3421e_transfer_start)
+           */
+#warning Missing logic
+
+          /* Clear the pending NDBAV interrupt */
+
+          max3421e_putreg(priv, MAX3421E_USBHOST_HIRQ,
+                          USBHOST_HIRQ_SNDBAVIRQ);
         }
     }
 
@@ -2764,6 +2643,7 @@ static int max3421e_epalloc(FAR struct usbhost_driver_s *drvr,
   FAR struct max3421e_usbhost_s *priv = (FAR struct max3421e_usbhost_s *)drvr;
   struct usbhost_hubport_s *hport;
   FAR struct max3421e_chan_s *chan;
+  uint16_t maxpacket;
   uint8_t epno;
   int ret;
 
@@ -2802,7 +2682,7 @@ static int max3421e_epalloc(FAR struct usbhost_driver_s *drvr,
   chan->funcaddr  = hport->funcaddr;
   chan->speed     = hport->speed;
   chan->interval  = epdesc->interval;
-  chan->maxpacket = epdesc->mxpacketsize;
+  chan->maxpacket = epdesc->mxpacketsize;;
   chan->indata1   = false;
   chan->outdata1  = false;
 
@@ -3060,9 +2940,13 @@ static int max3421e_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
   clock_t start;
   clock_t elapsed;
   int retries;
+  int chidx;
   int ret;
 
-  DEBUGASSERT(priv != NULL && ep0info != NULL && req != NULL);
+  DEBUGASSERT(priv != NULL && req != NULL);
+  chidx = (int)ep;
+  DEBUGASSERT(chidx >= 0 && chidx < MAX3421E_NHOST_CHANNELS);
+
   usbhost_vtrace2(MAX3421E_VTRACE2_CTRLIN, req->type, req->req);
   uinfo("type:%02x req:%02x value:%02x%02x index:%02x%02x len:%02x%02x\n",
         req->type, req->req, req->value[1], req->value[0],
@@ -3082,7 +2966,10 @@ static int max3421e_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
     {
       /* Send the SETUP request */
 
-      ret = max3421e_ep0_sendsetup(priv, req);
+      max3421e_lock(priv);
+      ret = max3421e_ctrl_sendsetup(priv, chidx, req);
+      max3421e_unlock(priv);
+
       if (ret < 0)
         {
           usbhost_trace1(MAX3421E_TRACE1_SENDSETUP, -ret);
@@ -3098,7 +2985,10 @@ static int max3421e_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
 
           if (buflen > 0)
             {
-              ret = max3421e_ep0_recvdata(priv, ep0info, buffer, buflen);
+              max3421e_lock(priv);
+              ret = max3421e_ctrl_recvdata(priv, chidx, buffer, buflen);
+              max3421e_unlock(priv);
+
               if (ret < 0)
                 {
                   usbhost_trace1(MAX3421E_TRACE1_RECVDATA, -ret);
@@ -3110,7 +3000,11 @@ static int max3421e_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
           if (ret == OK)
             {
               priv->chan[ep0info->outndx].outdata1 ^= true;
-              ret = max3421e_ep0_senddata(priv, ep0info, NULL, 0);
+
+              max3421e_lock(priv);
+              ret = max3421e_ctrl_senddata(priv, chidx, NULL, 0);
+              max3421e_unlock(priv);
+
               if (ret == OK)
                 {
                   /* All success transactions exit here */
@@ -3143,10 +3037,14 @@ static int max3421e_ctrlout(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
   uint16_t buflen;
   clock_t start;
   clock_t elapsed;
+  int chidx;
   int retries;
   int ret;
 
-  DEBUGASSERT(priv != NULL && ep0 != EP0 && req != NULL);
+  DEBUGASSERT(priv != NULL && req != NULL);
+  chidx = (int)ep;
+  DEBUGASSERT(chidx >= 0 && chidx < MAX3421E_NHOST_CHANNELS);
+
   usbhost_vtrace2(MAX3421E_VTRACE2_CTRLOUT, req->type, req->req);
   uinfo("type:%02x req:%02x value:%02x%02x index:%02x%02x len:%02x%02x\n",
         req->type, req->req, req->value[1], req->value[0],
@@ -3166,7 +3064,10 @@ static int max3421e_ctrlout(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
     {
       /* Send the SETUP request */
 
-      ret = max3421e_ep0_sendsetup(priv, req);
+      max3421e_lock(priv);
+      ret = max3421e_ctrl_sendsetup(priv, chidx, req);
+      max3421e_unlock(priv);
+
       if (ret < 0)
         {
           usbhost_trace1(MAX3421E_TRACE1_SENDSETUP, -ret);
@@ -3185,7 +3086,11 @@ static int max3421e_ctrlout(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
               /* Start DATA out transfer (only one DATA packet) */
 
               priv->chan[EP0].outdata1 = true;
-              ret = max3421e_ep0_senddata(priv, NULL, 0);
+
+              max3421e_lock(priv);
+              ret = max3421e_ctrl_senddata(priv, chidx, NULL, 0);
+              max3421e_unlock(priv);
+
               if (ret < 0)
                 {
                   usbhost_trace1(MAX3421E_TRACE1_SENDDATA, -ret);
@@ -3196,7 +3101,10 @@ static int max3421e_ctrlout(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
 
           if (ret == OK)
             {
-              ret = max3421e_ep0_recvdata(priv, NULL, 0);
+              max3421e_lock(priv);
+              ret = max3421e_ctrl_recvdata(priv, chidx, NULL, 0);
+              max3421e_unlock(priv);
+
               if (ret == OK)
                 {
                   /* All success transactions exit here */
