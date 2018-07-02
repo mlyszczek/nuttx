@@ -2,7 +2,13 @@
  * drivers/usbhost/max3421e_otgfshost.c
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
- *   Authors: Gregory Nutt <gnutt@nuttx.org>
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
+ *
+ * References:
+ *   "MAX3421E USB Peripheral/Host Controller with SPI Interface",
+ *      19-3953, Rev 4, Maxim Integrated, July 2013 (Datasheet).
+ *   "MAX3421E Programming Guide", Maxim Integrated, December 2006
+ *      (Application Note).
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -236,7 +242,6 @@ struct max3421e_usbhost_s
 
   volatile uint8_t  smstate;   /* The state of the USB host state machine */
   uint8_t           chidx;     /* ID of channel waiting for space in Tx FIFO */
-  uint8_t           ackstat;   /* See MAX3421E_ACKSTAT_* definitions */
   uint8_t           irqset;    /* Set of enabled interrupts */
   volatile bool     connected; /* Connected to device */
   volatile bool     change;    /* Connection change */
@@ -575,14 +580,14 @@ static void max3421e_checkreg(uint8_t addr, uint8_t val, bool iswrite)
  *     Bit 1:     Direction (read = 0, write = 1)
  *     Bit 0:     ACKSTAT
  *
+ *   The ACKSTAT bit is ignored in host mode.
+ *
  ****************************************************************************/
 
 static inline uint8_t max3421e_fmtcmd(FAR struct max3421e_usbhost_s *priv,
                                       uint8_t addr, uint8_t dir)
 {
-  uint8_t cmd = addr | dir | priv->acstat;
-  priv->ackstat = MAX3421E_ACKSTAT_FALSE;
-  return cmd;
+  return addr | dir | MAX3421E_ACKSTAT_FALSE;
 }
 
 /****************************************************************************
@@ -2245,14 +2250,14 @@ static int max3421e_irqwork(FAR void *arg)
 
       /* Possibilities:
        *
-       *   HXFRDNIRQ
-       *   FRAMEIRQ     - SOF interrupt
-       *   CONNIRQ      - Connection event
-       *   SUSDNIRQ
+       *   HXFRDNIRQ    - Host Transfer Done Interrupt
+       *   FRAMEIRQ     - Frame Generator Interrupt
+       *   CONNIRQ      - Peripheral Connect/Disconnect Interrupt
+       *   SUSDNIRQ     - Suspend operation Done
        *   SNDBAVIRQ    - SNDFIFO is available
        *   RCVDAVIRQ    - RCVFIFO data available
-       *   RSMREQIRQ
-       *   BUSEVENTIRQ
+       *   RSMREQIRQ    - Remote Wakeup Interrupt
+       *   BUSEVENTIRQ  - Bus Reset or Bus Resume Interrupt
        *
        * Only CONNIRQ handled here.
        */
@@ -3695,7 +3700,6 @@ static inline int max3421e_sw_initialize(FAR struct max3421e_usbhost_s *priv,
   priv->lower     = lower;
   priv->smstate   = SMSTATE_DETACHED;
   priv->connected = false;
-  priv->ackstat   = MAX3421E_ACKSTAT_FALSE;
   priv->irqset    = 0;
   priv->change    = false;
 
@@ -3782,7 +3786,6 @@ static inline int max3421e_hw_initialize(FAR struct max3421e_usbhost_s *priv)
   max3421e_putreg(priv, MAX3421E_USBHOST_HIRQ, 0xff);
 
   priv->irqset  = 0;
-  priv->ackstat = MAX3421E_ACKSTAT_FALSE;
 
   /* Configure full duplex SPI, edge-active rising edge interrupt */
 

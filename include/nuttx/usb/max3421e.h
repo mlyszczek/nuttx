@@ -4,6 +4,12 @@
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
+ * References:
+ *   "MAX3421E USB Peripheral/Host Controller with SPI Interface",
+ *      19-3953, Rev 4, Maxim Integrated, July 2013 (Datasheet).
+ *   "MAX3421E Programming Guide", Maxim Integrated, December 2006
+ *      (Application Note).
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -334,6 +340,11 @@
  *   Bit 2:     Unused
  *   Bit 1:     Direction (read = 0, write = 1)
  *   Bit 0:     ACKSTAT
+ *
+ * The ACKSTAT bit sets the ACKSTAT bit in the EPSTALLS (R9) register
+ * (peripheral mode only). The SPI master sets this bit to indicate that it
+ * has finished servicing a CONTROL transfer.  The ACKSTAT bit is ignored in
+ * host mode.
  */
 
 /* Read/write access to a register */
