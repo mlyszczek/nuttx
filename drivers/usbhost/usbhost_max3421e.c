@@ -430,13 +430,10 @@ static int max3421e_connect(FAR struct max3421e_usbhost_s *priv,
 static void max3421e_disconnect(FAR struct usbhost_driver_s *drvr,
               FAR struct usbhost_hubport_s *hport);
 
-/* Initialization **************************************************************/
+/* Initialization ***********************************************************/
 
 static void max3421e_busreset(FAR struct max3421e_usbhost_s *priv);
 static int  max3421e_startsof(FAR struct max3421e_usbhost_s *priv);
-static void max3421e_flush_txfifos(uint32_t txfnum);
-static void max3421e_flush_rxfifo(void);
-static void max3421e_vbusdrive(FAR struct max3421e_usbhost_s *priv, bool state);
 
 static inline int max3421e_sw_initialize(FAR struct max3421e_usbhost_s *priv,
               FAR struct usbhost_connection_s conn *conn,
@@ -1160,9 +1157,13 @@ static void max3421e_transfer_start(FAR struct max3421e_usbhost_s *priv,
           wrsize = maxfifo;
         }
 
+      /* Make sure the peripheral address is correct */
+
+      max3421e_putreg(priv, MAX3421E_USBHOST_PERADDR, chan->funcaddr);
+
       /* Write packet into the SNDFIFO. */
 
-      max3421e_sndblock(priv, MAX3421E_USBHOST_SUDFIFO, chan->buffer, wrsize);
+      max3421e_sndblock(priv, MAX3421E_USBHOST_SNDFIFO, chan->buffer, wrsize);
 
       /* Increment the count of bytes "in-flight" in the Tx FIFO */
 
@@ -1211,10 +1212,13 @@ static int max3421e_ctrl_sendsetup(FAR struct max3421e_usbhost_s *priv,
     {
       /* Send the  SETUP packet */
 
-      chan->pid    = MAX3421E_PID_SETUP;
-      chan->buffer = (FAR uint8_t *)req;
-      chan->buflen = USB_SIZEOF_CTRLREQ;
-      chan->xfrd   = 0;
+      chan->pid      = MAX3421E_PID_SETUP;
+      chan->buffer   = (FAR uint8_t *)req;
+      chan->buflen   = USB_SIZEOF_CTRLREQ;
+      chan->result   = EBUSY;
+      chan->inflight = 0;
+      chan->xfrd     = 0;
+      priv->chidx    = chidx;
 
       /* Set up for the wait BEFORE starting the transfer */
 
@@ -1225,10 +1229,20 @@ static int max3421e_ctrl_sendsetup(FAR struct max3421e_usbhost_s *priv,
           return ret;
         }
 
-      /* Start the transfer */
+      /* Make sure the peripheral address is correct */
 
-      max3421e_transfer_start(priv, chidx);
+      max3421e_putreg(priv, MAX3421E_USBHOST_PERADDR, chan->funcaddr);
 
+      /* Write packet into the SUDFIFO. */
+
+      max3421e_sndblock(priv, MAX3421E_USBHOST_SUDFIFO, chan->buffer, wrsize);
+
+      /* Increment the count of bytes "in-flight" in the Tx FIFO */
+
+      chan->inflight += wrsize;
+
+#warning REVISIT: wait for what?
+#if 0
       /* Wait for the transfer to complete */
 
       ret = max3421e_chan_wait(priv, chan);
@@ -1255,6 +1269,7 @@ static int max3421e_ctrl_sendsetup(FAR struct max3421e_usbhost_s *priv,
       /* Get the elapsed time (in frames) */
 
       elapsed = clock_systimer() - start;
+#endif
     }
   while (elapsed < MAX3421E_SETUP_DELAY);
 
@@ -1310,6 +1325,7 @@ static int max3421e_ctrl_senddata(FAR struct max3421e_usbhost_s *priv,
 
   /* Start the transfer */
 
+  chan->in = true;
   max3421e_transfer_start(priv, chidx);
 
   /* Wait for the transfer to complete and return the result */
@@ -1353,6 +1369,7 @@ static int max3421e_ctrl_recvdata(FAR struct max3421e_usbhost_s *priv,
 
   /* Start the transfer */
 
+  chan->in = false;
   max3421e_transfer_start(priv, chidx);
 
   /* Wait for the transfer to complete and return the result */
@@ -1429,8 +1446,9 @@ static int max3421e_in_setup(FAR struct max3421e_usbhost_s *priv, int chidx)
  *
  ****************************************************************************/
 
-static ssize_t max3421e_in_transfer(FAR struct max3421e_usbhost_s *priv, int chidx,
-                                 FAR uint8_t *buffer, size_t buflen)
+static ssize_t max3421e_in_transfer(FAR struct max3421e_usbhost_s *priv,
+                                    int chidx, FAR uint8_t *buffer,
+                                    size_t buflen)
 {
   FAR struct max3421e_chan_s *chan;
   clock_t start;
@@ -1615,7 +1633,7 @@ static ssize_t max3421e_in_transfer(FAR struct max3421e_usbhost_s *priv, int chi
 
 #ifdef CONFIG_USBHOST_ASYNCH
 static void max3421e_in_next(FAR struct max3421e_usbhost_s *priv,
-                          FAR struct max3421e_chan_s *chan)
+                             FAR struct max3421e_chan_s *chan)
 {
   usbhost_asynch_t callback;
   FAR void *arg;
@@ -1680,8 +1698,8 @@ static void max3421e_in_next(FAR struct max3421e_usbhost_s *priv,
 
 #ifdef CONFIG_USBHOST_ASYNCH
 static int max3421e_in_asynch(FAR struct max3421e_usbhost_s *priv, int chidx,
-                           FAR uint8_t *buffer, size_t buflen,
-                           usbhost_asynch_t callback, FAR void *arg)
+                              FAR uint8_t *buffer, size_t buflen,
+                              usbhost_asynch_t callback, FAR void *arg)
 {
   FAR struct max3421e_chan_s *chan;
   int ret;
@@ -1787,8 +1805,9 @@ static int max3421e_out_setup(FAR struct max3421e_usbhost_s *priv, int chidx)
  *
  ****************************************************************************/
 
-static ssize_t max3421e_out_transfer(FAR struct max3421e_usbhost_s *priv, int chidx,
-                                  FAR uint8_t *buffer, size_t buflen)
+static ssize_t max3421e_out_transfer(FAR struct max3421e_usbhost_s *priv,
+                                     int chidx, FAR uint8_t *buffer,
+                                     size_t buflen)
 {
   FAR struct max3421e_chan_s *chan;
   clock_t start;
@@ -1862,12 +1881,6 @@ static ssize_t max3421e_out_transfer(FAR struct max3421e_usbhost_s *priv, int ch
               uerr("ERROR: max3421e_chan_wait failed: %d\n", ret);
               return (ssize_t)ret;
             }
-
-          /* Is this flush really necessary? What does the hardware do with the
-           * data in the FIFO when the NAK occurs?  Does it discard it?
-           */
-
-          max3421e_flush_txfifos(MAX3421E_GRSTCTL_TXFNUM_HALL);
 
           /* Get the device a little time to catch up.  Then retry the transfer
            * using the same buffer pointer and length.
@@ -2233,11 +2246,11 @@ static int max3421e_irqwork(FAR void *arg)
       /* Possibilities:
        *
        *   HXFRDNIRQ
-       *   FRAMEIRQ
-       *   CONNIRQ
+       *   FRAMEIRQ     - SOF interrupt
+       *   CONNIRQ      - Connection event
        *   SUSDNIRQ
-       *   SNDBAVIRQ
-       *   RCVDAVIRQ
+       *   SNDBAVIRQ    - SNDFIFO is available
+       *   RCVDAVIRQ    - RCVFIFO data available
        *   RSMREQIRQ
        *   BUSEVENTIRQ
        *
@@ -2511,6 +2524,34 @@ static int max3421e_getspeed(FAR struct max3421e_usbhost_s *priv,
 
   return ret;
 }
+
+/****************************************************************************
+ * Name: max3421e_enumerate
+ *
+ * Description:
+ *   Enumerate the connected device.  As part of this enumeration process,
+ *   the driver will (1) get the device's configuration descriptor, (2)
+ *   extract the class ID info from the configuration descriptor, (3) call
+ *   usbhost_findclass() to find the class that supports this device, (4)
+ *   call the create() method on the struct usbhost_registry_s interface
+ *   to get a class instance, and finally (5) call the connect() method
+ *   of the struct usbhost_class_s interface.  After that, the class is in
+ *   charge of the sequence of operations.
+ *
+ * Input Parameters:
+ *   conn - The USB host connection instance obtained as a parameter from
+ *      the call to the USB driver initialization logic.
+ *   hport - The descriptor of the hub port that has the newly connected
+ *      device.
+ *
+ * Returned Value:
+ *   On success, zero (OK) is returned. On a failure, a negated errno value is
+ *   returned indicating the nature of the failure
+ *
+ * Assumptions:
+ *   This function will *not* be called from an interrupt handler.
+ *
+ ****************************************************************************/
 
 static int max3421e_enumerate(FAR struct usbhost_connection_s *conn,
                               FAR struct usbhost_hubport_s *hport)
@@ -3575,64 +3616,6 @@ static int max3421e_startsof(FAR struct max3421e_usbhost_s *priv)
 
   usleep(20*1000);
   return OK;
-}
-
-/****************************************************************************
- * Name: max3421e_flush_txfifos
- *
- * Description:
- *   Flush the selected Tx FIFO.
- *
- * Input Parameters:
- *   txfnum -- USB host driver private data structure.
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-static void max3421e_flush_txfifos(uint32_t txfnum)
-{
-#warning Missing logic
-}
-
-/****************************************************************************
- * Name: max3421e_flush_rxfifo
- *
- * Description:
- *   Flush the Rx FIFO.
- *
- * Input Parameters:
- *   priv -- USB host driver private data structure.
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-static void max3421e_flush_rxfifo(void)
-{
-#warning Missing logic
-}
-
-/****************************************************************************
- * Name: max3421e_vbusdrive
- *
- * Description:
- *   Drive the Vbus +5V.
- *
- * Input Parameters:
- *   priv  - USB host driver private data structure.
- *   state - True: Drive, False: Don't drive
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-static void max3421e_vbusdrive(FAR struct max3421e_usbhost_s *priv, bool state)
-{
-#warning Missing logic
 }
 
 /****************************************************************************
