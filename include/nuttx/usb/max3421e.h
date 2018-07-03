@@ -55,6 +55,28 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* Configuration ***************************************************************/
+/* MAX3421E USB Host Driver Support
+ *
+ * Pre-requisites
+ *
+ *  CONFIG_USBHOST - Enable general USB host support
+ *  CONFIG_USBHOST_MAX3421E - Enable the MAX3421E USB host support
+ *  CONFIG_SCHED_LPWORK - Low priority work queue support is required.
+ *
+ * Options:
+ *
+ *   CONFIG_MAX3421E_INT_LEVELHIGH - Open-drain, high level active interrupt
+ *     (Needs a pull-up)
+ *   CONFIG_MAX3421E_INT_RISINGEDGE - Push-pull, rising edge active interrupt
+ *   CONFIG_MAX3421E_INT_FALLINGEDGE - Push-pull, falling edge active interrupt
+ *   CONFIG_MAX3421E_DESCSIZE - Maximum size of a descriptor.  Default: 128
+ *   CONFIG_MAX3421E_USBHOST_REGDEBUG - Enable very low-level register access
+ *     debug.  Depends on CONFIG_DEBUG_USB_INFO.
+ *   CONFIG_MAX3421E_USBHOST_PKTDUMP - Dump all incoming and outgoing USB
+ *     packets. Depends on CONFIG_DEBUG_USB_INFO.
+ */
+
 /* Host Mode Register Addresses *********************************************/
 /* The command byte contains the register address, a direction bit, and an
  * ACKSTAT bit:
@@ -143,8 +165,14 @@
 #define USBHOST_USBCTL_CHIPRES          (1 << 5)
 
 #define USBHOST_CPUCTL_IE               (1 << 0)
-#define USBHOST_CPUCTL_PULSEWID0        (1 << 6)
-#define USBHOST_CPUCTL_PULSEWID1        (1 << 7)
+#define USBHOST_CPUCTL_PULSEWID_SHIFT   (6)       /* Bits 6-7:  INT Pulsewidth */
+#define USBHOST_CPUCTL_PULSEWID_MASK    (3 << USBHOST_CPUCTL_PULSEWID_SHIFT)
+#  define USBHOST_CPUCTL_PULSEWID0      (1 << 6)
+#  define USBHOST_CPUCTL_PULSEWID1      (1 << 7)
+#  define USBHOST_CPUCTL_PULSEWID_10p6US  (0 << USBHOST_CPUCTL_PULSEWID_SHIFT) /* 10.6 uS */
+#  define USBHOST_CPUCTL_PULSEWID_5p3US   (1 << USBHOST_CPUCTL_PULSEWID_SHIFT) /* 5.3 uS */
+#  define USBHOST_CPUCTL_PULSEWID_2p6US   (2 << USBHOST_CPUCTL_PULSEWID_SHIFT) /* 2.6 uS */
+#  define USBHOST_CPUCTL_PULSEWID_1p3US   (4 << USBHOST_CPUCTL_PULSEWID_SHIFT) /* 1.3 uS */
 
 #define USBHOST_PINCTL_PXA              (1 << 0)
 #define USBHOST_PINCTL_GPXB             (1 << 1)
@@ -419,7 +447,12 @@ struct max3421e_lowerhalf_s
    *   acknowledge - Acknowledge/clear any pending GPIO interrupt
    *
    * NOTE: The MAX3421E host driver will configure the interrupt pin
-   * as rising edge triggered.
+   * depending updon configuration:
+   *
+   *   CONFIG_MAX3421E_INT_LEVELHIGH   - Open-drain, high level active
+   *                                     (Needs a pull-up)
+   *   CONFIG_MAX3421E_INT_RISINGEDGE  - Push-pull, rising edge active
+   *   CONFIG_MAX3421E_INT_FALLINGEDGE - Push-pull, falling edge active
    */
 
   CODE int (*attach)(FAR struct max3421e_lowerhalf_s *lower, xcpt_t isr,

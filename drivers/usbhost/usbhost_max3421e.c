@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/usbhost/max3421e_otgfshost.c
+ * drivers/usbhost/usbhost_max3421e.c
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -88,47 +88,20 @@
  *
  *  CONFIG_USBHOST - Enable general USB host support
  *  CONFIG_USBHOST_MAX3421E - Enable the MAX3421E USB host support
+ *  CONFIG_SCHED_LPWORK - Low priority work queue support is required.
  *
  * Options:
  *
- *  CONFIG_MAX3421E_MAX3421E_RXFIFO_SIZE - Size of the RX FIFO in 32-bit words.
- *    Default 128 (512 bytes)
- *  CONFIG_MAX3421E_MAX3421E_NPTXFIFO_SIZE - Size of the non-periodic Tx FIFO
- *    in 32-bit words.  Default 96 (384 bytes)
- *  CONFIG_MAX3421E_MAX3421E_PTXFIFO_SIZE - Size of the periodic Tx FIFO in 32-bit
- *    words.  Default 96 (384 bytes)
- *  CONFIG_MAX3421E_DESCSIZE - Maximum size of a descriptor.  Default: 128
- *  CONFIG_MAX3421E_MAX3421E_SOFINTR - Enable SOF interrupts.  Why would you ever
- *    want to do that?
- *  CONFIG_MAX3421E_USBHOST_REGDEBUG - Enable very low-level register access
- *    debug.  Depends on CONFIG_DEBUG_FEATURES.
- *  CONFIG_MAX3421E_USBHOST_PKTDUMP - Dump all incoming and outgoing USB
- *    packets. Depends on CONFIG_DEBUG_FEATURES.
+ *   CONFIG_MAX3421E_INT_LEVELHIGH - Open-drain, high level active interrupt
+ *     (Needs a pull-up)
+ *   CONFIG_MAX3421E_INT_RISINGEDGE - Push-pull, rising edge active interrupt
+ *   CONFIG_MAX3421E_INT_FALLINGEDGE - Push-pull, falling edge active interrupt
+ *   CONFIG_MAX3421E_DESCSIZE - Maximum size of a descriptor.  Default: 128
+ *   CONFIG_MAX3421E_USBHOST_REGDEBUG - Enable very low-level register access
+ *     debug.  Depends on CONFIG_DEBUG_USB_INFO.
+ *   CONFIG_MAX3421E_USBHOST_PKTDUMP - Dump all incoming and outgoing USB
+ *     packets. Depends on CONFIG_DEBUG_USB_INFO.
  */
-
-/* Pre-requisites (partial) */
-
-#ifndef CONFIG_MAX3421E_SYSCFG
-#  error "CONFIG_MAX3421E_SYSCFG is required"
-#endif
-
-/* Default RxFIFO size */
-
-#ifndef CONFIG_MAX3421E_MAX3421E_RXFIFO_SIZE
-#  define CONFIG_MAX3421E_MAX3421E_RXFIFO_SIZE 128
-#endif
-
-/* Default host non-periodic Tx FIFO size */
-
-#ifndef CONFIG_MAX3421E_MAX3421E_NPTXFIFO_SIZE
-#  define CONFIG_MAX3421E_MAX3421E_NPTXFIFO_SIZE 96
-#endif
-
-/* Default host periodic Tx fifo size register */
-
-#ifndef CONFIG_MAX3421E_MAX3421E_PTXFIFO_SIZE
-#  define CONFIG_MAX3421E_MAX3421E_PTXFIFO_SIZE 96
-#endif
 
 /* Maximum size of a descriptor */
 
@@ -241,7 +214,7 @@ struct max3421e_usbhost_s
   /* Overall driver status */
 
   volatile uint8_t  smstate;   /* The state of the USB host state machine */
-  uint8_t           chidx;     /* ID of channel waiting for space in Tx FIFO */
+  uint8_t           chidx;     /* ID of channel waiting for space in SNDFIFO */
   uint8_t           irqset;    /* Set of enabled interrupts */
   volatile bool     connected; /* Connected to device */
   volatile bool     change;    /* Connection change */
@@ -1150,37 +1123,63 @@ static void max3421e_transfer_start(FAR struct max3421e_usbhost_s *priv,
     {
       FAR const uint8_t *src;
       unsigned int wrsize;
-      unsigned int maxfifo;
-
-      /* Yes.. Get the size of the biggest thing that we can put in the Tx FIFO now */
-
-      wrsize  = chan->buflen;
-      maxfifo = 2 * maxpacket; /* Double buffered */
-
-      if (wrsize > maxfifo)
-        {
-          wrsize = maxfifo;
-        }
+      int i;
 
       /* Make sure the peripheral address is correct */
 
       max3421e_putreg(priv, MAX3421E_USBHOST_PERADDR, chan->funcaddr);
 
-      /* Write packet into the SNDFIFO. */
+      /* The SNDFIFO is double buffered.  We may load up to
+       * MAX3421E_SNDFIFO_SIZE into a buffer.  After loading the SNDFIFO
+       * buffer, the write the SNDBC (Send Byte Count) register with the
+       * number of bytes loaded.  The MAX3421E will clear SNDBAVIRQ (Send
+       * Buffer Available IRQ) and commit the FIFO to USB transmission.
+       *
+       * If the other buffer is available when SNDBC is written, the MAX3421E
+       * will clear SNDBAVIRQ then immediately set it to indicate
+       * availability of the second buffer.
+       *
+       * The CPU should load the SNDFIFO only when a SNDBAVIRQ = 1.
+       */
 
-      max3421e_sndblock(priv, MAX3421E_USBHOST_SNDFIFO, chan->buffer, wrsize);
+      for (i = 0;
+           i < 2 && chan->inflight < chan->buflen &&
+           (max3421e_getreg(priv, MAX3421E_USBHOST_HIRQ) & USBHOST_HIRQ_SNDBAVIRQ) == 1;
+           i++)
+        {
+          /* Get the size of the biggest thing that we can put in the
+           * current SNDFIFO buffer.
+           */
 
-      /* Increment the count of bytes "in-flight" in the Tx FIFO */
+          wrsize  = chan->buflen - chan->inflight;
 
-      chan->inflight += wrsize;
+          DEBUGASSERT(maxpacket <= MAX3421E_SNDFIFO_SIZE);
+          if (wrsize > maxpacket)
+            {
+              wrsize = maxpacket;
+            }
 
-      /* Did we put the entire buffer into the Tx FIFO? */
+          /* Write packet into the SNDFIFO. */
+
+          max3421e_sndblock(priv, MAX3421E_USBHOST_SNDFIFO
+                            chan->buffer + chan->inflight, wrsize);
+
+          /* Write the byte count to the SNDBC register */
+
+          max3421e_putreg(priv, MAX3421E_USBHOST_SNDBC, wrize);
+
+          /* Increment the count of bytes "in-flight" in the SNDFIFO */
+
+          chan->inflight += wrsize;
+        }
+
+      /* Did we put the entire buffer into the SNDFIFO? */
 
       if (wrsize < chan->buflen)
         {
           /* No, there was insufficient space to hold the entire transfer ...
-           * Enable the Tx FIFO interrupt to handle the transfer when the
-           * SNDFIFO becomes empty.
+           * Enable the SNDFIFO interrupt to handle the rest of the transfer
+           * when one of the SNDFIFO FIFOs becomes empty.
            */
 
           max3421e_int_enable(priv, USBHOST_HIRQ_SNDBAVIRQ);
@@ -1242,7 +1241,7 @@ static int max3421e_ctrl_sendsetup(FAR struct max3421e_usbhost_s *priv,
 
       max3421e_sndblock(priv, MAX3421E_USBHOST_SUDFIFO, chan->buffer, wrsize);
 
-      /* Increment the count of bytes "in-flight" in the Tx FIFO */
+      /* Increment the count of bytes "in-flight" in the SNDFIFO */
 
       chan->inflight += wrsize;
 
@@ -1870,8 +1869,8 @@ static ssize_t max3421e_out_transfer(FAR struct max3421e_usbhost_s *priv,
           usbhost_trace1(MAX3421E_TRACE1_TRNSFRFAILED, ret);
 
           /* Check for a special case:  If (1) the transfer was NAKed and (2)
-           * no Tx FIFO empty or Rx FIFO not-empty event occurred, then we
-           * should be able to just flush the Rx and Tx FIFOs and try again.
+           * no SNDFIFO empty or Rx FIFO not-empty event occurred, then we
+           * should be able to just flush the Rx and SNDFIFOs and try again.
            * We can detect this latter case because then the transfer buffer
            * pointer and buffer size will be unaltered.
            */
@@ -3759,6 +3758,7 @@ static inline int max3421e_sw_initialize(FAR struct max3421e_usbhost_s *priv,
 static inline int max3421e_hw_initialize(FAR struct max3421e_usbhost_s *priv)
 {
   uint8_t revision;
+  uint8_t reval;
   int ret;
 
   /* Get exclusive access to the SPI bus */
@@ -3787,10 +3787,18 @@ static inline int max3421e_hw_initialize(FAR struct max3421e_usbhost_s *priv)
 
   priv->irqset  = 0;
 
-  /* Configure full duplex SPI, edge-active rising edge interrupt */
+  /* Configure full duplex SPI, level or edge-active, rising- or falling
+   * edge interrupt.
+   */
 
-  max3421e_putreg(priv, MAX3421E_USBHOST_PINCTL,
-                  USBHOST_PINCTL_FDUPSPI | USBHOST_PINCTL_POSINT);
+  regval  = USBHOST_PINCTL_FDUPSPI;
+#if defined(CONFIG_MAX3421E_INT_LEVELHIGH)
+  regval |= USBHOST_PINCTL_INTLEVEL;
+#elif defined(CONFIG_MAX3421E_INT_RISINGEDGE)
+  regval |= USBHOST_PINCTL_POSINT;
+#endif
+
+  max3421e_putreg(priv, MAX3421E_USBHOST_PINCTL, regval);
 
   /* Configure as full-speed USB host */
 
