@@ -1,5 +1,5 @@
 /********************************************************************************************
- * arch/arm/src/samd5e5/chip/saml_supc.h
+ * arch/arm/src/samd5e5/chip/sam_supc.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>

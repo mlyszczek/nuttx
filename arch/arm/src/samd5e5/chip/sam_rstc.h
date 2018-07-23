@@ -1,12 +1,8 @@
 /********************************************************************************************
- * arch/arm/src/samd5e5/chip/saml_rstc.h
+ * arch/arm/src/samd5e5/chip/sam_rstc.h
  *
  *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- * References:
- *   "Atmel SAM L21E / SAM L21G / SAM L21J Smart ARM-Based Microcontroller
- *   Datasheet", Atmel-42385C-SAML21_Datasheet_Preliminary-03/20/15
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
