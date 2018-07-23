@@ -63,17 +63,17 @@
 
 /* SUPC register addresses *******************************************************************/
 
-#define SAM_SUPC_INTENCLR          (SAM_SUPC_BASE+SAM_SUPC_INTENCLR_OFFSET)
-#define SAM_SUPC_INTENSET          (SAM_SUPC_BASE+SAM_SUPC_INTENSET_OFFSET)
-#define SAM_SUPC_INTFLAG           (SAM_SUPC_BASE+SAM_SUPC_INTFLAG_OFFSET)
-#define SAM_SUPC_STATUS            (SAM_SUPC_BASE+SAM_SUPC_STATUS_OFFSET)
-#define SAM_SUPC_BOD33             (SAM_SUPC_BASE+SAM_SUPC_BOD33_OFFSET)
-#define SAM_SUPC_BOD12             (SAM_SUPC_BASE+SAM_SUPC_BOD12_OFFSET)
-#define SAM_SUPC_VREG              (SAM_SUPC_BASE+SAM_SUPC_VREG_OFFSET)
-#define SAM_SUPC_VREF              (SAM_SUPC_BASE+SAM_SUPC_VREF_OFFSET)
-#define SAM_SUPC_BBPS              (SAM_SUPC_BASE+SAM_SUPC_BBPS_OFFSET)
-#define SAM_SUPC_BKOUT             (SAM_SUPC_BASE+SAM_SUPC_BKOUT_OFFSET)
-#define SAM_SUPC_BKIN              (SAM_SUPC_BASE+SAM_SUPC_BKIN_OFFSET)
+#define SAM_SUPC_INTENCLR          (SAM_SUPC_BASE + SAM_SUPC_INTENCLR_OFFSET)
+#define SAM_SUPC_INTENSET          (SAM_SUPC_BASE + SAM_SUPC_INTENSET_OFFSET)
+#define SAM_SUPC_INTFLAG           (SAM_SUPC_BASE + SAM_SUPC_INTFLAG_OFFSET)
+#define SAM_SUPC_STATUS            (SAM_SUPC_BASE + SAM_SUPC_STATUS_OFFSET)
+#define SAM_SUPC_BOD33             (SAM_SUPC_BASE + SAM_SUPC_BOD33_OFFSET)
+#define SAM_SUPC_BOD12             (SAM_SUPC_BASE + SAM_SUPC_BOD12_OFFSET)
+#define SAM_SUPC_VREG              (SAM_SUPC_BASE + SAM_SUPC_VREG_OFFSET)
+#define SAM_SUPC_VREF              (SAM_SUPC_BASE + SAM_SUPC_VREF_OFFSET)
+#define SAM_SUPC_BBPS              (SAM_SUPC_BASE + SAM_SUPC_BBPS_OFFSET)
+#define SAM_SUPC_BKOUT             (SAM_SUPC_BASE + SAM_SUPC_BKOUT_OFFSET)
+#define SAM_SUPC_BKIN              (SAM_SUPC_BASE + SAM_SUPC_BKIN_OFFSET)
 
 /* SUPC register bit definitions *************************************************************/
 

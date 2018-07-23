@@ -77,16 +77,16 @@
 
 /* CMCC register addresses **************************************************************/
 
-#define SAM_CMCC_TYPE                (SAM_CMCC_BASE+SAM_CMCC_TYPE_OFFSET)
-#define SAM_CMCC_CFG                 (SAM_CMCC_BASE+SAM_CMCC_CFG_OFFSET)
-#define SAM_CMCC_CTRL                (SAM_CMCC_BASE+SAM_CMCC_CTRL_OFFSET)
-#define SAM_CMCC_SR                  (SAM_CMCC_BASE+SAM_CMCC_SR_OFFSET)
-#define SAM_CMCC_MAINT0              (SAM_CMCC_BASE+SAM_CMCC_MAINT0_OFFSET)
-#define SAM_CMCC_MAINT1              (SAM_CMCC_BASE+SAM_CMCC_MAINT1_OFFSET)
-#define SAM_CMCC_MCFG                (SAM_CMCC_BASE+SAM_CMCC_MCFG_OFFSET)
-#define SAM_CMCC_MEN                 (SAM_CMCC_BASE+SAM_CMCC_MEN_OFFSET)
-#define SAM_CMCC_MCTRL               (SAM_CMCC_BASE+SAM_CMCC_MCTRL_OFFSET)
-#define SAM_CMCC_MSR                 (SAM_CMCC_BASE+SAM_CMCC_MSR_OFFSET)
+#define SAM_CMCC_TYPE                (SAM_CMCC_BASE + SAM_CMCC_TYPE_OFFSET)
+#define SAM_CMCC_CFG                 (SAM_CMCC_BASE + SAM_CMCC_CFG_OFFSET)
+#define SAM_CMCC_CTRL                (SAM_CMCC_BASE + SAM_CMCC_CTRL_OFFSET)
+#define SAM_CMCC_SR                  (SAM_CMCC_BASE + SAM_CMCC_SR_OFFSET)
+#define SAM_CMCC_MAINT0              (SAM_CMCC_BASE + SAM_CMCC_MAINT0_OFFSET)
+#define SAM_CMCC_MAINT1              (SAM_CMCC_BASE + SAM_CMCC_MAINT1_OFFSET)
+#define SAM_CMCC_MCFG                (SAM_CMCC_BASE + SAM_CMCC_MCFG_OFFSET)
+#define SAM_CMCC_MEN                 (SAM_CMCC_BASE + SAM_CMCC_MEN_OFFSET)
+#define SAM_CMCC_MCTRL               (SAM_CMCC_BASE + SAM_CMCC_MCTRL_OFFSET)
+#define SAM_CMCC_MSR                 (SAM_CMCC_BASE + SAM_CMCC_MSR_OFFSET)
 
 /* CMCC register bit definitions ********************************************************/
 
