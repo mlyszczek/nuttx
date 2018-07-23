@@ -159,7 +159,7 @@ config ARCH_CHIP_SAME51J18
 	select ARCH_FAMILY_SAME51
 	---help---
 		Flash 256KB SRAM 128KB
-###########################################################################
+
 config ARCH_CHIP_SAME53N20
 	bool "SAME53N20"
 	depends on ARCH_CHIP_SAME5X
