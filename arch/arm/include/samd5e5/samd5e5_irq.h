@@ -294,7 +294,8 @@
 #endif
 
 #ifdef CONFIG_SAMD5E5_GPIOC_IRQ
-#  define SAM_IRQ_GPIOC_PINS  (SAM_IRQ_EXTINT + SAM_IRQ_NEXTINT + SAM_NGPIOAIRQS + SAM_NGPIOBIRQS)
+#  define SAM_IRQ_GPIOC_PINS  (SAM_IRQ_EXTINT + SAM_IRQ_NEXTINT + \
+                               SAM_NGPIOAIRQS + SAM_NGPIOBIRQS)
 #  define SAM_IRQ_PC0         (SAM_IRQ_GPIOC_PINS+0)          /* GPIOC, PIN 0 */
 #  define SAM_IRQ_PC1         (SAM_IRQ_GPIOC_PINS+1)          /* GPIOC, PIN 1 */
 #  define SAM_IRQ_PC2         (SAM_IRQ_GPIOC_PINS+2)          /* GPIOC, PIN 2 */
@@ -332,10 +333,51 @@
 #  define SAM_NGPIOCIRQS      0
 #endif
 
+#ifdef CONFIG_SAMD5E5_GPIOD_IRQ
+#  define SAM_IRQ_GPIOD_PINS  (SAM_IRQ_EXTINT + SAM_IRQ_NEXTINT + \
+                               SAM_NGPIOAIRQS + SAM_NGPIOBIRQS + SAM_NGPIOCIRQS)
+#  define SAM_IRQ_PC0         (SAM_IRQ_GPIOD_PINS+0)          /* GPIOD, PIN 0 */
+#  define SAM_IRQ_PC1         (SAM_IRQ_GPIOD_PINS+1)          /* GPIOD, PIN 1 */
+#  define SAM_IRQ_PC2         (SAM_IRQ_GPIOD_PINS+2)          /* GPIOD, PIN 2 */
+#  define SAM_IRQ_PC3         (SAM_IRQ_GPIOD_PINS+3)          /* GPIOD, PIN 3 */
+#  define SAM_IRQ_PC4         (SAM_IRQ_GPIOD_PINS+4)          /* GPIOD, PIN 4 */
+#  define SAM_IRQ_PC5         (SAM_IRQ_GPIOD_PINS+5)          /* GPIOD, PIN 5 */
+#  define SAM_IRQ_PC6         (SAM_IRQ_GPIOD_PINS+6)          /* GPIOD, PIN 6 */
+#  define SAM_IRQ_PC7         (SAM_IRQ_GPIOD_PINS+7)          /* GPIOD, PIN 7 */
+#  define SAM_IRQ_PC8         (SAM_IRQ_GPIOD_PINS+8)          /* GPIOD, PIN 8 */
+#  define SAM_IRQ_PC9         (SAM_IRQ_GPIOD_PINS+9)          /* GPIOD, PIN 9 */
+#  define SAM_IRQ_PC10        (SAM_IRQ_GPIOD_PINS+10)         /* GPIOD, PIN 10 */
+#  define SAM_IRQ_PC11        (SAM_IRQ_GPIOD_PINS+11)         /* GPIOD, PIN 11 */
+#  define SAM_IRQ_PC12        (SAM_IRQ_GPIOD_PINS+12)         /* GPIOD, PIN 12 */
+#  define SAM_IRQ_PC13        (SAM_IRQ_GPIOD_PINS+13)         /* GPIOD, PIN 13 */
+#  define SAM_IRQ_PC14        (SAM_IRQ_GPIOD_PINS+14)         /* GPIOD, PIN 14 */
+#  define SAM_IRQ_PC15        (SAM_IRQ_GPIOD_PINS+15)         /* GPIOD, PIN 15 */
+#  define SAM_IRQ_PC16        (SAM_IRQ_GPIOD_PINS+16)         /* GPIOD, PIN 16 */
+#  define SAM_IRQ_PC17        (SAM_IRQ_GPIOD_PINS+17)         /* GPIOD, PIN 17 */
+#  define SAM_IRQ_PC18        (SAM_IRQ_GPIOD_PINS+18)         /* GPIOD, PIN 18 */
+#  define SAM_IRQ_PC19        (SAM_IRQ_GPIOD_PINS+19)         /* GPIOD, PIN 19 */
+#  define SAM_IRQ_PC20        (SAM_IRQ_GPIOD_PINS+20)         /* GPIOD, PIN 20 */
+#  define SAM_IRQ_PC21        (SAM_IRQ_GPIOD_PINS+21)         /* GPIOD, PIN 21 */
+#  define SAM_IRQ_PC22        (SAM_IRQ_GPIOD_PINS+22)         /* GPIOD, PIN 22 */
+#  define SAM_IRQ_PC23        (SAM_IRQ_GPIOD_PINS+23)         /* GPIOD, PIN 23 */
+#  define SAM_IRQ_PC24        (SAM_IRQ_GPIOD_PINS+24)         /* GPIOD, PIN 24 */
+#  define SAM_IRQ_PC25        (SAM_IRQ_GPIOD_PINS+25)         /* GPIOD, PIN 25 */
+#  define SAM_IRQ_PC26        (SAM_IRQ_GPIOD_PINS+26)         /* GPIOD, PIN 26 */
+#  define SAM_IRQ_PC27        (SAM_IRQ_GPIOD_PINS+27)         /* GPIOD, PIN 27 */
+#  define SAM_IRQ_PC28        (SAM_IRQ_GPIOD_PINS+28)         /* GPIOD, PIN 28 */
+#  define SAM_IRQ_PC29        (SAM_IRQ_GPIOD_PINS+29)         /* GPIOD, PIN 29 */
+#  define SAM_IRQ_PC30        (SAM_IRQ_GPIOD_PINS+30)         /* GPIOD, PIN 30 */
+#  define SAM_IRQ_PC31        (SAM_IRQ_GPIOD_PINS+31)         /* GPIOD, PIN 31 */
+#  define SAM_NGPIODIRQS      32
+#else
+#  define SAM_NGPIODIRQS      0
+#endif
+
 /* Total number of IRQ numbers */
 
 #define NR_IRQS               (SAM_IRQ_EXTINT + SAM_IRQ_NEXTINT + \
-                               SAM_NGPIOAIRQS + SAM_NGPIOBIRQS + SAM_NGPIOCIRQS)
+                               SAM_NGPIOAIRQS + SAM_NGPIOBIRQS + \
+                               SAM_NGPIOCIRQS + SAM_NGPIODIRQS)
 
 /************************************************************************************************
  * Public Types

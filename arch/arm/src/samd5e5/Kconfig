@@ -457,7 +457,33 @@ config SAMD5E5_WDT
 	bool "Watchdog Timer"
 	default n
 
-endmenu
+endmenu # SAMD5x/E5x Peripheral Support
+
+config SAMD5E5_GPIO_IRQ
+	bool "GPIO pin interrupts"
+	---help---
+		Enable support for interrupting GPIO pins
+
+if SAMD5E5_GPIO_IRQ
+
+config SAMD5E5_GPIOA_IRQ
+	bool "GPIOA interrupts"
+	default n
+
+config SAMD5E5_GPIOB_IRQ
+	bool "GPIOB interrupts"
+	default n
+
+config SAMD5E5_GPIOC_IRQ
+	bool "GPIOC interrupts"
+	default n
+
+config SAMD5E5_GPIOD_IRQ
+	bool "GPIOD interrupts"
+	default n
+	depends on SAMD5E5_HAVE_GPIOD_IRQ
+endif # SAMD5E5_GPIO_IRQ
+endmenu # GPIO pin interrupts
 
 choice
 	prompt "SERCOM0 mode"
