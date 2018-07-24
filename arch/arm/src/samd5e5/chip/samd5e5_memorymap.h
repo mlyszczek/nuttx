@@ -84,23 +84,28 @@
 #define SAM_SERCOM1_BASE    0x40003400 /* Serial Communication Interface 1 */
 #define SAM_TC0_BASE        0x40003800 /* Timer/Counter 2 */
 #define SAM_TC1_BASE        0x40003c00 /* Timer/Counter 3 */
+                                       /* Reserved */
 
 /* AHB-APB Bridge B */
 
-#define SAM_USB_BASE        0x41005000 /* USB */
+#define SAM_USB_BASE        0x41000000 /* USB */
 #define SAM_DSU_BASE        0x41002000 /* Device Service Unit (DSU) */
 #define SAM_NVMCTRL_BASE    0x41004000 /* Non-Volatile Memory Controller (NVMCTRL) */
 #define SAM_CMCCC_BASE      0x41006000 /* Cortex-M Cache Controller (CMCC) */
 #define SAM_PORT_BASE       0x41008000 /* Ports */
 #define SAM_DMAC_BASE       0x4100a000 /* DMA Controller */
+                                       /* Reserved */
 #define SAM_EVSYS_BASE      0x4100e000 /* Event System */
+                                       /* Reserved */
 #define SAM_SERCOM2_BASE    0x41001200 /* Serial Communication Interface 2 */
 #define SAM_SERCOM3_BASE    0x41001400 /* Serial Communication Interface 3 */
 #define SAM_TCC0_BASE       0x41001600 /* Timer/Counter Control 0 */
 #define SAM_TCC1_BASE       0x41001800 /* Timer/Counter Control 1 */
 #define SAM_TC2_BASE        0x41001a00 /* Timer/Counter 2 */
 #define SAM_TC3_BASE        0x41001c00 /* Timer/Counter 3 */
+                                       /* Reserved */
 #define SAM_RAMECC_BASE     0x41002000 /* RAM Error Correction Code (RAMECC) */
+                                       /* Reserved */
 
 /* AHB-APB Bridge C */
 
@@ -119,21 +124,23 @@
 #define SAM_PUKCC_BASE      0x42003000 /* Public-Key Cryptography Controller (PUKCC) */
 #define SAM_QSPIC_BASE      0x42003400 /* QSPI controller */
 #define SAM_CCL_BASE        0x42003800 /* Configurable Custom Logic (CCL) */
+                                       /* Reserved */
 
 /* AHB-APB Bridge D */
 
-#define SAM_SERCOM4_BASE    0x43001800 /* Serial Communication Interface 4 */
-#define SAM_SERCOM5_BASE    0x43001c00 /* Serial Communication Interface 5 */
-#define SAM_SERCOM6_BASE    0x43003000 /* Serial Communication Interface 6 */
-#define SAM_SERCOM7_BASE    0x43003400 /* Serial Communication Interface 7 */
-#define SAM_TCC4_BASE       0x43000c00 /* Timer/Counter Control 4 */
-#define SAM_TC6_BASE        0x43003800 /* Timer/Counter 6 */
-#define SAM_TC7_BASE        0x43003c00 /* Timer/Counter 7 */
-#define SAM_ADC0_BASE       0x43004000 /* Analog-to-Digital Converter 0 */
-#define SAM_ADC1_BASE       0x43004000 /* Analog-to-Digital Converter 1 */
-#define SAM_DAC_BASE        0x43004800 /* Digital-to-Analog Converter */
-#define SAM_I2S_BASE        0x43005000 /* Inter IC Sound */
-#define SAM_PCC_BASE        0x44005000 /* PCC */
+#define SAM_SERCOM4_BASE    0x43000000 /* Serial Communication Interface 4 */
+#define SAM_SERCOM5_BASE    0x43000400 /* Serial Communication Interface 5 */
+#define SAM_SERCOM6_BASE    0x43000800 /* Serial Communication Interface 6 */
+#define SAM_SERCOM7_BASE    0x43000c00 /* Serial Communication Interface 7 */
+#define SAM_TCC4_BASE       0x43001000 /* Timer/Counter Control 4 */
+#define SAM_TC6_BASE        0x43001400 /* Timer/Counter 6 */
+#define SAM_TC7_BASE        0x43001800 /* Timer/Counter 7 */
+#define SAM_ADC0_BASE       0x43001c00 /* Analog-to-Digital Converter 0 */
+#define SAM_ADC1_BASE       0x43002000 /* Analog-to-Digital Converter 1 */
+#define SAM_DAC_BASE        0x43002400 /* Digital-to-Analog Converter */
+#define SAM_I2S_BASE        0x43002800 /* Inter IC Sound */
+#define SAM_PCC_BASE        0x44002c00 /* PCC */
+                                       /* Reserved */
 
 /********************************************************************************************
  * Public Types

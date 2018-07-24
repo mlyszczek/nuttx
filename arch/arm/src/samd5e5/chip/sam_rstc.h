@@ -47,17 +47,17 @@
 /********************************************************************************************
  * Pre-processor Definitions
  ********************************************************************************************/
-/* RSTC register offsets *********************************************************************/
+/* RSTC register offsets ********************************************************************/
 
 #define SAM_RSTC_RCAUSE_OFFSET         0x0000  /* Reset cause */
 #define SAM_RSTC_BKUPEXIT_OFFSET       0x0002  /* Backup exit source */
 
-/* RSTC register addresses *******************************************************************/
+/* RSTC register addresses ******************************************************************/
 
 #define SAM_RSTC_RCAUSE                (SAM_RSTC_BASE + SAM_RSTC_RCAUSE_OFFSET)
 #define SAM_RSTC_BKUPEXIT              (SAM_RSTC_BASE + SAM_RSTC_BKUPEXIT_OFFSET)
 
-/* RSTC register bit definitions *************************************************************/
+/* RSTC register bit definitions ************************************************************/
 
 /* Reset cause */
 
