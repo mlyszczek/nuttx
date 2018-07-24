@@ -135,11 +135,11 @@
 #define SAM_TCC4_BASE       0x43001000 /* Timer/Counter Control 4 */
 #define SAM_TC6_BASE        0x43001400 /* Timer/Counter 6 */
 #define SAM_TC7_BASE        0x43001800 /* Timer/Counter 7 */
-#define SAM_ADC0_BASE       0x43001c00 /* Analog-to-Digital Converter 0 */
-#define SAM_ADC1_BASE       0x43002000 /* Analog-to-Digital Converter 1 */
-#define SAM_DAC_BASE        0x43002400 /* Digital-to-Analog Converter */
-#define SAM_I2S_BASE        0x43002800 /* Inter IC Sound */
-#define SAM_PCC_BASE        0x44002c00 /* PCC */
+#define SAM_ADC0_BASE       0x43001c00 /* Analog-to-Digital Converter 0 (ADC0) */
+#define SAM_ADC1_BASE       0x43002000 /* Analog-to-Digital Converter 1 (ADC1) */
+#define SAM_DAC_BASE        0x43002400 /* Digital-to-Analog Converter (DAC) */
+#define SAM_I2S_BASE        0x43002800 /* Inter IC Sound (I2S) */
+#define SAM_PCC_BASE        0x44002c00 /* Parallel Capture Controller (PCC) */
                                        /* Reserved */
 
 /********************************************************************************************
