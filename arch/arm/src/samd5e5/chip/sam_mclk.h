@@ -117,7 +117,7 @@
 #define MCLK_AHBMASK_QSPI          (1 << 13) /* Bit 13: QSPI AHB Clock Enable */
 #define MCLK_AHBMASK_GMAC          (1 << 14) /* Bit 14: GMAC AHB Clock Enable */
 #define MCLK_AHBMASK_SDHC0         (1 << 15) /* Bit 15: SDHC0 HB Clock Enable */
-#define MCLK_AHBMASK_SDHC0         (1 << 16) /* Bit 16: SDHC1 HB Clock Enable */
+#define MCLK_AHBMASK_SDHC1         (1 << 16) /* Bit 16: SDHC1 HB Clock Enable */
 #define MCLK_AHBMASK_CAN0          (1 << 17) /* Bit 17: CAN0 AHB Clock Enable */
 #define MCLK_AHBMASK_CAN1          (1 << 18) /* Bit 18: CAN1 AHB Clock Enable */
 #define MCLK_AHBMASK_ICM           (1 << 19) /* Bit 19: ICM AHB Clock Enable */

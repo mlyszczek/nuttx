@@ -126,22 +126,22 @@
 
 /* Interrupt flag status bridge A and Write protection status bridge A */
 
-#define PAC_INTA_PAC                 (1 << 0)  /* Bit 0:  Interrupt flag for PAC */
-#define PAC_INTA_PM                  (1 << 1)  /* Bit 1:  Interrupt flag for PM */
-#define PAC_INTA_MCLK                (1 << 2)  /* Bit 2:  Interrupt flag for MCLK */
-#define PAC_INTA_RSTC                (1 << 3)  /* Bit 3:  Interrupt flag for RSTC */
-#define PAC_INTA_OSCCTRL             (1 << 4)  /* Bit 4:  Interrupt flag for OSCCTRL */
-#define PAC_INTA_OSC32KCTRL          (1 << 5)  /* Bit 5:  Interrupt flag for OSC32KCTRL */
-#define PAC_INTA_SUPC                (1 << 6)  /* Bit 6:  Interrupt flag for SUPC */
-#define PAC_INTA_GCLK                (1 << 7)  /* Bit 7:  Interrupt flag for GCLK */
-#define PAC_INTA_WDT                 (1 << 8)  /* Bit 8:  Interrupt flag for WDT */
-#define PAC_INTA_RTC                 (1 << 9)  /* Bit 9:  Interrupt flag for RTC */
-#define PAC_INTA_EIC                 (1 << 10) /* Bit 10: Interrupt flag for EIC */
-#define PAC_INTA_FREQM               (1 << 11) /* Bit 11: Interrupt flag for FREQM */
-#define PAC_INTA_SERCOM0             (1 << 12) /* Bit 12: Interrupt flag for SERCOM0 */
-#define PAC_INTA_SERCOM1             (1 << 13) /* Bit 13: Interrupt flag for SERCOM1 */
-#define PAC_INTA_TC0                 (1 << 14) /* Bit 14: Interrupt flag for TC0 */
-#define PAC_INTA_TC1                 (1 << 15) /* Bit 15: Interrupt flag for TC1 */
+#define PAC_INTA_PAC                 (1 << 0)  /* Bit 0:  Interrupt for PAC */
+#define PAC_INTA_PM                  (1 << 1)  /* Bit 1:  Interrupt for PM */
+#define PAC_INTA_MCLK                (1 << 2)  /* Bit 2:  Interrupt for MCLK */
+#define PAC_INTA_RSTC                (1 << 3)  /* Bit 3:  Interrupt for RSTC */
+#define PAC_INTA_OSCCTRL             (1 << 4)  /* Bit 4:  Interrupt for OSCCTRL */
+#define PAC_INTA_OSC32KCTRL          (1 << 5)  /* Bit 5:  Interrupt for OSC32KCTRL */
+#define PAC_INTA_SUPC                (1 << 6)  /* Bit 6:  Interrupt for SUPC */
+#define PAC_INTA_GCLK                (1 << 7)  /* Bit 7:  Interrupt for GCLK */
+#define PAC_INTA_WDT                 (1 << 8)  /* Bit 8:  Interrupt for WDT */
+#define PAC_INTA_RTC                 (1 << 9)  /* Bit 9:  Interrupt for RTC */
+#define PAC_INTA_EIC                 (1 << 10) /* Bit 10: Interrupt for EIC */
+#define PAC_INTA_FREQM               (1 << 11) /* Bit 11: Interrupt for FREQM */
+#define PAC_INTA_SERCOM0             (1 << 12) /* Bit 12: Interrupt for SERCOM0 */
+#define PAC_INTA_SERCOM1             (1 << 13) /* Bit 13: Interrupt for SERCOM1 */
+#define PAC_INTA_TC0                 (1 << 14) /* Bit 14: Interrupt for TC0 */
+#define PAC_INTA_TC1                 (1 << 15) /* Bit 15: Interrupt for TC1 */
 
 #define SAM_PAC_PERID                ((0 << 5) + 0)  /* PAC Peripheral IDs */
 #define SAM_PM_PERID                 ((0 << 5) + 1)
@@ -162,20 +162,20 @@
 
 /* Interrupt flag status bridge B and Write protection status bridge B */
 
-#define PAC_INTB_USB                 (1 << 0)  /* Bit 0:  Interrupt flag for USB */
-#define PAC_INTB_DSU                 (1 << 1)  /* Bit 1:  Interrupt flag for DSU */
-#define PAC_INTB_CMCC                (1 << 2)  /* Bit 3:  Interrupt flag for CMCC */
-#define PAC_INTB_NVMCTRL             (1 << 3)  /* Bit 2:  Interrupt flag for NVMCTRL */
-#define PAC_INTB_PORT                (1 << 4)  /* Bit 4:  Interrupt flag for PORT */
-#define PAC_INTB_DMAC                (1 << 5)  /* Bit 5:  Interrupt flag for DMAC */
-#define PAC_INTB_EVSYS               (1 << 7)  /* Bit 7:  Interrupt flag for EVSYS */
-#define PAC_INTB_SERCOM2             (1 << 9)  /* Bit 9:  Interrupt flag for SERCOM2 */
-#define PAC_INTB_SERCOM3             (1 << 10) /* Bit 10: Interrupt flag for SERCOM3 */
-#define PAC_INTB_TCC0                (1 << 11) /* Bit 11: Interrupt flag for TCC0 */
-#define PAC_INTB_TCC1                (1 << 12) /* Bit 12: Interrupt flag for TCC1 */
-#define PAC_INTB_TC2                 (1 << 13) /* Bit 13: Interrupt flag for TC2 */
-#define PAC_INTB_TC3                 (1 << 14) /* Bit 14: Interrupt flag for TC3 */
-#define PAC_INTB_RAMECC              (1 << 16) /* Bit 16: Interrupt flag for RAMECC */
+#define PAC_INTB_USB                 (1 << 0)  /* Bit 0:  Interrupt for USB */
+#define PAC_INTB_DSU                 (1 << 1)  /* Bit 1:  Interrupt for DSU */
+#define PAC_INTB_CMCC                (1 << 2)  /* Bit 3:  Interrupt for CMCC */
+#define PAC_INTB_NVMCTRL             (1 << 3)  /* Bit 2:  Interrupt for NVMCTRL */
+#define PAC_INTB_PORT                (1 << 4)  /* Bit 4:  Interrupt for PORT */
+#define PAC_INTB_DMAC                (1 << 5)  /* Bit 5:  Interrupt for DMAC */
+#define PAC_INTB_EVSYS               (1 << 7)  /* Bit 7:  Interrupt for EVSYS */
+#define PAC_INTB_SERCOM2             (1 << 9)  /* Bit 9:  Interrupt for SERCOM2 */
+#define PAC_INTB_SERCOM3             (1 << 10) /* Bit 10: Interrupt for SERCOM3 */
+#define PAC_INTB_TCC0                (1 << 11) /* Bit 11: Interrupt for TCC0 */
+#define PAC_INTB_TCC1                (1 << 12) /* Bit 12: Interrupt for TCC1 */
+#define PAC_INTB_TC2                 (1 << 13) /* Bit 13: Interrupt for TC2 */
+#define PAC_INTB_TC3                 (1 << 14) /* Bit 14: Interrupt for TC3 */
+#define PAC_INTB_RAMECC              (1 << 16) /* Bit 16: Interrupt for RAMECC */
 
 #define SAM_USB_PERID                ((1 << 5) + 0)  /* PAC Peripheral IDs */
 #define SAM_DSU_PERID                ((1 << 5) + 1)
@@ -194,20 +194,20 @@
 
 /* Interrupt flag status bridge C and Write protection status bridge C */
 
-#define PAC_INTC_CAN0                (1 << 0)  /* Bit 0:  Interrupt flag for CAN0 */
-#define PAC_INTC_CAN1                (1 << 1)  /* Bit 1:  Interrupt flag for CAN1 */
-#define PAC_INTC_GMAC                (1 << 2)  /* Bit 2:  Interrupt flag for GMAC */
-#define PAC_INTC_TCC2                (1 << 3)  /* Bit 3:  Interrupt flag for TCC2 */
-#define PAC_INTC_TCC3                (1 << 4)  /* Bit 4:  Interrupt flag for TCC3 */
-#define PAC_INTC_TC4                 (1 << 5)  /* Bit 5:  Interrupt flag for TC4 */
-#define PAC_INTC_TC5                 (1 << 6)  /* Bit 6:  Interrupt flag for TC5 */
-#define PAC_INTC_PDEC                (1 << 7)  /* Bit 7:  Interrupt flag for PDEC */
-#define PAC_INTC_AES                 (1 << 9)  /* Bit 9:  Interrupt flag for AES */
-#define PAC_INTC_TRNG                (1 << 10) /* Bit 10: Interrupt flag for TRNG */
-#define PAC_INTC_ICM                 (1 << 11) /* Bit 11: Interrupt flag for ICM */
-#define PAC_INTC_PUKCC               (1 << 12) /* Bit 12: Interrupt flag for PUKCC */
-#define PAC_INTC_QSPI                (1 << 13) /* Bit 13: Interrupt flag for QSPI */
-#define PAC_INTC_CCL                 (1 << 14) /* Bit 14: Interrupt flag for CCL */
+#define PAC_INTC_CAN0                (1 << 0)  /* Bit 0:  Interrupt for CAN0 */
+#define PAC_INTC_CAN1                (1 << 1)  /* Bit 1:  Interrupt for CAN1 */
+#define PAC_INTC_GMAC                (1 << 2)  /* Bit 2:  Interrupt for GMAC */
+#define PAC_INTC_TCC2                (1 << 3)  /* Bit 3:  Interrupt for TCC2 */
+#define PAC_INTC_TCC3                (1 << 4)  /* Bit 4:  Interrupt for TCC3 */
+#define PAC_INTC_TC4                 (1 << 5)  /* Bit 5:  Interrupt for TC4 */
+#define PAC_INTC_TC5                 (1 << 6)  /* Bit 6:  Interrupt for TC5 */
+#define PAC_INTC_PDEC                (1 << 7)  /* Bit 7:  Interrupt for PDEC */
+#define PAC_INTC_AES                 (1 << 9)  /* Bit 9:  Interrupt for AES */
+#define PAC_INTC_TRNG                (1 << 10) /* Bit 10: Interrupt for TRNG */
+#define PAC_INTC_ICM                 (1 << 11) /* Bit 11: Interrupt for ICM */
+#define PAC_INTC_PUKCC               (1 << 12) /* Bit 12: Interrupt for PUKCC */
+#define PAC_INTC_QSPI                (1 << 13) /* Bit 13: Interrupt for QSPI */
+#define PAC_INTC_CCL                 (1 << 14) /* Bit 14: Interrupt for CCL */
 
 #define SAM_CAN0_PERID               ((2 << 5) + 0)  /* PAC Peripheral IDs */
 #define SAM_CAN1_PERID               ((2 << 5) + 1)
@@ -225,20 +225,20 @@
 #define SAM_QSPIC_PERID              ((2 << 5) + 13)
 #define SAM_CCL_PERID                ((2 << 5) + 14)
 
-/* Interrupt flag status bridge D */
+/* Interrupt flag status bridge D and Write protection status bridge D */
 
-#define PAC_INTD_SERCOM4             (1 << 0)  /* Bit 0:  Interrupt flag for SERCOM4 */
-#define PAC_INTD_SERCOM5             (1 << 1)  /* Bit 1:  Interrupt flag for SERCOM5 */
-#define PAC_INTD_SERCOM6             (1 << 2)  /* Bit 2:  Interrupt flag for SERCOM6 */
-#define PAC_INTD_SERCOM7             (1 << 3)  /* Bit 3:  Interrupt flag for SERCOM7 */
-#define PAC_INTD_TCC4                (1 << 4)  /* Bit 4:  Interrupt flag for TCC4 */
-#define PAC_INTD_TC6                 (1 << 5)  /* Bit 5:  Interrupt flag for TC6 */
-#define PAC_INTD_TC7                 (1 << 6)  /* Bit 6:  Interrupt flag for TC7 */
-#define PAC_INTD_ADC0                (1 << 7)  /* Bit 7:  Interrupt flag for ADC0 */
-#define PAC_INTD_ADC1                (1 << 8)  /* Bit 8:  Interrupt flag for ADC1 */
-#define PAC_INTD_DAC                 (1 << 9)  /* Bit 9:  Interrupt flag for DAC */
-#define PAC_INTD_I2S                 (1 << 10) /* Bit 10: Interrupt flag for I2S */
-#define PAC_INTD_PCC                 (1 << 11) /* Bit 11: Interrupt flag for PCC */
+#define PAC_INTD_SERCOM4             (1 << 0)  /* Bit 0:  Interrupt for SERCOM4 */
+#define PAC_INTD_SERCOM5             (1 << 1)  /* Bit 1:  Interrupt for SERCOM5 */
+#define PAC_INTD_SERCOM6             (1 << 2)  /* Bit 2:  Interrupt for SERCOM6 */
+#define PAC_INTD_SERCOM7             (1 << 3)  /* Bit 3:  Interrupt for SERCOM7 */
+#define PAC_INTD_TCC4                (1 << 4)  /* Bit 4:  Interrupt for TCC4 */
+#define PAC_INTD_TC6                 (1 << 5)  /* Bit 5:  Interrupt for TC6 */
+#define PAC_INTD_TC7                 (1 << 6)  /* Bit 6:  Interrupt for TC7 */
+#define PAC_INTD_ADC0                (1 << 7)  /* Bit 7:  Interrupt for ADC0 */
+#define PAC_INTD_ADC1                (1 << 8)  /* Bit 8:  Interrupt for ADC1 */
+#define PAC_INTD_DAC                 (1 << 9)  /* Bit 9:  Interrupt for DAC */
+#define PAC_INTD_I2S                 (1 << 10) /* Bit 10: Interrupt for I2S */
+#define PAC_INTD_PCC                 (1 << 11) /* Bit 11: Interrupt for PCC */
 
 #define SAM_SERCOM4_PERID            ((3 << 5) + 0)  /* PAC Peripheral IDs */
 #define SAM_SERCOM5_PERID            ((3 << 5) + 1)
@@ -252,10 +252,6 @@
 #define SAM_DAC_PERID                ((3 << 5) + 9)
 #define SAM_I2S_PERID                ((3 << 5) + 10)
 #define SAM_PCC_PERID                ((3 << 5) + 11)
-
-/* Write protection status bridge D */
-#define PAC_STATUSD_
-
 
 /********************************************************************************************
  * Public Types
