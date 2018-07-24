@@ -7,7 +7,7 @@ comment "Microchip SAMD5x/E5x Configuration Options"
 
 choice
 	prompt "Microchip SAMD5x/E5x Chip Selection"
-	default ARCH_CHIP_SAMD21G18A if ARCH_CHIP_SAMD5X
+	default ARCH_CHIP_SAMD51P19 if ARCH_CHIP_SAMD5X
 	default ARCH_CHIP_ATSAME54P20A if ARCH_CHIP_SAME5X
 	depends on ARCH_CHIP_SAMD5X || ARCH_CHIP_SAME5X
 
@@ -482,8 +482,8 @@ config SAMD5E5_GPIOD_IRQ
 	bool "GPIOD interrupts"
 	default n
 	depends on SAMD5E5_HAVE_GPIOD_IRQ
+
 endif # SAMD5E5_GPIO_IRQ
-endmenu # GPIO pin interrupts
 
 choice
 	prompt "SERCOM0 mode"
@@ -680,4 +680,3 @@ config SAMD5E5_USB_REGDEBUG
 		CONFIG_DEBUG_USB_INFO.
 
 endmenu # USB options
-

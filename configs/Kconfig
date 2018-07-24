@@ -456,7 +456,9 @@ config ARCH_BOARD_MCU123_LPC214X
 
 config ARCH_BOARD_METRO_M4
 	bool "Adafruit M4 Metro"
-	depends on CONFIG_ARCH_CHIP_SAMD51J19
+	depends on ARCH_CHIP_SAMD51J19
+	select ARCH_HAVE_LEDS
+	---help---
 	---help---
 		This configuration is the port of NuttX to the Adafruit Metro M4.
 		The Metro M4 uses a Arduino form factor and and pinout.  It's powered
