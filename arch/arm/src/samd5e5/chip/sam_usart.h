@@ -217,18 +217,18 @@
                                                                      * arithmetic baud */
 #define USART_CTRLA_TXPO_SHIFT       (16)      /* Bits 16-17: Transmit data pinout */
 #define USART_CTRLA_TXPO_MASK        (3 << USART_CTRLA_TXPO_SHIFT)
-#  define USART_CTRLA_TXPAD0_1       (0 << USART_CTRLA_TXPO_SHIFT) /* TxD=PAD[0] XCK=PAD[1]
+#  define USART_CTRLA_TXPAD0_1       (0 << USART_CTRLA_TXPO_SHIFT) /* TxD=PAD0 XCK=PAD1
                                                                     * RTS/TE=N/A CTS=N/A */
-#  define USART_CTRLA_TXPAD0_2       (2 << USART_CTRLA_TXPO_SHIFT) /* TxD=PAD[0] XCK=N/A
-                                                                    * RTS/TE=PAD[2] CTS=PAD[3] */
-#  define USART_CTRLA_TXPAD0_3       (3 << USART_CTRLA_TXPO_SHIFT) /* TxD=PAD[0] RTS=PAD[1]
-                                                                    * RTS/PAD[2] CTS=N/A */
+#  define USART_CTRLA_TXPAD0_2       (2 << USART_CTRLA_TXPO_SHIFT) /* TxD=PAD0 XCK=N/A
+                                                                    * RTS/TE=PAD2 CTS=PAD3 */
+#  define USART_CTRLA_TXPAD0_3       (3 << USART_CTRLA_TXPO_SHIFT) /* TxD=PAD0 RTS=PAD1
+                                                                    * RTS/PAD2 CTS=N/A */
 #define USART_CTRLA_RXPO_SHIFT       (20)      /* Bits 20-21: Receive data pinout */
 #define USART_CTRLA_RXPO_MASK        (3 << USART_CTRLA_RXPO_SHIFT)
-#  define USART_CTRLA_RXPAD0         (0 << USART_CTRLA_RXPO_SHIFT) /* RxD=SERCOM PAD[0] */
-#  define USART_CTRLA_RXPAD1         (1 << USART_CTRLA_RXPO_SHIFT) /* RxD=SERCOM PAD[1] */
-#  define USART_CTRLA_RXPAD2         (2 << USART_CTRLA_RXPO_SHIFT) /* RxD=SERCOM PAD[2] */
-#  define USART_CTRLA_RXPAD3         (3 << USART_CTRLA_RXPO_SHIFT) /* RxD=SERCOM PAD[3] */
+#  define USART_CTRLA_RXPAD0         (0 << USART_CTRLA_RXPO_SHIFT) /* RxD=SERCOM PAD0 */
+#  define USART_CTRLA_RXPAD1         (1 << USART_CTRLA_RXPO_SHIFT) /* RxD=SERCOM PAD1 */
+#  define USART_CTRLA_RXPAD2         (2 << USART_CTRLA_RXPO_SHIFT) /* RxD=SERCOM PAD2 */
+#  define USART_CTRLA_RXPAD3         (3 << USART_CTRLA_RXPO_SHIFT) /* RxD=SERCOM PAD3 */
 #define USART_CTRLA_SAMPA_SHIFT      (22)      /* Bits 22-23: Sample adjustment */
 #define USART_CTRLA_SAMPA_MASK       (3 << USART_CTRLA_SAMPA_SHIFT)
 #  define USART_CTRLA_SAMPA_789      (0 << USART_CTRLA_SAMPA_SHIFT) /* 16x oversampling 7-8-9 */

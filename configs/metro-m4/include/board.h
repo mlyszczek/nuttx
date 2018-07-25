@@ -57,4 +57,39 @@
 
 /* Alternate function pin selections ************************************************/
 
+/* SERCOM definitions ***************************************************************/
+/* The SERCOM bus clock (CLK_SERCOMx_APB) can be enabled and disabled in the Main
+ * Clock Controller.  The SERCOM uses two generic clocks: GCLK_SERCOMx_CORE and
+ * GCLK_SERCOMx_SLOW. The core clock (GCLK_SERCOMx_CORE) is required to clock the
+ * SERCOM while working as a master.  The slow clock (GCLK_SERCOMx_SLOW) is only
+ * required for certain functions.
+ *
+ * These clocks must be configured and enabled in the Generic Clock Controller (GCLK)
+ * before using the SERCOM.
+ */
+
+/* SERCOM3
+ *
+ * An Arduino compatible serial Shield is assumed (or equivalently, an external
+ * RS-232 or serial-to-USB adapter connected on Arduino pins D0 and D1):
+ *
+ *   ------ ----------------- ---------
+ *   SHIELD SAMD5E5           FUNCTION
+ *   ------ ----------------- ---------
+ *   D0     PA23 SERCOM3 PAD2 RXD
+ *   D1     PA22 SERCOM3 PAD0 TXD
+ *
+ * NOTES:
+ *   USART_CTRLA_TXPAD0_1: TxD=PAD0 XCK=PAD1 RTS/TE=N/A CTS=N/A
+ *   USART_CTRLA_RXPAD2:   RxD=PAD2
+ */
+
+#define BOARD_SERCOM3_MUXCONFIG      (USART_CTRLA_TXPAD0_1 | USART_CTRLA_RXPAD2)
+#define BOARD_SERCOM3_PINMAP_PAD0    PORT_SERCOM3_PAD0_1 /* USART TX */
+#define BOARD_SERCOM3_PINMAP_PAD1    PORT_SERCOM3_PAD2_1 /* USART RX */
+#define BOARD_SERCOM3_PINMAP_PAD2    0                   /* (not used) */
+#define BOARD_SERCOM3_PINMAP_PAD3    0                   /* (not used) */
+
+#define BOARD_SERCOM3_FREQUENCY      BOARD_GCLK0_FREQUENCY
+
 #endif  /* __CONFIG_METRO_M4_INCLUDE_BOARD_H */

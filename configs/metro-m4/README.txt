@@ -2,7 +2,8 @@ README
 ======
 
   This directory contains the port of NuttX to the Adafruit Metro M4.  The
-  Metro M4 uses a Arduino form factor and and pinout.  It's powered with an ATSAMD51J19:
+  Metro M4 uses a Arduino form factor and and pinout.  It's powered with an
+  ATSAMD51J19:
 
   o Cortex M4 core running at 120 MHz
   o Hardware DSP and floating point support
@@ -16,3 +17,17 @@ README
   o 10-bit Parallel capture controller (for camera/video in)
   o Built in crypto engines with AES (256 bit), true RNG, Pubkey controller
   o 64 QFN
+
+Serial Console
+==============
+
+  An Arduino compatible serial Shield is assumed (or equivalently, and
+  external RS-232 or serial-to-USB adapter connected on Arduino pins D0 and
+  D1):
+
+  ------ ----------------- ---------
+  SHIELD SAMD5E5           FUNCTION
+  ------ ----------------- ---------
+  D0     PA23 SERCOM3 PAD2 RXD
+  D1     PA22 SERCOM3 PAD0 TXD
+

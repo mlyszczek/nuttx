@@ -313,14 +313,6 @@ config SAMD5E5_HAVE_SDHC2
 	bool
 	default n
 
-config SAMD5E5_HAVE_SERCOM4
-	bool
-	default n
-
-config SAMD5E5_HAVE_SERCOM5
-	bool
-	default n
-
 config SAMD5E5_HAVE_SERCOM6
 	bool
 	default n
@@ -407,7 +399,16 @@ config SAMD5E5_SERCOM4
 config SAMD5E5_SERCOM5
 	bool "Serial Communication Interface 5"
 	default n
-	depends on SAMD5E5_HAVE_SERCOM5
+
+config SAMD5E5_SERCOM6
+	bool "Serial Communication Interface 6"
+	default n
+	depends on SAMD5E5_HAVE_SERCOM6
+
+config SAMD5E5_SERCOM7
+	bool "Serial Communication Interface 7"
+	default n
+	depends on SAMD5E5_HAVE_SERCOM7
 
 config SAMD5E5_TC0
 	bool "Timer/Counter 0"
@@ -485,6 +486,20 @@ config SAMD5E5_GPIOD_IRQ
 
 endif # SAMD5E5_GPIO_IRQ
 
+config SAMD5E5_DMAC_NDESC
+	int "Number of additional DMA Descriptors"
+	default 0
+	depends on SAMD5E5_DMAC
+	---help---
+		This provides the number of additional DMA descriptors that can be
+		use to support multi-linked DMA transfers.  A minimum of 16
+		descriptors will always be allocated (16 for the base descriptor which
+		overlap the writeback descriptors).  If this value is set to zero,
+		then only single block DMA transfers can be supported.
+
+		Each additional DMA descriptor will require 16-bytes for LPRAM
+		memory.
+
 choice
 	prompt "SERCOM0 mode"
 	default SAMD5E5_SERCOM0_ISUSART
@@ -504,20 +519,6 @@ config SAMD5E5_SERCOM0_ISUSART
 	select USART0_SERIALDRIVER
 
 endchoice
-
-config SAMD5E5_DMAC_NDESC
-	int "Number of additional DMA Descriptors"
-	default 0
-	depends on SAMD5E5_DMAC
-	---help---
-		This provides the number of additional DMA descriptors that can be
-		use to support multi-linked DMA transfers.  A minimum of 16
-		descriptors will always be allocated (16 for the base descriptor which
-		overlap the writeback descriptors).  If this value is set to zero,
-		then only single block DMA transfers can be supported.
-
-		Each additional DMA descriptor will require 16-bytes for LPRAM
-		memory.
 
 choice
 	prompt "SERCOM1 mode"
@@ -616,6 +617,46 @@ config SAMD5E5_SERCOM5_ISSPI
 config SAMD5E5_SERCOM5_ISUSART
 	bool "USART"
 	select USART5_SERIALDRIVER
+
+endchoice
+
+choice
+	prompt "SERCOM6 mode"
+	default SAMD5E5_SERCOM6_ISUSART
+	depends on SAMD5E5_SERCOM6
+
+config SAMD5E5_SERCOM6_ISI2C
+	bool "I2C"
+	select I2C
+	select SAMD5E5_HAVE_I2C
+
+config SAMD5E5_SERCOM6_ISSPI
+	bool "SPI"
+	select SAMD5E5_HAVE_SPI
+
+config SAMD5E5_SERCOM6_ISUSART
+	bool "USART"
+	select USART6_SERIALDRIVER
+
+endchoice
+
+choice
+	prompt "SERCOM7 mode"
+	default SAMD5E5_SERCOM7_ISUSART
+	depends on SAMD5E5_SERCOM7
+
+config SAMD5E5_SERCOM7_ISI2C
+	bool "I2C"
+	select I2C
+	select SAMD5E5_HAVE_I2C
+
+config SAMD5E5_SERCOM7_ISSPI
+	bool "SPI"
+	select SAMD5E5_HAVE_SPI
+
+config SAMD5E5_SERCOM7_ISUSART
+	bool "USART"
+	select USART7_SERIALDRIVER
 
 endchoice
 
