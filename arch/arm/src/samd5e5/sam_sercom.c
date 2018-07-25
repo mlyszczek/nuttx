@@ -104,6 +104,60 @@ static const uint8_t g_corclk_channel[SAMD5E5_NSERCOM] =
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: sercom_enable
+ *
+ * Description:
+ *   Enable clocking to a SERCOM module
+ *
+ * Assumptions/Limitation:
+ *   This operation is global and atomic.  Interrupts will be masked.
+ *
+ ****************************************************************************/
+
+static void sercom_enable(int sercom)
+{
+  DEBUGASSERT((unsigned)sercom < SAMD5E5_NSERCOM);
+
+  switch (sercom)
+    {
+      case 0:
+        sam_sercom0_enableperiph();
+        break;
+
+      case 1:
+        sam_sercom1_enableperiph();
+        break;
+
+      case 2:
+        sam_sercom2_enableperiph();
+        break;
+
+      case 3:
+        sam_sercom3_enableperiph();
+        break;
+
+      case 4:
+        sam_sercom4_enableperiph();
+        break;
+
+      case 5:
+        sam_sercom5_enableperiph();
+        break;
+
+      case 6:
+        sam_sercom6_enableperiph();
+        break;
+
+      case 7:
+        sam_sercom7_enableperiph();
+        break;
+
+      default:
+        break;
+    }
+}
+
+/****************************************************************************
  * Name: sercom_coreclk_configure
  *
  * Description:
@@ -120,13 +174,12 @@ static const uint8_t g_corclk_channel[SAMD5E5_NSERCOM] =
  *
  ****************************************************************************/
 
-#if defined(CONFIG_ARCH_FAMILY_SAMD20) || defined(CONFIG_ARCH_FAMILY_SAMD21)
 void sercom_coreclk_configure(int sercom, int gclkgen, bool wrlock)
 {
   uint16_t regval;
   uint8_t gclkcore;
 
-  DEBUASSERT((unsigned)sercom < SAMD5E5_NSERCOM);
+  DEBUGASSERT((unsigned)sercom < SAMD5E5_NSERCOM);
 
   /* Set up the SERCOMn_GCLK_ID_CORE clock */
 
@@ -179,7 +232,7 @@ void sercom_coreclk_configure(int sercom, int gclkgen, bool wrlock)
 
 void sercom_slowclk_configure(int sercom, int gclkgen)
 {
-  DEBUASSERT((unsigned)sercom < SAMD5E5_NSERCOM);
+  DEBUGASSERT((unsigned)sercom < SAMD5E5_NSERCOM);
 
   /* Setup the SERCOMn_GCLK channel. */
 
