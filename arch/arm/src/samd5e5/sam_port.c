@@ -185,7 +185,7 @@ static inline void sam_configinput(uintptr_t base, port_pinset_t pinset)
 
 static inline void sam_configinterrupt(uintptr_t base, port_pinset_t pinset)
 {
-#ifdef CONFIG_SAMD2L2_EIC
+#ifdef CONFIG_SAMD5E5_EIC
   uint32_t func;
   uint32_t regval;
   int pin;
@@ -208,7 +208,7 @@ static inline void sam_configinterrupt(uintptr_t base, port_pinset_t pinset)
 #ifdef CONFIG_DEBUG_GPIO_INFO
   sam_dumpport(pinset, "extint");
 #endif
-#endif /* CONFIG_SAMD2L2_EIC */
+#endif /* CONFIG_SAMD5E5_EIC */
 }
 
 /****************************************************************************
