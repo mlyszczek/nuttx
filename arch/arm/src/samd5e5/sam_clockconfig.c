@@ -1,19 +1,8 @@
 /****************************************************************************
- * arch/arm/src/samd2l2/saml_clockconfig.c
+ * arch/arm/src/samd5e5/saml_clockconfig.c
  *
- *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- * References:
- *   1. "Atmel SAM L21E / SAM L21G / SAM L21J Smart ARM-Based Microcontroller
- *       Datasheet", Atmel-42385C-SAML21_Datasheet_Preliminary-03/20/15
- *   2. The SAMD20 samd_clockconfig.c file.  See that file for additional
- *      references.
- *   3. Atmel sample code for the SAML21.  This code has an ASF license
- *      with is compatible with the NuttX BSD license, but includes the
- *      provision that this code not be used in non-Atmel products.  That
- *      sample code was used only as a reference so I believe that only the
- *      NuttX BSD license applies.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -68,8 +57,6 @@
 
 #include "saml_periphclks.h"
 #include "sam_clockconfig.h"
-
-#ifdef CONFIG_ARCH_FAMILY_SAML21
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -342,7 +329,7 @@ static inline void sam_flash_waitstates(void)
 {
   uint32_t regval;
 
-  /* Errate 13134: Correct the default value of the NVMCTRL.CTRLB.MANW bit */
+  /* Errata 13134: Correct the default value of the NVMCTRL.CTRLB.MANW bit */
 
   regval  = getreg32(SAM_NVMCTRL_CTRLB);
   regval |= NVMCTRL_CTRLB_MANW;
@@ -1372,5 +1359,3 @@ void sam_clockconfig(void)
 
   sam_periph_clocks();
 }
-
-#endif /* CONFIG_ARCH_FAMILY_SAML21 */
