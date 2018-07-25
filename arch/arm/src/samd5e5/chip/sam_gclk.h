@@ -138,21 +138,24 @@
 #define GCLK_CHAN_OSCCTRL_FDPLL1     2         /* Reference clock for FDPLL1 */
 #define GCLK_CHAN_OSCCTRL_FDPLL0_32K 3         /* FDPLL0 32KHz clock for internal lock timer */
 #define GCLK_CHAN_OSCCTRL_FDPLL1_32K 3         /* FDPLL1 32KHz clock for internal lock timer */
+#define GCLK_CHAN_SDHCn_SLOW         3         /* SDHC0-1 Slow */
 #define GCLK_CHAN_SDHC0_SLOW         3         /* SDHC0 Slow */
 #define GCLK_CHAN_SDHC1_SLOW         3         /* SDHC1 Slow */
-#define GCLK_CHAN_SERCOM0            3         /* SERCOM0 Slow */
-#define GCLK_CHAN_SERCOM1            3         /* SERCOM1 Slow */
-#define GCLK_CHAN_SERCOM2            3         /* SERCOM2 Slow */
-#define GCLK_CHAN_SERCOM3            3         /* SERCOM3 Slow */
-#define GCLK_CHAN_SERCOM4            3         /* SERCOM4 Slow */
-#define GCLK_CHAN_SERCOM5            3         /* SERCOM5 Slow */
-#define GCLK_CHAN_SERCOM6            3         /* SERCOM6 Slow */
-#define GCLK_CHAN_SERCOM7            3         /* SERCOM7 Slow */
+#define GCLK_CHAN_SERCOMn_SLOW       3         /* SERCOM0=7 Slow */
+#define GCLK_CHAN_SERCOM0_SLOW       3         /* SERCOM0 Slow */
+#define GCLK_CHAN_SERCOM1_SLOW       3         /* SERCOM1 Slow */
+#define GCLK_CHAN_SERCOM2_SLOW       3         /* SERCOM2 Slow */
+#define GCLK_CHAN_SERCOM3_SLOW       3         /* SERCOM3 Slow */
+#define GCLK_CHAN_SERCOM4_SLOW       3         /* SERCOM4 Slow */
+#define GCLK_CHAN_SERCOM5_SLOW       3         /* SERCOM5 Slow */
+#define GCLK_CHAN_SERCOM6_SLOW       3         /* SERCOM6 Slow */
+#define GCLK_CHAN_SERCOM7_SLOW       3         /* SERCOM7 Slow */
 #define GCLK_CHAN_EIC                4         /* EIC */
 #define GCLK_CHAN_FREQM_MSR          5         /* FREQM Measure */
 #define GCLK_CHAN_FREQM_REF          6         /* FREQM Reference */
 #define GCLK_CHAN_SERCOM0_CORE       7         /* SERCOM0 Core */
 #define GCLK_CHAN_SERCOM1_CORE       8         /* SERCOM1 Core */
+#define GCLK_CHAN_TCn                9         /* TC0-1 */
 #define GCLK_CHAN_TC0                9         /* TC0 */
 #define GCLK_CHAN_TC1                9         /* TC1 */
 #define GCLK_CHAN_USB                10        /* USB */
