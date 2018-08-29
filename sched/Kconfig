@@ -1269,10 +1269,23 @@ config SIG_POLL
 		The SIGPOLL signal is sent to a process when an asynchronous I/O
 		event occurs (meaning it has been polled).  Default: 5
 
+if SIG_DEFAULT
+
+config SIG_STOP
+	int "SIGSTOP"
+	default 6
+	---help---
+		Suspend/pause a task.
+
+config SIG_STP
+	int "SIGSTP"
+	default 7
+	---help---
+		Suspend/pause a task.  Like SIGSTOP, but can be caught or ignored.
+
 config SIG_INT
 	int "SIGINT"
-	default 6
-	depends on SIG_DEFAULT
+	default 8
 	---help---
 		The SIGINT signal is sent to cause a task termination event (only
 		if CONFIG_SIG_DEFAULT=y).  SIGINT may be ignored or caught by the
@@ -1281,10 +1294,17 @@ config SIG_INT
 config SIG_KILL
 	int "SIGKILL"
 	default 9
-	depends on SIG_DEFAULT
 	---help---
 		The SIGKILL signal is sent to cause a task termination event (only
 		if CONFIG_SIG_DEFAULT=y).  SIGKILL may not be caught or ignored.
+
+config SIG_CONT
+	int "SIGCONT"
+	default 10
+	---help---
+		Resume a suspend task.
+
+endif SIG_DEFAULT
 
 comment "Non-standard Signal Numbers"
 

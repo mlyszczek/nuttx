@@ -170,8 +170,18 @@
 #endif
 
 #ifdef CONFIG_SIG_DEFAULT
+#  ifndef CONFIG_SIG_STOP
+#    define SIGSTOP     6  /* Suspend/pause the task */
+#  else
+#    define SIGSTOP     CONFIG_SIG_STOP
+#  endif
+#  ifndef CONFIG_SIG_STP
+#    define SIGSTP      7  /* Like SIGSTOP but can be caught or ignored  */
+#  else
+#    define SIGSTP      CONFIG_SIG_STP
+#  endif
 #  ifndef CONFIG_SIG_INT
-#    define SIGINT      6  /* Sent when ctrl-c event  */
+#    define SIGINT      8  /* Sent when ctrl-c event */
 #  else
 #    define SIGINT      CONFIG_SIG_INT
 #  endif
@@ -179,6 +189,11 @@
 #    define SIGKILL     9  /* Sent from shell as 'kill -9 <task>'  */
 #  else
 #    define SIGKILL     CONFIG_SIG_KILL
+#  endif
+#  ifndef CONFIG_SIG_CONT
+#    define SIGCONT     10  /* Resume paused task */
+#  else
+#    define SIGCONT     CONFIG_SIG_CONT
 #  endif
 #endif
 

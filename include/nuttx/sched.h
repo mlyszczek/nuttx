@@ -245,6 +245,10 @@ enum tstate_e
 #ifdef CONFIG_PAGING
   TSTATE_WAIT_PAGEFILL,       /* BLOCKED      - Waiting for page fill */
 #endif
+#ifdef CONFIG_SIG_DEFAULT
+  TSTATE_TASK_STOPPED,        /* BLOCKED      - Waiting for SIGCONT */
+#endif
+
   NUM_TASK_STATES             /* Must be last */
 };
 typedef enum tstate_e tstate_t;
@@ -621,6 +625,9 @@ struct tcb_s
 #endif
 
   uint8_t  task_state;                   /* Current state of the thread         */
+#ifdef CONFIG_SIG_DEFAULT
+  uint8_t  prev_state;                   /* Previous state before being stopped */
+#endif
 #ifdef CONFIG_SMP
   uint8_t  cpu;                          /* CPU index if running or assigned    */
   cpu_set_t affinity;                    /* Bit set of permitted CPUs           */
