@@ -15,4 +15,19 @@ config FS_SPIFFS
 
 if FS_SPIFFS
 
+config SPIFFS_GCDBG
+	bool "Enable garbage collection debug output"
+	default n
+	depends on DEBUG_FS_INFO
+
+config SPIFFS_CACHEDBG
+	bool "Enable cache debug output"
+	default n
+	depends on DEBUG_FS_INFO
+
+config SPIFFS_CHECKDBG
+	bool "Enable consistency check debug output"
+	default n
+	depends on DEBUG_FS_INFO
+
 endif # FS_SPIFFS
