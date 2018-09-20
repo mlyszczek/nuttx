@@ -4,7 +4,7 @@
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- * This is a port of version 9.3.7 of SPIFFS by Peter Andersion.  That
+ * This is a port of version 0.3.7 of SPIFFS by Peter Andersion.  That
  * version was originally released under the MIT license but is here re-
  * released under the NuttX BSD license.
  *
@@ -55,18 +55,18 @@
  * Private Data
  ****************************************************************************/
 
-static int32_t spiffs_fflush_cache(spiffs * fs, spiffs_file fh);
+static int32_t spiffs_fflush_cache(FAR struct spiffs_s *fs, spiffs_file fh);
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-uint8_t SPIFFS_mounted(spiffs * fs)
+uint8_t SPIFFS_mounted(FAR struct spiffs_s *fs)
 {
   return SPIFFS_CHECK_MOUNT(fs);
 }
 
-int32_t SPIFFS_format(spiffs * fs)
+int32_t SPIFFS_format(FAR struct spiffs_s *fs)
 {
   SPIFFS_API_CHECK_CFG(fs);
   if (SPIFFS_CHECK_MOUNT(fs))
@@ -105,7 +105,7 @@ int32_t SPIFFS_probe_fs(spiffs_config * config)
 }
 #endif
 
-int32_t SPIFFS_mount(spiffs * fs, spiffs_config * config, uint8_t * work,
+int32_t SPIFFS_mount(FAR struct spiffs_s *fs, spiffs_config * config, uint8_t * work,
                    uint8_t * fd_space, uint32_t fd_space_size,
                    void *cache, uint32_t cache_size,
                    spiffs_check_callback check_cb_f)
@@ -121,7 +121,7 @@ int32_t SPIFFS_mount(spiffs * fs, spiffs_config * config, uint8_t * work,
 
   SPIFFS_LOCK(fs);
   user_data = fs->user_data;
-  memset(fs, 0, sizeof(spiffs));
+  memset(fs, 0, sizeof(struct spiffs_s));
   memcpy(&fs->cfg, config, sizeof(spiffs_config));
   fs->user_data = user_data;
   fs->block_count = SPIFFS_CFG_PHYS_SZ(fs) / SPIFFS_CFG_LOG_BLOCK_SZ(fs);
@@ -184,7 +184,7 @@ int32_t SPIFFS_mount(spiffs * fs, spiffs_config * config, uint8_t * work,
   finfo("page pages per block:        " _SPIPRIi "\n",
         (uint32_t) SPIFFS_PAGES_PER_BLOCK(fs));
   finfo("page header length:          " _SPIPRIi "\n",
-        (uint32_t) sizeof(spiffs_page_header));
+        (uint32_t) sizeof(struct spiffs_page_header_s));
   finfo("object header index entries: " _SPIPRIi "\n",
         (uint32_t) SPIFFS_OBJ_HDR_IX_LEN(fs));
   finfo("object index entries:        " _SPIPRIi "\n",
@@ -200,7 +200,7 @@ int32_t SPIFFS_mount(spiffs * fs, spiffs_config * config, uint8_t * work,
   return 0;
 }
 
-void SPIFFS_unmount(spiffs * fs)
+void SPIFFS_unmount(FAR struct spiffs_s *fs)
 {
   uint32_t i;
   spiffs_fd *fds = (spiffs_fd *) fs->fd_space;
@@ -226,13 +226,7 @@ void SPIFFS_unmount(spiffs * fs)
   SPIFFS_UNLOCK(fs);
 }
 
-void SPIFFS_clearerr(spiffs * fs)
-{
-  finfo("%s\n", __func__);
-  fs->err_code = OK;
-}
-
-int32_t SPIFFS_creat(spiffs * fs, const char *path, spiffs_mode mode)
+int32_t SPIFFS_creat(FAR struct spiffs_s *fs, const char *path, spiffs_mode mode)
 {
   spiffs_obj_id obj_id;
   int32_t res;
@@ -258,7 +252,7 @@ int32_t SPIFFS_creat(spiffs * fs, const char *path, spiffs_mode mode)
   return 0;
 }
 
-spiffs_file SPIFFS_open(spiffs * fs, const char *path, spiffs_flags flags,
+spiffs_file SPIFFS_open(FAR struct spiffs_s *fs, const char *path, spiffs_flags flags,
                         spiffs_mode mode)
 {
   SPIFFS_API_CHECK_CFG(fs);
@@ -288,6 +282,7 @@ spiffs_file SPIFFS_open(spiffs * fs, const char *path, spiffs_flags flags,
         {
           spiffs_fd_return(fs, fd->file_nbr);
         }
+
       SPIFFS_API_CHECK_RES_UNLOCK(fs, res);
     }
 
@@ -360,7 +355,7 @@ spiffs_file SPIFFS_open(spiffs * fs, const char *path, spiffs_flags flags,
   return fd->file_nbr;
 }
 
-spiffs_file SPIFFS_open_by_dirent(spiffs * fs, struct spiffs_dirent * e,
+spiffs_file SPIFFS_open_by_dirent(FAR struct spiffs_s *fs, struct spiffs_s_dirent * e,
                                   spiffs_flags flags, spiffs_mode mode)
 {
   spiffs_fd *fd;
@@ -400,7 +395,7 @@ spiffs_file SPIFFS_open_by_dirent(spiffs * fs, struct spiffs_dirent * e,
   return fd->file_nbr;
 }
 
-spiffs_file SPIFFS_open_by_page(spiffs * fs, spiffs_page_ix page_ix,
+spiffs_file SPIFFS_open_by_page(FAR struct spiffs_s *fs, spiffs_page_ix page_ix,
                                 spiffs_flags flags, spiffs_mode mode)
 {
   spiffs_fd *fd;
@@ -453,7 +448,7 @@ spiffs_file SPIFFS_open_by_page(spiffs * fs, spiffs_page_ix page_ix,
   return fd->file_nbr;
 }
 
-static int32_t spiffs_hydro_read(spiffs * fs, spiffs_file fh, void *buf,
+static int32_t spiffs_hydro_read(FAR struct spiffs_s *fs, spiffs_file fh, void *buf,
                                int32_t len)
 {
   spiffs_fd *fd;
@@ -518,7 +513,7 @@ static int32_t spiffs_hydro_read(spiffs * fs, spiffs_file fh, void *buf,
   return len;
 }
 
-int32_t SPIFFS_read(spiffs * fs, spiffs_file fh, void *buf, int32_t len)
+int32_t SPIFFS_read(FAR struct spiffs_s *fs, spiffs_file fh, void *buf, int32_t len)
 {
   int32_t res;
 
@@ -533,7 +528,7 @@ int32_t SPIFFS_read(spiffs * fs, spiffs_file fh, void *buf, int32_t len)
   return res;
 }
 
-static int32_t spiffs_hydro_write(spiffs * fs, spiffs_fd * fd, void *buf,
+static int32_t spiffs_hydro_write(FAR struct spiffs_s *fs, spiffs_fd * fd, void *buf,
                                 uint32_t offset, int32_t len)
 {
   int32_t res = OK;
@@ -562,7 +557,7 @@ static int32_t spiffs_hydro_write(spiffs * fs, spiffs_fd * fd, void *buf,
   return len;
 }
 
-int32_t SPIFFS_write(spiffs * fs, spiffs_file fh, void *buf, int32_t len)
+int32_t SPIFFS_write(FAR struct spiffs_s *fs, spiffs_file fh, void *buf, int32_t len)
 {
   spiffs_fd *fd;
   int32_t res;
@@ -747,7 +742,7 @@ int32_t SPIFFS_write(spiffs * fs, spiffs_file fh, void *buf, int32_t len)
   return res;
 }
 
-int32_t SPIFFS_lseek(spiffs * fs, spiffs_file fh, int32_t offs, int whence)
+int32_t SPIFFS_lseek(FAR struct spiffs_s *fs, spiffs_file fh, int32_t offs, int whence)
 {
   spiffs_fd *fd;
   int32_t res;
@@ -809,7 +804,7 @@ int32_t SPIFFS_lseek(spiffs * fs, spiffs_file fh, int32_t offs, int whence)
   return offs;
 }
 
-int32_t SPIFFS_remove(spiffs * fs, const char *path)
+int32_t SPIFFS_remove(FAR struct spiffs_s *fs, const char *path)
 {
   spiffs_fd *fd;
   spiffs_page_ix pix;
@@ -859,7 +854,7 @@ int32_t SPIFFS_remove(spiffs * fs, const char *path)
   return 0;
 }
 
-int32_t SPIFFS_fremove(spiffs * fs, spiffs_file fh)
+int32_t SPIFFS_fremove(FAR struct spiffs_s *fs, spiffs_file fh)
 {
   spiffs_fd *fd;
   int32_t res;
@@ -886,8 +881,8 @@ int32_t SPIFFS_fremove(spiffs * fs, spiffs_file fh)
   return 0;
 }
 
-static int32_t spiffs_stat_pix(spiffs * fs, spiffs_page_ix pix, spiffs_file fh,
-                             spiffs_stat * s)
+static int32_t spiffs_stat_pix(FAR struct spiffs_s *fs, spiffs_page_ix pix, spiffs_file fh,
+                               FAR struct spiffs_stat_s *s)
 {
   spiffs_page_object_ix_header objix_hdr;
   spiffs_obj_id obj_id;
@@ -919,7 +914,7 @@ static int32_t spiffs_stat_pix(spiffs * fs, spiffs_page_ix pix, spiffs_file fh,
   return res;
 }
 
-int32_t SPIFFS_stat(spiffs * fs, const char *path, spiffs_stat * s)
+int32_t SPIFFS_stat(FAR struct spiffs_s *fs, const char *path, FAR struct spiffs_stat_s * s)
 {
   int32_t res;
   spiffs_page_ix pix;
@@ -946,7 +941,7 @@ int32_t SPIFFS_stat(spiffs * fs, const char *path, spiffs_stat * s)
   return res;
 }
 
-int32_t SPIFFS_fstat(spiffs * fs, spiffs_file fh, spiffs_stat * s)
+int32_t SPIFFS_fstat(FAR struct spiffs_s *fs, spiffs_file fh, FAR struct spiffs_stat_s * s)
 {
   spiffs_fd *fd;
   int32_t res;
@@ -970,7 +965,7 @@ int32_t SPIFFS_fstat(spiffs * fs, spiffs_file fh, spiffs_stat * s)
  * given filehandle. If so, these writes are flushed.
  */
 
-static int32_t spiffs_fflush_cache(spiffs * fs, spiffs_file fh)
+static int32_t spiffs_fflush_cache(FAR struct spiffs_s *fs, spiffs_file fh)
 {
   int32_t res = OK;
   spiffs_fd *fd;
@@ -1010,7 +1005,7 @@ static int32_t spiffs_fflush_cache(spiffs * fs, spiffs_file fh)
   return res;
 }
 
-int32_t SPIFFS_fflush(spiffs * fs, spiffs_file fh)
+int32_t SPIFFS_fflush(FAR struct spiffs_s *fs, spiffs_file fh)
 {
   int32_t res = OK;
 
@@ -1026,7 +1021,7 @@ int32_t SPIFFS_fflush(spiffs * fs, spiffs_file fh)
   return res;
 }
 
-int32_t SPIFFS_close(spiffs * fs, spiffs_file fh)
+int32_t SPIFFS_close(FAR struct spiffs_s *fs, spiffs_file fh)
 {
   int32_t res = OK;
 
@@ -1045,7 +1040,7 @@ int32_t SPIFFS_close(spiffs * fs, spiffs_file fh)
   return res;
 }
 
-int32_t SPIFFS_rename(spiffs * fs, const char *old_path, const char *new_path)
+int32_t SPIFFS_rename(FAR struct spiffs_s *fs, const char *old_path, const char *new_path)
 {
   spiffs_page_ix pix_old;
   spiffs_page_ix pix_dummy;
@@ -1109,7 +1104,7 @@ int32_t SPIFFS_rename(spiffs * fs, const char *old_path, const char *new_path)
 }
 
 #if SPIFFS_OBJ_META_LEN
-int32_t SPIFFS_update_meta(spiffs * fs, const char *name, const void *meta)
+int32_t SPIFFS_update_meta(FAR struct spiffs_s *fs, const char *name, const void *meta)
 {
   spiffs_page_ix pix, pix_dummy;
   spiffs_fd *fd;
@@ -1144,7 +1139,7 @@ int32_t SPIFFS_update_meta(spiffs * fs, const char *name, const void *meta)
   return res;
 }
 
-int32_t SPIFFS_fupdate_meta(spiffs * fs, spiffs_file fh, const void *meta)
+int32_t SPIFFS_fupdate_meta(FAR struct spiffs_s *fs, spiffs_file fh, const void *meta)
 {
   int32_t res;
   spiffs_fd *fd;
@@ -1172,7 +1167,7 @@ int32_t SPIFFS_fupdate_meta(spiffs * fs, spiffs_file fh, const void *meta)
 }
 #endif  /* SPIFFS_OBJ_META_LEN */
 
-spiffs_DIR *SPIFFS_opendir(spiffs * fs, const char *name, spiffs_DIR * d)
+spiffs_DIR *SPIFFS_opendir(FAR struct spiffs_s *fs, const char *name, spiffs_DIR * d)
 {
   finfo("Entry\n");
 
@@ -1194,7 +1189,7 @@ spiffs_DIR *SPIFFS_opendir(spiffs * fs, const char *name, spiffs_DIR * d)
   return d;
 }
 
-static int32_t spiffs_read_dir_v(spiffs * fs,
+static int32_t spiffs_read_dir_v(FAR struct spiffs_s *fs,
                                  spiffs_obj_id obj_id,
                                  spiffs_block_ix bix,
                                  int ix_entry,
@@ -1225,7 +1220,7 @@ static int32_t spiffs_read_dir_v(spiffs * fs,
                                 SPIFFS_PH_FLAG_IXDELE)) ==
       (SPIFFS_PH_FLAG_DELET | SPIFFS_PH_FLAG_IXDELE))
     {
-      struct spiffs_dirent *e = (struct spiffs_dirent *)user_var_p;
+      struct spiffs_s_dirent *e = (struct spiffs_s_dirent *)user_var_p;
       e->obj_id = obj_id;
       strcpy((char *)e->name, (char *)objix_hdr.name);
       e->type = objix_hdr.type;
@@ -1240,12 +1235,12 @@ static int32_t spiffs_read_dir_v(spiffs * fs,
   return SPIFFS_VIS_COUNTINUE;
 }
 
-struct spiffs_dirent *SPIFFS_readdir(spiffs_DIR * d, struct spiffs_dirent *e)
+struct spiffs_s_dirent *SPIFFS_readdir(spiffs_DIR * d, struct spiffs_s_dirent *e)
 {
   spiffs_block_ix bix;
   int entry;
   int32_t res;
-  struct spiffs_dirent *ret = 0;
+  struct spiffs_s_dirent *ret = 0;
 
   finfo("Entry\n");
   if (!SPIFFS_CHECK_MOUNT(d->fs))
@@ -1286,7 +1281,7 @@ int32_t SPIFFS_closedir(spiffs_DIR * d)
   return 0;
 }
 
-int32_t SPIFFS_check(spiffs * fs)
+int32_t SPIFFS_check(FAR struct spiffs_s *fs)
 {
   int32_t res;
 
@@ -1304,7 +1299,7 @@ int32_t SPIFFS_check(spiffs * fs)
   return res;
 }
 
-int32_t SPIFFS_info(spiffs * fs, uint32_t * total, uint32_t * used)
+int32_t SPIFFS_info(FAR struct spiffs_s *fs, uint32_t * total, uint32_t * used)
 {
   int32_t res = OK;
   uint32_t pages_per_block;
@@ -1341,7 +1336,7 @@ int32_t SPIFFS_info(spiffs * fs, uint32_t * total, uint32_t * used)
   return res;
 }
 
-int32_t SPIFFS_gc_quick(spiffs * fs, uint16_t max_free_pages)
+int32_t SPIFFS_gc_quick(FAR struct spiffs_s *fs, uint16_t max_free_pages)
 {
   int32_t res;
 
@@ -1357,7 +1352,7 @@ int32_t SPIFFS_gc_quick(spiffs * fs, uint16_t max_free_pages)
   return 0;
 }
 
-int32_t SPIFFS_gc(spiffs * fs, uint32_t size)
+int32_t SPIFFS_gc(FAR struct spiffs_s *fs, uint32_t size)
 {
   int32_t res;
 
@@ -1373,7 +1368,7 @@ int32_t SPIFFS_gc(spiffs * fs, uint32_t size)
   return 0;
 }
 
-int32_t SPIFFS_eof(spiffs * fs, spiffs_file fh)
+int32_t SPIFFS_eof(FAR struct spiffs_s *fs, spiffs_file fh)
 {
   spiffs_fd *fd;
   int32_t res;
@@ -1395,7 +1390,7 @@ int32_t SPIFFS_eof(spiffs * fs, spiffs_file fh)
   return res;
 }
 
-int32_t SPIFFS_tell(spiffs * fs, spiffs_file fh)
+int32_t SPIFFS_tell(FAR struct spiffs_s *fs, spiffs_file fh)
 {
   spiffs_fd *fd;
   int32_t res;
@@ -1417,7 +1412,7 @@ int32_t SPIFFS_tell(spiffs * fs, spiffs_file fh)
   return res;
 }
 
-int32_t SPIFFS_set_file_callback_func(spiffs * fs, spiffs_file_callback cb_func)
+int32_t SPIFFS_set_file_callback_func(FAR struct spiffs_s *fs, spiffs_file_callback cb_func)
 {
   finfo("Entry\n");
   SPIFFS_LOCK(fs);
@@ -1427,7 +1422,7 @@ int32_t SPIFFS_set_file_callback_func(spiffs * fs, spiffs_file_callback cb_func)
 }
 
 #if SPIFFS_IX_MAP
-int32_t SPIFFS_ix_map(spiffs * fs, spiffs_file fh, spiffs_ix_map * map,
+int32_t SPIFFS_ix_map(FAR struct spiffs_s *fs, spiffs_file fh, spiffs_ix_map * map,
                     uint32_t offset, uint32_t len, spiffs_page_ix * map_buf)
 {
   spiffs_fd *fd;
@@ -1466,7 +1461,7 @@ int32_t SPIFFS_ix_map(spiffs * fs, spiffs_file fh, spiffs_ix_map * map,
   return res;
 }
 
-int32_t SPIFFS_ix_unmap(spiffs * fs, spiffs_file fh)
+int32_t SPIFFS_ix_unmap(FAR struct spiffs_s *fs, spiffs_file fh)
 {
   spiffs_fd *fd;
   int32_t res;
@@ -1490,7 +1485,7 @@ int32_t SPIFFS_ix_unmap(spiffs * fs, spiffs_file fh)
   return res;
 }
 
-int32_t SPIFFS_ix_remap(spiffs * fs, spiffs_file fh, uint32_t offset)
+int32_t SPIFFS_ix_remap(FAR struct spiffs_s *fs, spiffs_file fh, uint32_t offset)
 {
   spiffs_fd *fd;
   int32_t res = OK;
@@ -1580,7 +1575,7 @@ int32_t SPIFFS_ix_remap(spiffs * fs, spiffs_file fh, uint32_t offset)
   return res;
 }
 
-int32_t SPIFFS_bytes_to_ix_map_entries(spiffs * fs, uint32_t bytes)
+int32_t SPIFFS_bytes_to_ix_map_entries(FAR struct spiffs_s *fs, uint32_t bytes)
 {
   SPIFFS_API_CHECK_CFG(fs);
 
@@ -1589,7 +1584,7 @@ int32_t SPIFFS_bytes_to_ix_map_entries(spiffs * fs, uint32_t bytes)
   return (bytes + SPIFFS_DATA_PAGE_SIZE(fs)) / SPIFFS_DATA_PAGE_SIZE(fs);
 }
 
-int32_t SPIFFS_ix_map_entries_to_bytes(spiffs * fs, uint32_t map_page_ix_entries)
+int32_t SPIFFS_ix_map_entries_to_bytes(FAR struct spiffs_s *fs, uint32_t map_page_ix_entries)
 {
   SPIFFS_API_CHECK_CFG(fs);
   return map_page_ix_entries * SPIFFS_DATA_PAGE_SIZE(fs);

@@ -4,7 +4,7 @@
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- * This is a port of version 9.3.7 of SPIFFS by Peter Andersion.  That
+ * This is a port of version 0.3.7 of SPIFFS by Peter Andersion.  That
  * version was originally released under the MIT license but is here re-
  * released under the NuttX BSD license.
  *
@@ -54,7 +54,7 @@
 
 /* returns cached page for give page index, or null if no such cached page */
 
-static spiffs_cache_page *spiffs_cache_page_get(FAR spiffs * fs,
+static spiffs_cache_page *spiffs_cache_page_get(FAR struct spiffs_s *fs,
                                                 spiffs_page_ix pix)
 {
   int i;
@@ -81,7 +81,7 @@ static spiffs_cache_page *spiffs_cache_page_get(FAR spiffs * fs,
 
 /* frees cached page */
 
-static int32_t spiffs_cache_page_free(spiffs * fs, int ix, uint8_t write_back)
+static int32_t spiffs_cache_page_free(FAR struct spiffs_s *fs, int ix, uint8_t write_back)
 {
   int32_t res = OK;
   spiffs_cache *cache = spiffs_get_cache(fs);
@@ -121,7 +121,7 @@ static int32_t spiffs_cache_page_free(spiffs * fs, int ix, uint8_t write_back)
 
 /* removes the oldest accessed cached page */
 
-static int32_t spiffs_cache_page_remove_oldest(spiffs * fs, uint8_t flag_mask,
+static int32_t spiffs_cache_page_remove_oldest(FAR struct spiffs_s *fs, uint8_t flag_mask,
                                                uint8_t flags)
 {
   int32_t res = OK;
@@ -162,7 +162,7 @@ static int32_t spiffs_cache_page_remove_oldest(spiffs * fs, uint8_t flag_mask,
  * are busy.
  */
 
-static spiffs_cache_page *spiffs_cache_page_allocate(spiffs * fs)
+static spiffs_cache_page *spiffs_cache_page_allocate(FAR struct spiffs_s *fs)
 {
   int i;
 
@@ -192,7 +192,7 @@ static spiffs_cache_page *spiffs_cache_page_allocate(spiffs * fs)
 
 /* drops the cache page for give page index */
 
-void spiffs_cache_drop_page(spiffs * fs, spiffs_page_ix pix)
+void spiffs_cache_drop_page(FAR struct spiffs_s *fs, spiffs_page_ix pix)
 {
   spiffs_cache_page *cp = spiffs_cache_page_get(fs, pix);
   if (cp)
@@ -203,7 +203,7 @@ void spiffs_cache_drop_page(spiffs * fs, spiffs_page_ix pix)
 
 /* reads from spi flash or the cache */
 
-int32_t spiffs_phys_rd(spiffs * fs, uint8_t op, spiffs_file fh,
+int32_t spiffs_phys_rd(FAR struct spiffs_s *fs, uint8_t op, spiffs_file fh,
                        uint32_t addr, uint32_t len, uint8_t * dst)
 {
   (void)fh;
@@ -288,7 +288,7 @@ int32_t spiffs_phys_rd(spiffs * fs, uint8_t op, spiffs_file fh,
 
 /* writes to spi flash and/or the cache */
 
-int32_t spiffs_phys_wr(spiffs * fs, uint8_t op, spiffs_file fh,
+int32_t spiffs_phys_wr(FAR struct spiffs_s *fs, uint8_t op, spiffs_file fh,
                        uint32_t addr, uint32_t len, uint8_t * src)
 {
   (void)fh;
@@ -338,7 +338,7 @@ int32_t spiffs_phys_wr(spiffs * fs, uint8_t op, spiffs_file fh,
 
 /* returns the cache page that this fd refers, or null if no cache page */
 
-spiffs_cache_page *spiffs_cache_page_get_by_fd(spiffs * fs, spiffs_fd * fd)
+spiffs_cache_page *spiffs_cache_page_get_by_fd(FAR struct spiffs_s *fs, spiffs_fd * fd)
 {
   spiffs_cache *cache = spiffs_get_cache(fs);
 
@@ -367,7 +367,7 @@ spiffs_cache_page *spiffs_cache_page_get_by_fd(spiffs * fs, spiffs_fd * fd)
  * page if all cache is busy
  */
 
-spiffs_cache_page *spiffs_cache_page_allocate_by_fd(spiffs * fs, spiffs_fd * fd)
+spiffs_cache_page *spiffs_cache_page_allocate_by_fd(FAR struct spiffs_s *fs, spiffs_fd * fd)
 {
   /* before this function is called, it is ensured that there is no already
    * existing cache page with same object id
@@ -395,7 +395,7 @@ spiffs_cache_page *spiffs_cache_page_allocate_by_fd(spiffs * fs, spiffs_fd * fd)
  * page
  */
 
-void spiffs_cache_fd_release(spiffs * fs, spiffs_cache_page * cp)
+void spiffs_cache_fd_release(FAR struct spiffs_s *fs, spiffs_cache_page * cp)
 {
   uint32_t i;
   spiffs_fd *fds = (spiffs_fd *) fs->fd_space;
@@ -420,7 +420,7 @@ void spiffs_cache_fd_release(spiffs * fs, spiffs_cache_page * cp)
 
 /* Initializes the cache */
 
-void spiffs_cache_init(spiffs * fs)
+void spiffs_cache_init(FAR struct spiffs_s *fs)
 {
   uint32_t sz = fs->cache_size;
   uint32_t cache_mask = 0;

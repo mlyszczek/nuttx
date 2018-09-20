@@ -4,7 +4,7 @@
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- * This is a port of version 9.3.7 of SPIFFS by Peter Andersion.  That
+ * This is a port of version 0.3.7 of SPIFFS by Peter Andersion.  That
  * version was originally released under the MIT license but is here re-
  * released under the NuttX BSD license.
  *
@@ -80,7 +80,7 @@ typedef struct
  * is dropped.
  */
 
-static int32_t spiffs_gc_erase_block(spiffs * fs, spiffs_block_ix bix)
+static int32_t spiffs_gc_erase_block(FAR struct spiffs_s *fs, spiffs_block_ix bix)
 {
   int32_t res;
   uint32_t i;
@@ -102,7 +102,7 @@ static int32_t spiffs_gc_erase_block(spiffs * fs, spiffs_block_ix bix)
  * that no updates are needed on existing objects on pages that are erased.
  */
 
-int32_t spiffs_gc_quick(spiffs * fs, uint16_t max_free_pages)
+int32_t spiffs_gc_quick(FAR struct spiffs_s *fs, uint16_t max_free_pages)
 {
   int32_t res = OK;
   uint32_t blocks = fs->block_count;
@@ -211,7 +211,7 @@ int32_t spiffs_gc_quick(spiffs * fs, uint16_t max_free_pages)
  * cleansed and erased
  */
 
-int32_t spiffs_gc_check(spiffs * fs, uint32_t len)
+int32_t spiffs_gc_check(FAR struct spiffs_s *fs, uint32_t len)
 {
   int32_t res;
   int32_t free_pages =
@@ -340,7 +340,7 @@ int32_t spiffs_gc_check(spiffs * fs, uint32_t len)
 
 /* Updates page statistics for a block that is about to be erased */
 
-int32_t spiffs_gc_erase_page_stats(spiffs * fs, spiffs_block_ix bix)
+int32_t spiffs_gc_erase_page_stats(FAR struct spiffs_s *fs, spiffs_block_ix bix)
 {
   int32_t res = OK;
   int obj_lookup_page = 0;
@@ -397,7 +397,7 @@ int32_t spiffs_gc_erase_page_stats(spiffs * fs, spiffs_block_ix bix)
 
 /* Finds block candidates to erase */
 
-int32_t spiffs_gc_find_candidate(spiffs * fs,
+int32_t spiffs_gc_find_candidate(FAR struct spiffs_s *fs,
                                  spiffs_block_ix ** block_candidates,
                                  int *candidate_count, char fs_crammed)
 {
@@ -579,7 +579,7 @@ int32_t spiffs_gc_find_candidate(spiffs * fs,
  *   scan object lookup again for remaining object index pages, move to new page in other block
  */
 
-int32_t spiffs_gc_clean(spiffs * fs, spiffs_block_ix bix)
+int32_t spiffs_gc_clean(FAR struct spiffs_s *fs, spiffs_block_ix bix)
 {
   int32_t res = OK;
   const int entries_per_page =
@@ -678,11 +678,11 @@ int32_t spiffs_gc_clean(spiffs * fs, spiffs_block_ix bix)
 
                   if (obj_id == gc.cur_obj_id)
                     {
-                      spiffs_page_header p_hdr;
+                      struct spiffs_page_header_s p_hdr;
                       res =
                         _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
                                    0, SPIFFS_PAGE_TO_PADDR(fs, cur_pix),
-                                   sizeof(spiffs_page_header),
+                                   sizeof(struct spiffs_page_header_s),
                                    (uint8_t *) & p_hdr);
                       SPIFFS_CHECK_RES(res);
                       spiffs_gcinfo("MOVE_DATA found data page "
@@ -785,7 +785,7 @@ int32_t spiffs_gc_clean(spiffs * fs, spiffs_block_ix bix)
                     {
                       /* found an index object id */
 
-                      spiffs_page_header p_hdr;
+                      struct spiffs_page_header_s p_hdr;
                       spiffs_page_ix new_pix;
 
                       /* load header */
@@ -793,7 +793,7 @@ int32_t spiffs_gc_clean(spiffs * fs, spiffs_block_ix bix)
                       res =
                         _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
                                    0, SPIFFS_PAGE_TO_PADDR(fs, cur_pix),
-                                   sizeof(spiffs_page_header),
+                                   sizeof(struct spiffs_page_header_s),
                                    (uint8_t *) & p_hdr);
                       SPIFFS_CHECK_RES(res);
                       if (p_hdr.flags & SPIFFS_PH_FLAG_DELET)
@@ -881,14 +881,14 @@ int32_t spiffs_gc_clean(spiffs * fs, spiffs_block_ix bix)
                * find out corresponding obj ix page and load it to memory
                */
 
-              spiffs_page_header p_hdr;
+              struct spiffs_page_header_s p_hdr;
               spiffs_page_ix objix_pix;
               gc.stored_scan_entry_index = cur_entry;   /* push cursor */
               cur_entry = 0;    /* restart scan from start */
               gc.state = MOVE_OBJ_DATA;
               res = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
                                0, SPIFFS_PAGE_TO_PADDR(fs, cur_pix),
-                               sizeof(spiffs_page_header), (uint8_t *) & p_hdr);
+                               sizeof(struct spiffs_page_header_s), (uint8_t *) & p_hdr);
               SPIFFS_CHECK_RES(res);
               gc.cur_objix_spix =
                 SPIFFS_OBJ_IX_ENTRY_SPAN_IX(fs, p_hdr.span_ix);

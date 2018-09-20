@@ -4,7 +4,7 @@
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- * This is a port of version 9.3.7 of SPIFFS by Peter Andersion.  That
+ * This is a port of version 0.3.7 of SPIFFS by Peter Andersion.  That
  * version was originally released under the MIT license but is here re-
  * released under the NuttX BSD license.
  *
@@ -218,7 +218,7 @@
  * logical_page_size - (SPIFFS_NAME_MAX + 64)
  *
  * This is derived from following:
- * logical_page_size - (SPIFFS_NAME_MAX + sizeof(spiffs_page_header) +
+ * logical_page_size - (SPIFFS_NAME_MAX + sizeof(struct spiffs_page_header_s) +
  * spiffs_object_ix_header fields + at least some LUT entries)
  */
 
@@ -278,12 +278,6 @@
 
 #ifndef SPIFFS_ALIGNED_OBJECT_INDEX_TABLES
 #define SPIFFS_ALIGNED_OBJECT_INDEX_TABLES       0
-#endif
-
-/* Enable this if you want the HAL callbacks to be called with the spiffs struct */
-
-#ifndef SPIFFS_HAL_CALLBACK_EXTRA
-#define SPIFFS_HAL_CALLBACK_EXTRA         0
 #endif
 
 /* Enable this to add a temporal file cache using the fd buffer.

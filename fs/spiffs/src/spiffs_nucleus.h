@@ -4,7 +4,7 @@
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- * This is a port of version 9.3.7 of SPIFFS by Peter Andersion.  That
+ * This is a port of version 0.3.7 of SPIFFS by Peter Andersion.  That
  * version was originally released under the MIT license but is here re-
  * released under the NuttX BSD license.
  *
@@ -288,7 +288,7 @@
 /* returns data size in a data page */
 
 #define SPIFFS_DATA_PAGE_SIZE(fs) \
-    ( SPIFFS_CFG_LOG_PAGE_SZ(fs) - sizeof(spiffs_page_header) )
+    ( SPIFFS_CFG_LOG_PAGE_SZ(fs) - sizeof(struct spiffs_page_header_s) )
 
 /* returns physical address for block's erase count,
  * always in the physical last entry of the last object lookup page
@@ -439,25 +439,12 @@
 
 #define SPIFFS_VIS_NO_WRAP      (1<<2)
 
-#if SPIFFS_HAL_CALLBACK_EXTRA
-
-#  define SPIFFS_HAL_WRITE(_fs, _paddr, _len, _src) \
-  (_fs)->cfg.hal_write_f((_fs), (_paddr), (_len), (_src))
-#  define SPIFFS_HAL_READ(_fs, _paddr, _len, _dst) \
-  (_fs)->cfg.hal_read_f((_fs), (_paddr), (_len), (_dst))
-#  define SPIFFS_HAL_ERASE(_fs, _paddr, _len) \
-  (_fs)->cfg.hal_erase_f((_fs), (_paddr), (_len))
-
-#else
-
-#  define SPIFFS_HAL_WRITE(_fs, _paddr, _len, _src) \
+#define SPIFFS_HAL_WRITE(_fs, _paddr, _len, _src) \
   (_fs)->cfg.hal_write_f((_paddr), (_len), (_src))
-#  define SPIFFS_HAL_READ(_fs, _paddr, _len, _dst) \
+#define SPIFFS_HAL_READ(_fs, _paddr, _len, _dst) \
   (_fs)->cfg.hal_read_f((_paddr), (_len), (_dst))
-#  define SPIFFS_HAL_ERASE(_fs, _paddr, _len) \
+#define SPIFFS_HAL_ERASE(_fs, _paddr, _len) \
   (_fs)->cfg.hal_erase_f((_paddr), (_len))
-
-#endif
 
 #define SPIFFS_CACHE_FLAG_DIRTY       (1<<0)
 #define SPIFFS_CACHE_FLAG_WRTHRU      (1<<1)
@@ -556,7 +543,7 @@ typedef struct
 {
   /* the filesystem of this descriptor */
 
-  spiffs *fs;
+  FAR struct spiffs_s *fs;
 
   /* number of file descriptor - if 0, the file descriptor is closed */
 
@@ -619,7 +606,7 @@ typedef struct
  * as in this case struct spiffs_page_object_ix is used
  */
 
-typedef begin_packed_struct struct
+begin_packed_struct struct spiffs_page_header_s
 {
   /* object id */
 
@@ -632,7 +619,7 @@ typedef begin_packed_struct struct
   /* flags */
 
   uint8_t flags;
-} end_packed_struct spiffs_page_header;
+} end_packed_struct;
 
 /* object index header page header */
 
@@ -643,12 +630,13 @@ __attribute((aligned(sizeof(spiffs_page_ix))))
 {
   /* common page header */
   
-  spiffs_page_header p_hdr;
+  struct spiffs_page_header_s p_hdr;
+
   /* alignment */
   
   uint8_t _align[4 -
-              ((sizeof(spiffs_page_header) & 3) ==
-               0 ? 4 : (sizeof(spiffs_page_header) & 3))];
+              ((sizeof(struct spiffs_page_header_s) & 3) ==
+               0 ? 4 : (sizeof(struct spiffs_page_header_s) & 3))];
   /* size of object */
   
   uint32_t size;
@@ -669,14 +657,14 @@ __attribute((aligned(sizeof(spiffs_page_ix))))
 
 typedef begin_packed_struct struct
 {
-  spiffs_page_header p_hdr;
-  uint8_t _align[4 - ((sizeof(spiffs_page_header) & 3) ==
-                 0 ? 4 : (sizeof(spiffs_page_header) & 3))];
+  struct spiffs_page_header_s p_hdr;
+  uint8_t _align[4 - ((sizeof(struct spiffs_page_header_s) & 3) ==
+                 0 ? 4 : (sizeof(struct spiffs_page_header_s) & 3))];
 } begin_packed_struct spiffs_page_object_ix;
 
 /* callback func for object lookup visitor */
 
-typedef int32_t(*spiffs_visitor_f)(spiffs * fs, spiffs_obj_id id,
+typedef int32_t(*spiffs_visitor_f)(FAR struct spiffs_s *fs, spiffs_obj_id id,
                                    spiffs_block_ix bix, int ix_entry,
                                    const void *user_const_p, void *user_var_p);
 
@@ -684,20 +672,20 @@ typedef int32_t(*spiffs_visitor_f)(spiffs * fs, spiffs_obj_id id,
  * Public Function Prototypes
  ****************************************************************************/
 
-int32_t spiffs_phys_rd(spiffs * fs,
+int32_t spiffs_phys_rd(FAR struct spiffs_s *fs,
                      uint8_t op, spiffs_file fh,
                      uint32_t addr, uint32_t len, uint8_t * dst);
 
-int32_t spiffs_phys_wr(spiffs * fs,
+int32_t spiffs_phys_wr(FAR struct spiffs_s *fs,
                      uint8_t op, spiffs_file fh,
                      uint32_t addr, uint32_t len, uint8_t * src);
 
-int32_t spiffs_phys_cpy(spiffs * fs,
+int32_t spiffs_phys_cpy(FAR struct spiffs_s *fs,
                       spiffs_file fh, uint32_t dst, uint32_t src, uint32_t len);
 
-int32_t spiffs_phys_count_free_blocks(spiffs * fs);
+int32_t spiffs_phys_count_free_blocks(FAR struct spiffs_s *fs);
 
-int32_t spiffs_obj_lu_find_entry_visitor(spiffs * fs,
+int32_t spiffs_obj_lu_find_entry_visitor(FAR struct spiffs_s *fs,
                                          spiffs_block_ix starting_block,
                                          int starting_lu_entry,
                                          uint8_t flags,
@@ -708,66 +696,66 @@ int32_t spiffs_obj_lu_find_entry_visitor(spiffs * fs,
                                          spiffs_block_ix * block_ix,
                                          int *lu_entry);
 
-int32_t spiffs_erase_block(spiffs * fs, spiffs_block_ix bix);
+int32_t spiffs_erase_block(FAR struct spiffs_s *fs, spiffs_block_ix bix);
 
 #if SPIFFS_USE_MAGIC && SPIFFS_USE_MAGIC_LENGTH
 int32_t spiffs_probe(spiffs_config * cfg);
 #endif
 
-int32_t spiffs_obj_lu_scan(spiffs * fs);
+int32_t spiffs_obj_lu_scan(FAR struct spiffs_s *fs);
 
-int32_t spiffs_obj_lu_find_free_obj_id(spiffs * fs,
+int32_t spiffs_obj_lu_find_free_obj_id(FAR struct spiffs_s *fs,
                                      spiffs_obj_id * obj_id,
                                      const uint8_t * conflicting_name);
 
-int32_t spiffs_obj_lu_find_free(spiffs * fs,
+int32_t spiffs_obj_lu_find_free(FAR struct spiffs_s *fs,
                               spiffs_block_ix starting_block,
                               int starting_lu_entry,
                               spiffs_block_ix * block_ix, int *lu_entry);
 
-int32_t spiffs_obj_lu_find_id(spiffs * fs,
+int32_t spiffs_obj_lu_find_id(FAR struct spiffs_s *fs,
                             spiffs_block_ix starting_block,
                             int starting_lu_entry,
                             spiffs_obj_id obj_id,
                             spiffs_block_ix * block_ix, int *lu_entry);
 
-int32_t spiffs_obj_lu_find_id_and_span(spiffs * fs,
+int32_t spiffs_obj_lu_find_id_and_span(FAR struct spiffs_s *fs,
                                      spiffs_obj_id obj_id,
                                      spiffs_span_ix spix,
                                      spiffs_page_ix exclusion_pix,
                                      spiffs_page_ix * pix);
 
-int32_t spiffs_obj_lu_find_id_and_span_by_phdr(spiffs * fs,
+int32_t spiffs_obj_lu_find_id_and_span_by_phdr(FAR struct spiffs_s *fs,
                                              spiffs_obj_id obj_id,
                                              spiffs_span_ix spix,
                                              spiffs_page_ix exclusion_pix,
                                              spiffs_page_ix * pix);
 
-int32_t spiffs_page_allocate_data(spiffs * fs,
+int32_t spiffs_page_allocate_data(FAR struct spiffs_s *fs,
                                 spiffs_obj_id obj_id,
-                                spiffs_page_header * ph,
+                                struct spiffs_page_header_s * ph,
                                 uint8_t * data,
                                 uint32_t len,
                                 uint32_t page_offs,
                                 uint8_t finalize, spiffs_page_ix * pix);
 
-int32_t spiffs_page_move(spiffs * fs,
+int32_t spiffs_page_move(FAR struct spiffs_s *fs,
                        spiffs_file fh,
                        uint8_t * page_data,
                        spiffs_obj_id obj_id,
-                       spiffs_page_header * page_hdr,
+                       struct spiffs_page_header_s * page_hdr,
                        spiffs_page_ix src_pix, spiffs_page_ix * dst_pix);
 
-int32_t spiffs_page_delete(spiffs * fs, spiffs_page_ix pix);
+int32_t spiffs_page_delete(FAR struct spiffs_s *fs, spiffs_page_ix pix);
 
-int32_t spiffs_object_create(spiffs * fs,
+int32_t spiffs_object_create(FAR struct spiffs_s *fs,
                            spiffs_obj_id obj_id,
                            const uint8_t name[],
                            const uint8_t meta[],
                            spiffs_obj_type type,
                            spiffs_page_ix * objix_hdr_pix);
 
-int32_t spiffs_object_update_index_hdr(spiffs * fs,
+int32_t spiffs_object_update_index_hdr(FAR struct spiffs_s *fs,
                                      spiffs_fd * fd,
                                      spiffs_obj_id obj_id,
                                      spiffs_page_ix objix_hdr_pix,
@@ -777,24 +765,24 @@ int32_t spiffs_object_update_index_hdr(spiffs * fs,
                                      uint32_t size, spiffs_page_ix * new_pix);
 
 #if SPIFFS_IX_MAP
-int32_t spiffs_populate_ix_map(spiffs * fs,
+int32_t spiffs_populate_ix_map(FAR struct spiffs_s *fs,
                              spiffs_fd * fd,
                              uint32_t vec_entry_start, uint32_t vec_entry_end);
 #endif
 
-void spiffs_cb_object_event(spiffs * fs,
+void spiffs_cb_object_event(FAR struct spiffs_s *fs,
                             spiffs_page_object_ix * objix,
                             int ev,
                             spiffs_obj_id obj_id,
                             spiffs_span_ix spix,
                             spiffs_page_ix new_pix, uint32_t new_size);
 
-int32_t spiffs_object_open_by_id(spiffs * fs,
+int32_t spiffs_object_open_by_id(FAR struct spiffs_s *fs,
                                spiffs_obj_id obj_id,
                                spiffs_fd * f,
                                spiffs_flags flags, spiffs_mode mode);
 
-int32_t spiffs_object_open_by_page(spiffs * fs,
+int32_t spiffs_object_open_by_page(FAR struct spiffs_s *fs,
                                  spiffs_page_ix pix,
                                  spiffs_fd * f,
                                  spiffs_flags flags, spiffs_mode mode);
@@ -809,50 +797,50 @@ int32_t spiffs_object_read(spiffs_fd * fd, uint32_t offset, uint32_t len, uint8_
 
 int32_t spiffs_object_truncate(spiffs_fd * fd, uint32_t new_len, uint8_t remove_object);
 
-int32_t spiffs_object_find_object_index_header_by_name(spiffs * fs,
+int32_t spiffs_object_find_object_index_header_by_name(FAR struct spiffs_s *fs,
                                                      const uint8_t
                                                      name[SPIFFS_NAME_MAX],
                                                      spiffs_page_ix * pix);
 
-int32_t spiffs_gc_check(spiffs * fs, uint32_t len);
+int32_t spiffs_gc_check(FAR struct spiffs_s *fs, uint32_t len);
 
-int32_t spiffs_gc_erase_page_stats(spiffs * fs, spiffs_block_ix bix);
+int32_t spiffs_gc_erase_page_stats(FAR struct spiffs_s *fs, spiffs_block_ix bix);
 
-int32_t spiffs_gc_find_candidate(spiffs * fs,
+int32_t spiffs_gc_find_candidate(FAR struct spiffs_s *fs,
                                spiffs_block_ix ** block_candidate,
                                int *candidate_count, char fs_crammed);
 
-int32_t spiffs_gc_clean(spiffs * fs, spiffs_block_ix bix);
+int32_t spiffs_gc_clean(FAR struct spiffs_s *fs, spiffs_block_ix bix);
 
-int32_t spiffs_gc_quick(spiffs * fs, uint16_t max_free_pages);
+int32_t spiffs_gc_quick(FAR struct spiffs_s *fs, uint16_t max_free_pages);
 
-int32_t spiffs_fd_find_new(spiffs * fs, spiffs_fd ** fd, const char *name);
+int32_t spiffs_fd_find_new(FAR struct spiffs_s *fs, spiffs_fd ** fd, const char *name);
 
-int32_t spiffs_fd_return(spiffs * fs, spiffs_file f);
+int32_t spiffs_fd_return(FAR struct spiffs_s *fs, spiffs_file f);
 
-int32_t spiffs_fd_get(spiffs * fs, spiffs_file f, spiffs_fd ** fd);
+int32_t spiffs_fd_get(FAR struct spiffs_s *fs, spiffs_file f, spiffs_fd ** fd);
 
 #if SPIFFS_TEMPORAL_FD_CACHE
-void spiffs_fd_temporal_cache_rehash(spiffs * fs,
+void spiffs_fd_temporal_cache_rehash(FAR struct spiffs_s *fs,
                                      const char *old_path,
                                      const char *new_path);
 #endif
 
-void spiffs_cache_init(spiffs * fs);
+void spiffs_cache_init(FAR struct spiffs_s *fs);
 
-void spiffs_cache_drop_page(spiffs * fs, spiffs_page_ix pix);
+void spiffs_cache_drop_page(FAR struct spiffs_s *fs, spiffs_page_ix pix);
 
-spiffs_cache_page *spiffs_cache_page_allocate_by_fd(spiffs * fs,
+spiffs_cache_page *spiffs_cache_page_allocate_by_fd(FAR struct spiffs_s *fs,
                                                     spiffs_fd * fd);
 
-void spiffs_cache_fd_release(spiffs * fs, spiffs_cache_page * cp);
+void spiffs_cache_fd_release(FAR struct spiffs_s *fs, spiffs_cache_page * cp);
 
-spiffs_cache_page *spiffs_cache_page_get_by_fd(spiffs * fs, spiffs_fd * fd);
+spiffs_cache_page *spiffs_cache_page_get_by_fd(FAR struct spiffs_s *fs, spiffs_fd * fd);
 
-int32_t spiffs_lookup_consistency_check(spiffs * fs, uint8_t check_all_objects);
+int32_t spiffs_lookup_consistency_check(FAR struct spiffs_s *fs, uint8_t check_all_objects);
 
-int32_t spiffs_page_consistency_check(spiffs * fs);
+int32_t spiffs_page_consistency_check(FAR struct spiffs_s *fs);
 
-int32_t spiffs_object_index_consistency_check(spiffs * fs);
+int32_t spiffs_object_index_consistency_check(FAR struct spiffs_s *fs);
 
 #endif /* __FS_SPIFFS_SRC_SPIFFS_NUCLEIUS_H */
