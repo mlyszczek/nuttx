@@ -1,0 +1,18 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+config FS_SPIFFS
+	bool "SPIFFS File System"
+	default n
+	select FS_READABLE
+	select FS_WRITABLE
+	---help---
+		Build the SPIFFS file system.  This is a port of version 0.3.7 of
+		the SPIFFS file system by  Peter Andersson.  It was originally
+		released under the MIT license.
+
+if FS_SPIFFS
+
+endif # FS_SPIFFS
