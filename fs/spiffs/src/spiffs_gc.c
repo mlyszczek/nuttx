@@ -651,7 +651,7 @@ int32_t spiffs_gc_clean(spiffs * fs, spiffs_block_ix bix)
               switch (gc.state)
                 {
                 case FIND_OBJ_DATA:
-                  /* find a data page
+                  /* find a data page. */
 
                   if (obj_id != SPIFFS_OBJ_ID_DELETED &&
                       obj_id != SPIFFS_OBJ_ID_FREE &&
@@ -941,18 +941,18 @@ int32_t spiffs_gc_clean(spiffs * fs, spiffs_block_ix bix)
             }
           else
             {
-              /* no more data pages found, passed thru all block, start
+              /* No more data pages found, passed thru all block, start
                * evacuating object indices
                */
 
               gc.state = MOVE_OBJ_IX;
-              cur_entry = 0;    /* restart entry scan index
+              cur_entry = 0;    /* Restart entry scan index */
             }
           break;
 
         case MOVE_OBJ_DATA:
           {
-            /* store modified objix (hdr) page residing in memory now that all
+            /* Store modified objix (hdr) page residing in memory now that all
              * data pages belonging to this object index and residing in the
              * block we want to evacuate
              */

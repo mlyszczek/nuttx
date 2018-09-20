@@ -234,17 +234,19 @@ void SPIFFS_clearerr(spiffs * fs)
 
 int32_t SPIFFS_creat(spiffs * fs, const char *path, spiffs_mode mode)
 {
-  finfo("%s '%s'\n", __func__, path);
-  (void)mode;
+  spiffs_obj_id obj_id;
+  int32_t res;
+
+  finfo("'%s'\n", path);
+
   SPIFFS_API_CHECK_CFG(fs);
   SPIFFS_API_CHECK_MOUNT(fs);
   if (strlen(path) > SPIFFS_NAME_MAX - 1)
     {
       SPIFFS_API_CHECK_RES(fs, SPIFFS_ERR_NAME_TOO_LONG);
     }
+
   SPIFFS_LOCK(fs);
-  spiffs_obj_id obj_id;
-  int32_t res;
 
   res = spiffs_obj_lu_find_free_obj_id(fs, &obj_id, (const uint8_t *)path);
   SPIFFS_API_CHECK_RES_UNLOCK(fs, res);
@@ -461,7 +463,6 @@ static int32_t spiffs_hydro_read(spiffs * fs, spiffs_file fh, void *buf,
   SPIFFS_API_CHECK_MOUNT(fs);
   SPIFFS_LOCK(fs);
 
-  fh = SPIFFS_FH_UNOFFS(fs, fh);
   res = spiffs_fd_get(fs, fh, &fd);
   SPIFFS_API_CHECK_RES_UNLOCK(fs, res);
 
@@ -523,7 +524,7 @@ int32_t SPIFFS_read(spiffs * fs, spiffs_file fh, void *buf, int32_t len)
 
   finfo(_SPIPRIfd " " _SPIPRIi "\n", fh, len);
 
-  int32_t res = spiffs_hydro_read(fs, fh, buf, len);
+  res = spiffs_hydro_read(fs, fh, buf, len);
   if (res == SPIFFS_ERR_END_OF_OBJECT)
     {
       res = 0;
@@ -572,7 +573,6 @@ int32_t SPIFFS_write(spiffs * fs, spiffs_file fh, void *buf, int32_t len)
   SPIFFS_API_CHECK_MOUNT(fs);
   SPIFFS_LOCK(fs);
 
-  fh = SPIFFS_FH_UNOFFS(fs, fh);
   res = spiffs_fd_get(fs, fh, &fd);
   SPIFFS_API_CHECK_RES_UNLOCK(fs, res);
 
@@ -760,7 +760,6 @@ int32_t SPIFFS_lseek(spiffs * fs, spiffs_file fh, int32_t offs, int whence)
   SPIFFS_API_CHECK_MOUNT(fs);
   SPIFFS_LOCK(fs);
 
-  fh = SPIFFS_FH_UNOFFS(fs, fh);
   res = spiffs_fd_get(fs, fh, &fd);
   SPIFFS_API_CHECK_RES_UNLOCK(fs, res);
   spiffs_fflush_cache(fs, fh);
@@ -870,7 +869,6 @@ int32_t SPIFFS_fremove(spiffs * fs, spiffs_file fh)
   SPIFFS_API_CHECK_MOUNT(fs);
   SPIFFS_LOCK(fs);
 
-  fh = SPIFFS_FH_UNOFFS(fs, fh);
   res = spiffs_fd_get(fs, fh, &fd);
   SPIFFS_API_CHECK_RES_UNLOCK(fs, res);
 
@@ -958,7 +956,6 @@ int32_t SPIFFS_fstat(spiffs * fs, spiffs_file fh, spiffs_stat * s)
   SPIFFS_API_CHECK_MOUNT(fs);
   SPIFFS_LOCK(fs);
 
-  fh = SPIFFS_FH_UNOFFS(fs, fh);
   res = spiffs_fd_get(fs, fh, &fd);
   SPIFFS_API_CHECK_RES_UNLOCK(fs, res);
   spiffs_fflush_cache(fs, fh);
@@ -1020,13 +1017,12 @@ int32_t SPIFFS_fflush(spiffs * fs, spiffs_file fh)
   finfo("%s " _SPIPRIfd "\n", __func__, fh);
   SPIFFS_API_CHECK_CFG(fs);
   SPIFFS_API_CHECK_MOUNT(fs);
-
   SPIFFS_LOCK(fs);
-  fh = SPIFFS_FH_UNOFFS(fs, fh);
+
   res = spiffs_fflush_cache(fs, fh);
+
   SPIFFS_API_CHECK_RES_UNLOCK(fs, res);
   SPIFFS_UNLOCK(fs);
-
   return res;
 }
 
@@ -1037,9 +1033,7 @@ int32_t SPIFFS_close(spiffs * fs, spiffs_file fh)
   finfo("%s " _SPIPRIfd "\n", __func__, fh);
   SPIFFS_API_CHECK_CFG(fs);
   SPIFFS_API_CHECK_MOUNT(fs);
-
   SPIFFS_LOCK(fs);
-  fh = SPIFFS_FH_UNOFFS(fs, fh);
 
   res = spiffs_fflush_cache(fs, fh);
   SPIFFS_API_CHECK_RES_UNLOCK(fs, res);
@@ -1160,7 +1154,6 @@ int32_t SPIFFS_fupdate_meta(spiffs * fs, spiffs_file fh, const void *meta)
   SPIFFS_API_CHECK_MOUNT(fs);
   SPIFFS_LOCK(fs);
 
-  fh = SPIFFS_FH_UNOFFS(fs, fh);
   res = spiffs_fd_get(fs, fh, &fd);
   SPIFFS_API_CHECK_RES_UNLOCK(fs, res);
 
@@ -1390,8 +1383,6 @@ int32_t SPIFFS_eof(spiffs * fs, spiffs_file fh)
   SPIFFS_API_CHECK_MOUNT(fs);
   SPIFFS_LOCK(fs);
 
-  fh = SPIFFS_FH_UNOFFS(fs, fh);
-
   res = spiffs_fd_get(fs, fh, &fd);
   SPIFFS_API_CHECK_RES_UNLOCK(fs, res);
 
@@ -1409,12 +1400,10 @@ int32_t SPIFFS_tell(spiffs * fs, spiffs_file fh)
   spiffs_fd *fd;
   int32_t res;
 
-  finfo("_SPIPRIfd "\n", fh);
+  finfo(_SPIPRIfd "\n", fh);
   SPIFFS_API_CHECK_CFG(fs);
   SPIFFS_API_CHECK_MOUNT(fs);
   SPIFFS_LOCK(fs);
-
-  fh = SPIFFS_FH_UNOFFS(fs, fh);
 
   res = spiffs_fd_get(fs, fh, &fd);
   SPIFFS_API_CHECK_RES_UNLOCK(fs, res);
@@ -1448,8 +1437,6 @@ int32_t SPIFFS_ix_map(spiffs * fs, spiffs_file fh, spiffs_ix_map * map,
   SPIFFS_API_CHECK_CFG(fs);
   SPIFFS_API_CHECK_MOUNT(fs);
   SPIFFS_LOCK(fs);
-
-  fh = SPIFFS_FH_UNOFFS(fs, fh);
 
   res = spiffs_fd_get(fs, fh, &fd);
   SPIFFS_API_CHECK_RES_UNLOCK(fs, res);
@@ -1489,8 +1476,6 @@ int32_t SPIFFS_ix_unmap(spiffs * fs, spiffs_file fh)
   SPIFFS_API_CHECK_MOUNT(fs);
   SPIFFS_LOCK(fs);
 
-  fh = SPIFFS_FH_UNOFFS(fs, fh);
-
   res = spiffs_fd_get(fs, fh, &fd);
   SPIFFS_API_CHECK_RES_UNLOCK(fs, res);
 
@@ -1514,8 +1499,6 @@ int32_t SPIFFS_ix_remap(spiffs * fs, spiffs_file fh, uint32_t offset)
   SPIFFS_API_CHECK_CFG(fs);
   SPIFFS_API_CHECK_MOUNT(fs);
   SPIFFS_LOCK(fs);
-
-  fh = SPIFFS_FH_UNOFFS(fs, fh);
 
   res = spiffs_fd_get(fs, fh, &fd);
   SPIFFS_API_CHECK_RES_UNLOCK(fs, res);

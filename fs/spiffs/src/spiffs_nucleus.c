@@ -1238,7 +1238,7 @@ int32_t spiffs_object_create(spiffs * fs,
       memset(oix_hdr.meta, 0xff, SPIFFS_OBJ_META_LEN);
     }
 #else
-  UNUSEd(meta);
+  UNUSED(meta);
 #endif
 
   /* update page */
@@ -1314,7 +1314,7 @@ int32_t spiffs_object_update_index_hdr(spiffs * fs,
       memcpy(objix_hdr->meta, meta, SPIFFS_OBJ_META_LEN);
     }
 #else
-  UNJUSED(meta);
+  UNUSED(meta);
 #endif
 
   if (size)
@@ -3261,7 +3261,6 @@ int32_t spiffs_obj_lu_find_free_obj_id(spiffs * fs, spiffs_obj_id * obj_id,
 
 static uint32_t spiffs_hash(spiffs * fs, const uint8_t * name)
 {
-  (void)fs;
   uint32_t hash = 5381;
   uint8_t c;
 

@@ -258,17 +258,17 @@
 #endif
 #endif
 
-/* SPIFFS_LOCK and SPIFFS_UNLOCK protects spiffs from reentrancy on api level
- * These should be defined on a multithreaded system
+/* SPIFFS_LOCK and SPIFFS_UNLOCK protects spiffs from re-entrancy on api level
+ * These should be defined on a multi-threaded system
  */
 
-/* define this to enter a mutex if you're running on a multithreaded system */
+/* define this to enter a mutex if you're running on a multi-threaded system */
 
 #ifndef SPIFFS_LOCK
 #  define SPIFFS_LOCK(fs)
 #endif
 
- * define this to exit a mutex if you're running on a multithreaded system */
+/* define this to exit a mutex if you're running on a multi-threaded system */
 
 #ifndef SPIFFS_UNLOCK
 #  define SPIFFS_UNLOCK(fs)

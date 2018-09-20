@@ -209,15 +209,21 @@
 #  endif
 #endif
 
+#define SPIFFS_CFG_LOG_PAGE_SZ(fs)      ((fs)->cfg.log_page_size)
+#define SPIFFS_CFG_LOG_BLOCK_SZ(fs)     ((fs)->cfg.log_block_size)
+#define SPIFFS_CFG_PHYS_SZ(fs)          ((fs)->cfg.phys_size)
+#define SPIFFS_CFG_PHYS_ERASE_SZ(fs)    ((fs)->cfg.phys_erase_block)
+#define SPIFFS_CFG_PHYS_ADDR(fs)        ((fs)->cfg.phys_addr)
+
 /* total number of pages */
 
 #define SPIFFS_MAX_PAGES(fs) \
-  ( SPIFFS_CFG_PHYS_SZ(fs)/SPIFFS_CFG_LOG_PAGE_SZ(fs) )
+  (SPIFFS_CFG_PHYS_SZ(fs)/SPIFFS_CFG_LOG_PAGE_SZ(fs) )
 
 /* total number of pages per block, including object lookup pages */
 
 #define SPIFFS_PAGES_PER_BLOCK(fs) \
-  ( SPIFFS_CFG_LOG_BLOCK_SZ(fs)/SPIFFS_CFG_LOG_PAGE_SZ(fs) )
+  (SPIFFS_CFG_LOG_BLOCK_SZ(fs)/SPIFFS_CFG_LOG_PAGE_SZ(fs) )
 
 /* number of object lookup pages per block */
 
