@@ -46,6 +46,7 @@
 #include <nuttx/config.h>
 
 #include <sys/statfs.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 
 #include <nuttx/kmalloc.h>
@@ -87,7 +88,7 @@ int32_t SPIFFS_format(FAR struct spiffs_s *fs)
 }
 
 #if SPIFFS_USE_MAGIC && SPIFFS_USE_MAGIC_LENGTH
-int32_t SPIFFS_probe_fs(spiffs_config * config)
+int32_t SPIFFS_probe_fs(FAR struct spiffs_config_s *config)
 {
   finfo("%s\n", __func__);
   int32_t ret = spiffs_probe(config);
@@ -95,9 +96,9 @@ int32_t SPIFFS_probe_fs(spiffs_config * config)
 }
 #endif
 
-int32_t SPIFFS_mount(FAR struct spiffs_s *fs, spiffs_config * config, uint8_t * work,
-                   void *cache, uint32_t cache_size,
-                   spiffs_check_callback check_cb)
+int32_t SPIFFS_mount(FAR struct spiffs_s *fs, FAR struct spiffs_config_s *config,
+                     FAR uint8_t *work, FAR void *cache, uint32_t cache_size,
+                     spiffs_check_callback check_cb)
 {
   FAR void *user_data;
   uint8_t ptr_size = sizeof(FAR void *);
@@ -115,7 +116,7 @@ int32_t SPIFFS_mount(FAR struct spiffs_s *fs, spiffs_config * config, uint8_t * 
   SPIFFS_LOCK(fs);
   user_data = fs->user_data;
   memset(fs, 0, sizeof(struct spiffs_s));
-  memcpy(&fs->cfg, config, sizeof(spiffs_config));
+  memcpy(&fs->cfg, config, sizeof(struct spiffs_config_s));
   fs->user_data = user_data;
   fs->block_count = SPIFFS_CFG_PHYS_SZ(fs) / SPIFFS_CFG_LOG_BLOCK_SZ(fs);
   fs->work = &work[0];
@@ -215,7 +216,7 @@ ssize_t spiffs_hydro_write(FAR struct spiffs_s *fs,
   if (fobj->size != SPIFFS_UNDEFINED_LEN && offset < fobj->size)
     {
       int32_t m_len = MIN((int32_t) (fobj->size - offset), len);
-      ret = spiffs_object_modify(fobj, offset, (uint8_t *) buffer, m_len);
+      ret = spiffs_object_modify(fs, fobj, offset, (uint8_t *) buffer, m_len);
       SPIFFS_CHECK_RES(ret);
       remaining -= m_len;
       uint8_t *buf_8 = (uint8_t *) buffer;
@@ -226,7 +227,8 @@ ssize_t spiffs_hydro_write(FAR struct spiffs_s *fs,
 
   if (remaining > 0)
     {
-      ret = spiffs_object_append(fobj, offset, (uint8_t *) buffer, remaining);
+      ret = spiffs_object_append(fs, fobj, offset, (uint8_t *) buffer,
+                                 remaining);
       SPIFFS_CHECK_RES(ret);
     }
 
@@ -237,14 +239,7 @@ ssize_t spiffs_hydro_read(FAR struct spiffs_s *fs,
                           FAR struct spiffs_file_s *fobj, FAR void *buffer,
                           size_t buflen)
 {
-  FAR struct spiffs_file_s *fobj;
-  int32_t ret;
-
-  ret = spiffs_find_fileobject(fs, id, &fobj);
-  if (ret < 0)
-    {
-      return ret;
-    }
+  ssize_t nread;
 
   if ((fobj->flags & O_RDONLY) == 0)
     {
@@ -270,15 +265,16 @@ ssize_t spiffs_hydro_read(FAR struct spiffs_s *fs,
           return SPIFFS_ERR_END_OF_OBJECT;
         }
 
-      ret = spiffs_object_read(fobj, fs->f_pos, avail, (FAR uint8_t *)buffer);
-      if (ret == SPIFFS_ERR_END_OF_OBJECT)
+      nread = spiffs_object_read(fs, fobj, fs->f_pos, avail,
+                                 (FAR uint8_t *)buffer);
+      if (nread == SPIFFS_ERR_END_OF_OBJECT)
         {
           fs->f_pos += avail;
           return avail;
         }
-      else if (ret < 0)
+      else if (nread < 0)
         {
-          return ret;
+          return (int)nread;
         }
       else
         {
@@ -289,15 +285,16 @@ ssize_t spiffs_hydro_read(FAR struct spiffs_s *fs,
     {
       /* reading within file size */
 
-      ret = spiffs_object_read(fobj, fs->f_pos, buflen, (FAR uint8_t *)buffer);
-      if (ret < 0)
+      nread = spiffs_object_read(fs, fobj, fs->f_pos, buflen,
+                                 (FAR uint8_t *)buffer);
+      if (nread < 0)
         {
-          return ret;
+          return (int)nread;
         }
     }
 
-  fs->f_pos += buflen;
-  return buflen;
+  fs->f_pos += nread;
+  return nread;
 }
 
 int32_t SPIFFS_remove(FAR struct spiffs_s *fs, const char *path)
@@ -340,7 +337,7 @@ int32_t SPIFFS_remove(FAR struct spiffs_s *fs, const char *path)
       return ret;
     }
 
-  ret = spiffs_object_truncate(fobj, 0, 1);
+  ret = spiffs_object_truncate(fs, fobj, 0, true);
   if (ret != OK)
     {
       SPIFFS_UNLOCK(fs);
@@ -382,7 +379,7 @@ int spiffs_stat_pix(FAR struct spiffs_s *fs, int16_t pix, int16_t id,
   /* Build the struct stat */
 
   mode  = S_IRWXO | S_IRWXG  | S_IRWXU;  /* Assume all permisions */
-  mode |= S_IFREG                        /* Assume regular file */
+  mode |= S_IFREG;                       /* Assume regular file */
 
   /* REVISIT:  Should the file object type derive from objix_hdr.type? */
 
@@ -494,7 +491,7 @@ int32_t SPIFFS_rename(FAR struct spiffs_s *fs, const char *old_path, const char 
 
 
   ret = spiffs_object_update_index_hdr(fs, fobj, fobj->objid, fobj->objix_hdr_pix, 0,
-                                       (const uint8_t *)new_path, 0, 0, &pix_dummy);
+                                       (const uint8_t *)new_path, 0, &pix_dummy);
 
   SPIFFS_UNLOCK(fs);
   kmm_free(fobj);
@@ -512,41 +509,6 @@ int32_t SPIFFS_check(FAR struct spiffs_s *fs)
   ret = spiffs_object_index_consistency_check(fs);
   ret = spiffs_page_consistency_check(fs);
   ret = spiffs_obj_lu_scan(fs);
-
-  SPIFFS_UNLOCK(fs);
-  return ret;
-}
-
-int32_t SPIFFS_info(FAR struct spiffs_s *fs, uint32_t * total, uint32_t * used)
-{
-  int32_t ret = OK;
-  uint32_t pages_per_block;
-  uint32_t blocks;
-  uint32_t obj_lu_pages;
-  uint32_t data_page_size;
-  uint32_t total_data_pages;
-
-  finfo("Entry\n");
-  SPIFFS_LOCK(fs);
-
-  pages_per_block = SPIFFS_PAGES_PER_BLOCK(fs);
-  blocks = fs->block_count;
-  obj_lu_pages = SPIFFS_OBJ_LOOKUP_PAGES(fs);
-  data_page_size = SPIFFS_DATA_PAGE_SIZE(fs);
-
-   /* -2 for  spare blocks, +1 for emergency page */
-
-  total_data_pages = (blocks - 2) * (pages_per_block - obj_lu_pages) + 1;
-
-  if (total)
-    {
-      *total = total_data_pages * data_page_size;
-    }
-
-  if (used)
-    {
-      *used = fs->stats_p_allocated * data_page_size;
-    }
 
   SPIFFS_UNLOCK(fs);
   return ret;

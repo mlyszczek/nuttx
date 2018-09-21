@@ -1145,7 +1145,7 @@ static int spiffs_bind(FAR struct inode *blkdriver, FAR const void *data,
  ****************************************************************************/
 
 static int spiffs_unbind(FAR void *handle, FAR struct inode **blkdriver,
-                        unsigned int flags)
+                         unsigned int flags)
 {
   FAR struct spiffs_s *fs = (FAR struct spiffs_s *)handle;
   int ret;
@@ -1176,26 +1176,62 @@ static int spiffs_unbind(FAR void *handle, FAR struct inode **blkdriver,
 static int spiffs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
 {
   FAR struct spiffs_s *fs;
-  size_t inuse;
-  size_t avail;
-  off_t blkalloc;
-  off_t blkused;
-  int ret;
+  FAR struct spiffs_file_s *fobj;
+  uint32_t pages_per_block;
+  uint32_t blocks;
+  uint32_t obj_lupages;
+  uint32_t data_pgsize;
+  uint32_t ndata_pages;
+  uint32_t nfile_objs;
+  uint32_t total;
+  uint32_t used;
+  int ret = OK;
 
   finfo("mountpt: %p buf: %p\n", mountpt, buf);
   DEBUGASSERT(mountpt != NULL && buf != NULL);
 
-  /* Get the file system structure from the inode reference. */
+  /* Get the mountpoint private data from the inode structure */
 
   fs = mountpt->i_private;
   DEBUGASSERT(fs != NULL);
 
-  /* Get exclusive access to the file system */
+  /* Lock the SPIFFS volume */
 
   spiffs_lock_volume(fs);
 
-  /* Set up the memory use for the file system and root directory object */
-#warning Missing logid
+  /* Collect some statistics */
+
+  pages_per_block  = SPIFFS_PAGES_PER_BLOCK(fs);
+  blocks           = fs->block_count;
+  obj_lupages      = SPIFFS_OBJ_LOOKUP_PAGES(fs);
+  data_pgsize      = SPIFFS_DATA_PAGE_SIZE(fs);
+
+   /* -2 for  spare blocks, +1 for emergency page */
+
+  ndata_pages      = (blocks - 2) * (pages_per_block - obj_lupages) + 1;
+  total            = ndata_pages * data_pgsize;
+  used             = fs->stats_p_allocated * data_pgsize;
+
+  /* Count the number of file objects */
+
+  nfile_objs       = 0;
+  for (fobj  = (FAR struct spiffs_file_s *)dq_peek(&fs->objq);
+       fobj != NULL;
+       fobj  = (FAR struct spiffs_file_s *)dq_next((FAR dq_entry_t *)fobj))
+    {
+      nfile_objs++;
+    }
+
+  /* Fill in the statfs structure */
+
+  buf->f_type      = SPIFFS_SUPER_MAGIC;
+  buf->f_namelen   = SPIFFS_NAME_MAX - 1;
+  buf->f_bsize     = data_pgsize;
+  buf->f_blocks    = ndata_pages;
+  buf->f_bfree     = ndata_pages - used;
+  buf->f_bavail    = buf->f_bfree;
+  buf->f_files     = nfile_objs;
+  buf->f_ffree     = buf->f_bfree;  /* SWAG */
 
   /* Release the lock on the file system */
 

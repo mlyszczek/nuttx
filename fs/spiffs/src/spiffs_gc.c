@@ -966,11 +966,9 @@ int32_t spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t bix)
 
                 res =
                   spiffs_object_update_index_hdr(fs, 0,
-                                                 gc.
-                                                 cur_obj_id |
-                                                 SPIFFS_OBJ_ID_IX_FLAG,
+                                                 gc.cur_obj_id | SPIFFS_OBJ_ID_IX_FLAG,
                                                  gc.cur_objix_pix, fs->work, 0,
-                                                 0, 0, &new_objix_pix);
+                                                 0, &new_objix_pix);
                 spiffs_gcinfo("MOVE_DATA store modified objix_hdr page, "
                    _SPIPRIpg ":" _SPIPRIsp "\n", new_objix_pix, 0);
                 SPIFFS_CHECK_RES(res);

@@ -167,57 +167,35 @@ typedef void (*spiffs_file_callback)(struct spiffs_s * fs,
 
 struct spiffs_sem_s
 {
-  sem_t    sem;       /* The actual semaphore */
-  pid_t    holder;    /* Current older (-1 if not held) */
-  uint16_t count;     /* Number of counts held */
+  sem_t    sem;                     /* The actual semaphore */
+  pid_t    holder;                  /* Current older (-1 if not held) */
+  uint16_t count;                   /* Number of counts held */
 };
 
-/* spiffs spi configuration struct */
+/* spiffs SPI configuration struct */
 
-typedef struct
+struct spiffs_config_s
 {
-  /* physical read function */
-
-  spiffs_read_t hal_read_f;
-
-  /* physical write function */
-
-  spiffs_write_t hal_write_f;
-
-  /* physical erase function */
-
-  spiffs_erase_t hal_erase_f;
-
-  /* physical size of the spi flash */
-
-  uint32_t phys_size;
-
-  /* physical offset in spi flash used for spiffs, must be on block boundary
-   */
-
-  uint32_t phys_addr;
-
-  /* physical size when erasing a block */
-
-  uint32_t phys_erase_block;
-
-  /* logical size of a block, must be on physical block size boundary and
-   * must never be less than a physical block
-   */
-
-  uint32_t log_block_size;
-
-  /* logical size of a page, must be at least log_block_size / 8 */
-
-  uint32_t log_page_size;
-} spiffs_config;
+  spiffs_read_t hal_read_f;         /* physical read function */
+  spiffs_write_t hal_write_f;       /* physical write function */
+  spiffs_erase_t hal_erase_f;       /* physical erase function */
+  uint32_t phys_size;               /* physical size of the SPI flash */
+  uint32_t phys_addr;               /* physical offset in SPI flash used for
+                                     * SPIFFS, must be on block boundary */
+  uint32_t phys_erase_block;        /* physical size when erasing a block */
+  uint32_t log_block_size;          /* logical size of a block, must be on
+                                     * physical block size boundary and
+                                     * must never be less than a physical block */
+  uint32_t log_page_size;           /* logical size of a page, must be at least
+                                     * log_block_size / 8 */
+};
 
 /* This structure represents the current state of an SPIFFS volume */
 
 struct spiffs_file_s;               /* Forward reference */
 struct spiffs_s
 {
-  spiffs_config cfg;                /* File system configuration */
+  struct spiffs_config_s cfg;       /* File system configuration */
   struct spiffs_sem_s exclsem;      /* Supports mutually exclusive access */
   dq_queue_t objq;                  /* A doubly linked list of open file objects */
   int16_t free_cursor_block_ix;     /* cursor for free blocks, block index */
@@ -320,7 +298,7 @@ struct spiffs_ix_map_s
  *                 of the file system.
  */
 
-int32_t SPIFFS_probe_fs(spiffs_config * config);
+int32_t SPIFFS_probe_fs(FAR struct spiffs_config_s *config);
 #endif  /* SPIFFS_USE_MAGIC && SPIFFS_USE_MAGIC_LENGTH */
 
 /* Initializes the file system dynamic parameters and mounts the filesystem.
@@ -338,7 +316,8 @@ int32_t SPIFFS_probe_fs(spiffs_config * config);
  *   check_cb      callback function for reporting during consistency checks
  */
 
-int32_t SPIFFS_mount(FAR struct spiffs_s *fs, spiffs_config * config, uint8_t * work,
+int32_t SPIFFS_mount(FAR struct spiffs_s *fs,
+                     FAR struct spiffs_config_s *config, FAR uint8_t *work,
                      void *cache, uint32_t cache_size,
                      spiffs_check_callback check_cb);
 
@@ -376,21 +355,6 @@ int32_t SPIFFS_rename(FAR struct spiffs_s *fs, const char *old, const char *newP
  */
 
 int32_t SPIFFS_check(FAR struct spiffs_s *fs);
-
-/* Returns number of total bytes available and number of used bytes.
- * This is an estimation, and depends on if there a many files with little
- * data or few files with much data.
- * NB: If used number of bytes exceeds total bytes, a SPIFFS_check should
- * run. This indicates a power loss in midst of things. In worst case
- * (repeated powerlosses in mending or gc) you might have to delete some files.
- *
- * Input Parameters:
- *   fs            the file system struct
- *   total         total number of bytes in filesystem
- *   used          used number of bytes in filesystem
- */
-
-int32_t SPIFFS_info(FAR struct spiffs_s *fs, uint32_t * total, uint32_t * used);
 
 /* Formats the entire file system. All data will be lost.
  *
@@ -437,7 +401,7 @@ int32_t SPIFFS_gc_quick(FAR struct spiffs_s *fs, uint16_t max_free_pages);
  * pages and erasing blocks.
  * If it is physically impossible, err_no will be set to -ENOSPC. If
  * there already is this amount (or more) of free space, SPIFFS_gc will
- * silently return. It is recommended to call SPIFFS_info before invoking
+ * silently return. It is recommended to call statfs() before invoking
  * this method in order to determine what amount of bytes to give.
  *
  * NB: the garbage collector is automatically called when spiffs needs free

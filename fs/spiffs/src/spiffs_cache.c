@@ -59,7 +59,7 @@ static FAR struct spiffs_cache_page_s *spiffs_cache_page_get(FAR struct spiffs_s
 {
   int i;
 
-  spiffs_cache *cache = spiffs_get_cache(fs);
+  FAR struct spiffs_cache_s *cache = spiffs_get_cache(fs);
   if ((cache->cpage_use_map & cache->cpage_use_mask) == 0)
     {
       return 0;
@@ -84,7 +84,7 @@ static FAR struct spiffs_cache_page_s *spiffs_cache_page_get(FAR struct spiffs_s
 static int32_t spiffs_cache_page_free(FAR struct spiffs_s *fs, int ix, uint8_t write_back)
 {
   int32_t res = OK;
-  spiffs_cache *cache = spiffs_get_cache(fs);
+  FAR struct spiffs_cache_s *cache = spiffs_get_cache(fs);
   FAR struct spiffs_cache_page_s *cp = spiffs_get_cache_page_hdr(fs, cache, ix);
 
   if (cache->cpage_use_map & (1 << ix))
@@ -125,7 +125,7 @@ static int32_t spiffs_cache_page_remove_oldest(FAR struct spiffs_s *fs, uint8_t 
                                                uint8_t flags)
 {
   int32_t res = OK;
-  spiffs_cache *cache = spiffs_get_cache(fs);
+  FAR struct spiffs_cache_s *cache = spiffs_get_cache(fs);
   uint32_t oldest_val = 0;
   int cand_ix = -1;
   int i;
@@ -166,7 +166,7 @@ static FAR struct spiffs_cache_page_s *spiffs_cache_page_allocate(FAR struct spi
 {
   int i;
 
-  spiffs_cache *cache = spiffs_get_cache(fs);
+  FAR struct spiffs_cache_s *cache = spiffs_get_cache(fs);
   if (cache->cpage_use_map == 0xffffffff)
     {
       /* out of cache memory */
@@ -207,7 +207,7 @@ int32_t spiffs_phys_rd(FAR struct spiffs_s *fs, uint8_t op, int16_t id,
                        uint32_t addr, uint32_t len, uint8_t *dst)
 {
   int32_t res = OK;
-  spiffs_cache *cache = spiffs_get_cache(fs);
+  FAR struct spiffs_cache_s *cache = spiffs_get_cache(fs);
   FAR struct spiffs_cache_page_s *cp =
     spiffs_cache_page_get(fs, SPIFFS_PADDR_TO_PAGE(fs, addr));
 
@@ -292,7 +292,7 @@ int32_t spiffs_phys_wr(FAR struct spiffs_s *fs, uint8_t op, int16_t id,
 {
   (void)id;
   int16_t pix = SPIFFS_PADDR_TO_PAGE(fs, addr);
-  spiffs_cache *cache = spiffs_get_cache(fs);
+  FAR struct spiffs_cache_s *cache = spiffs_get_cache(fs);
   FAR struct spiffs_cache_page_s *cp = spiffs_cache_page_get(fs, pix);
 
   if (cp && (op & SPIFFS_OP_COM_MASK) != SPIFFS_OP_C_WRTHRU)
@@ -340,7 +340,7 @@ int32_t spiffs_phys_wr(FAR struct spiffs_s *fs, uint8_t op, int16_t id,
 FAR struct spiffs_cache_page_s *spiffs_cache_page_get_by_fd(FAR struct spiffs_s *fs,
                                                             FAR struct spiffs_file_s *fobj)
 {
-  spiffs_cache *cache = spiffs_get_cache(fs);
+  FAR struct spiffs_cache_s *cache = spiffs_get_cache(fs);
   int i;
 
   if ((cache->cpage_use_map & cache->cpage_use_mask) == 0)
@@ -407,7 +407,7 @@ void spiffs_cache_fd_release(FAR struct spiffs_s *fs, FAR struct spiffs_cache_pa
 
   for (fobj  = (FAR struct spiffs_file_s *)dq_peek(&fs->objq);
        fobj != NULL;
-       fobj  = dq_next(fobj))
+       fobj  = (FAR struct spiffs_file_s *)dq_next((FAR dq_entry_t *)fobj))
     {
       fobj->cache_page = 0;
     }
@@ -424,7 +424,7 @@ void spiffs_cache_init(FAR struct spiffs_s *fs)
   uint32_t cache_mask = 0;
   int i;
   int cache_entries =
-    (sz - sizeof(spiffs_cache)) / (SPIFFS_CACHE_PAGE_SIZE(fs));
+    (sz - sizeof(struct spiffs_cache_s )) / (SPIFFS_CACHE_PAGE_SIZE(fs));
 
   if (fs->cache == 0)
     {
@@ -442,16 +442,16 @@ void spiffs_cache_init(FAR struct spiffs_s *fs)
       cache_mask |= 1;
     }
 
-  spiffs_cache cache;
-  memset(&cache, 0, sizeof(spiffs_cache));
+  struct spiffs_cache_s cache;
+  memset(&cache, 0, sizeof(struct spiffs_cache_s ));
   cache.cpage_count = cache_entries;
-  cache.cpages = (uint8_t *) ((uint8_t *) fs->cache + sizeof(spiffs_cache));
+  cache.cpages = (uint8_t *) ((uint8_t *) fs->cache + sizeof(struct spiffs_cache_s ));
 
   cache.cpage_use_map = 0xffffffff;
   cache.cpage_use_mask = cache_mask;
-  memcpy(fs->cache, &cache, sizeof(spiffs_cache));
+  memcpy(fs->cache, &cache, sizeof(struct spiffs_cache_s ));
 
-  spiffs_cache *c = spiffs_get_cache(fs);
+  FAR struct spiffs_cache_s *c = spiffs_get_cache(fs);
 
   memset(c->cpages, 0, c->cpage_count * SPIFFS_CACHE_PAGE_SIZE(fs));
 
