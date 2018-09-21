@@ -198,22 +198,6 @@
 #endif
 #endif
 
-/* SPIFFS_LOCK and SPIFFS_UNLOCK protects spiffs from re-entrancy on api level
- * These should be defined on a multi-threaded system
- */
-
-/* define this to enter a mutex if you're running on a multi-threaded system */
-
-#ifndef SPIFFS_LOCK
-#  define SPIFFS_LOCK(fs)
-#endif
-
-/* define this to exit a mutex if you're running on a multi-threaded system */
-
-#ifndef SPIFFS_UNLOCK
-#  define SPIFFS_UNLOCK(fs)
-#endif
-
 /* Temporal file cache hit score. Each time a file is opened, all cached files
  * will lose one point. If the opened file is found in cache, that entry will
  * gain SPIFFS_TEMPORAL_CACHE_HIT_SCORE points. One can experiment with this

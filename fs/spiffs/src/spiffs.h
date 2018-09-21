@@ -205,7 +205,6 @@ struct spiffs_s
   int free_cursor_obj_lu_entry;     /* Cursor for free blocks, entry index */
   int cursor_obj_lu_entry;          /* Cursor when searching, entry index */
   uint32_t block_count;             /* Number of logical blocks */
-  int32_t err_code;                 /* Last error */
   uint32_t free_blocks;             /* Current number of free blocks */
   uint32_t stats_p_allocated;       /* Current number of busy pages */
   uint32_t stats_p_deleted;         /* Current number of deleted pages */
@@ -289,9 +288,6 @@ struct spiffs_ix_map_s
  *
  * Otherwise, it returns an error indicating why it is not regarded as a file
  * system.
- *
- * Note: this function is not protected with SPIFFS_LOCK and SPIFFS_UNLOCK
- * macros. It returns the error code directly, instead of as read by fs->err_code.
  *
  * Input Parameters:
  *   config        essential parts of the physical and logical configuration

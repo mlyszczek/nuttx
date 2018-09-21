@@ -839,8 +839,7 @@ static off_t spiffs_seek(FAR struct file *filep, off_t offset, int whence)
                                            objix_spix, 0, &pix);
       if (ret < 0)
         {
-          SPIFFS_UNLOCK(fs);
-          return ret;
+          goto errout_with_lock;
         }
 
       fobj->cursor_objix_spix = objix_spix;
