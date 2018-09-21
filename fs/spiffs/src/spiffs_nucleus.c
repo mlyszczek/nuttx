@@ -630,7 +630,7 @@ int32_t spiffs_obj_lu_find_free(FAR struct spiffs_s *fs,
 
       if (fs->free_blocks < 2)
         {
-          return SPIFFS_ERR_FULL;
+          return -ENOSPC;
         }
     }
 
@@ -646,7 +646,7 @@ int32_t spiffs_obj_lu_find_free(FAR struct spiffs_s *fs,
         }
     }
 
-  if (res == SPIFFS_ERR_FULL)
+  if (res == -ENOSPC)
     {
       finfo("fs full\n");
     }
@@ -670,7 +670,7 @@ int32_t spiffs_obj_lu_find_id(FAR struct spiffs_s *fs,
                                      block_ix, lu_entry);
   if (res == SPIFFS_VIS_END)
     {
-      res = SPIFFS_ERR_NOT_FOUND;
+      res = -ENOENT;
     }
 
   return res;
@@ -734,7 +734,7 @@ int32_t spiffs_obj_lu_find_id_and_span(FAR struct spiffs_s *fs,
 
   if (res == SPIFFS_VIS_END)
     {
-      res = SPIFFS_ERR_NOT_FOUND;
+      res = -ENOENT;
     }
 
   SPIFFS_CHECK_RES(res);
@@ -775,7 +775,7 @@ int32_t spiffs_obj_lu_find_id_and_span_by_phdr(FAR struct spiffs_s *fs,
 
   if (res == SPIFFS_VIS_END)
     {
-      res = SPIFFS_ERR_NOT_FOUND;
+      res = -ENOENT;
     }
 
   SPIFFS_CHECK_RES(res);
@@ -2379,7 +2379,7 @@ int32_t spiffs_object_find_object_index_header_by_name(FAR struct spiffs_s *fs,
 
   if (res == SPIFFS_VIS_END)
     {
-      res = SPIFFS_ERR_NOT_FOUND;
+      res = -ENOENT;
     }
 
   SPIFFS_CHECK_RES(res);
@@ -3102,7 +3102,7 @@ int32_t spiffs_obj_lu_find_free_obj_id(FAR struct spiffs_s *fs, int16_t *id,
                 }
             }
 
-          return SPIFFS_ERR_FULL;
+          return -ENOSPC;
         }
       else
         {
@@ -3139,7 +3139,7 @@ int32_t spiffs_obj_lu_find_free_obj_id(FAR struct spiffs_s *fs, int16_t *id,
                   /* there are no free objids! */
 
                   finfo("free_obj_id: compacted table is full\n");
-                  return SPIFFS_ERR_FULL;
+                  return -ENOSPC;
                 }
 
               finfo("free_obj_id: COMP select index:" _SPIPRIi

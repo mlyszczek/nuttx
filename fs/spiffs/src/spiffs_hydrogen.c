@@ -248,7 +248,7 @@ ssize_t spiffs_hydro_read(FAR struct spiffs_s *fs,
 
   if ((fobj->flags & O_RDONLY) == 0)
     {
-      return SPIFFS_ERR_NOT_READABLE;
+      return -EACCES;
     }
 
   if (fobj->size == SPIFFS_UNDEFINED_LEN && buflen > 0)
@@ -345,40 +345,6 @@ int32_t SPIFFS_remove(FAR struct spiffs_s *fs, const char *path)
     {
       SPIFFS_UNLOCK(fs);
       kmm_free(fobj);
-      return ret;
-    }
-
-  SPIFFS_UNLOCK(fs);
-  return 0;
-}
-
-int32_t SPIFFS_fremove(FAR struct spiffs_s *fs, int16_t id)
-{
-  FAR struct spiffs_file_s *fobj;
-  int32_t ret;
-
-  finfo(_SPIPRIfd "\n", id);
-  SPIFFS_LOCK(fs);
-
-  ret = spiffs_find_fileobject(fs, id, &fobj);
-  if (ret < 0)
-    {
-      SPIFFS_UNLOCK(fs);
-      return ret;
-    }
-
-
-  if ((fobj->flags & O_WRONLY) == 0)
-    {
-      SPIFFS_UNLOCK(fs);
-      return SPIFFS_ERR_NOT_WRITABLE;
-    }
-
-  spiffs_cache_fd_release(fs, fobj->cache_page);
-  ret = spiffs_object_truncate(fobj, 0, 1);
-  if (ret < 0)
-    {
-      SPIFFS_UNLOCK(fs);
       return ret;
     }
 
@@ -519,7 +485,7 @@ int32_t SPIFFS_rename(FAR struct spiffs_s *fs, const char *old_path, const char 
 
   ret = spiffs_object_find_object_index_header_by_name(fs, (const uint8_t *)new_path,
                                                        &pix_dummy);
-  if (ret == SPIFFS_ERR_NOT_FOUND)
+  if (ret == -ENOENT)
     {
       ret = OK;
     }
@@ -618,7 +584,7 @@ int32_t SPIFFS_fupdate_meta(FAR struct spiffs_s *fs, int16_t id, const void *met
   if ((fobj->flags & O_WRONLY) == 0)
     {
       SPIFFS_UNLOCK(fs);
-      return SPIFFS_ERR_NOT_WRITABLE;
+      return -EACCES;
     }
 
   ret = spiffs_object_update_index_hdr(fs, fobj, fobj->objid, fobj->objix_hdr_pix, 0, 0,

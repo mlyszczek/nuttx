@@ -261,7 +261,7 @@ static int32_t spiffs_delete_obj_lazy(FAR struct spiffs_s *fs, int16_t id)
   int32_t res;
 
   res = spiffs_obj_lu_find_id_and_span(fs, id, 0, 0, &objix_hdr_pix);
-  if (res == SPIFFS_ERR_NOT_FOUND)
+  if (res == -ENOENT)
     {
       return OK;
     }
@@ -320,7 +320,7 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
           res = spiffs_object_get_data_page_index_reference(fs, p_hdr->id,
                                                             p_hdr->span_ix,
                                                             &ref_pix, &objix_pix);
-          if (res == SPIFFS_ERR_NOT_FOUND)
+          if (res == -ENOENT)
             {
               /* no object with this id, so remove page safely */
 
@@ -385,7 +385,7 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
           res = spiffs_obj_lu_find_id_and_span(fs,
                                                p_hdr->id | SPIFFS_OBJ_ID_IX_FLAG,
                                                p_hdr->span_ix, cur_pix, 0);
-          if (res == SPIFFS_ERR_NOT_FOUND)
+          if (res == -ENOENT)
             {
               /* no such index page found, check for a data page amongst page
                * headers.  lu cannot be trusted
@@ -449,7 +449,7 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
                                                                     p_hdr->span_ix,
                                                                     &ref_pix,
                                                                     &objix_pix);
-                  if (res == SPIFFS_ERR_NOT_FOUND)
+                  if (res == -ENOENT)
                     {
                       /* no object with this id, so remove page safely */
 
@@ -507,7 +507,7 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
                                                        lu_obj_id | SPIFFS_OBJ_ID_IX_FLAG,
                                                        p_hdr->span_ix, 0,
                                                        &objix_pix_lu);
-                  if (res == SPIFFS_ERR_NOT_FOUND)
+                  if (res == -ENOENT)
                     {
                       res = OK;
                       objix_pix_lu = 0;
@@ -523,7 +523,7 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
                                                        p_hdr->id | SPIFFS_OBJ_ID_IX_FLAG,
                                                        p_hdr->span_ix, 0,
                                                        &objix_pix_ph);
-                  if (res == SPIFFS_ERR_NOT_FOUND)
+                  if (res == -ENOENT)
                     {
                       res = OK;
                       objix_pix_ph = 0;
@@ -546,7 +546,7 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
                       res = spiffs_obj_lu_find_id_and_span(fs,
                                                            lu_obj_id & ~SPIFFS_OBJ_ID_IX_FLAG,
                                                            0, 0, &data_pix_lu);
-                      if (res == SPIFFS_ERR_NOT_FOUND)
+                      if (res == -ENOENT)
                         {
                           res = OK;
                           objix_pix_lu = 0;
@@ -561,7 +561,7 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
                       res = spiffs_obj_lu_find_id_and_span(fs,
                                                            p_hdr->id & ~SPIFFS_OBJ_ID_IX_FLAG,
                                                            0, 0, &data_pix_ph);
-                      if (res == SPIFFS_ERR_NOT_FOUND)
+                      if (res == -ENOENT)
                         {
                           res = OK;
                           objix_pix_ph = 0;
@@ -640,7 +640,7 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
           res = spiffs_obj_lu_find_id_and_span(fs,
                                                lu_obj_id & ~SPIFFS_OBJ_ID_IX_FLAG,
                                                p_hdr->span_ix, cur_pix, &data_pix);
-          if (res == SPIFFS_ERR_NOT_FOUND)
+          if (res == -ENOENT)
             {
               res = OK;
               data_pix = 0;
@@ -654,7 +654,7 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
                                                lu_obj_id | SPIFFS_OBJ_ID_IX_FLAG,
                                                p_hdr->span_ix, cur_pix,
                                                &objix_pix_d);
-          if (res == SPIFFS_ERR_NOT_FOUND)
+          if (res == -ENOENT)
             {
               res = OK;
               objix_pix_d = 0;
@@ -747,7 +747,7 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
           res = spiffs_object_get_data_page_index_reference(fs, lu_obj_id,
                                                             p_hdr->span_ix,
                                                             &ref_pix, &objix_pix);
-          if (res == SPIFFS_ERR_NOT_FOUND)
+          if (res == -ENOENT)
             {
               /* no object with this id, so remove page safely */
 
@@ -1020,7 +1020,7 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                                                                objix_p_hdr->id & ~SPIFFS_OBJ_ID_IX_FLAG,
                                                                data_spix_offset + i,
                                                                0, &data_pix);
-                          if (res == SPIFFS_ERR_NOT_FOUND)
+                          if (res == -ENOENT)
                             {
                               res = OK;
                               data_pix = 0;
@@ -1122,7 +1122,7 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                                                                    p_hdr.id & ~SPIFFS_OBJ_ID_IX_FLAG,
                                                                    data_spix_offset + i, rpix,
                                                                    &data_pix);
-                              if (res == SPIFFS_ERR_NOT_FOUND)
+                              if (res == -ENOENT)
                                 {
                                   res = OK;
                                   data_pix = 0;
@@ -1357,7 +1357,7 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                                 }
                             }
                         }
-                      else if (res == SPIFFS_ERR_NOT_FOUND)
+                      else if (res == -ENOENT)
                         {
                           spiffs_checkinfo
                             ("PA: corresponding ref not found, delete "
@@ -1615,7 +1615,7 @@ static int32_t spiffs_object_index_consistency_check_v(FAR struct spiffs_s *fs,
 
                   obj_table[*log_ix] = id & ~SPIFFS_OBJ_ID_IX_FLAG;
                 }
-              else if (res == SPIFFS_ERR_NOT_FOUND)
+              else if (res == -ENOENT)
                 {
                   /* not found, register as unreachable */
 

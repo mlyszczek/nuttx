@@ -62,17 +62,11 @@ extern "C"
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define SPIFFS_ERR_NOT_MOUNTED          -10000
-#define SPIFFS_ERR_FULL                 -10001
-#define SPIFFS_ERR_NOT_FOUND            -10002
 #define SPIFFS_ERR_END_OF_OBJECT        -10003
 #define SPIFFS_ERR_DELETED              -10004
 #define SPIFFS_ERR_NOT_FINALIZED        -10005
 #define SPIFFS_ERR_NOT_INDEX            -10006
-#define SPIFFS_ERR_OUT_OF_FILE_DESCS    -10007
-#define SPIFFS_ERR_FILE_CLOSED          -10008
 #define SPIFFS_ERR_FILE_DELETED         -10009
-#define SPIFFS_ERR_BAD_DESCRIPTOR       -10010
 #define SPIFFS_ERR_IS_INDEX             -10011
 #define SPIFFS_ERR_IS_FREE              -10012
 #define SPIFFS_ERR_INDEX_SPAN_MISMATCH  -10013
@@ -83,36 +77,16 @@ extern "C"
 #define SPIFFS_ERR_INDEX_FREE           -10018
 #define SPIFFS_ERR_INDEX_LU             -10019
 #define SPIFFS_ERR_INDEX_INVALID        -10020
-#define SPIFFS_ERR_NOT_WRITABLE         -10021
-#define SPIFFS_ERR_NOT_READABLE         -10022
 #define SPIFFS_ERR_CONFLICTING_NAME     -10023
-#define SPIFFS_ERR_NOT_CONFIGURED       -10024
-
 #define SPIFFS_ERR_NOT_A_FS             -10025
-#define SPIFFS_ERR_MOUNTED              -10026
-#define SPIFFS_ERR_ERASE_FAIL           -10027
 #define SPIFFS_ERR_MAGIC_NOT_POSSIBLE   -10028
-
 #define SPIFFS_ERR_NO_DELETED_BLOCKS    -10029
-
-#define SPIFFS_ERR_FILE_EXISTS          -10030
-
-#define SPIFFS_ERR_NOT_A_FILE           -10031
-#define SPIFFS_ERR_RO_NOT_IMPL          -10032
-#define SPIFFS_ERR_RO_ABORTED_OPERATION -10033
 #define SPIFFS_ERR_PROBE_TOO_FEW_BLOCKS -10034
 #define SPIFFS_ERR_PROBE_NOT_A_FS       -10035
-#define SPIFFS_ERR_NAME_TOO_LONG        -10036
-
 #define SPIFFS_ERR_IX_MAP_UNMAPPED      -10037
 #define SPIFFS_ERR_IX_MAP_MAPPED        -10038
 #define SPIFFS_ERR_IX_MAP_BAD_RANGE     -10039
-
-#define SPIFFS_ERR_SEEK_BOUNDS          -10040
-
 #define SPIFFS_ERR_INTERNAL             -10050
-
-#define SPIFFS_ERR_TEST                 -10100
 
 /* Flags on open file/directory options */
 
@@ -406,15 +380,6 @@ void SPIFFS_unmount(FAR struct spiffs_s *fs);
  */
   int32_t SPIFFS_remove(FAR struct spiffs_s *fs, const char *path);
 
-/* Removes a file by ID
- *
- * Input Parameters:
- *   fs            the file system struct
- *   id            the ID of the file to remove
- */
-
-int32_t SPIFFS_fremove(FAR struct spiffs_s *fs, int16_t id);
-
 /* Gets file status by path
  *
  * Input Parameters:
@@ -535,7 +500,7 @@ int32_t SPIFFS_gc_quick(FAR struct spiffs_s *fs, uint16_t max_free_pages);
 
 /* Will try to make room for given amount of bytes in the filesystem by moving
  * pages and erasing blocks.
- * If it is physically impossible, err_no will be set to SPIFFS_ERR_FULL. If
+ * If it is physically impossible, err_no will be set to -ENOSPC. If
  * there already is this amount (or more) of free space, SPIFFS_gc will
  * silently return. It is recommended to call SPIFFS_info before invoking
  * this method in order to determine what amount of bytes to give.

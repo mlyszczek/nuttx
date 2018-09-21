@@ -235,7 +235,7 @@ int32_t spiffs_gc_check(FAR struct spiffs_s *fs, uint32_t len)
       spiffs_gcinfo("Full freeblk:" _SPIPRIi " needed:" _SPIPRIi " free:"
                     _SPIPRIi " dele:" _SPIPRIi "\n",
                     fs->free_blocks, needed_pages, free_pages, fs->stats_p_deleted);
-      return SPIFFS_ERR_FULL;
+      return -ENOSPC;
     }
 #endif
 
@@ -244,7 +244,7 @@ int32_t spiffs_gc_check(FAR struct spiffs_s *fs, uint32_t len)
       spiffs_gcinfo("Full freeblk:" _SPIPRIi " needed:" _SPIPRIi
                     " free:" _SPIPRIi " dele:" _SPIPRIi "\n", fs->free_blocks,
                     needed_pages, free_pages, fs->stats_p_deleted);
-      return SPIFFS_ERR_FULL;
+      return -ENOSPC;
     }
 
   do
@@ -272,7 +272,7 @@ int32_t spiffs_gc_check(FAR struct spiffs_s *fs, uint32_t len)
         {
           spiffs_gcinfo("No candidates, return\n");
           return (int32_t) needed_pages <
-            free_pages ? OK : SPIFFS_ERR_FULL;
+            free_pages ? OK : -ENOSPC;
         }
 
 #if CONFIG_SPIFFS_GCDBG
@@ -327,7 +327,7 @@ int32_t spiffs_gc_check(FAR struct spiffs_s *fs, uint32_t len)
 
   if ((int32_t) len > free_pages * (int32_t) SPIFFS_DATA_PAGE_SIZE(fs))
     {
-      res = SPIFFS_ERR_FULL;
+      res = -ENOSPC;
     }
 
   spiffs_gcinfo("Finished, " _SPIPRIi " dirty, blocks " _SPIPRIi " free, "
@@ -901,7 +901,7 @@ int32_t spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t bix)
                                                SPIFFS_OBJ_ID_IX_FLAG,
                                                gc.cur_objix_spix, 0,
                                                &objix_pix);
-              if (res == SPIFFS_ERR_NOT_FOUND)
+              if (res == -ENOENT)
                 {
                   /* on borked systems we might get an ERR_NOT_FOUND here -
                    * this is handled by simply deleting the page as it is not
