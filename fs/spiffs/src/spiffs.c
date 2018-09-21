@@ -230,15 +230,6 @@ static void spiffs_unlock_reentrant(FAR struct spiffs_sem_s *rsem)
 }
 
 /****************************************************************************
- * Name: spiffs_unlock
- ****************************************************************************/
-
-static void spiffs_unlock(FAR struct spiffs_s *fs)
-{
-  spiffs_unlock_reentrant(&fs->exclsem);
-}
-
-/****************************************************************************
  * Name: spiffs_open
  ****************************************************************************/
 
@@ -247,11 +238,12 @@ static int spiffs_open(FAR struct file *filep, FAR const char *relpath,
 {
   FAR struct inode *inode;
   FAR struct spiffs_s *fs;
-  FAR struct spiffs_s_file_s *sfo;
+  FAR struct spiffs_file_s *sfo;
   off_t offset;
+  int16_t pix;
   int ret;
 
-  finfo("filep: %p\n", filep);
+  finfo("relpath: %s oflags; %04x\n", relpath, oflags);
   DEBUGASSERT(filep->f_priv == NULL && filep->f_inode != NULL);
 
   /* Get the mountpoint inode reference from the file structure and the
@@ -263,102 +255,97 @@ static int spiffs_open(FAR struct file *filep, FAR const char *relpath,
 
   DEBUGASSERT(fs != NULL);
 
-  /* Get exclusive access to the file system */
-
-  spiffs_lock_volume(fs);
-
   /* Skip over any leading directory separators (shouldn't be any) */
 
   for (; *relpath == '/'; relpath++)
     {
     }
 
-  /* Find the file object associated with this relative path.
-   * If successful, this action will lock both the parent directory and
-   * the file object, adding one to the reference count of both.
-   * In the event that -ENOENT, there will still be a reference and
-   * lock on the returned directory.
-   */
+  /* Check the length of the relative path */
 
-  ret = spiffs_find_file(fs, relpath, &sfo, NULL);
-  if (ret >= 0)
+  if (strlen(relpath) > SPIFFS_NAME_MAX - 1)
     {
-      /* The file exists.  We hold the lock and one reference count
-       * on the file object.
-       *
-       * It would be an error if we are asked to create it exclusively
-       */
-
-      if ((oflags & (O_CREAT | O_EXCL)) == (O_CREAT | O_EXCL))
-        {
-          /* Already exists -- can't create it exclusively */
-
-          ret = -EEXIST;
-          goto errout_with_filelock;
-        }
-
-      /* Check if the caller has sufficient privileges to open the file */
-      /* REVISIT: No file protection implemented */
-
-      /* If O_TRUNC is specified and the file is opened for writing,
-       * then truncate the file.  This operation requires that the file is
-       * writeable, but we have already checked that. O_TRUNC without write
-       * access is ignored.
-       */
-
-      if ((oflags & (O_TRUNC | O_WRONLY)) == (O_TRUNC | O_WRONLY))
-        {
-          /* Truncate the file to zero length (if it is not already
-           * zero length)
-           */
-
-#warning Missing logic
-//          if (sfo->tfo_size > 0)
-            {
-#warning Missing logic
-              if (ret < 0)
-                {
-                  goto errout_with_filelock;
-                }
-            }
-        }
+      return -ENAMETOOLONG;
     }
 
-  /* ENOENT would be returned by spiffs_find_file() if the full directory
-   * path was found, but the file was not found in the final directory.
-   */
+  /* Allocate a new file object */
 
-  else if (ret == -ENOENT)
+  sfo = (FAR struct spiffs_file_s *)kmm_zalloc(sizeof(struct spiffs_file_s));
+  if (sfo == NULL)
     {
-      /* The file does not exist.  Were we asked to create it? */
+      return -ENOMEM;
+    }
 
-      if ((oflags & O_CREAT) == 0)
-        {
-           /* No.. then we fail with -ENOENT */
+  /* Get exclusive access to the file system */
 
-           ret = -ENOENT;
-           goto errout_with_fslock;
-       }
+  spiffs_lock_volume(fs);
 
-      /* Yes.. create the file object.  There will be a reference and a lock
-       * on the new file object.
-       */
+  /* Check of the file object already exists */
 
-      ret = spiffs_create_file(fs, relpath, &sfo);
+  ret = spiffs_object_find_object_index_header_by_name(fs,
+                                                       (FAR const uint8_t *)relpath,
+                                                       &pix);
+  if (ret < 0 && (oflags & O_CREAT) == 0)
+    {
+      /* It does not exist and we were not asked to create it */
+
+      goto errout_with_fileobject;
+    }
+  else if (ret == OK && (oflags & (O_CREAT | O_EXCL)) == (O_CREAT | O_EXCL))
+    {
+      /* O_CREAT and O_EXCL and file exists - fail */
+
+      ret = -EEXIST;
+      goto errout_with_fileobject;
+    }
+  else if ((oflags & O_CREAT) != 0 && ret == -ENOENT)
+    {
+      int16_t id;
+
+      /* The file does not exist.  We need to create the it. */
+
+      ret = spiffs_obj_lu_find_free_obj_id(fs, &id, 0);
       if (ret < 0)
         {
-          goto errout_with_fslock;
+          goto errout_with_fileobject;
         }
-   }
 
-  /* Some other error occurred */
+      ret = spiffs_object_create(fs, id, (FAR const uint8_t *)relpath, 0,
+                                 SPIFFS_TYPE_FILE, &pix);
+      if (ret < 0)
+        {
+          goto errout_with_fileobject;
+        }
 
-  else
+      /* Since we created the file, we don't need to truncate it */
+
+      oflags &= ~O_TRUNC;
+    }
+  else if (ret < 0)
     {
-      goto errout_with_fslock;
+      goto errout_with_fileobject;
     }
 
-  /* Save the struct spiffs_s_file_s instance as the file private data */
+  /* Open the file */
+
+  ret = spiffs_object_open_by_page(fs, pix, sfo, oflags, mode);
+  if (ret < 0)
+    {
+      goto errout_with_fileobject;
+    }
+
+  /* Truncate the file to zero length */
+
+  if ((oflags & O_TRUNC) != 0)
+    {
+      ret = spiffs_object_truncate(sfo, 0, 0);
+      if (ret < 0)
+        {
+          goto errout_with_fileobject;
+        }
+    }
+
+  /* Save the struct spiffs_file_s instance as the file private data */
 
   filep->f_priv = sfo;
 
@@ -370,23 +357,30 @@ static int spiffs_open(FAR struct file *filep, FAR const char *relpath,
   if ((oflags & (O_APPEND | O_WRONLY)) == (O_APPEND | O_WRONLY))
     {
 #warning Missing logic
-//      offset = sfo->tfo_size;
     }
+
+  /* Save the file position */
 
   filep->f_pos = offset;
 
-  /* Unlock the file file object, but retain the reference count */
+  /* Finish initialization of the file object */
 
-  spiffs_unlock_file(sfo);
+  sfo->fdoffset = offset;
+  sem_init(&sfo->exclsem.sem, 0, 1);
+  sfo->exclsem.holder = SPIFFS_NO_HOLDER;
+
+  /* Add the new file object to the had of the open file list */
+
+  sfo->flink = fs->ohead;
+  fs->ohead  = sfo;
+
   spiffs_unlock_volume(fs);
   return OK;
 
-  /* Error exits */
+errout_with_fileobject:
+  kmm_free(sfo);
 
-errout_with_filelock:
-#warning Missgin logic
-
-errout_with_fslock:
+errout_with_lock:
   spiffs_unlock_volume(fs);
   return ret;
 }
@@ -397,7 +391,7 @@ errout_with_fslock:
 
 static int spiffs_close(FAR struct file *filep)
 {
-  FAR struct spiffs_s_file_s *sfo;
+  FAR struct spiffs_file_s *sfo;
 
   finfo("filep: %p\n", filep);
   DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
@@ -448,7 +442,7 @@ static int spiffs_close(FAR struct file *filep)
 static ssize_t spiffs_read(FAR struct file *filep, FAR char *buffer,
                           size_t buflen)
 {
-  FAR struct spiffs_s_file_s *sfo;
+  FAR struct spiffs_file_s *sfo;
   ssize_t nread;
   off_t startpos;
   off_t endpos;
@@ -480,7 +474,7 @@ static ssize_t spiffs_read(FAR struct file *filep, FAR char *buffer,
 static ssize_t spiffs_write(FAR struct file *filep, FAR const char *buffer,
                            size_t buflen)
 {
-  FAR struct spiffs_s_file_s *sfo;
+  FAR struct spiffs_file_s *sfo;
   ssize_t nwritten;
   off_t startpos;
   off_t endpos;
@@ -516,7 +510,7 @@ errout_with_lock:
 
 static off_t spiffs_seek(FAR struct file *filep, off_t offset, int whence)
 {
-  FAR struct spiffs_s_file_s *sfo;
+  FAR struct spiffs_file_s *sfo;
   off_t position;
 
   finfo("filep: %p\n", filep);
@@ -570,7 +564,7 @@ static off_t spiffs_seek(FAR struct file *filep, off_t offset, int whence)
 
 static int spiffs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
-  FAR struct spiffs_s_file_s *sfo;
+  FAR struct spiffs_file_s *sfo;
   FAR void **ppv = (FAR void**)arg;
 
   finfo("filep: %p cmd: %d arg: %08lx\n", filep, cmd, arg);
@@ -628,7 +622,7 @@ static int spiffs_sync(FAR struct file *filep)
 
 static int spiffs_dup(FAR const struct file *oldp, FAR struct file *newp)
 {
-  FAR struct spiffs_s_file_s *sfo;
+  FAR struct spiffs_file_s *sfo;
 
   finfo("Dup %p->%p\n", oldp, newp);
   DEBUGASSERT(oldp->f_priv != NULL && oldp->f_inode != NULL &&
@@ -660,13 +654,13 @@ static int spiffs_dup(FAR const struct file *oldp, FAR struct file *newp)
  *
  * Description:
  *   Obtain information about an open file associated with the file
- *   descriptor 'fd', and will write it to the area pointed to by 'buf'.
+ *   descriptor 'sfo', and will write it to the area pointed to by 'buf'.
  *
  ****************************************************************************/
 
 static int spiffs_fstat(FAR const struct file *filep, FAR struct stat *buf)
 {
-  FAR struct spiffs_s_file_s *sfo;
+  FAR struct spiffs_file_s *sfo;
 
   finfo("Fstat %p\n", buf);
   DEBUGASSERT(filep != NULL && buf != NULL);
@@ -695,7 +689,7 @@ static int spiffs_fstat(FAR const struct file *filep, FAR struct stat *buf)
 
 static int spiffs_truncate(FAR struct file *filep, off_t length)
 {
-  FAR struct spiffs_s_file_s *sfo;
+  FAR struct spiffs_file_s *sfo;
   size_t oldsize;
   int ret = OK;
 
@@ -946,7 +940,7 @@ static int spiffs_unlink(FAR struct inode *mountpt, FAR const char *relpath)
 {
   FAR struct spiffs_s *fs;
   FAR struct spiff_directory_s *sdo;
-  FAR struct spiffs_s_file_s *sfo = NULL;
+  FAR struct spiffs_file_s *sfo = NULL;
   FAR const char *name;
   int ret;
 
@@ -1208,7 +1202,7 @@ static int spiffs_rename(FAR struct inode *mountpt, FAR const char *oldrelpath,
       /* No subdirectories... use the root directory */
 #warning Missing logic
       newname   = copy;
-//      newparent = 
+//      newparent =
 
       spiffs_lock_directory(newparent);
       newparent->crefs++;

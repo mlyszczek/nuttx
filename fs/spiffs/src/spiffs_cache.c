@@ -54,8 +54,8 @@
 
 /* returns cached page for give page index, or null if no such cached page */
 
-static spiffs_cache_page *spiffs_cache_page_get(FAR struct spiffs_s *fs,
-                                                spiffs_page_ix pix)
+static FAR struct spiffs_cache_page_s *spiffs_cache_page_get(FAR struct spiffs_s *fs,
+                                                int16_t pix)
 {
   int i;
 
@@ -67,7 +67,7 @@ static spiffs_cache_page *spiffs_cache_page_get(FAR struct spiffs_s *fs,
 
   for (i = 0; i < cache->cpage_count; i++)
     {
-      spiffs_cache_page *cp = spiffs_get_cache_page_hdr(fs, cache, i);
+      FAR struct spiffs_cache_page_s *cp = spiffs_get_cache_page_hdr(fs, cache, i);
       if ((cache->cpage_use_map & (1 << i)) &&
           (cp->flags & SPIFFS_CACHE_FLAG_TYPE_WR) == 0 && cp->pix == pix)
         {
@@ -85,7 +85,7 @@ static int32_t spiffs_cache_page_free(FAR struct spiffs_s *fs, int ix, uint8_t w
 {
   int32_t res = OK;
   spiffs_cache *cache = spiffs_get_cache(fs);
-  spiffs_cache_page *cp = spiffs_get_cache_page_hdr(fs, cache, ix);
+  FAR struct spiffs_cache_page_s *cp = spiffs_get_cache_page_hdr(fs, cache, ix);
 
   if (cache->cpage_use_map & (1 << ix))
     {
@@ -104,7 +104,7 @@ static int32_t spiffs_cache_page_free(FAR struct spiffs_s *fs, int ix, uint8_t w
       if (cp->flags & SPIFFS_CACHE_FLAG_TYPE_WR)
         {
           spiffs_cacheinfo("CACHE_FREE: free cache page " _SPIPRIi " objid "
-                           _SPIPRIid "\n", ix, cp->obj_id);
+                           _SPIPRIid "\n", ix, cp->id);
         }
       else
         {
@@ -141,7 +141,7 @@ static int32_t spiffs_cache_page_remove_oldest(FAR struct spiffs_s *fs, uint8_t 
 
   for (i = 0; i < cache->cpage_count; i++)
     {
-      spiffs_cache_page *cp = spiffs_get_cache_page_hdr(fs, cache, i);
+      FAR struct spiffs_cache_page_s *cp = spiffs_get_cache_page_hdr(fs, cache, i);
       if ((cache->last_access - cp->last_access) > oldest_val &&
           (cp->flags & flag_mask) == flags)
         {
@@ -162,7 +162,7 @@ static int32_t spiffs_cache_page_remove_oldest(FAR struct spiffs_s *fs, uint8_t 
  * are busy.
  */
 
-static spiffs_cache_page *spiffs_cache_page_allocate(FAR struct spiffs_s *fs)
+static FAR struct spiffs_cache_page_s *spiffs_cache_page_allocate(FAR struct spiffs_s *fs)
 {
   int i;
 
@@ -178,7 +178,7 @@ static spiffs_cache_page *spiffs_cache_page_allocate(FAR struct spiffs_s *fs)
     {
       if ((cache->cpage_use_map & (1 << i)) == 0)
         {
-          spiffs_cache_page *cp = spiffs_get_cache_page_hdr(fs, cache, i);
+          FAR struct spiffs_cache_page_s *cp = spiffs_get_cache_page_hdr(fs, cache, i);
           cache->cpage_use_map |= (1 << i);
           cp->last_access = cache->last_access;
           return cp;
@@ -192,9 +192,9 @@ static spiffs_cache_page *spiffs_cache_page_allocate(FAR struct spiffs_s *fs)
 
 /* drops the cache page for give page index */
 
-void spiffs_cache_drop_page(FAR struct spiffs_s *fs, spiffs_page_ix pix)
+void spiffs_cache_drop_page(FAR struct spiffs_s *fs, int16_t pix)
 {
-  spiffs_cache_page *cp = spiffs_cache_page_get(fs, pix);
+  FAR struct spiffs_cache_page_s *cp = spiffs_cache_page_get(fs, pix);
   if (cp)
     {
       spiffs_cache_page_free(fs, cp->ix, 0);
@@ -203,13 +203,12 @@ void spiffs_cache_drop_page(FAR struct spiffs_s *fs, spiffs_page_ix pix)
 
 /* reads from spi flash or the cache */
 
-int32_t spiffs_phys_rd(FAR struct spiffs_s *fs, uint8_t op, spiffs_file fh,
+int32_t spiffs_phys_rd(FAR struct spiffs_s *fs, uint8_t op, int16_t id,
                        uint32_t addr, uint32_t len, uint8_t * dst)
 {
-  (void)fh;
   int32_t res = OK;
   spiffs_cache *cache = spiffs_get_cache(fs);
-  spiffs_cache_page *cp =
+  FAR struct spiffs_cache_page_s *cp =
     spiffs_cache_page_get(fs, SPIFFS_PADDR_TO_PAGE(fs, addr));
 
   cache->last_access++;
@@ -288,13 +287,13 @@ int32_t spiffs_phys_rd(FAR struct spiffs_s *fs, uint8_t op, spiffs_file fh,
 
 /* writes to spi flash and/or the cache */
 
-int32_t spiffs_phys_wr(FAR struct spiffs_s *fs, uint8_t op, spiffs_file fh,
+int32_t spiffs_phys_wr(FAR struct spiffs_s *fs, uint8_t op, int16_t id,
                        uint32_t addr, uint32_t len, uint8_t * src)
 {
-  (void)fh;
-  spiffs_page_ix pix = SPIFFS_PADDR_TO_PAGE(fs, addr);
+  (void)id;
+  int16_t pix = SPIFFS_PADDR_TO_PAGE(fs, addr);
   spiffs_cache *cache = spiffs_get_cache(fs);
-  spiffs_cache_page *cp = spiffs_cache_page_get(fs, pix);
+  FAR struct spiffs_cache_page_s *cp = spiffs_cache_page_get(fs, pix);
 
   if (cp && (op & SPIFFS_OP_COM_MASK) != SPIFFS_OP_C_WRTHRU)
     {
@@ -336,15 +335,15 @@ int32_t spiffs_phys_wr(FAR struct spiffs_s *fs, uint8_t op, spiffs_file fh,
     }
 }
 
-/* returns the cache page that this fd refers, or null if no cache page */
+/* returns the cache page that this sfo refers, or null if no cache page */
 
-spiffs_cache_page *spiffs_cache_page_get_by_fd(FAR struct spiffs_s *fs, spiffs_fd * fd)
+FAR struct spiffs_cache_page_s *spiffs_cache_page_get_by_fd(FAR struct spiffs_s *fs, FAR struct spiffs_file_s * sfo)
 {
   spiffs_cache *cache = spiffs_get_cache(fs);
 
   if ((cache->cpage_use_map & cache->cpage_use_mask) == 0)
     {
-      /* all cpages free, no cpage cannot be assigned to obj_id */
+      /* all cpages free, no cpage cannot be assigned to id */
 
       return 0;
     }
@@ -352,9 +351,9 @@ spiffs_cache_page *spiffs_cache_page_get_by_fd(FAR struct spiffs_s *fs, spiffs_f
   int i;
   for (i = 0; i < cache->cpage_count; i++)
     {
-      spiffs_cache_page *cp = spiffs_get_cache_page_hdr(fs, cache, i);
+      FAR struct spiffs_cache_page_s *cp = spiffs_get_cache_page_hdr(fs, cache, i);
       if ((cache->cpage_use_map & (1 << i)) &&
-          (cp->flags & SPIFFS_CACHE_FLAG_TYPE_WR) && cp->obj_id == fd->obj_id)
+          (cp->flags & SPIFFS_CACHE_FLAG_TYPE_WR) && cp->id == sfo->id)
         {
           return cp;
         }
@@ -363,18 +362,18 @@ spiffs_cache_page *spiffs_cache_page_get_by_fd(FAR struct spiffs_s *fs, spiffs_f
   return 0;
 }
 
-/* allocates a new cache page and refers this to given fd - flushes an old cache
+/* allocates a new cache page and refers this to given sfo - flushes an old cache
  * page if all cache is busy
  */
 
-spiffs_cache_page *spiffs_cache_page_allocate_by_fd(FAR struct spiffs_s *fs, spiffs_fd * fd)
+FAR struct spiffs_cache_page_s *spiffs_cache_page_allocate_by_fd(FAR struct spiffs_s *fs, FAR struct spiffs_file_s * sfo)
 {
   /* before this function is called, it is ensured that there is no already
    * existing cache page with same object id
    */
 
   spiffs_cache_page_remove_oldest(fs, SPIFFS_CACHE_FLAG_TYPE_WR, 0);
-  spiffs_cache_page *cp = spiffs_cache_page_allocate(fs);
+  FAR struct spiffs_cache_page_s *cp = spiffs_cache_page_allocate(fs);
   if (cp == 0)
     {
       /* could not get cache page */
@@ -383,11 +382,10 @@ spiffs_cache_page *spiffs_cache_page_allocate_by_fd(FAR struct spiffs_s *fs, spi
     }
 
   cp->flags = SPIFFS_CACHE_FLAG_TYPE_WR;
-  cp->obj_id = fd->obj_id;
-  fd->cache_page = cp;
-  spiffs_cacheinfo("CACHE_ALLO: allocated cache page " _SPIPRIi " for fd "
-                   _SPIPRIfd ":" _SPIPRIid "\n", cp->ix, fd->file_nbr,
-                   fd->obj_id);
+  cp->id = sfo->id;
+  sfo->cache_page = cp;
+  spiffs_cacheinfo("CACHE_ALLO: allocated cache page " _SPIPRIi " for sfo "
+                   _SPIPRIfd "\n", cp->ix, sfo->id);
   return cp;
 }
 
@@ -395,27 +393,22 @@ spiffs_cache_page *spiffs_cache_page_allocate_by_fd(FAR struct spiffs_s *fs, spi
  * page
  */
 
-void spiffs_cache_fd_release(FAR struct spiffs_s *fs, spiffs_cache_page * cp)
+void spiffs_cache_fd_release(FAR struct spiffs_s *fs, FAR struct spiffs_cache_page_s *cp)
 {
-  uint32_t i;
-  spiffs_fd *fds = (spiffs_fd *) fs->fd_space;
+  FAR struct spiffs_file_s *sfo;
 
   if (cp == 0)
     {
       return;
     }
 
-  for (i = 0; i < fs->fd_count; i++)
+  for (sfo = fs->ohead; sfo != NULL; sfo = sfo->flink)
     {
-      spiffs_fd *cur_fd = &fds[i];
-      if (cur_fd->file_nbr != 0 && cur_fd->cache_page == cp)
-        {
-          cur_fd->cache_page = 0;
-        }
+      sfo->cache_page = 0;
     }
 
   spiffs_cache_page_free(fs, cp->ix, 0);
-  cp->obj_id = 0;
+  cp->id = 0;
 }
 
 /* Initializes the cache */

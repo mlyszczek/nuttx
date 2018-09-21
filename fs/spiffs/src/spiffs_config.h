@@ -280,30 +280,6 @@
 #define SPIFFS_ALIGNED_OBJECT_INDEX_TABLES       0
 #endif
 
-/* Enable this to add a temporal file cache using the fd buffer.
- * The effects of the cache is that SPIFFS_open will find the file faster in
- * certain cases. It will make it a lot easier for spiffs to find files
- * opened frequently, reducing number of readings from the spi flash for
- * finding those files.
- * This will grow each fd by 6 bytes. If your files are opened in patterns
- * with a degree of temporal locality, the system is optimized.
- * Examples can be letting spiffs serve web content, where one file is the css.
- * The css is accessed for each html file that is opened, meaning it is
- * accessed almost every second time a file is opened. Another example could be
- * a log file that is often opened, written, and closed.
- * The size of the cache is number of given file descriptors, as it piggybacks
- * on the fd update mechanism. The cache lives in the closed file descriptors.
- * When closed, the fd know the whereabouts of the file. Instead of forgetting
- * this, the temporal cache will keep handling updates to that file even if the
- * fd is closed. If the file is opened again, the location of the file is found
- * directly. If all available descriptors become opened, all cache memory is
- * lost.
- */
-
-#ifndef SPIFFS_TEMPORAL_FD_CACHE
-#  define SPIFFS_TEMPORAL_FD_CACHE            1
-#endif
-
 /* Temporal file cache hit score. Each time a file is opened, all cached files
  * will lose one point. If the opened file is found in cache, that entry will
  * gain SPIFFS_TEMPORAL_CACHE_HIT_SCORE points. One can experiment with this
@@ -345,41 +321,5 @@
 #ifndef SPIFFS_NO_BLIND_WRITES
   #define SPIFFS_NO_BLIND_WRITES              0
 #endif
-
-/****************************************************************************
- * Public Types
- ****************************************************************************/
-
-/* Types depending on configuration such as the amount of flash bytes
- * given to spiffs file system in total (spiffs_file_system_size),
- * the logical block size (log_block_size), and the logical page size
- * (log_page_size)
- */
-
-/* Block index type. Make sure the size of this type can hold
- * the highest number of all blocks - i.e. spiffs_file_system_size / log_block_size
- */
-
-typedef uint16_t spiffs_block_ix;
-
-/* Page index type. Make sure the size of this type can hold
- * the highest page number of all pages - i.e. spiffs_file_system_size / log_page_size
- */
-
-typedef uint16_t spiffs_page_ix;
-
-/* Object id type - most significant bit is reserved for index flag. Make sure the
- * size of this type can hold the highest object id on a full system,
- * i.e. 2 + (spiffs_file_system_size / (2*log_page_size))*2
- */
-
-typedef uint16_t spiffs_obj_id;
-
-/* Object span index type. Make sure the size of this type can
- * hold the largest possible span index on the system -
- * i.e. (spiffs_file_system_size / log_page_size) - 1
- */
-
-typedef uint16_t spiffs_span_ix;
 
 #endif /* __FS_SPIFFS_SRC_SPIFFS_CONFIG_H */
