@@ -275,18 +275,6 @@ struct spiffs_file_s
   off_t offset;                     /* current absolute offset */
 };
 
-struct spiffs_s_dirent
-{
-  int16_t id;
-  uint8_t name[SPIFFS_NAME_MAX];
-  uint8_t type;
-  uint32_t size;
-  int16_t pix;
-#if SPIFFS_OBJ_META_LEN
-  uint8_t meta[SPIFFS_OBJ_META_LEN];
-#endif
-};
-
 #if SPIFFS_IX_MAP
 struct spiffs_ix_map_s
 {
@@ -296,15 +284,6 @@ struct spiffs_ix_map_s
   int16_t end_spix;                 /* End data span index of lookup buffer */
 };
 #endif
-
-/* This structure represents one open directory */
-
-struct spiff_directory_s
-{
-  struct spiffs_sem_s exclsem; /* Supports mutually exclusive access to the open file */
-  int16_t crefs;               /* Reference count */
-#warning Missing logic
-};
 
 /****************************************************************************
  * Public Function Prototypes
@@ -380,28 +359,6 @@ void SPIFFS_unmount(FAR struct spiffs_s *fs);
  */
   int32_t SPIFFS_remove(FAR struct spiffs_s *fs, const char *path);
 
-/* Gets file status by path
- *
- * Input Parameters:
- *   fs            the file system struct
- *   path          the path of the file to stat
- *   s             the stat struct to populate
- */
-
-struct stat; /* Forward reference */
-int32_t SPIFFS_stat(FAR struct spiffs_s *fs, const char *path, FAR struct stat * s);
-
-/* Gets file status by ID
- *
- * Input Parameters:
- *   fs            the file system struct
- *   id            the ID of the file to stat
- *   s             the stat struct to populate
- */
-
-struct stat; /* Forward reference */
-int32_t SPIFFS_fstat(FAR struct spiffs_s *fs, int16_t id, FAR struct stat * s);
-
 /* Renames a file
  *
  * Input Parameters:
@@ -411,28 +368,6 @@ int32_t SPIFFS_fstat(FAR struct spiffs_s *fs, int16_t id, FAR struct stat * s);
  */
 
 int32_t SPIFFS_rename(FAR struct spiffs_s *fs, const char *old, const char *newPath);
-
-#if SPIFFS_OBJ_META_LEN
-/* Updates file's metadata
- *
- * Input Parameters:
- *   fs            the file system struct
- *   path          path to the file
- *   meta          new metadata. must be SPIFFS_OBJ_META_LEN bytes long.
- */
-
-int32_t SPIFFS_update_meta(FAR struct spiffs_s *fs, const char *name, const void *meta);
-
-/* Updates file's metadata
- *
- * Input Parameters:
- *   fs            the file system struct
- *   id            ID of the file
- *   meta          new metadata. must be SPIFFS_OBJ_META_LEN bytes long.
- */
-
-int32_t SPIFFS_fupdate_meta(FAR struct spiffs_s *fs, int16_t id, const void *meta);
-#endif
 
 /* Runs a consistency check on given filesystem.
  *
@@ -526,15 +461,6 @@ int32_t SPIFFS_gc(FAR struct spiffs_s *fs, uint32_t size);
  */
 
 int32_t SPIFFS_eof(FAR struct spiffs_s *fs, int16_t id);
-
-/* Get position in file.
- *
- * Input Parameters:
- *   fs            the file system struct
- *   id            the ID of the file to check
- */
-
-int32_t SPIFFS_tell(FAR struct spiffs_s *fs, int16_t id);
 
 /* Registers a callback function that keeps track on operations on file
  * headers. Do note, that this callback is called from within internal spiffs

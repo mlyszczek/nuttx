@@ -389,7 +389,7 @@ static int spiffs_open(FAR struct file *filep, FAR const char *relpath,
 
   if ((oflags & O_TRUNC) != 0)
     {
-      ret = spiffs_object_truncate(fobj, 0, 0);
+      ret = spiffs_object_truncate(fobj, 0, false);
       if (ret < 0)
         {
           goto errout_with_fileobject;
@@ -996,12 +996,26 @@ static int spiffs_fstat(FAR const struct file *filep, FAR struct stat *buf)
 
 static int spiffs_truncate(FAR struct file *filep, off_t length)
 {
+  FAR struct spiffs_file_s *fobj;
+  int ret;
+
   finfo("filep: %p length: %ld\n", filep, (long)length);
-  DEBUGASSERT(filep != NULL && length >= 0);
+  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL &&  length >= 0);
 
-  /* Not implemented */
+  /* Recover the file object state from the struct file instance */
 
-  return -ENOSYS;
+  fobj = filep->f_priv;
+
+  /* Get exclusive access to the file */
+
+  spiffs_lock_file(fobj);
+
+  /* REVISIT:  I believe that this can only truncate to smaller sizes. */
+
+  ret = spiffs_object_truncate(fobj, length, false);
+
+  spiffs_unlock_file(fobj);
+  return ret;
 }
 
 /****************************************************************************
@@ -1288,26 +1302,12 @@ errout_with_lock:
 static int spiffs_mkdir(FAR struct inode *mountpt, FAR const char *relpath,
                        mode_t mode)
 {
-  FAR struct spiffs_s *fs;
-  int ret;
-
   finfo("mountpt: %p relpath: %s mode: %04x\n", mountpt, relpath, mode);
   DEBUGASSERT(mountpt != NULL && relpath != NULL);
 
-  /* Get the file system structure from the inode reference. */
+  /* Directories are not supported */
 
-  fs = mountpt->i_private;
-  DEBUGASSERT(fs != NULL);
-
-  /* Get exclusive access to the file system */
-
-  spiffs_lock_volume(fs);
-
-  /* Create the directory. */
-
-  ret = spiffs_create_directory(fs, relpath, NULL);
-  spiffs_unlock_volume(fs);
-  return ret;
+  return -ENOSYS;
 }
 
 /****************************************************************************
@@ -1316,81 +1316,12 @@ static int spiffs_mkdir(FAR struct inode *mountpt, FAR const char *relpath,
 
 static int spiffs_rmdir(FAR struct inode *mountpt, FAR const char *relpath)
 {
-  FAR struct spiffs_s *fs;
-  FAR struct spiff_directory_s *parent;
-  FAR const char *name;
-  int ret;
-
   finfo("mountpt: %p relpath: %s\n", mountpt, relpath);
   DEBUGASSERT(mountpt != NULL && relpath != NULL);
 
-  /* Get the file system structure from the inode reference. */
+  /* Directories are not supported */
 
-  fs = mountpt->i_private;
-  DEBUGASSERT(fs != NULL);
-
-  /* Get exclusive access to the file system */
-
-  spiffs_lock_volume(fs);
-
-  /* Find the directory object and parent directory associated with this
-   * relative path.  If successful, spiffs_find_file will lock both the
-   * directory object and the parent directory and take one reference count
-   * on each.
-   */
-
-  ret = spiffs_find_directory(fs, relpath, 0, &parent);
-  if (ret < 0)
-    {
-      goto errout_with_lock;
-    }
-
-  /* Is the directory empty?  We cannot remove directories that still
-   * contain references to file system objects.  No can we remove the
-   * directory if there are outstanding references on it (other than
-   * our reference).
-   */
-#warning Missing logic
-
-  /* Get the directory name from the relative path */
-
-  name = strrchr(relpath, '/');
-  if (name != NULL)
-    {
-      /* Skip over the fidirectoryle '/' character */
-
-      name++;
-    }
-  else
-    {
-      /* The name must lie in the root directory */
-
-      name = relpath;
-    }
-
-  /* Remove the directory from parent directory */
-
-  ret = spiffs_remove_dirent(parent, name);
-  if (ret < 0)
-    {
-      goto errout_with_objects;
-    }
-
-  /* Release the reference and lock on the parent directory */
-
-  parent->crefs--;
-  spiffs_unlock_directory(parent);
-  spiffs_unlock_volume(fs);
-
-  return OK;
-
-errout_with_objects:
-  parent->crefs--;
-  spiffs_unlock_directory(parent);
-
-errout_with_lock:
-  spiffs_unlock_volume(fs);
-  return ret;
+  return -ENOSYS;
 }
 
 /****************************************************************************
@@ -1400,12 +1331,7 @@ errout_with_lock:
 static int spiffs_rename(FAR struct inode *mountpt, FAR const char *oldrelpath,
                         FAR const char *newrelpath)
 {
-  FAR struct spiff_directory_s *oldparent;
-  FAR struct spiff_directory_s *newparent;
   FAR struct spiffs_s *fs;
-  FAR const char *oldname;
-  FAR char *newname;
-  FAR char *copy;
   int ret;
 
   finfo("mountpt: %p oldrelpath: %s newrelpath: %s\n",
@@ -1417,115 +1343,13 @@ static int spiffs_rename(FAR struct inode *mountpt, FAR const char *oldrelpath,
   fs = mountpt->i_private;
   DEBUGASSERT(fs != NULL);
 
-  /* Duplicate the newpath variable so that we can modify it */
-
-  copy = strdup(newrelpath);
-  if (copy == NULL)
-    {
-      return -ENOMEM;
-    }
-
   /* Get exclusive access to the file system */
 
   spiffs_lock_volume(fs);
 
-  /* Separate the new path into the new file name and the path to the new
-   * parent directory.
-   */
-
-  newname = strrchr(copy, '/');
-  if (newname == NULL)
-    {
-      /* No subdirectories... use the root directory */
-#warning Missing logic
-      newname   = copy;
-//      newparent =
-
-      spiffs_lock_directory(newparent);
-      newparent->crefs++;
-    }
-  else
-    {
-      /* Terminate the parent directory path */
-
-      *newname++ = '\0';
-
-      /* Locate the parent directory that should contain this name.
-       * On success, spiffs_find_directory() will lockthe parent
-       * directory and increment the reference count.
-       */
-
-      ret = spiffs_find_directory(fs, copy, &newparent, NULL);
-      if (ret < 0)
-        {
-          goto errout_with_lock;
-        }
-    }
-
-  /* Verify that no object of this name already exists in the destination
-   * directory.
-   */
-
-  ret = spiffs_find_dirent(newparent, newname);
-  if (ret != -ENOENT)
-    {
-      /* Something with this name already exists in the directory.
-       * OR perhaps some fatal error occurred.
-       */
-
-      if (ret >= 0)
-        {
-          ret = -EEXIST;
-        }
-
-      goto errout_with_newparent;
-    }
-
-  /* Find the old object at oldpath.  If successful, spiffs_find_object()
-   * will lock both the object and the parent directory and will increment
-   * the reference count on both.
-   */
 #warning Missing logic
 
-  /* Get the old file name from the relative path */
-
-  oldname = strrchr(oldrelpath, '/');
-  if (oldname != NULL)
-    {
-      /* Skip over the file '/' character */
-
-      oldname++;
-    }
-  else
-    {
-      /* The name must lie in the root directory */
-
-      oldname = oldrelpath;
-    }
-
-  /* Remove the entry from the parent directory */
-
-  ret = spiffs_remove_dirent(oldparent, oldname);
-  if (ret < 0)
-    {
-      goto errout_with_oldparent;
-    }
-
-  /* Add an entry to the new parent directory. */
-
-  ret = spiffs_add_dirent(&newparent, 0, newname);
-
-errout_with_oldparent:
-  oldparent->crefs--;
-  spiffs_unlock_directory(oldparent);
-
-errout_with_newparent:
-  newparent->crefs--;
-  spiffs_unlock_directory(newparent);
-
-errout_with_lock:
   spiffs_unlock_volume(fs);
-  kmm_free(copy);
   return ret;
 }
 
@@ -1537,10 +1361,16 @@ static int spiffs_stat(FAR struct inode *mountpt, FAR const char *relpath,
                       FAR struct stat *buf)
 {
   FAR struct spiffs_s *fs;
+  int16_t pix;
   int ret;
 
   finfo("mountpt=%p relpath=%s buf=%p\n", mountpt, relpath, buf);
   DEBUGASSERT(mountpt != NULL && relpath != NULL && buf != NULL);
+
+  if (strlen(relpath) > SPIFFS_NAME_MAX - 1)
+    {
+      return -ENAMETOOLONG;
+    }
 
   /* Get the file system structure from the inode reference. */
 
@@ -1551,23 +1381,25 @@ static int spiffs_stat(FAR struct inode *mountpt, FAR const char *relpath,
 
   spiffs_lock_volume(fs);
 
-  /* Find the SPIFFS object at the relpath.  If successful,
-   * spiffs_find_object() will lock the object and increment the
-   * reference count on the object.
-   */
-#warning Missing logic
+  /* Find the object associated with this relative path */
 
-  /* We found it... Return information about the file object in the stat
-   * buffer.
-   */
-#warning Missing logic
+  ret = spiffs_object_find_object_index_header_by_name(fs,
+                                                       (FAR const uint8_t *)relpath,
+                                                       &pix);
+  if (ret < 0)
+    {
+      goto errout_with_lock;
+    }
 
-  /* Unlock the object and return success */
-#warning Missing logic
+  /* And get information about the object */
 
-  ret = OK;
+  ret = spiffs_stat_pix(fs, pix, 0, buf);
+  if (ret < 0)
+    {
+      ferr("ERROR: spiffs_stat_pix failed: %d\n", ret);
+    }
 
-errout_with_fslock:
+errout_with_lock:
   spiffs_unlock_volume(fs);
   return ret;
 }

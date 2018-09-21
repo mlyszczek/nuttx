@@ -358,7 +358,8 @@ int spiffs_stat_pix(FAR struct spiffs_s *fs, int16_t pix, int16_t id,
   struct spiffs_pgobj_ixheader_s objix_hdr;
   int16_t ix;
   uint32_t obj_id_addr;
-  int32_t ret;
+  mode_t mode;
+  int ret;
 
   ret = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_IX | SPIFFS_OP_C_READ, id,
                    SPIFFS_PAGE_TO_PADDR(fs, pix),
@@ -378,44 +379,19 @@ int spiffs_stat_pix(FAR struct spiffs_s *fs, int16_t pix, int16_t id,
       return ret;
     }
 
-  buf->id   = ix & ~SPIFFS_OBJ_ID_IX_FLAG;
-  buf->type = objix_hdr.type;
-  buf->size = objix_hdr.size == SPIFFS_UNDEFINED_LEN ? 0 : objix_hdr.size;
-  buf->pix  = pix;
+  /* Build the struct stat */
 
-  strncpy((char *)buf->name, (char *)objix_hdr.name, SPIFFS_NAME_MAX);
-#if SPIFFS_OBJ_META_LEN
-  memcpy(buf->meta, objix_hdr.meta, SPIFFS_OBJ_META_LEN);
-#endif
+  mode  = S_IRWXO | S_IRWXG  | S_IRWXU;  /* Assume all permisions */
+  mode |= S_IFREG                        /* Assume regular file */
 
-  return ret;
-}
+  /* REVISIT:  Should the file object type derive from objix_hdr.type? */
 
-int32_t SPIFFS_stat(FAR struct spiffs_s *fs, const char *path, FAR struct stat *buf)
-{
-  int32_t ret;
-  int16_t pix;
+  memset(buf, 0, sizeof(struct stat));
+  buf->st_mode = mode;
+  buf->st_size = objix_hdr.size == SPIFFS_UNDEFINED_LEN ? 0 : objix_hdr.size;
 
-  finfo("'%s'\n", path);
+#warning REVISIT: Need st_blksize and st_blocks
 
-  if (strlen(path) > SPIFFS_NAME_MAX - 1)
-    {
-      return -ENAMETOOLONG;
-    }
-
-  SPIFFS_LOCK(fs);
-
-  ret = spiffs_object_find_object_index_header_by_name(fs, (const uint8_t *)path,
-                                                       &pix);
-  if (ret < 0)
-    {
-      SPIFFS_UNLOCK(fs);
-      return ret;
-    }
-
-  ret = spiffs_stat_pix(fs, pix, 0, buf);
-
-  SPIFFS_UNLOCK(fs);
   return ret;
 }
 
@@ -524,75 +500,6 @@ int32_t SPIFFS_rename(FAR struct spiffs_s *fs, const char *old_path, const char 
   kmm_free(fobj);
   return ret;
 }
-
-#if SPIFFS_OBJ_META_LEN
-int32_t SPIFFS_update_meta(FAR struct spiffs_s *fs, const char *name, const void *meta)
-{
-  int16_t pix, pix_dummy;
-  FAR struct spiffs_file_s *fobj;
-  int32_t ret;
-
-  SPIFFS_LOCK(fs);
-
-  ret = spiffs_object_find_object_index_header_by_name(fs, (const uint8_t *)name,
-                                                       &pix);
-  if (ret < 0)
-    {
-      SPIFFS_UNLOCK(fs);
-      return ret;
-    }
-
-  /* Allocate  new file object */
-
-  fobj = (FAR struct spiffs_file_s *)kmm_zalloc((struct spiffs_file_s));
-  if (fobj == NULL)
-    {
-      return -ENOMEM;
-    }
-
-  ret = spiffs_object_open_by_page(fs, pix, fobj, 0, 0);
-  if (ret != OK)
-    {
-      SPIFFS_UNLOCK(fs);
-      kmm_free(fobj);
-      return ret;
-    }
-
-  ret = spiffs_object_update_index_hdr(fs, fobj, fobj->objid, fobj->objix_hdr_pix, 0, 0,
-                                       meta, 0, &pix_dummy);
-
-  kmm_free(fobj);
-  SPIFFS_UNLOCK(fs);
-  return ret;
-}
-
-int32_t SPIFFS_fupdate_meta(FAR struct spiffs_s *fs, int16_t id, const void *meta)
-{
-  int32_t ret;
-  FAR struct spiffs_file_s *fobj;
-  int16_t pix_dummy;
-
-  SPIFFS_LOCK(fs);
-
-  ret = spiffs_find_fileobject(fs, id, &fobj);
-  if (ret < 0)
-    {
-      SPIFFS_UNLOCK(fs);
-      return ret;
-    }
-
-  if ((fobj->flags & O_WRONLY) == 0)
-    {
-      SPIFFS_UNLOCK(fs);
-      return -EACCES;
-    }
-
-  ret = spiffs_object_update_index_hdr(fs, fobj, fobj->objid, fobj->objix_hdr_pix, 0, 0,
-                                       meta, 0, &pix_dummy);
-  SPIFFS_UNLOCK(fs);
-  return ret;
-}
-#endif  /* SPIFFS_OBJ_META_LEN */
 
 int32_t SPIFFS_check(FAR struct spiffs_s *fs)
 {
@@ -704,34 +611,6 @@ int32_t SPIFFS_eof(FAR struct spiffs_s *fs, int16_t id)
     }
 
   ret = (fs->f_pos >= (fobj->size == SPIFFS_UNDEFINED_LEN ? 0 : fobj->size));
-
-  SPIFFS_UNLOCK(fs);
-  return ret;
-}
-
-int32_t SPIFFS_tell(FAR struct spiffs_s *fs, int16_t id)
-{
-  FAR struct spiffs_file_s *fobj;
-  int32_t ret;
-
-  finfo(_SPIPRIfd "\n", id);
-  SPIFFS_LOCK(fs);
-
-  ret = spiffs_find_fileobject(fs, id, &fobj);
-  if (ret < 0)
-    {
-      SPIFFS_UNLOCK(fs);
-      return ret;
-    }
-
-  ret = spiffs_fflush_cache(fobj);
-  if (ret < 0)
-    {
-      SPIFFS_UNLOCK(fs);
-      return ret;
-    }
-
-  ret = fs->f_pos;
 
   SPIFFS_UNLOCK(fs);
   return ret;

@@ -2397,9 +2397,9 @@ int32_t spiffs_object_find_object_index_header_by_name(FAR struct spiffs_s *fs,
 
 /* Truncates object to new size. If new size is null, object may be removed totally */
 
-int32_t spiffs_object_truncate(FAR struct spiffs_file_s *fobj, uint32_t new_size, uint8_t remove_full)
+int spiffs_object_truncate(FAR struct spiffs_file_s *fobj, off_t new_size, bool remove_full)
 {
-  int32_t res = OK;
+  int res = OK;
   FAR struct spiffs_s *fs = fobj->fs;
 
   if ((fobj->size == SPIFFS_UNDEFINED_LEN || fobj->size == 0) && !remove_full)
@@ -2413,7 +2413,7 @@ int32_t spiffs_object_truncate(FAR struct spiffs_file_s *fobj, uint32_t new_size
    * page
    */
 
-  if (remove_full == 0)
+  if (!remove_full)
     {
       res = spiffs_gc_check(fs, SPIFFS_DATA_PAGE_SIZE(fs) * 2);
       SPIFFS_CHECK_RES(res);
@@ -2486,7 +2486,7 @@ int32_t spiffs_object_truncate(FAR struct spiffs_file_s *fobj, uint32_t new_size
                    * as the file is marked as fully deleted in the beginning.
                    */
 
-                  if (remove_full == 0)
+                  if (!remove_full)
                     {
                       finfo("truncate: update objix hdr page " _SPIPRIpg
                                  ":" _SPIPRIsp " to size " _SPIPRIi "\n",
