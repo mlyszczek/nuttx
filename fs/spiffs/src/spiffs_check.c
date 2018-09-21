@@ -112,7 +112,7 @@ static int32_t spiffs_object_get_data_page_index_reference(FAR struct spiffs_s *
     {
       /* get referenced page from object index header */
 
-      addr += sizeof(spiffs_page_object_ix_header) +
+      addr += sizeof(struct spiffs_pgobj_ixheader_s) +
               data_spix * sizeof(int16_t);
     }
   else
@@ -226,7 +226,7 @@ static int32_t spiffs_rewrite_index(FAR struct spiffs_s *fs, int16_t id,
   if (objix_spix == 0)
     {
       ((int16_t *) ((uint8_t *) fs->lu_work +
-                           sizeof(spiffs_page_object_ix_header)))[data_spix] =
+                           sizeof(struct spiffs_pgobj_ixheader_s)))[data_spix] =
         new_data_pix;
     }
   else
@@ -850,7 +850,7 @@ int32_t spiffs_lookup_consistency_check(FAR struct spiffs_s *fs, uint8_t check_a
   (void)check_all_objects;
   CHECK_CB(fs, SPIFFS_CHECK_LOOKUP, SPIFFS_CHECK_PROGRESS, 0, 0);
 
-  res = spiffs_obj_lu_find_entry_visitor(fs, 0, 0, 0, 0, spiffs_lookup_check_v,
+  res = spiffs_foreach_objlu(fs, 0, 0, 0, 0, spiffs_lookup_check_v,
                                          0, 0, 0, 0);
 
   if (res == SPIFFS_VIS_END)
@@ -978,7 +978,7 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                       data_spix_offset = 0;
                       object_page_index =
                         (int16_t *) ((uint8_t *) fs->lu_work +
-                                            sizeof(spiffs_page_object_ix_header));
+                                            sizeof(struct spiffs_pgobj_ixheader_s));
                     }
                   else
                     {
@@ -1683,7 +1683,7 @@ int32_t spiffs_object_index_consistency_check(FAR struct spiffs_s *fs)
   uint32_t obj_id_log_ix = 0;
   CHECK_CB(fs, SPIFFS_CHECK_INDEX, SPIFFS_CHECK_PROGRESS, 0, 0);
   res =
-    spiffs_obj_lu_find_entry_visitor(fs, 0, 0, 0, 0,
+    spiffs_foreach_objlu(fs, 0, 0, 0, 0,
                                      spiffs_object_index_consistency_check_v, 0,
                                      &obj_id_log_ix, 0, 0);
   if (res == SPIFFS_VIS_END)

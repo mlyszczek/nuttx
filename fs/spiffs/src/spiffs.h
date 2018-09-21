@@ -54,6 +54,7 @@ extern "C"
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <queue.h>
 
 #include "spiffs_config.h"
 
@@ -113,11 +114,6 @@ extern "C"
 
 #define SPIFFS_ERR_TEST                 -10100
 
-#define SPIFFS_TYPE_FILE                (1)
-#define SPIFFS_TYPE_DIR                 (2)
-#define SPIFFS_TYPE_HARD_LINK           (3)
-#define SPIFFS_TYPE_SOFT_LINK           (4)
-
 /* Flags on open file/directory options */
 
 #define SFO_FLAG_UNLINKED               (1 << 0)
@@ -129,16 +125,6 @@ extern "C"
 /****************************************************************************
  * Public Types
  ****************************************************************************/
-
-/* spiffs file mode */
-
-typedef uint16_t spiffs_mode;
-
-/* object type */
-
-typedef uint8_t spiffs_obj_type;
-
-struct spiffs_s;
 
 enum spiffs_check_e
 {
@@ -163,8 +149,8 @@ enum spiffs_check_report_e
 /* File system check callback function */
 
 typedef void (*spiffs_check_callback)(enum spiffs_check_e type,
-                                     enum spiffs_check_report_e report, uint32_t arg1,
-                                     uint32_t arg2);
+                                      enum spiffs_check_report_e report, uint32_t arg1,
+                                      uint32_t arg2);
 
 /* File system listener callback operation */
 
@@ -197,6 +183,7 @@ typedef int32_t(*spiffs_erase_t)(uint32_t addr, uint32_t size);
 
 /* file system listener callback function */
 
+struct spiffs_s; /* Forward reference */
 typedef void (*spiffs_file_callback)(struct spiffs_s * fs,
                                      enum spiffs_fileop_e op,
                                      int16_t id,
@@ -258,9 +245,9 @@ struct spiffs_s
 {
   spiffs_config cfg;                /* File system configuration */
   struct spiffs_sem_s exclsem;      /* Supports mutually exclusive access */
-  FAR struct spiffs_file_s *ohead;  /* Head of a singly linked list of open files */
-  int16_t free_cursor_block_ix;  /* cursor for free blocks, block index */
-  int16_t cursor_block_ix;  /* Cursor when searching, block index */
+  dq_queue_t objq;                  /* A doubly linked list of open file objects */
+  int16_t free_cursor_block_ix;     /* cursor for free blocks, block index */
+  int16_t cursor_block_ix;          /* Cursor when searching, block index */
   FAR uint8_t *lu_work;             /* Primary work buffer, size of a logical page */
   FAR uint8_t *work;                /* Secondary work buffer, size of a logical page */
   int free_cursor_obj_lu_entry;     /* Cursor for free blocks, entry index */
@@ -297,57 +284,34 @@ struct spiffs_ix_map_s;             /* Forward reference */
 
 struct spiffs_file_s
 {
-  FAR struct spiffs_file_s *flink;  /* Supports a singly linked list */
-  FAR struct spiffs_s *fs;          /* The filesystem of this object */
+  dq_entry_t entry;                 /* Supports a doubly linked list */
   FAR struct spiffs_cache_page_s *cache_page;
 #if SPIFFS_IX_MAP
   FAR struct spiffs_ix_map_s *ix_map; /* spiffs index map, if 0 it means unmapped */
 #endif
   struct spiffs_sem_s exclsem;      /* Supports mutually exclusive access to the open file */
   int16_t crefs;                    /* Reference count */
-  int16_t id;                       /* Unique ID of the file object */
+  int16_t objid;                    /* Unique ID of the file object */
   uint8_t flags;                    /* See SFO_FLAG_* definitions */
   int16_t objix_hdr_pix;            /* cached object index header page index */
   int16_t cursor_objix_pix;         /* cached offset object index page index */
   int16_t cursor_objix_spix;        /* cached offset object index span index */
   uint16_t oflags;                  /* File object opent flags */
-  uint32_t size;                    /* size of the file */
-  uint32_t offset;                  /* current absolute offset */
-  uint32_t fdoffset;                /* current file object offset (cached) */
-};
-
-/* SPIFFS file status struct */
-
-struct spiffs_stat_s
-{
-  int16_t id;
-  uint32_t size;
-  spiffs_obj_type type;
-  int16_t pix;
-  uint8_t name[SPIFFS_NAME_MAX];
-#if SPIFFS_OBJ_META_LEN
-  uint8_t meta[SPIFFS_OBJ_META_LEN];
-#endif
+  off_t size;                       /* size of the file */
+  off_t offset;                     /* current absolute offset */
 };
 
 struct spiffs_s_dirent
 {
   int16_t id;
   uint8_t name[SPIFFS_NAME_MAX];
-  spiffs_obj_type type;
+  uint8_t type;
   uint32_t size;
   int16_t pix;
 #if SPIFFS_OBJ_META_LEN
   uint8_t meta[SPIFFS_OBJ_META_LEN];
 #endif
 };
-
-typedef struct
-{
-  FAR struct spiffs_s *fs;
-  int16_t block;
-  int entry;
-} spiffs_DIR;
 
 #if SPIFFS_IX_MAP
 struct spiffs_ix_map_s
@@ -434,58 +398,6 @@ int32_t SPIFFS_mount(FAR struct spiffs_s *fs, spiffs_config * config, uint8_t * 
 
 void SPIFFS_unmount(FAR struct spiffs_s *fs);
 
-/* Creates a new file.
- *
- * Input Parameters:
- *   fs            the file system struct
- *   path          the path of the new file
- *   mode          ignored, for posix compliance
- */
-
-int32_t SPIFFS_creat(FAR struct spiffs_s *fs, const char *path, spiffs_mode mode);
-
-/* Reads from given ID.
- *
- * Input Parameters:
- *   fs            the file system struct
- *   id            the ID
- *   buf           where to put read data
- *   len           how much to read
- *
- * Returned Value:
- *   number of bytes read, or -1 if error
- */
-
-int32_t SPIFFS_read(FAR struct spiffs_s *fs, int16_t id, void *buf, int32_t len);
-
-/* Writes to given ID.
- *
- * Input Parameters:
- *   fs            the file system struct
- *   id            the ID
- *   buf           the data to write
- *   len           how much to write
- *
- * Returned Value:
- *   number of bytes written, or -1 if error
- */
-
-int32_t SPIFFS_write(FAR struct spiffs_s *fs, int16_t id, void *buf, int32_t len);
-
-/* Moves the read/write file offset. Resulting offset is returned or negative if error.
- * lseek(fs, fd, 0, SEEK_CUR) will thus return current offset.
- *
- * Input Parameters:
- *   fs            the file system struct
- *   id            the ID
- *   offs          how much/where to move the offset
- *   whence        if SEEK_SET, the file offset shall be set to offset bytes
- *                      if SEEK_CUR, the file offset shall be set to its current location plus offset
- *                      if SEEK_END, the file offset shall be set to the size of the file plus offset, which should be negative
- */
-
-int32_t SPIFFS_lseek(FAR struct spiffs_s *fs, int16_t id, int32_t offs, int whence);
-
 /* Removes a file by path
  *
  * Input Parameters:
@@ -511,7 +423,8 @@ int32_t SPIFFS_fremove(FAR struct spiffs_s *fs, int16_t id);
  *   s             the stat struct to populate
  */
 
-int32_t SPIFFS_stat(FAR struct spiffs_s *fs, const char *path, FAR struct spiffs_stat_s * s);
+struct stat; /* Forward reference */
+int32_t SPIFFS_stat(FAR struct spiffs_s *fs, const char *path, FAR struct stat * s);
 
 /* Gets file status by ID
  *
@@ -521,25 +434,8 @@ int32_t SPIFFS_stat(FAR struct spiffs_s *fs, const char *path, FAR struct spiffs
  *   s             the stat struct to populate
  */
 
-int32_t SPIFFS_fstat(FAR struct spiffs_s *fs, int16_t id, FAR struct spiffs_stat_s * s);
-
-/* Flushes all pending write operations from cache for given file
- *
- * Input Parameters:
- *   fs            the file system struct
- *   id            the ID of the file to flush
- */
-
-int32_t SPIFFS_fflush(FAR struct spiffs_s *fs, int16_t id);
-
-/* Closes a ID. If there are pending write operations, these are finalized before closing.
- *
- * Input Parameters:
- *   fs            the file system struct
- *   id            the ID of the file to close
- */
-
-int32_t SPIFFS_close(FAR struct spiffs_s *fs, int16_t id);
+struct stat; /* Forward reference */
+int32_t SPIFFS_fstat(FAR struct spiffs_s *fs, int16_t id, FAR struct stat * s);
 
 /* Renames a file
  *
@@ -573,39 +469,6 @@ int32_t SPIFFS_update_meta(FAR struct spiffs_s *fs, const char *name, const void
 int32_t SPIFFS_fupdate_meta(FAR struct spiffs_s *fs, int16_t id, const void *meta);
 #endif
 
-/* Opens a directory stream corresponding to the given name.
- * The stream is positioned at the first entry in the directory.
- * On hydrogen builds the name argument is ignored as hydrogen builds always correspond
- * to a flat file structure - no directories.
- *
- * Input Parameters:
- *   fs            the file system struct
- *   name          the name of the directory
- *   d             pointer the directory stream to be populated
- */
-
-spiffs_DIR *SPIFFS_opendir(FAR struct spiffs_s *fs, const char *name, spiffs_DIR * d);
-
-/* Closes a directory stream
- *
- * Input Parameters:
- *   d             the directory stream to close
- */
-
-int32_t SPIFFS_closedir(spiffs_DIR * d);
-
-/* Reads a directory into given spifs_dirent struct.
- *
- * Input Parameters:
- *   d             pointer to the directory stream
- *   e             the dirent struct to be populated
- *
- * Returned Value:
- *   null if error or end of stream, else given dirent is returned
- */
-
-struct spiffs_s_dirent *SPIFFS_readdir(spiffs_DIR * d, struct spiffs_s_dirent *e);
-
 /* Runs a consistency check on given filesystem.
  *
  * Input Parameters:
@@ -630,7 +493,6 @@ int32_t SPIFFS_check(FAR struct spiffs_s *fs);
 int32_t SPIFFS_info(FAR struct spiffs_s *fs, uint32_t * total, uint32_t * used);
 
 /* Formats the entire file system. All data will be lost.
- * The filesystem must not be mounted when calling this.
  *
  * NB: formatting is awkward. Due to backwards compatibility, SPIFFS_mount
  * MUST be called prior to formatting in order to configure the filesystem.
@@ -644,14 +506,6 @@ int32_t SPIFFS_info(FAR struct spiffs_s *fs, uint32_t * total, uint32_t * used);
  */
 
 int32_t SPIFFS_format(FAR struct spiffs_s *fs);
-
-/* Returns nonzero if spiffs is mounted, or zero if unmounted.
- *
- * Input Parameters:
- *   fs            the file system struct
- */
-
-uint8_t SPIFFS_mounted(FAR struct spiffs_s *fs);
 
 /* Tries to find a block where most or all pages are deleted, and erase that
  * block if found. Does not care for wear levelling. Will not move pages
@@ -822,6 +676,23 @@ int32_t SPIFFS_bytes_to_ix_map_entries(FAR struct spiffs_s *fs, uint32_t bytes);
 int32_t SPIFFS_ix_map_entries_to_bytes(FAR struct spiffs_s *fs, uint32_t map_page_ix_entries);
 
 #endif  /* SPIFFS_IX_MAP */
+
+/****************************************************************************
+ * Name: spiffs_file_free
+ *
+ * Description:
+ *   Free all resources used a file object
+ *
+ * Input Parameters:
+ *   fs   - A reference to the volume structure
+ *   fobj - A reference to the file object to be removed
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void spiffs_file_free(FAR struct spiffs_s *fs, FAR struct spiffs_file_s *fobj);
 
 #if defined(__cplusplus)
 }

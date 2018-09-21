@@ -105,53 +105,15 @@
 
 /* Defines spiffs debug print formatters */
 
-/* some general signed number */
+#define _SPIPRIi   "%d"      /* Some general signed number */
+#define _SPIPRIad  "%08x"    /* Address */
+#define _SPIPRIbl  "%04x"    /* Block */
+#define _SPIPRIpg  "%04x"    /* Page */
+#define _SPIPRIsp  "%04x"    /* Span index */
+#define _SPIPRIfd  "%d"      /* File descriptor */
+#define _SPIPRIid  "%04x"    /* File object id */
+#define _SPIPRIfl  "%02x"    /* File flags */
 
-#ifndef _SPIPRIi
-#  define _SPIPRIi   "%d"
-#endif
-
-/* address */
-
-#ifndef _SPIPRIad
-#  define _SPIPRIad  "%08x"
-#endif
-
-/* block */
-
-#ifndef _SPIPRIbl
-#  define _SPIPRIbl  "%04x"
-#endif
-
-/* page */
-
-#ifndef _SPIPRIpg
-#  define _SPIPRIpg  "%04x"
-#endif
-
-/* span index */
-
-#ifndef _SPIPRIsp
-#  define _SPIPRIsp  "%04x"
-#endif
-
-/* file descriptor */
-
-#ifndef _SPIPRIfd
-#  define _SPIPRIfd  "%d"
-#endif
-
-/* file object id */
-
-#ifndef _SPIPRIid
-#  define _SPIPRIid  "%04x"
-#endif
-
-/* file flags */
-
-#ifndef _SPIPRIfl
-#  define _SPIPRIfl  "%02x"
-#endif
 
 /* Always check header of each accessed page to ensure consistent state.
  * If enabled it will increase number of reads, will increase flash.
@@ -197,17 +159,11 @@
 #endif
 
 /* Object name maximum length. Note that this length include the
- * zero-termination character, meaning maximum string of characters
- * can at most be SPIFFS_NAME_MAX - 1.
+ * zero-termination character, meaning maximum string of characters.
  */
 
 #ifndef SPIFFS_NAME_MAX
-#  define SPIFFS_NAME_MAX              (32)
-#endif
-
-#if SPIFFS_NAME_MAX > NAME_MAX
-#  undef SPIFFS_NAME_MAX
-#  define SPIFFS_NAME_MAX               NAME_MAX
+#  define SPIFFS_NAME_MAX               (32)
 #endif
 
 /* Maximum length of the metadata associated with an object.
@@ -272,12 +228,6 @@
 
 #ifndef SPIFFS_UNLOCK
 #  define SPIFFS_UNLOCK(fs)
-#endif
-
-/* Enable this if your target needs aligned data for index tables */
-
-#ifndef SPIFFS_ALIGNED_OBJECT_INDEX_TABLES
-#define SPIFFS_ALIGNED_OBJECT_INDEX_TABLES       0
 #endif
 
 /* Temporal file cache hit score. Each time a file is opened, all cached files

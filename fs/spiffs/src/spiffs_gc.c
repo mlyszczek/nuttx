@@ -591,8 +591,8 @@ int32_t spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t bix)
   int16_t *obj_lu_buf = (int16_t *) fs->lu_work;
   spiffs_gc gc;                 /* our stack frame/state */
   int16_t cur_pix = 0;
-  spiffs_page_object_ix_header *objix_hdr =
-    (spiffs_page_object_ix_header *) fs->work;
+  FAR struct spiffs_pgobj_ixheader_s *objix_hdr =
+    (FAR struct spiffs_pgobj_ixheader_s *) fs->work;
   spiffs_page_object_ix *objix = (spiffs_page_object_ix *) fs->work;
 
   spiffs_gcinfo("Cleaning block " _SPIPRIbl "\n", bix);
@@ -749,7 +749,7 @@ int32_t spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t bix)
                               /* update object index header page */
 
                               ((int16_t *) ((uint8_t *) objix_hdr +
-                                                   sizeof(spiffs_page_object_ix_header)))
+                                                   sizeof(struct spiffs_pgobj_ixheader_s)))
                                 [p_hdr.span_ix] = new_data_pix;
                               spiffs_gcinfo("MOVE_DATA wrote page "
                                             _SPIPRIpg " to objix_hdr entry "

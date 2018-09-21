@@ -204,7 +204,7 @@ void spiffs_cache_drop_page(FAR struct spiffs_s *fs, int16_t pix)
 /* reads from spi flash or the cache */
 
 int32_t spiffs_phys_rd(FAR struct spiffs_s *fs, uint8_t op, int16_t id,
-                       uint32_t addr, uint32_t len, uint8_t * dst)
+                       uint32_t addr, uint32_t len, uint8_t *dst)
 {
   int32_t res = OK;
   spiffs_cache *cache = spiffs_get_cache(fs);
@@ -288,7 +288,7 @@ int32_t spiffs_phys_rd(FAR struct spiffs_s *fs, uint8_t op, int16_t id,
 /* writes to spi flash and/or the cache */
 
 int32_t spiffs_phys_wr(FAR struct spiffs_s *fs, uint8_t op, int16_t id,
-                       uint32_t addr, uint32_t len, uint8_t * src)
+                       uint32_t addr, uint32_t len, uint8_t *src)
 {
   (void)id;
   int16_t pix = SPIFFS_PADDR_TO_PAGE(fs, addr);
@@ -335,11 +335,13 @@ int32_t spiffs_phys_wr(FAR struct spiffs_s *fs, uint8_t op, int16_t id,
     }
 }
 
-/* returns the cache page that this sfo refers, or null if no cache page */
+/* returns the cache page that this fobj refers, or null if no cache page */
 
-FAR struct spiffs_cache_page_s *spiffs_cache_page_get_by_fd(FAR struct spiffs_s *fs, FAR struct spiffs_file_s * sfo)
+FAR struct spiffs_cache_page_s *spiffs_cache_page_get_by_fd(FAR struct spiffs_s *fs,
+                                                            FAR struct spiffs_file_s *fobj)
 {
   spiffs_cache *cache = spiffs_get_cache(fs);
+  int i;
 
   if ((cache->cpage_use_map & cache->cpage_use_mask) == 0)
     {
@@ -348,12 +350,11 @@ FAR struct spiffs_cache_page_s *spiffs_cache_page_get_by_fd(FAR struct spiffs_s 
       return 0;
     }
 
-  int i;
   for (i = 0; i < cache->cpage_count; i++)
     {
       FAR struct spiffs_cache_page_s *cp = spiffs_get_cache_page_hdr(fs, cache, i);
       if ((cache->cpage_use_map & (1 << i)) &&
-          (cp->flags & SPIFFS_CACHE_FLAG_TYPE_WR) && cp->id == sfo->id)
+          (cp->flags & SPIFFS_CACHE_FLAG_TYPE_WR) && cp->id == fobj->objid)
         {
           return cp;
         }
@@ -362,11 +363,13 @@ FAR struct spiffs_cache_page_s *spiffs_cache_page_get_by_fd(FAR struct spiffs_s 
   return 0;
 }
 
-/* allocates a new cache page and refers this to given sfo - flushes an old cache
+/* Allocates a new cache page and refers this to given fobj - flushes an old cache
  * page if all cache is busy
  */
 
-FAR struct spiffs_cache_page_s *spiffs_cache_page_allocate_by_fd(FAR struct spiffs_s *fs, FAR struct spiffs_file_s * sfo)
+FAR struct spiffs_cache_page_s *
+spiffs_cache_page_allocate_by_fd(FAR struct spiffs_s *fs,
+                                 FAR struct spiffs_file_s *fobj)
 {
   /* before this function is called, it is ensured that there is no already
    * existing cache page with same object id
@@ -382,29 +385,31 @@ FAR struct spiffs_cache_page_s *spiffs_cache_page_allocate_by_fd(FAR struct spif
     }
 
   cp->flags = SPIFFS_CACHE_FLAG_TYPE_WR;
-  cp->id = sfo->id;
-  sfo->cache_page = cp;
-  spiffs_cacheinfo("CACHE_ALLO: allocated cache page " _SPIPRIi " for sfo "
-                   _SPIPRIfd "\n", cp->ix, sfo->id);
+  cp->id = fobj->objid;
+  fobj->cache_page = cp;
+  spiffs_cacheinfo("CACHE_ALLO: allocated cache page " _SPIPRIi " for fobj "
+                   _SPIPRIfd "\n", cp->ix, fobj->objid);
   return cp;
 }
 
-/* unrefers all fds that this cache page refers to and releases the cache
+/* Unrefers all file objects that this cache page refers to and releases the cache
  * page
  */
 
 void spiffs_cache_fd_release(FAR struct spiffs_s *fs, FAR struct spiffs_cache_page_s *cp)
 {
-  FAR struct spiffs_file_s *sfo;
+  FAR struct spiffs_file_s *fobj;
 
   if (cp == 0)
     {
       return;
     }
 
-  for (sfo = fs->ohead; sfo != NULL; sfo = sfo->flink)
+  for (fobj  = (FAR struct spiffs_file_s *)dq_peek(&fs->objq);
+       fobj != NULL;
+       fobj  = dq_next(fobj))
     {
-      sfo->cache_page = 0;
+      fobj->cache_page = 0;
     }
 
   spiffs_cache_page_free(fs, cp->ix, 0);
