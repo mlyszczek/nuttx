@@ -80,187 +80,187 @@
 /* Look up consistency */
 
 /* searches in the object indices and returns the referenced page index given
- * the object id and the data span index
+ * the object ID and the data span index
  * destroys fs->lu_work
  */
 
 static int32_t spiffs_object_get_data_page_index_reference(FAR struct spiffs_s *fs,
-                                                           int16_t id,
+                                                           int16_t objid,
                                                            int16_t
-                                                           data_spix,
-                                                           int16_t * pix,
+                                                           data_spndx,
+                                                           int16_t * pgndx,
                                                            int16_t *
-                                                           objix_pix)
+                                                           objndx_pgndx)
 {
   uint32_t addr;
   int32_t res;
 
   /* calculate object index span index for given data page span index */
 
-  int16_t objix_spix = SPIFFS_OBJ_IX_ENTRY_SPAN_IX(fs, data_spix);
+  int16_t objndx_spndx = SPIFFS_OBJ_IX_ENTRY_SPAN_IX(fs, data_spndx);
 
-  /* find obj index for obj id and span index */
+  /* find obj index for obj ID and span index */
 
-  res = spiffs_obj_lu_find_id_and_span(fs, id | SPIFFS_OBJ_ID_IX_FLAG,
-                                       objix_spix, 0, objix_pix);
+  res = spiffs_obj_lu_find_id_and_span(fs, objid | SPIFFS_OBJ_ID_IX_FLAG,
+                                       objndx_spndx, 0, objndx_pgndx);
   SPIFFS_CHECK_RES(res);
 
   /* load obj index entry */
 
-  addr = SPIFFS_PAGE_TO_PADDR(fs, *objix_pix);
-  if (objix_spix == 0)
+  addr = SPIFFS_PAGE_TO_PADDR(fs, *objndx_pgndx);
+  if (objndx_spndx == 0)
     {
       /* get referenced page from object index header */
 
       addr += sizeof(struct spiffs_pgobj_ixheader_s) +
-              data_spix * sizeof(int16_t);
+              data_spndx * sizeof(int16_t);
     }
   else
     {
       /* get referenced page from object index */
 
       addr += sizeof(spiffs_page_object_ix) +
-              SPIFFS_OBJ_IX_ENTRY(fs, data_spix) *
+              SPIFFS_OBJ_IX_ENTRY(fs, data_spndx) *
               sizeof(int16_t);
     }
 
   res = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ, 0, addr,
-                   sizeof(int16_t), (uint8_t *) pix);
+                   sizeof(int16_t), (uint8_t *) pgndx);
 
   return res;
 }
 
 /* copies page contents to a new page */
 
-static int32_t spiffs_rewrite_page(FAR struct spiffs_s *fs, int16_t cur_pix,
+static int32_t spiffs_rewrite_page(FAR struct spiffs_s *fs, int16_t cur_pgndx,
                                    struct spiffs_page_header_s * p_hdr,
-                                   int16_t * new_pix)
+                                   int16_t * new_pgndx)
 {
   int32_t res;
 
-  res = spiffs_page_allocate_data(fs, p_hdr->id, p_hdr, 0, 0, 0, 0,
-                                  new_pix);
+  res = spiffs_page_allocate_data(fs, p_hdr->objid, p_hdr, 0, 0, 0, 0,
+                                  new_pgndx);
   SPIFFS_CHECK_RES(res);
   res = spiffs_phys_cpy(fs, 0,
-                        SPIFFS_PAGE_TO_PADDR(fs, *new_pix) +
+                        SPIFFS_PAGE_TO_PADDR(fs, *new_pgndx) +
                         sizeof(struct spiffs_page_header_s),
-                        SPIFFS_PAGE_TO_PADDR(fs, cur_pix) +
+                        SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx) +
                         sizeof(struct spiffs_page_header_s),
                         SPIFFS_DATA_PAGE_SIZE(fs));
   SPIFFS_CHECK_RES(res);
   return res;
 }
 
-/* rewrites the object index for given object id and replaces the
+/* rewrites the object index for given object ID and replaces the
  * data page index to a new page index
  */
 
-static int32_t spiffs_rewrite_index(FAR struct spiffs_s *fs, int16_t id,
-                                   int16_t data_spix,
-                                   int16_t new_data_pix,
-                                   int16_t objix_pix)
+static int32_t spiffs_rewrite_index(FAR struct spiffs_s *fs, int16_t objid,
+                                   int16_t data_spndx,
+                                   int16_t new_data_pgndx,
+                                   int16_t objndx_pgndx)
 {
   int32_t res;
-  int16_t bix;
+  int16_t blkndx;
   int entry;
-  int16_t free_pix;
+  int16_t free_pgndx;
 
-  id |= SPIFFS_OBJ_ID_IX_FLAG;
+  objid |= SPIFFS_OBJ_ID_IX_FLAG;
 
   /* find free entry */
 
-  res = spiffs_obj_lu_find_free(fs, fs->free_cursor_block_ix,
-                                fs->free_cursor_obj_lu_entry, &bix, &entry);
+  res = spiffs_obj_lu_find_free(fs, fs->free_blkndx,
+                                fs->free_entry, &blkndx, &entry);
   SPIFFS_CHECK_RES(res);
-  free_pix = SPIFFS_OBJ_LOOKUP_ENTRY_TO_PIX(fs, bix, entry);
+  free_pgndx = SPIFFS_OBJ_LOOKUP_ENTRY_TO_PIX(fs, blkndx, entry);
 
   /* calculate object index span index for given data page span index */
 
-  int16_t objix_spix = SPIFFS_OBJ_IX_ENTRY_SPAN_IX(fs, data_spix);
-  if (objix_spix == 0)
+  int16_t objndx_spndx = SPIFFS_OBJ_IX_ENTRY_SPAN_IX(fs, data_spndx);
+  if (objndx_spndx == 0)
     {
       /* calc index in index header */
 
-      entry = data_spix;
+      entry = data_spndx;
     }
   else
     {
       /* calc entry in index */
 
-      entry = SPIFFS_OBJ_IX_ENTRY(fs, data_spix);
+      entry = SPIFFS_OBJ_IX_ENTRY(fs, data_spndx);
     }
 
   /* load index */
 
   res = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
-                   0, SPIFFS_PAGE_TO_PADDR(fs, objix_pix),
+                   0, SPIFFS_PAGE_TO_PADDR(fs, objndx_pgndx),
                    SPIFFS_CFG_LOG_PAGE_SZ(fs), fs->lu_work);
   SPIFFS_CHECK_RES(res);
-  struct spiffs_page_header_s *objix_p_hdr = (struct spiffs_page_header_s *) fs->lu_work;
+  struct spiffs_page_header_s *objndx_p_hdr = (struct spiffs_page_header_s *) fs->lu_work;
 
   /* be ultra safe, double check header against provided data */
 
-  if (objix_p_hdr->id != id)
+  if (objndx_p_hdr->objid != objid)
     {
-      spiffs_page_delete(fs, free_pix);
+      spiffs_page_delete(fs, free_pgndx);
       return SPIFFS_ERR_CHECK_OBJ_ID_MISM;
     }
 
-  if (objix_p_hdr->span_ix != objix_spix)
+  if (objndx_p_hdr->span_ix != objndx_spndx)
     {
-      spiffs_page_delete(fs, free_pix);
+      spiffs_page_delete(fs, free_pgndx);
       return SPIFFS_ERR_CHECK_SPIX_MISM;
     }
 
-  if ((objix_p_hdr->flags & (SPIFFS_PH_FLAG_USED | SPIFFS_PH_FLAG_IXDELE |
+  if ((objndx_p_hdr->flags & (SPIFFS_PH_FLAG_USED | SPIFFS_PH_FLAG_IXDELE |
                              SPIFFS_PH_FLAG_INDEX | SPIFFS_PH_FLAG_FINAL |
                              SPIFFS_PH_FLAG_DELET)) !=
       (SPIFFS_PH_FLAG_IXDELE | SPIFFS_PH_FLAG_DELET))
     {
-      spiffs_page_delete(fs, free_pix);
+      spiffs_page_delete(fs, free_pgndx);
       return SPIFFS_ERR_CHECK_FLAGS_BAD;
     }
 
   /* rewrite in mem */
 
-  if (objix_spix == 0)
+  if (objndx_spndx == 0)
     {
       ((int16_t *) ((uint8_t *) fs->lu_work +
-                           sizeof(struct spiffs_pgobj_ixheader_s)))[data_spix] =
-        new_data_pix;
+                           sizeof(struct spiffs_pgobj_ixheader_s)))[data_spndx] =
+        new_data_pgndx;
     }
   else
     {
       ((int16_t *) ((uint8_t *) fs->lu_work +
                            sizeof(spiffs_page_object_ix)))[SPIFFS_OBJ_IX_ENTRY
-                                                           (fs, data_spix)] =
-        new_data_pix;
+                                                           (fs, data_spndx)] =
+        new_data_pgndx;
     }
 
   res = _spiffs_wr(fs, SPIFFS_OP_T_OBJ_DA | SPIFFS_OP_C_UPDT,
-                   0, SPIFFS_PAGE_TO_PADDR(fs, free_pix),
+                   0, SPIFFS_PAGE_TO_PADDR(fs, free_pgndx),
                    SPIFFS_CFG_LOG_PAGE_SZ(fs), fs->lu_work);
   SPIFFS_CHECK_RES(res);
   res = _spiffs_wr(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_UPDT,
-                   0, SPIFFS_BLOCK_TO_PADDR(fs, SPIFFS_BLOCK_FOR_PAGE(fs,free_pix)) +
-                   SPIFFS_OBJ_LOOKUP_ENTRY_FOR_PAGE(fs, free_pix) *
+                   0, SPIFFS_BLOCK_TO_PADDR(fs, SPIFFS_BLOCK_FOR_PAGE(fs,free_pgndx)) +
+                   SPIFFS_OBJ_LOOKUP_ENTRY_FOR_PAGE(fs, free_pgndx) *
                    sizeof(int16_t), sizeof(int16_t),
-                   (uint8_t *) & id);
+                   (FAR uint8_t *)&objid);
   SPIFFS_CHECK_RES(res);
-  res = spiffs_page_delete(fs, objix_pix);
+  res = spiffs_page_delete(fs, objndx_pgndx);
 
   return res;
 }
 
 /* deletes an object just by marking object index header as deleted */
 
-static int32_t spiffs_delete_obj_lazy(FAR struct spiffs_s *fs, int16_t id)
+static int32_t spiffs_delete_obj_lazy(FAR struct spiffs_s *fs, int16_t objid)
 {
-  int16_t objix_hdr_pix;
+  int16_t objhdr_pgndx;
   uint8_t flags = 0xff;
   int32_t res;
 
-  res = spiffs_obj_lu_find_id_and_span(fs, id, 0, 0, &objix_hdr_pix);
+  res = spiffs_obj_lu_find_id_and_span(fs, objid, 0, 0, &objhdr_pgndx);
   if (res == -ENOENT)
     {
       return OK;
@@ -269,14 +269,14 @@ static int32_t spiffs_delete_obj_lazy(FAR struct spiffs_s *fs, int16_t id)
   SPIFFS_CHECK_RES(res);
 #if SPIFFS_NO_BLIND_WRITES
   res = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_READ, 0,
-                   SPIFFS_PAGE_TO_PADDR(fs, objix_hdr_pix) +
+                   SPIFFS_PAGE_TO_PADDR(fs, objhdr_pgndx) +
                    offsetof(struct spiffs_page_header_s, flags), sizeof(flags),
                    &flags);
   SPIFFS_CHECK_RES(res);
 #endif
   flags &= ~SPIFFS_PH_FLAG_IXDELE;
   res = _spiffs_wr(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_UPDT, 0,
-                   SPIFFS_PAGE_TO_PADDR(fs, objix_hdr_pix) +
+                   SPIFFS_PAGE_TO_PADDR(fs, objhdr_pgndx) +
                    offsetof(struct spiffs_page_header_s, flags), sizeof(flags),
                    &flags);
   return res;
@@ -286,14 +286,14 @@ static int32_t spiffs_delete_obj_lazy(FAR struct spiffs_s *fs, int16_t id)
 
 static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_obj_id,
                                             struct spiffs_page_header_s * p_hdr,
-                                            int16_t cur_pix,
+                                            int16_t cur_pgndx,
                                             int16_t cur_block,
                                             int cur_entry, int *reload_lu)
 {
   uint8_t delete_page = 0;
   int32_t res = OK;
-  int16_t objix_pix;
-  int16_t ref_pix;
+  int16_t objndx_pgndx;
+  int16_t ref_pgndx;
 
   (void)cur_block;
   (void)cur_entry;
@@ -307,8 +307,8 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
     {
       /* look up entry deleted / free but used in page header */
 
-      spiffs_checkinfo("LU: pix " _SPIPRIpg
-                       " deleted/free in lu but not on page\n", cur_pix);
+      spiffs_checkinfo("LU: pgndx " _SPIPRIpg
+                       " deleted/free in lu but not on page\n", cur_pgndx);
       *reload_lu = 1;
       delete_page = 1;
       if (p_hdr->flags & SPIFFS_PH_FLAG_INDEX)
@@ -317,41 +317,41 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
            * data page can be removed if not referenced by some object index
            */
 
-          res = spiffs_object_get_data_page_index_reference(fs, p_hdr->id,
+          res = spiffs_object_get_data_page_index_reference(fs, p_hdr->objid,
                                                             p_hdr->span_ix,
-                                                            &ref_pix, &objix_pix);
+                                                            &ref_pgndx, &objndx_pgndx);
           if (res == -ENOENT)
             {
-              /* no object with this id, so remove page safely */
+              /* No object with this objid, so remove page safely */
 
               res = OK;
             }
           else
             {
               SPIFFS_CHECK_RES(res);
-              if (ref_pix == cur_pix)
+              if (ref_pgndx == cur_pgndx)
                 {
                   /* data page referenced by object index but deleted in lu
                    * copy page to new place and re-write the object index to
                    * new place
                    */
 
-                  int16_t new_pix;
-                  res = spiffs_rewrite_page(fs, cur_pix, p_hdr, &new_pix);
+                  int16_t new_pgndx;
+                  res = spiffs_rewrite_page(fs, cur_pgndx, p_hdr, &new_pgndx);
 
                   spiffs_checkinfo
                     ("LU: FIXUP: data page not found elsewhere, rewriting "
-                     _SPIPRIpg " to new page " _SPIPRIpg "\n", cur_pix,
-                     new_pix);
+                     _SPIPRIpg " to new page " _SPIPRIpg "\n", cur_pgndx,
+                     new_pgndx);
                   SPIFFS_CHECK_RES(res);
 
                   *reload_lu = 1;
 
                   spiffs_checkinfo("LU: FIXUP: " _SPIPRIpg " rewritten to "
-                                   _SPIPRIpg ", affected objix_pix " _SPIPRIpg
-                                   "\n", cur_pix, new_pix, objix_pix);
-                  res = spiffs_rewrite_index(fs, p_hdr->id, p_hdr->span_ix,
-                                             new_pix, objix_pix);
+                                   _SPIPRIpg ", affected objndx_pgndx " _SPIPRIpg
+                                   "\n", cur_pgndx, new_pgndx, objndx_pgndx);
+                  res = spiffs_rewrite_index(fs, p_hdr->objid, p_hdr->span_ix,
+                                             new_pgndx, objndx_pgndx);
                   if (res <= _SPIFFS_ERR_CHECK_FIRST &&
                       res > _SPIFFS_ERR_CHECK_LAST)
                     {
@@ -359,16 +359,16 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
 
                       spiffs_checkinfo("LU: FIXUP: index bad " _SPIPRIi
                                        ", cannot mend!\n", res);
-                      res = spiffs_page_delete(fs, new_pix);
+                      res = spiffs_page_delete(fs, new_pgndx);
                       SPIFFS_CHECK_RES(res);
-                      res = spiffs_delete_obj_lazy(fs, p_hdr->id);
+                      res = spiffs_delete_obj_lazy(fs, p_hdr->objid);
                       CHECK_CB(fs, SPIFFS_CHECK_LOOKUP,
-                               SPIFFS_CHECK_DELETE_BAD_FILE, p_hdr->id, 0);
+                               SPIFFS_CHECK_DELETE_BAD_FILE, p_hdr->objid, 0);
                     }
                   else
                     {
                       CHECK_CB(fs, SPIFFS_CHECK_LOOKUP, SPIFFS_CHECK_FIX_INDEX,
-                               p_hdr->id, p_hdr->span_ix);
+                               p_hdr->objid, p_hdr->span_ix);
                     }
 
                   SPIFFS_CHECK_RES(res);
@@ -378,22 +378,22 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
       else
         {
           /* header says index page
-           * index page can be removed if other index with same id and
+           * index page can be removed if other index with same objid and
            * span index is found
            */
 
           res = spiffs_obj_lu_find_id_and_span(fs,
-                                               p_hdr->id | SPIFFS_OBJ_ID_IX_FLAG,
-                                               p_hdr->span_ix, cur_pix, 0);
+                                               p_hdr->objid | SPIFFS_OBJ_ID_IX_FLAG,
+                                               p_hdr->span_ix, cur_pgndx, 0);
           if (res == -ENOENT)
             {
               /* no such index page found, check for a data page amongst page
                * headers.  lu cannot be trusted
                */
 
-              res = spiffs_obj_lu_find_id_and_span_by_phdr(fs,
-                                                           p_hdr->id | SPIFFS_OBJ_ID_IX_FLAG,
-                                                           0, 0, 0);
+              res = spiffs_obj_lu_find_id_and_span_byphdr(fs,
+                                                          p_hdr->objid | SPIFFS_OBJ_ID_IX_FLAG,
+                                                          0, 0, 0);
               if (res == OK)
                 {
                   /* ignore other errors
@@ -401,16 +401,16 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
                    * to new page
                    */
 
-                  int16_t new_pix;
-                  res = spiffs_rewrite_page(fs, cur_pix, p_hdr, &new_pix);
+                  int16_t new_pgndx;
+                  res = spiffs_rewrite_page(fs, cur_pgndx, p_hdr, &new_pgndx);
                   spiffs_checkinfo
                     ("LU: FIXUP: ix page with data not found elsewhere, rewriting "
-                     _SPIPRIpg " to new page " _SPIPRIpg "\n", cur_pix,
-                     new_pix);
+                     _SPIPRIpg " to new page " _SPIPRIpg "\n", cur_pgndx,
+                     new_pgndx);
                   SPIFFS_CHECK_RES(res);
                   *reload_lu = 1;
                   CHECK_CB(fs, SPIFFS_CHECK_LOOKUP, SPIFFS_CHECK_FIX_LOOKUP,
-                           p_hdr->id, p_hdr->span_ix);
+                           p_hdr->objid, p_hdr->span_ix);
                 }
             }
           else
@@ -424,12 +424,12 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
     {
       /* look up entry used */
 
-      if ((p_hdr->id | SPIFFS_OBJ_ID_IX_FLAG) !=
+      if ((p_hdr->objid | SPIFFS_OBJ_ID_IX_FLAG) !=
           (lu_obj_id | SPIFFS_OBJ_ID_IX_FLAG))
         {
-          spiffs_checkinfo("LU: pix " _SPIPRIpg " differ in id lu:"
-                           _SPIPRIid " ph:" _SPIPRIid "\n", cur_pix, lu_obj_id,
-                           p_hdr->id);
+          spiffs_checkinfo("LU: pgndx " _SPIPRIpg " differ in objid lu:"
+                           _SPIPRIid " ph:" _SPIPRIid "\n", cur_pgndx, lu_obj_id,
+                           p_hdr->objid);
           delete_page = 1;
           if ((p_hdr->flags & SPIFFS_PH_FLAG_DELET) == 0 ||
               (p_hdr->flags & SPIFFS_PH_FLAG_FINAL) ||
@@ -445,13 +445,13 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
                   /* if data page, check for reference to this page */
 
                   res = spiffs_object_get_data_page_index_reference(fs,
-                                                                    p_hdr->id,
+                                                                    p_hdr->objid,
                                                                     p_hdr->span_ix,
-                                                                    &ref_pix,
-                                                                    &objix_pix);
+                                                                    &ref_pgndx,
+                                                                    &objndx_pgndx);
                   if (res == -ENOENT)
                     {
-                      /* no object with this id, so remove page safely */
+                      /* no object with this objid, so remove page safely */
 
                       res = OK;
                     }
@@ -459,18 +459,18 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
                     {
                       SPIFFS_CHECK_RES(res);
 
-                      /* if found, rewrite page with object id, update index,
+                      /* if found, rewrite page with object ID, update index,
                        * and delete current
                        */
 
-                      if (ref_pix == cur_pix)
+                      if (ref_pgndx == cur_pgndx)
                         {
-                          int16_t new_pix;
-                          res = spiffs_rewrite_page(fs, cur_pix, p_hdr, &new_pix);
+                          int16_t new_pgndx;
+                          res = spiffs_rewrite_page(fs, cur_pgndx, p_hdr, &new_pgndx);
                           SPIFFS_CHECK_RES(res);
-                          res = spiffs_rewrite_index(fs, p_hdr->id,
-                                                     p_hdr->span_ix, new_pix,
-                                                     objix_pix);
+                          res = spiffs_rewrite_index(fs, p_hdr->objid,
+                                                     p_hdr->span_ix, new_pgndx,
+                                                     objndx_pgndx);
                           if (res <= _SPIFFS_ERR_CHECK_FIRST &&
                               res > _SPIFFS_ERR_CHECK_LAST)
                             {
@@ -478,13 +478,13 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
 
                               spiffs_checkinfo("LU: FIXUP: index bad " _SPIPRIi
                                                ", cannot mend!\n", res);
-                              res = spiffs_page_delete(fs, new_pix);
+                              res = spiffs_page_delete(fs, new_pgndx);
                               SPIFFS_CHECK_RES(res);
-                              res = spiffs_delete_obj_lazy(fs, p_hdr->id);
+                              res = spiffs_delete_obj_lazy(fs, p_hdr->objid);
                               *reload_lu = 1;
                               CHECK_CB(fs, SPIFFS_CHECK_LOOKUP,
                                        SPIFFS_CHECK_DELETE_BAD_FILE,
-                                       p_hdr->id, 0);
+                                       p_hdr->objid, 0);
                             }
 
                           SPIFFS_CHECK_RES(res);
@@ -493,78 +493,78 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
                 }
               else
                 {
-                  /* else if index, check for other pages with both id's
+                  /* else if index, check for other pages with both ID's
                    * and span index
                    */
 
-                  int16_t objix_pix_lu, objix_pix_ph;
+                  int16_t objndx_pgndx_lu, objndx_pgndx_ph;
 
-                  /* see if other object index page exists for lookup obj id
+                  /* see if other object index page exists for lookup objid
                    * and span index
                    */
 
                   res = spiffs_obj_lu_find_id_and_span(fs,
                                                        lu_obj_id | SPIFFS_OBJ_ID_IX_FLAG,
                                                        p_hdr->span_ix, 0,
-                                                       &objix_pix_lu);
+                                                       &objndx_pgndx_lu);
                   if (res == -ENOENT)
                     {
                       res = OK;
-                      objix_pix_lu = 0;
+                      objndx_pgndx_lu = 0;
                     }
 
                   SPIFFS_CHECK_RES(res);
 
-                  /* see if other object index exists for page header obj id
+                  /* see if other object index exists for page header objid
                    * and span index
                    */
 
                   res = spiffs_obj_lu_find_id_and_span(fs,
-                                                       p_hdr->id | SPIFFS_OBJ_ID_IX_FLAG,
+                                                       p_hdr->objid | SPIFFS_OBJ_ID_IX_FLAG,
                                                        p_hdr->span_ix, 0,
-                                                       &objix_pix_ph);
+                                                       &objndx_pgndx_ph);
                   if (res == -ENOENT)
                     {
                       res = OK;
-                      objix_pix_ph = 0;
+                      objndx_pgndx_ph = 0;
                     }
 
                   SPIFFS_CHECK_RES(res);
 
-                  /* if both id's found, just delete current */
+                  /* if both ID's found, just delete current */
 
-                  if (objix_pix_ph == 0 || objix_pix_lu == 0)
+                  if (objndx_pgndx_ph == 0 || objndx_pgndx_lu == 0)
                     {
                       /* otherwise try finding first corresponding data pages */
 
-                      int16_t data_pix_lu, data_pix_ph;
+                      int16_t data_pgndx_lu, data_pgndx_ph;
 
-                      /* see if other data page exists for look up obj id and
+                      /* see if other data page exists for look up objid and
                        * span index
                        */
 
                       res = spiffs_obj_lu_find_id_and_span(fs,
                                                            lu_obj_id & ~SPIFFS_OBJ_ID_IX_FLAG,
-                                                           0, 0, &data_pix_lu);
+                                                           0, 0, &data_pgndx_lu);
                       if (res == -ENOENT)
                         {
                           res = OK;
-                          objix_pix_lu = 0;
+                          objndx_pgndx_lu = 0;
                         }
 
                       SPIFFS_CHECK_RES(res);
 
-                      /* see if other data page exists for page header obj id
+                      /* see if other data page exists for page header objid
                        * and span index
                        */
 
                       res = spiffs_obj_lu_find_id_and_span(fs,
-                                                           p_hdr->id & ~SPIFFS_OBJ_ID_IX_FLAG,
-                                                           0, 0, &data_pix_ph);
+                                                           p_hdr->objid & ~SPIFFS_OBJ_ID_IX_FLAG,
+                                                           0, 0, &data_pgndx_ph);
                       if (res == -ENOENT)
                         {
                           res = OK;
-                          objix_pix_ph = 0;
+                          objndx_pgndx_ph = 0;
                         }
 
                       SPIFFS_CHECK_RES(res);
@@ -574,43 +574,43 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
                                               SPIFFS_PH_FLAG_INDEX |
                                               SPIFFS_PH_FLAG_FINAL);
                       new_ph.span_ix = p_hdr->span_ix;
-                      int16_t new_pix;
+                      int16_t new_pgndx;
 
-                      if ((objix_pix_lu && data_pix_lu && data_pix_ph && objix_pix_ph == 0) ||
-                          (objix_pix_lu == 0 && data_pix_ph && objix_pix_ph == 0))
+                      if ((objndx_pgndx_lu && data_pgndx_lu && data_pgndx_ph && objndx_pgndx_ph == 0) ||
+                          (objndx_pgndx_lu == 0 && data_pgndx_ph && objndx_pgndx_ph == 0))
                         {
-                          /* got a data page for page header obj id
+                          /* got a data page for page header objid
                            * rewrite as obj_id_ph
                            */
 
-                          new_ph.id = p_hdr->id | SPIFFS_OBJ_ID_IX_FLAG;
-                          res = spiffs_rewrite_page(fs, cur_pix, &new_ph, &new_pix);
+                          new_ph.objid = p_hdr->objid | SPIFFS_OBJ_ID_IX_FLAG;
+                          res = spiffs_rewrite_page(fs, cur_pgndx, &new_ph, &new_pgndx);
                           spiffs_checkinfo("LU: FIXUP: rewrite page " _SPIPRIpg
-                                           " as " _SPIPRIid " to pix " _SPIPRIpg
-                                           "\n", cur_pix, new_ph.id,
-                                           new_pix);
+                                           " as " _SPIPRIid " to pgndx " _SPIPRIpg
+                                           "\n", cur_pgndx, new_ph.objid,
+                                           new_pgndx);
                           CHECK_CB(fs, SPIFFS_CHECK_LOOKUP,
-                                   SPIFFS_CHECK_FIX_LOOKUP, p_hdr->id,
+                                   SPIFFS_CHECK_FIX_LOOKUP, p_hdr->objid,
                                    p_hdr->span_ix);
                           SPIFFS_CHECK_RES(res);
                           *reload_lu = 1;
                         }
                       else
-                        if ((objix_pix_ph && data_pix_ph && data_pix_lu && objix_pix_lu == 0) ||
-                            (objix_pix_ph == 0 && data_pix_lu && objix_pix_lu == 0))
+                        if ((objndx_pgndx_ph && data_pgndx_ph && data_pgndx_lu && objndx_pgndx_lu == 0) ||
+                            (objndx_pgndx_ph == 0 && data_pgndx_lu && objndx_pgndx_lu == 0))
                         {
-                          /* got a data page for look up obj id
+                          /* got a data page for look up objid
                            * rewrite as obj_id_lu
                            */
 
-                          new_ph.id = lu_obj_id | SPIFFS_OBJ_ID_IX_FLAG;
+                          new_ph.objid = lu_obj_id | SPIFFS_OBJ_ID_IX_FLAG;
                           spiffs_checkinfo("LU: FIXUP: rewrite page " _SPIPRIpg
-                                           " as " _SPIPRIid "\n", cur_pix,
-                                           new_ph.id);
+                                           " as " _SPIPRIid "\n", cur_pgndx,
+                                           new_ph.objid);
                           CHECK_CB(fs, SPIFFS_CHECK_LOOKUP,
-                                   SPIFFS_CHECK_FIX_LOOKUP, p_hdr->id,
+                                   SPIFFS_CHECK_FIX_LOOKUP, p_hdr->objid,
                                    p_hdr->span_ix);
-                          res = spiffs_rewrite_page(fs, cur_pix, &new_ph, &new_pix);
+                          res = spiffs_rewrite_page(fs, cur_pgndx, &new_ph, &new_pgndx);
                           SPIFFS_CHECK_RES(res);
                           *reload_lu = 1;
                         }
@@ -632,32 +632,32 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
              (p_hdr->flags & SPIFFS_PH_FLAG_INDEX) == 0))
         {
           spiffs_checkinfo("LU: " _SPIPRIpg " lu/page index marking differ\n",
-                           cur_pix);
-          int16_t data_pix, objix_pix_d;
+                           cur_pgndx);
+          int16_t data_pgndx, objndx_pgndx_d;
 
-          /* see if other data page exists for given obj id and span index */
+          /* see if other data page exists for given objid and span index */
 
           res = spiffs_obj_lu_find_id_and_span(fs,
                                                lu_obj_id & ~SPIFFS_OBJ_ID_IX_FLAG,
-                                               p_hdr->span_ix, cur_pix, &data_pix);
+                                               p_hdr->span_ix, cur_pgndx, &data_pgndx);
           if (res == -ENOENT)
             {
               res = OK;
-              data_pix = 0;
+              data_pgndx = 0;
             }
 
           SPIFFS_CHECK_RES(res);
 
-          /* see if other object index exists for given obj id and span index */
+          /* see if other object index exists for given objid and span index */
 
           res = spiffs_obj_lu_find_id_and_span(fs,
                                                lu_obj_id | SPIFFS_OBJ_ID_IX_FLAG,
-                                               p_hdr->span_ix, cur_pix,
-                                               &objix_pix_d);
+                                               p_hdr->span_ix, cur_pgndx,
+                                               &objndx_pgndx_d);
           if (res == -ENOENT)
             {
               res = OK;
-              objix_pix_d = 0;
+              objndx_pgndx_d = 0;
             }
 
           SPIFFS_CHECK_RES(res);
@@ -668,7 +668,7 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
            * page
            */
 
-          if (data_pix && objix_pix_d)
+          if (data_pgndx && objndx_pgndx_d)
             {
               spiffs_checkinfo
                 ("LU: FIXUP: other index and data page exists, simply remove\n");
@@ -676,25 +676,25 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
 
           /* if only data page exists, make this page index */
 
-          else if (data_pix && objix_pix_d == 0)
+          else if (data_pgndx && objndx_pgndx_d == 0)
             {
               spiffs_checkinfo
                 ("LU: FIXUP: other data page exists, make this index\n");
               CHECK_CB(fs, SPIFFS_CHECK_LOOKUP, SPIFFS_CHECK_FIX_INDEX,
                        lu_obj_id, p_hdr->span_ix);
               struct spiffs_page_header_s new_ph;
-              int16_t new_pix;
+              int16_t new_pgndx;
               new_ph.flags = 0xff & ~(SPIFFS_PH_FLAG_USED |
                                       SPIFFS_PH_FLAG_FINAL |
                                       SPIFFS_PH_FLAG_INDEX);
-              new_ph.id = lu_obj_id | SPIFFS_OBJ_ID_IX_FLAG;
+              new_ph.objid = lu_obj_id | SPIFFS_OBJ_ID_IX_FLAG;
               new_ph.span_ix = p_hdr->span_ix;
-              res = spiffs_page_allocate_data(fs, new_ph.id, &new_ph,
-                                              0, 0, 0, 1, &new_pix);
+              res = spiffs_page_allocate_data(fs, new_ph.objid, &new_ph,
+                                              0, 0, 0, 1, &new_pgndx);
               SPIFFS_CHECK_RES(res);
-              res = spiffs_phys_cpy(fs, 0, SPIFFS_PAGE_TO_PADDR(fs, new_pix) +
+              res = spiffs_phys_cpy(fs, 0, SPIFFS_PAGE_TO_PADDR(fs, new_pgndx) +
                                     sizeof(struct spiffs_page_header_s),
-                                    SPIFFS_PAGE_TO_PADDR(fs, cur_pix) +
+                                    SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx) +
                                     sizeof(struct spiffs_page_header_s),
                                     SPIFFS_CFG_LOG_PAGE_SZ(fs) -
                                     sizeof(struct spiffs_page_header_s));
@@ -703,23 +703,23 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
 
           /* if only index exists, make data page */
 
-          else if (data_pix == 0 && objix_pix_d)
+          else if (data_pgndx == 0 && objndx_pgndx_d)
             {
               spiffs_checkinfo
                 ("LU: FIXUP: other index page exists, make this data\n");
               CHECK_CB(fs, SPIFFS_CHECK_LOOKUP, SPIFFS_CHECK_FIX_LOOKUP,
                        lu_obj_id, p_hdr->span_ix);
               struct spiffs_page_header_s new_ph;
-              int16_t new_pix;
+              int16_t new_pgndx;
               new_ph.flags = 0xff & ~(SPIFFS_PH_FLAG_USED | SPIFFS_PH_FLAG_FINAL);
-              new_ph.id = lu_obj_id & ~SPIFFS_OBJ_ID_IX_FLAG;
+              new_ph.objid = lu_obj_id & ~SPIFFS_OBJ_ID_IX_FLAG;
               new_ph.span_ix = p_hdr->span_ix;
-              res = spiffs_page_allocate_data(fs, new_ph.id, &new_ph,
-                                              0, 0, 0, 1, &new_pix);
+              res = spiffs_page_allocate_data(fs, new_ph.objid, &new_ph,
+                                              0, 0, 0, 1, &new_pgndx);
               SPIFFS_CHECK_RES(res);
-              res = spiffs_phys_cpy(fs, 0, SPIFFS_PAGE_TO_PADDR(fs, new_pix) +
+              res = spiffs_phys_cpy(fs, 0, SPIFFS_PAGE_TO_PADDR(fs, new_pgndx) +
                                 sizeof(struct spiffs_page_header_s),
-                                SPIFFS_PAGE_TO_PADDR(fs, cur_pix) +
+                                SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx) +
                                 sizeof(struct spiffs_page_header_s),
                                 SPIFFS_CFG_LOG_PAGE_SZ(fs) -
                                 sizeof(struct spiffs_page_header_s));
@@ -732,24 +732,24 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
         }
       else if ((p_hdr->flags & SPIFFS_PH_FLAG_DELET) == 0)
         {
-          spiffs_checkinfo("LU: pix " _SPIPRIpg
-                           " busy in lu but deleted on page\n", cur_pix);
+          spiffs_checkinfo("LU: pgndx " _SPIPRIpg
+                           " busy in lu but deleted on page\n", cur_pgndx);
           delete_page = 1;
         }
       else if ((p_hdr->flags & SPIFFS_PH_FLAG_FINAL))
         {
-          spiffs_checkinfo("LU: pix " _SPIPRIpg " busy but not final\n",
-                           cur_pix);
+          spiffs_checkinfo("LU: pgndx " _SPIPRIpg " busy but not final\n",
+                           cur_pgndx);
 
           /* page can be removed if not referenced by object index */
 
           *reload_lu = 1;
           res = spiffs_object_get_data_page_index_reference(fs, lu_obj_id,
                                                             p_hdr->span_ix,
-                                                            &ref_pix, &objix_pix);
+                                                            &ref_pgndx, &objndx_pgndx);
           if (res == -ENOENT)
             {
-              /* no object with this id, so remove page safely */
+              /* no object with this ID, so remove page safely */
 
               res = OK;
               delete_page = 1;
@@ -757,7 +757,7 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
           else
             {
               SPIFFS_CHECK_RES(res);
-              if (ref_pix != cur_pix)
+              if (ref_pgndx != cur_pgndx)
                 {
                   spiffs_checkinfo
                     ("LU: FIXUP: other finalized page is referred, just delete\n");
@@ -774,17 +774,17 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
                   spiffs_checkinfo
                     ("LU: FIXUP: unfinalized page is referred, finalizing\n");
                   CHECK_CB(fs, SPIFFS_CHECK_LOOKUP, SPIFFS_CHECK_FIX_LOOKUP,
-                           p_hdr->id, p_hdr->span_ix);
+                           p_hdr->objid, p_hdr->span_ix);
 #if SPIFFS_NO_BLIND_WRITES
                   res = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_DA | SPIFFS_OP_C_READ,
-                                   0, SPIFFS_PAGE_TO_PADDR(fs, cur_pix) +
+                                   0, SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx) +
                                    offsetof(struct spiffs_page_header_s, flags),
                                    sizeof(flags), &flags);
                   SPIFFS_CHECK_RES(res);
 #endif
                   flags &= ~SPIFFS_PH_FLAG_FINAL;
                   res = _spiffs_wr(fs, SPIFFS_OP_T_OBJ_DA | SPIFFS_OP_C_UPDT,
-                                   0, SPIFFS_PAGE_TO_PADDR(fs, cur_pix) +
+                                   0, SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx) +
                                    offsetof(struct spiffs_page_header_s, flags),
                                    sizeof(flags), &flags);
                 }
@@ -794,22 +794,22 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
 
   if (delete_page)
     {
-      spiffs_checkinfo("LU: FIXUP: deleting page " _SPIPRIpg "\n", cur_pix);
-      CHECK_CB(fs, SPIFFS_CHECK_LOOKUP, SPIFFS_CHECK_DELETE_PAGE, cur_pix, 0);
-      res = spiffs_page_delete(fs, cur_pix);
+      spiffs_checkinfo("LU: FIXUP: deleting page " _SPIPRIpg "\n", cur_pgndx);
+      CHECK_CB(fs, SPIFFS_CHECK_LOOKUP, SPIFFS_CHECK_DELETE_PAGE, cur_pgndx, 0);
+      res = spiffs_page_delete(fs, cur_pgndx);
       SPIFFS_CHECK_RES(res);
     }
 
   return res;
 }
 
-static int32_t spiffs_lookup_check_v(FAR struct spiffs_s *fs, int16_t id,
+static int32_t spiffs_lookup_check_v(FAR struct spiffs_s *fs, int16_t objid,
                                      int16_t cur_block, int cur_entry,
                                      const void *user_const_p, void *user_var_p)
 {
   (void)user_const_p;
   struct spiffs_page_header_s p_hdr;
-  int16_t cur_pix =
+  int16_t cur_pgndx =
     SPIFFS_OBJ_LOOKUP_ENTRY_TO_PIX(fs, cur_block, cur_entry);
 
   (void)user_var_p;
@@ -821,13 +821,13 @@ static int32_t spiffs_lookup_check_v(FAR struct spiffs_s *fs, int16_t id,
   /* load header */
 
   res = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
-                   0, SPIFFS_PAGE_TO_PADDR(fs, cur_pix),
+                   0, SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx),
                    sizeof(struct spiffs_page_header_s), (uint8_t *) & p_hdr);
   SPIFFS_CHECK_RES(res);
 
   int reload_lu = 0;
 
-  res = spiffs_lookup_check_validate(fs, id, &p_hdr, cur_pix, cur_block,
+  res = spiffs_lookup_check_validate(fs, objid, &p_hdr, cur_pgndx, cur_block,
                                      cur_entry, &reload_lu);
   SPIFFS_CHECK_RES(res);
 
@@ -887,11 +887,11 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
   const int16_t pages_per_scan = SPIFFS_CFG_LOG_PAGE_SZ(fs) * 8 / bits;
 
   int32_t res = OK;
-  int16_t pix_offset = 0;
+  int16_t pgndx_offset = 0;
 
   /* for each range of pages fitting into work memory */
 
-  while (pix_offset < SPIFFS_PAGES_PER_BLOCK(fs) * fs->block_count)
+  while (pgndx_offset < SPIFFS_PAGES_PER_BLOCK(fs) * fs->block_count)
     {
       /* set this flag to abort all checks and rescan the page range */
 
@@ -900,23 +900,23 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
 
       int16_t cur_block = 0;
 
-      /* build consistency bitmap for id range traversing all blocks */
+      /* build consistency bitmap for ID range traversing all blocks */
 
       while (!restart && cur_block < fs->block_count)
         {
           CHECK_CB(fs, SPIFFS_CHECK_PAGE, SPIFFS_CHECK_PROGRESS,
-                   (pix_offset * 256) / (SPIFFS_PAGES_PER_BLOCK(fs) * fs->block_count) +
+                   (pgndx_offset * 256) / (SPIFFS_PAGES_PER_BLOCK(fs) * fs->block_count) +
                    ((((cur_block * pages_per_scan * 256) /
                       (SPIFFS_PAGES_PER_BLOCK(fs) * fs->block_count))) /
                     fs->block_count), 0);
 
           /* traverse each page except for lookup pages */
 
-          int16_t cur_pix =
+          int16_t cur_pgndx =
             SPIFFS_OBJ_LOOKUP_PAGES(fs) +
             SPIFFS_PAGES_PER_BLOCK(fs) * cur_block;
           while (!restart &&
-                 cur_pix < SPIFFS_PAGES_PER_BLOCK(fs) * (cur_block + 1))
+                 cur_pgndx < SPIFFS_PAGES_PER_BLOCK(fs) * (cur_block + 1))
             {
               uint8_t within_range;
 
@@ -924,14 +924,14 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
 
               struct spiffs_page_header_s p_hdr;
               res = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
-                               0, SPIFFS_PAGE_TO_PADDR(fs, cur_pix),
+                               0, SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx),
                                sizeof(struct spiffs_page_header_s), (uint8_t *) & p_hdr);
               SPIFFS_CHECK_RES(res);
 
-              within_range = (cur_pix >= pix_offset &&
-                              cur_pix < pix_offset + pages_per_scan);
-              const uint32_t pix_byte_ix = (cur_pix - pix_offset) / (8 / bits);
-              const uint8_t pix_bit_ix = (cur_pix & ((8 / bits) - 1)) * bits;
+              within_range = (cur_pgndx >= pgndx_offset &&
+                              cur_pgndx < pgndx_offset + pages_per_scan);
+              const uint32_t pgndx_byte_ix = (cur_pgndx - pgndx_offset) / (8 / bits);
+              const uint8_t pgndx_bit_ix = (cur_pgndx & ((8 / bits) - 1)) * bits;
 
               if (within_range &&
                   (p_hdr.flags & SPIFFS_PH_FLAG_DELET) &&
@@ -939,7 +939,7 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                 {
                   /* used */
 
-                  fs->work[pix_byte_ix] |= (1 << (pix_bit_ix + 0));
+                  fs->work[pgndx_byte_ix] |= (1 << (pgndx_bit_ix + 0));
                 }
 
               if ((p_hdr.flags & SPIFFS_PH_FLAG_DELET) &&
@@ -953,29 +953,29 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
 
                   if (within_range)
                     {
-                      fs->work[pix_byte_ix] |= (1 << (pix_bit_ix + 2));
+                      fs->work[pgndx_byte_ix] |= (1 << (pgndx_bit_ix + 2));
                     }
 
                   /* load non-deleted index */
 
                   res = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
-                                   0, SPIFFS_PAGE_TO_PADDR(fs, cur_pix),
+                                   0, SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx),
                                    SPIFFS_CFG_LOG_PAGE_SZ(fs), fs->lu_work);
                   SPIFFS_CHECK_RES(res);
 
                   /* traverse index for referenced pages */
 
                   int16_t *object_page_index;
-                  struct spiffs_page_header_s *objix_p_hdr =
+                  struct spiffs_page_header_s *objndx_p_hdr =
                     (struct spiffs_page_header_s *) fs->lu_work;
 
-                  int16_t data_spix_offset;
+                  int16_t data_spndx_offset;
                   if (p_hdr.span_ix == 0)
                     {
                       /* object header page index */
 
                       entries = SPIFFS_OBJ_HDR_IX_LEN(fs);
-                      data_spix_offset = 0;
+                      data_spndx_offset = 0;
                       object_page_index =
                         (int16_t *) ((uint8_t *) fs->lu_work +
                                             sizeof(struct spiffs_pgobj_ixheader_s));
@@ -985,7 +985,7 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                       /* object page index */
 
                       entries = SPIFFS_OBJ_IX_LEN(fs);
-                      data_spix_offset =
+                      data_spndx_offset =
                         SPIFFS_OBJ_HDR_IX_LEN(fs) +
                         SPIFFS_OBJ_IX_LEN(fs) * (p_hdr.span_ix - 1);
                       object_page_index =
@@ -997,63 +997,63 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
 
                   for (i = 0; !restart && i < entries; i++)
                     {
-                      int16_t rpix = object_page_index[i];
-                      uint8_t rpix_within_range = rpix >= pix_offset &&
-                        rpix < pix_offset + pages_per_scan;
+                      int16_t rpgndx = object_page_index[i];
+                      uint8_t rpgndx_within_range = rpgndx >= pgndx_offset &&
+                        rpgndx < pgndx_offset + pages_per_scan;
 
-                      if ((rpix != (int16_t) - 1 &&
-                           rpix > SPIFFS_MAX_PAGES(fs)) || (rpix_within_range &&
+                      if ((rpgndx != (int16_t) - 1 &&
+                           rpgndx > SPIFFS_MAX_PAGES(fs)) || (rpgndx_within_range &&
                                                             SPIFFS_IS_LOOKUP_PAGE
-                                                            (fs, rpix)))
+                                                            (fs, rpgndx)))
                         {
 
                           /* bad reference */
 
-                          spiffs_checkinfo("PA: pix " _SPIPRIpg
-                                           "x bad pix / LU referenced from page "
-                                           _SPIPRIpg "\n", rpix, cur_pix);
+                          spiffs_checkinfo("PA: pgndx " _SPIPRIpg
+                                           "x bad pgndx / LU referenced from page "
+                                           _SPIPRIpg "\n", rpgndx, cur_pgndx);
 
                           /* check for data page elsewhere */
 
-                          int16_t data_pix;
+                          int16_t data_pgndx;
                           res = spiffs_obj_lu_find_id_and_span(fs,
-                                                               objix_p_hdr->id & ~SPIFFS_OBJ_ID_IX_FLAG,
-                                                               data_spix_offset + i,
-                                                               0, &data_pix);
+                                                               objndx_p_hdr->objid & ~SPIFFS_OBJ_ID_IX_FLAG,
+                                                               data_spndx_offset + i,
+                                                               0, &data_pgndx);
                           if (res == -ENOENT)
                             {
                               res = OK;
-                              data_pix = 0;
+                              data_pgndx = 0;
                             }
 
                           SPIFFS_CHECK_RES(res);
 
-                          if (data_pix == 0)
+                          if (data_pgndx == 0)
                             {
                               /* if not, allocate free page */
 
                               struct spiffs_page_header_s new_ph;
                               new_ph.flags = 0xff & ~(SPIFFS_PH_FLAG_USED |
                                                       SPIFFS_PH_FLAG_FINAL);
-                              new_ph.id = objix_p_hdr->id & ~SPIFFS_OBJ_ID_IX_FLAG;
-                              new_ph.span_ix = data_spix_offset + i;
-                              res = spiffs_page_allocate_data(fs, new_ph.id,
+                              new_ph.objid = objndx_p_hdr->objid & ~SPIFFS_OBJ_ID_IX_FLAG;
+                              new_ph.span_ix = data_spndx_offset + i;
+                              res = spiffs_page_allocate_data(fs, new_ph.objid,
                                                               &new_ph, 0, 0, 0, 1,
-                                                              &data_pix);
+                                                              &data_pgndx);
                               SPIFFS_CHECK_RES(res);
                               spiffs_checkinfo
                                 ("PA: FIXUP: found no existing data page, created new @ "
-                                 _SPIPRIpg "\n", data_pix);
+                                 _SPIPRIpg "\n", data_pgndx);
                             }
 
                           /* remap index */
 
-                          spiffs_checkinfo("PA: FIXUP: rewriting index pix "
-                                           _SPIPRIpg "\n", cur_pix);
+                          spiffs_checkinfo("PA: FIXUP: rewriting index pgndx "
+                                           _SPIPRIpg "\n", cur_pgndx);
                           res = spiffs_rewrite_index(fs,
-                                                     objix_p_hdr->id | SPIFFS_OBJ_ID_IX_FLAG,
-                                                     data_spix_offset + i, data_pix,
-                                                     cur_pix);
+                                                     objndx_p_hdr->objid | SPIFFS_OBJ_ID_IX_FLAG,
+                                                     data_spndx_offset + i, data_pgndx,
+                                                     cur_pgndx);
                           if (res <= _SPIFFS_ERR_CHECK_FIRST &&
                               res > _SPIFFS_ERR_CHECK_LAST)
                             {
@@ -1064,24 +1064,24 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                                                res);
                               CHECK_CB(fs, SPIFFS_CHECK_PAGE,
                                        SPIFFS_CHECK_DELETE_BAD_FILE,
-                                       objix_p_hdr->id, 0);
+                                       objndx_p_hdr->objid, 0);
 
                               /* delete file */
 
-                              res = spiffs_page_delete(fs, cur_pix);
+                              res = spiffs_page_delete(fs, cur_pgndx);
                             }
                           else
                             {
                               CHECK_CB(fs, SPIFFS_CHECK_PAGE,
                                        SPIFFS_CHECK_FIX_INDEX,
-                                       objix_p_hdr->id,
-                                       objix_p_hdr->span_ix);
+                                       objndx_p_hdr->objid,
+                                       objndx_p_hdr->span_ix);
                             }
 
                           SPIFFS_CHECK_RES(res);
                           restart = 1;
                         }
-                      else if (rpix_within_range)
+                      else if (rpgndx_within_range)
                         {
 
                           /* valid reference. read referenced page header */
@@ -1089,58 +1089,58 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                           struct spiffs_page_header_s rp_hdr;
                           res = _spiffs_rd(fs,
                                            SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
-                                           0, SPIFFS_PAGE_TO_PADDR(fs, rpix),
+                                           0, SPIFFS_PAGE_TO_PADDR(fs, rpgndx),
                                            sizeof(struct spiffs_page_header_s),
                                            (uint8_t *) & rp_hdr);
                           SPIFFS_CHECK_RES(res);
 
                           /* cross reference page header check */
 
-                          if (rp_hdr.id != (p_hdr.id & ~SPIFFS_OBJ_ID_IX_FLAG) ||
-                              rp_hdr.span_ix != data_spix_offset + i ||
+                          if (rp_hdr.objid != (p_hdr.objid & ~SPIFFS_OBJ_ID_IX_FLAG) ||
+                              rp_hdr.span_ix != data_spndx_offset + i ||
                               (rp_hdr.flags & (SPIFFS_PH_FLAG_DELET |
                                                SPIFFS_PH_FLAG_INDEX |
                                                SPIFFS_PH_FLAG_USED)) !=
                               (SPIFFS_PH_FLAG_DELET | SPIFFS_PH_FLAG_INDEX))
                             {
-                              spiffs_checkinfo("PA: pix " _SPIPRIpg
-                                               " has inconsistent page header ix id/span:"
+                              spiffs_checkinfo("PA: pgndx " _SPIPRIpg
+                                               " has inconsistent page header ix objid/span:"
                                                _SPIPRIid "/" _SPIPRIsp
-                                               ", ref id/span:" _SPIPRIid "/"
+                                               ", ref objid/span:" _SPIPRIid "/"
                                                _SPIPRIsp " flags:" _SPIPRIfl
-                                               "\n", rpix,
+                                               "\n", rpgndx,
                                                p_hdr.
-                                               id & ~SPIFFS_OBJ_ID_IX_FLAG,
-                                               data_spix_offset + i,
-                                               rp_hdr.id, rp_hdr.span_ix,
+                                               objid & ~SPIFFS_OBJ_ID_IX_FLAG,
+                                               data_spndx_offset + i,
+                                               rp_hdr.objid, rp_hdr.span_ix,
                                                rp_hdr.flags);
 
                               /* try finding correct page */
 
-                              int16_t data_pix;
+                              int16_t data_pgndx;
                               res = spiffs_obj_lu_find_id_and_span(fs,
-                                                                   p_hdr.id & ~SPIFFS_OBJ_ID_IX_FLAG,
-                                                                   data_spix_offset + i, rpix,
-                                                                   &data_pix);
+                                                                   p_hdr.objid & ~SPIFFS_OBJ_ID_IX_FLAG,
+                                                                   data_spndx_offset + i, rpgndx,
+                                                                   &data_pgndx);
                               if (res == -ENOENT)
                                 {
                                   res = OK;
-                                  data_pix = 0;
+                                  data_pgndx = 0;
                                 }
 
                               SPIFFS_CHECK_RES(res);
 
-                              if (data_pix == 0)
+                              if (data_pgndx == 0)
                                 {
                                   /* not found, this index is badly borked */
 
                                   spiffs_checkinfo
-                                    ("PA: FIXUP: index bad, delete object id "
-                                     _SPIPRIid "\n", p_hdr.id);
+                                    ("PA: FIXUP: index bad, delete object objid "
+                                     _SPIPRIid "\n", p_hdr.objid);
                                   CHECK_CB(fs, SPIFFS_CHECK_PAGE,
                                            SPIFFS_CHECK_DELETE_BAD_FILE,
-                                           p_hdr.id, 0);
-                                  res = spiffs_delete_obj_lazy(fs, p_hdr.id);
+                                           p_hdr.objid, 0);
+                                  res = spiffs_delete_obj_lazy(fs, p_hdr.objid);
                                   SPIFFS_CHECK_RES(res);
                                   break;
                                 }
@@ -1149,13 +1149,13 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                                   /* found it, so rewrite index */
 
                                   spiffs_checkinfo
-                                    ("PA: FIXUP: found correct data pix "
-                                     _SPIPRIpg ", rewrite ix pix " _SPIPRIpg
-                                     " id " _SPIPRIid "\n", data_pix, cur_pix,
-                                     p_hdr.id);
-                                  res = spiffs_rewrite_index(fs, p_hdr.id,
-                                                             data_spix_offset + i,
-                                                             data_pix, cur_pix);
+                                    ("PA: FIXUP: found correct data pgndx "
+                                     _SPIPRIpg ", rewrite ix pgndx " _SPIPRIpg
+                                     " objid " _SPIPRIid "\n", data_pgndx, cur_pgndx,
+                                     p_hdr.objid);
+                                  res = spiffs_rewrite_index(fs, p_hdr.objid,
+                                                             data_spndx_offset + i,
+                                                             data_pgndx, cur_pgndx);
                                   if (res <= _SPIFFS_ERR_CHECK_FIRST &&
                                       res > _SPIFFS_ERR_CHECK_LAST)
                                     {
@@ -1166,14 +1166,14 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                                                        ", cannot mend!\n", res);
                                       CHECK_CB(fs, SPIFFS_CHECK_PAGE,
                                                SPIFFS_CHECK_DELETE_BAD_FILE,
-                                               p_hdr.id, 0);
-                                      res = spiffs_delete_obj_lazy(fs, p_hdr.id);
+                                               p_hdr.objid, 0);
+                                      res = spiffs_delete_obj_lazy(fs, p_hdr.objid);
                                     }
                                   else
                                     {
                                       CHECK_CB(fs, SPIFFS_CHECK_PAGE,
                                                SPIFFS_CHECK_FIX_INDEX,
-                                               p_hdr.id, p_hdr.span_ix);
+                                               p_hdr.objid, p_hdr.span_ix);
                                     }
 
                                   SPIFFS_CHECK_RES(res);
@@ -1182,46 +1182,46 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                             }
                           else
                             {
-                              /* mark rpix as referenced */
+                              /* mark rpgndx as referenced */
 
-                              const uint32_t rpix_byte_ix =
-                                (rpix - pix_offset) / (8 / bits);
-                              const uint8_t rpix_bit_ix =
-                                (rpix & ((8 / bits) - 1)) * bits;
+                              const uint32_t rpgndx_byte_ix =
+                                (rpgndx - pgndx_offset) / (8 / bits);
+                              const uint8_t rpgndx_bit_ix =
+                                (rpgndx & ((8 / bits) - 1)) * bits;
 
                               if (fs->
-                                  work[rpix_byte_ix] & (1 << (rpix_bit_ix + 1)))
+                                  work[rpgndx_byte_ix] & (1 << (rpgndx_bit_ix + 1)))
                                 {
-                                  spiffs_checkinfo("PA: pix " _SPIPRIpg
+                                  spiffs_checkinfo("PA: pgndx " _SPIPRIpg
                                                    " multiple referenced from page "
-                                                   _SPIPRIpg "\n", rpix,
-                                                   cur_pix);
+                                                   _SPIPRIpg "\n", rpgndx,
+                                                   cur_pgndx);
                                   /* Here, we should have fixed all broken
                                    * references - getting this means there
                                    * must be multiple files with same object
-                                   * id. Only solution is to delete
+                                   * ID. Only solution is to delete
                                    * the object which is referring to this page
                                    */
 
                                   spiffs_checkinfo("PA: FIXUP: removing object "
                                                    _SPIPRIid " and page "
-                                                   _SPIPRIpg "\n", p_hdr.id,
-                                                   cur_pix);
+                                                   _SPIPRIpg "\n", p_hdr.objid,
+                                                   cur_pgndx);
                                   CHECK_CB(fs, SPIFFS_CHECK_PAGE,
                                            SPIFFS_CHECK_DELETE_BAD_FILE,
-                                           p_hdr.id, 0);
+                                           p_hdr.objid, 0);
                                   res =
-                                    spiffs_delete_obj_lazy(fs, p_hdr.id);
+                                    spiffs_delete_obj_lazy(fs, p_hdr.objid);
                                   SPIFFS_CHECK_RES(res);
 
                                   /* extra precaution, delete this page also */
 
-                                  res = spiffs_page_delete(fs, cur_pix);
+                                  res = spiffs_page_delete(fs, cur_pgndx);
                                   SPIFFS_CHECK_RES(res);
                                   restart = 1;
                                 }
-                              fs->work[rpix_byte_ix] |=
-                                (1 << (rpix_bit_ix + 1));
+                              fs->work[rpgndx_byte_ix] |=
+                                (1 << (rpgndx_bit_ix + 1));
                             }
                         }
                     }
@@ -1229,7 +1229,7 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
 
               /* next page */
 
-              cur_pix++;
+              cur_pgndx++;
             }
 
           /* next block */
@@ -1241,8 +1241,8 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
 
       if (!restart)
         {
-          int16_t objix_pix;
-          int16_t rpix;
+          int16_t objndx_pgndx;
+          int16_t rpgndx;
 
           uint32_t byte_ix;
           uint8_t bit_ix;
@@ -1252,8 +1252,8 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
               for (bit_ix = 0; !restart && bit_ix < 8 / bits; bit_ix++)
                 {
                   uint8_t bitmask = (fs->work[byte_ix] >> (bit_ix * bits)) & 0x7;
-                  int16_t cur_pix =
-                    pix_offset + byte_ix * (8 / bits) + bit_ix;
+                  int16_t cur_pgndx =
+                    pgndx_offset + byte_ix * (8 / bits) + bit_ix;
 
                   /* 000 ok - free, unreferenced, not index */
 
@@ -1262,9 +1262,9 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
 
                       /* 001 */
 
-                      spiffs_checkinfo("PA: pix " _SPIPRIpg
+                      spiffs_checkinfo("PA: pgndx " _SPIPRIpg
                                        " USED, UNREFERENCED, not index\n",
-                                       cur_pix);
+                                       cur_pgndx);
 
                       uint8_t rewrite_ix_to_this = 0;
                       uint8_t delete_page = 0;
@@ -1274,21 +1274,21 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                       struct spiffs_page_header_s p_hdr;
                       res =
                         _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
-                                   0, SPIFFS_PAGE_TO_PADDR(fs, cur_pix),
+                                   0, SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx),
                                    sizeof(struct spiffs_page_header_s),
                                    (uint8_t *) & p_hdr);
                       SPIFFS_CHECK_RES(res);
 
                       res = spiffs_object_get_data_page_index_reference(fs,
-                                                                        p_hdr.id,
+                                                                        p_hdr.objid,
                                                                         p_hdr.span_ix,
-                                                                        &rpix,
-                                                                        &objix_pix);
+                                                                        &rpgndx,
+                                                                        &objndx_pgndx);
                       if (res == OK)
                         {
-                          if (((rpix == (int16_t) - 1 ||
-                                rpix > SPIFFS_MAX_PAGES(fs)) ||
-                               (SPIFFS_IS_LOOKUP_PAGE(fs, rpix))))
+                          if (((rpgndx == (int16_t) - 1 ||
+                                rpgndx > SPIFFS_MAX_PAGES(fs)) ||
+                               (SPIFFS_IS_LOOKUP_PAGE(fs, rpgndx))))
                             {
                               /* pointing to a bad page altogether, rewrite
                                * index to this
@@ -1297,7 +1297,7 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                               rewrite_ix_to_this = 1;
                               spiffs_checkinfo("PA: corresponding ref is bad: "
                                                _SPIPRIpg ", rewrite to this "
-                                               _SPIPRIpg "\n", rpix, cur_pix);
+                                               _SPIPRIpg "\n", rpgndx, cur_pgndx);
                             }
                           else
                             {
@@ -1306,12 +1306,12 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                               struct spiffs_page_header_s rp_hdr;
                               res = _spiffs_rd(fs,
                                                SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ, 0,
-                                               SPIFFS_PAGE_TO_PADDR(fs, rpix),
+                                               SPIFFS_PAGE_TO_PADDR(fs, rpgndx),
                                                sizeof(struct spiffs_page_header_s),
                                                (uint8_t *) & rp_hdr);
                               SPIFFS_CHECK_RES(res);
-                              if (((p_hdr.id & ~SPIFFS_OBJ_ID_IX_FLAG) ==
-                                   rp_hdr.id) &&
+                              if (((p_hdr.objid & ~SPIFFS_OBJ_ID_IX_FLAG) ==
+                                   rp_hdr.objid) &&
                                   ((rp_hdr.flags & (SPIFFS_PH_FLAG_INDEX |
                                                     SPIFFS_PH_FLAG_DELET |
                                                     SPIFFS_PH_FLAG_USED |
@@ -1325,7 +1325,7 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                                   spiffs_checkinfo
                                     ("PA: corresponding ref is good but different: "
                                      _SPIPRIpg ", delete this " _SPIPRIpg "\n",
-                                     rpix, cur_pix);
+                                     rpgndx, cur_pgndx);
                                   delete_page = 1;
                                 }
                               else
@@ -1334,12 +1334,12 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                                    * to point to this page instead
                                    */
 
-                                  if (rpix != cur_pix)
+                                  if (rpgndx != cur_pgndx)
                                     {
                                       spiffs_checkinfo
                                         ("PA: corresponding ref is weird: "
                                          _SPIPRIpg " %s%s%s%s, rewrite this "
-                                         _SPIPRIpg "\n", rpix,
+                                         _SPIPRIpg "\n", rpgndx,
                                          (rp_hdr.flags & SPIFFS_PH_FLAG_INDEX) ? "" :
                                          "INDEX ",
                                          (rp_hdr.flags & SPIFFS_PH_FLAG_DELET) ? "" :
@@ -1347,7 +1347,7 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                                          (rp_hdr.flags & SPIFFS_PH_FLAG_USED) ?
                                          "NOTUSED " : "",
                                          (rp_hdr.flags & SPIFFS_PH_FLAG_FINAL) ?
-                                         "NOTFINAL " : "", cur_pix);
+                                         "NOTFINAL " : "", cur_pgndx);
                                       rewrite_ix_to_this = 1;
                                     }
                                   else
@@ -1361,7 +1361,7 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                         {
                           spiffs_checkinfo
                             ("PA: corresponding ref not found, delete "
-                             _SPIPRIpg "\n", cur_pix);
+                             _SPIPRIpg "\n", cur_pgndx);
                           delete_page = 1;
                           res = OK;
                         }
@@ -1372,14 +1372,14 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                            * this page
                            */
 
-                          spiffs_checkinfo("PA: FIXUP: rewrite index id "
-                                           _SPIPRIid " data spix " _SPIPRIsp
-                                           " to point to this pix: " _SPIPRIpg
-                                           "\n", p_hdr.id, p_hdr.span_ix,
-                                           cur_pix);
-                          res =  spiffs_rewrite_index(fs, p_hdr.id,
-                                                      p_hdr.span_ix, cur_pix,
-                                                     objix_pix);
+                          spiffs_checkinfo("PA: FIXUP: rewrite index objid "
+                                           _SPIPRIid " data spndx " _SPIPRIsp
+                                           " to point to this pgndx: " _SPIPRIpg
+                                           "\n", p_hdr.objid, p_hdr.span_ix,
+                                           cur_pgndx);
+                          res =  spiffs_rewrite_index(fs, p_hdr.objid,
+                                                      p_hdr.span_ix, cur_pgndx,
+                                                     objndx_pgndx);
                           if (res <= _SPIFFS_ERR_CHECK_FIRST &&
                               res > _SPIFFS_ERR_CHECK_LAST)
                             {
@@ -1389,15 +1389,15 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                                                ", cannot mend!\n", res);
                               CHECK_CB(fs, SPIFFS_CHECK_PAGE,
                                        SPIFFS_CHECK_DELETE_BAD_FILE,
-                                       p_hdr.id, 0);
-                              res = spiffs_page_delete(fs, cur_pix);
+                                       p_hdr.objid, 0);
+                              res = spiffs_page_delete(fs, cur_pgndx);
                               SPIFFS_CHECK_RES(res);
-                              res = spiffs_delete_obj_lazy(fs, p_hdr.id);
+                              res = spiffs_delete_obj_lazy(fs, p_hdr.objid);
                             }
                           else
                             {
                               CHECK_CB(fs, SPIFFS_CHECK_PAGE,
-                                       SPIFFS_CHECK_FIX_INDEX, p_hdr.id,
+                                       SPIFFS_CHECK_FIX_INDEX, p_hdr.objid,
                                        p_hdr.span_ix);
                             }
 
@@ -1408,10 +1408,10 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                       else if (delete_page)
                         {
                           spiffs_checkinfo("PA: FIXUP: deleting page " _SPIPRIpg
-                                           "\n", cur_pix);
+                                           "\n", cur_pgndx);
                           CHECK_CB(fs, SPIFFS_CHECK_PAGE,
-                                   SPIFFS_CHECK_DELETE_PAGE, cur_pix, 0);
-                          res = spiffs_page_delete(fs, cur_pix);
+                                   SPIFFS_CHECK_DELETE_PAGE, cur_pgndx, 0);
+                          res = spiffs_page_delete(fs, cur_pgndx);
                         }
 
                       SPIFFS_CHECK_RES(res);
@@ -1421,9 +1421,9 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                     {
                       /* 010 */
 
-                      spiffs_checkinfo("PA: pix " _SPIPRIpg
+                      spiffs_checkinfo("PA: pgndx " _SPIPRIpg
                                        " FREE, REFERENCED, not index\n",
-                                       cur_pix);
+                                       cur_pgndx);
 
                       /* no op, this should be taken care of when checking
                        * valid references
@@ -1436,8 +1436,8 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                     {
                       /* 100 */
 
-                      spiffs_checkinfo("PA: pix " _SPIPRIpg
-                                       " FREE, unreferenced, INDEX\n", cur_pix);
+                      spiffs_checkinfo("PA: pgndx " _SPIPRIpg
+                                       " FREE, unreferenced, INDEX\n", cur_pgndx);
 
                       /* this should never happen, major fubar */
                     }
@@ -1448,8 +1448,8 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                     {
                       /* 110 */
 
-                      spiffs_checkinfo("PA: pix " _SPIPRIpg
-                                       " FREE, REFERENCED, INDEX\n", cur_pix);
+                      spiffs_checkinfo("PA: pgndx " _SPIPRIpg
+                                       " FREE, REFERENCED, INDEX\n", cur_pgndx);
 
                       /* no op, this should be taken care of when checking
                        * valid references
@@ -1460,8 +1460,8 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                     {
                       /* 111 */
 
-                      spiffs_checkinfo("PA: pix " _SPIPRIpg
-                                       " USED, REFERENCED, INDEX\n", cur_pix);
+                      spiffs_checkinfo("PA: pgndx " _SPIPRIpg
+                                       " USED, REFERENCED, INDEX\n", cur_pgndx);
 
                       /* no op, this should be taken care of when checking
                        * valid references
@@ -1472,13 +1472,13 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
         }
 
       spiffs_checkinfo("PA: processed " _SPIPRIpg ", restart " _SPIPRIi "\n",
-                       pix_offset, restart);
+                       pgndx_offset, restart);
 
       /* next page range */
 
       if (!restart)
         {
-          pix_offset += pages_per_scan;
+          pgndx_offset += pages_per_scan;
         }
     }
 
@@ -1502,18 +1502,18 @@ int32_t spiffs_page_consistency_check(FAR struct spiffs_s *fs)
 
 /* Object index consistency */
 
-/* searches for given object id in temporary object id index,
+/* searches for given object ID in temporary object ID index,
  * returns the index or -1
  */
 
-static int spiffs_object_index_search(FAR struct spiffs_s *fs, int16_t id)
+static int spiffs_object_index_search(FAR struct spiffs_s *fs, int16_t objid)
 {
   uint32_t i;
   int16_t *obj_table = (int16_t *) fs->work;
-  id &= ~SPIFFS_OBJ_ID_IX_FLAG;
+  objid &= ~SPIFFS_OBJ_ID_IX_FLAG;
   for (i = 0; i < SPIFFS_CFG_LOG_PAGE_SZ(fs) / sizeof(int16_t); i++)
     {
-      if ((obj_table[i] & ~SPIFFS_OBJ_ID_IX_FLAG) == id)
+      if ((obj_table[i] & ~SPIFFS_OBJ_ID_IX_FLAG) == objid)
         {
           return i;
         }
@@ -1522,7 +1522,7 @@ static int spiffs_object_index_search(FAR struct spiffs_s *fs, int16_t id)
 }
 
 static int32_t spiffs_object_index_consistency_check_v(FAR struct spiffs_s *fs,
-                                                     int16_t id,
+                                                     int16_t objid,
                                                      int16_t cur_block,
                                                      int cur_entry,
                                                      const void *user_const_p,
@@ -1537,17 +1537,17 @@ static int32_t spiffs_object_index_consistency_check_v(FAR struct spiffs_s *fs,
   CHECK_CB(fs, SPIFFS_CHECK_INDEX, SPIFFS_CHECK_PROGRESS,
            (cur_block * 256) / fs->block_count, 0);
 
-  if (id != SPIFFS_OBJ_ID_FREE && id != SPIFFS_OBJ_ID_DELETED &&
-      (id & SPIFFS_OBJ_ID_IX_FLAG))
+  if (objid != SPIFFS_OBJ_ID_FREE && objid != SPIFFS_OBJ_ID_DELETED &&
+      (objid & SPIFFS_OBJ_ID_IX_FLAG))
     {
       struct spiffs_page_header_s p_hdr;
-      int16_t cur_pix =
+      int16_t cur_pgndx =
         SPIFFS_OBJ_LOOKUP_ENTRY_TO_PIX(fs, cur_block, cur_entry);
 
       /* load header */
 
       res = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
-                       0, SPIFFS_PAGE_TO_PADDR(fs, cur_pix),
+                       0, SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx),
                        sizeof(struct spiffs_page_header_s), (uint8_t *) & p_hdr);
       SPIFFS_CHECK_RES(res);
 
@@ -1557,12 +1557,12 @@ static int32_t spiffs_object_index_consistency_check_v(FAR struct spiffs_s *fs,
                     SPIFFS_PH_FLAG_DELET | SPIFFS_PH_FLAG_IXDELE)) ==
           (SPIFFS_PH_FLAG_DELET))
         {
-          spiffs_checkinfo("IX: pix " _SPIPRIpg ", obj id:" _SPIPRIid " spix:"
+          spiffs_checkinfo("IX: pgndx " _SPIPRIpg ", objid:" _SPIPRIid " spndx:"
                            _SPIPRIsp " header not fully deleted - deleting\n",
-                           cur_pix, id, p_hdr.span_ix);
-          CHECK_CB(fs, SPIFFS_CHECK_INDEX, SPIFFS_CHECK_DELETE_PAGE, cur_pix,
-                   id);
-          res = spiffs_page_delete(fs, cur_pix);
+                           cur_pgndx, objid, p_hdr.span_ix);
+          CHECK_CB(fs, SPIFFS_CHECK_INDEX, SPIFFS_CHECK_DELETE_PAGE, cur_pgndx,
+                   objid);
+          res = spiffs_page_delete(fs, cur_pgndx);
           SPIFFS_CHECK_RES(res);
           return res_c;
         }
@@ -1577,14 +1577,14 @@ static int32_t spiffs_object_index_consistency_check_v(FAR struct spiffs_s *fs,
 
       if (p_hdr.span_ix == 0)
         {
-          /* objix header page, register objid as reachable */
+          /* objndx header page, register objid as reachable */
 
-          int r = spiffs_object_index_search(fs, id);
+          int r = spiffs_object_index_search(fs, objid);
           if (r == -1)
             {
               /* not registered, do it */
 
-              obj_table[*log_ix] = id & ~SPIFFS_OBJ_ID_IX_FLAG;
+              obj_table[*log_ix] = objid & ~SPIFFS_OBJ_ID_IX_FLAG;
               (*log_ix)++;
               if (*log_ix >= SPIFFS_CFG_LOG_PAGE_SZ(fs) / sizeof(int16_t))
                 {
@@ -1595,32 +1595,32 @@ static int32_t spiffs_object_index_consistency_check_v(FAR struct spiffs_s *fs,
       else
         {
           /* span index
-           * objix page, see if header can be found
+           * objndx page, see if header can be found
            */
 
-          int r = spiffs_object_index_search(fs, id);
+          int r = spiffs_object_index_search(fs, objid);
           uint8_t delete = 0;
           if (r == -1)
             {
               /* not in temporary index, try finding it */
 
-              int16_t objix_hdr_pix;
+              int16_t objhdr_pgndx;
               res =
-                spiffs_obj_lu_find_id_and_span(fs, id | SPIFFS_OBJ_ID_IX_FLAG,
-                                               0, 0, &objix_hdr_pix);
+                spiffs_obj_lu_find_id_and_span(fs, objid | SPIFFS_OBJ_ID_IX_FLAG,
+                                               0, 0, &objhdr_pgndx);
               res_c = SPIFFS_VIS_COUNTINUE_RELOAD;
               if (res == OK)
                 {
                   /* found, register as reachable */
 
-                  obj_table[*log_ix] = id & ~SPIFFS_OBJ_ID_IX_FLAG;
+                  obj_table[*log_ix] = objid & ~SPIFFS_OBJ_ID_IX_FLAG;
                 }
               else if (res == -ENOENT)
                 {
                   /* not found, register as unreachable */
 
                   delete = 1;
-                  obj_table[*log_ix] = id | SPIFFS_OBJ_ID_IX_FLAG;
+                  obj_table[*log_ix] = objid | SPIFFS_OBJ_ID_IX_FLAG;
                 }
               else
                 {
@@ -1646,13 +1646,13 @@ static int32_t spiffs_object_index_consistency_check_v(FAR struct spiffs_s *fs,
 
           if (delete)
             {
-              spiffs_checkinfo("IX: FIXUP: pix " _SPIPRIpg ", obj id:" _SPIPRIid
-                               " spix:" _SPIPRIsp
-                               " is orphan index - deleting\n", cur_pix, id,
+              spiffs_checkinfo("IX: FIXUP: pgndx " _SPIPRIpg ", obj objid:" _SPIPRIid
+                               " spndx:" _SPIPRIsp
+                               " is orphan index - deleting\n", cur_pgndx, objid,
                                p_hdr.span_ix);
               CHECK_CB(fs, SPIFFS_CHECK_INDEX,
-                       SPIFFS_CHECK_DELETE_ORPHANED_INDEX, cur_pix, id);
-              res = spiffs_page_delete(fs, cur_pix);
+                       SPIFFS_CHECK_DELETE_ORPHANED_INDEX, cur_pgndx, objid);
+              res = spiffs_page_delete(fs, cur_pgndx);
               SPIFFS_CHECK_RES(res);
             }
         }
@@ -1676,7 +1676,7 @@ int32_t spiffs_object_index_consistency_check(FAR struct spiffs_s *fs)
    * ids and indicating whether they can be reached or not. Acting as a fifo if
    * object ids cannot fit.  In the temporary object index memory,
    * SPIFFS_OBJ_ID_IX_FLAG bit is used to indicate a reachable/unreachable
-   * object id.
+   * object ID.
    */
 
   memset(fs->work, 0, SPIFFS_CFG_LOG_PAGE_SZ(fs));

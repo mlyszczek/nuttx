@@ -160,8 +160,8 @@ typedef int32_t(*spiffs_erase_t)(uint32_t addr, uint32_t size);
 struct spiffs_s; /* Forward reference */
 typedef void (*spiffs_file_callback)(struct spiffs_s * fs,
                                      enum spiffs_fileop_e op,
-                                     int16_t id,
-                                     int16_t pix);
+                                     int16_t objid,
+                                     int16_t pgndx);
 
 /* Re-entrant semaphore */
 
@@ -198,32 +198,32 @@ struct spiffs_s
   struct spiffs_config_s cfg;       /* File system configuration */
   struct spiffs_sem_s exclsem;      /* Supports mutually exclusive access */
   dq_queue_t objq;                  /* A doubly linked list of open file objects */
-  int16_t free_cursor_block_ix;     /* cursor for free blocks, block index */
-  int16_t cursor_block_ix;          /* Cursor when searching, block index */
+  spiffs_check_callback check_cb;   /* Check callback function */
+  spiffs_file_callback file_cb;     /* File callback function */
   FAR uint8_t *lu_work;             /* Primary work buffer, size of a logical page */
   FAR uint8_t *work;                /* Secondary work buffer, size of a logical page */
-  int free_cursor_obj_lu_entry;     /* Cursor for free blocks, entry index */
-  int cursor_obj_lu_entry;          /* Cursor when searching, entry index */
+  FAR void *cache;                  /* Cache memory */
+  FAR void *user_data;              /* User data */
+  int free_entry;                   /* Cursor for free blocks, entry index */
+  int lu_entry;                     /* Cursor when searching, entry index */
   uint32_t block_count;             /* Number of logical blocks */
   uint32_t free_blocks;             /* Current number of free blocks */
   uint32_t stats_p_allocated;       /* Current number of busy pages */
   uint32_t stats_p_deleted;         /* Current number of deleted pages */
-  uint8_t mounted;                  /* Mounted flag */
-  uint8_t cleaning;                 /* Flag indicating that garbage collector is cleaning */
-  int16_t max_erase_count;          /* Max erase count amongst all blocks */
 #if CONFIG_SPIFFS_GCDBG
   uint32_t stats_gc_runs;
 #endif
-  FAR void *cache;                  /* Cache memory */
   uint32_t cache_size;              /* Cache size */
 #if CONFIG_SPIFFS_CACHEDBG
   uint32_t cache_hits;              /* Number of cache hits */
   uint32_t cache_misses;            /* Number of cache misses */
 #endif
-  spiffs_check_callback check_cb;   /* Check callback function */
-  spiffs_file_callback file_cb;     /* File callback function */
-  FAR void *user_data;              /* User data */
-  uint32_t config_magic;            /* config magic */
+  uint32_t config_magic;            /* Config magic */
+  int16_t free_blkndx;              /* cursor for free blocks, block index */
+  int16_t lu_blkndx;                /* Cursor when searching, block index */
+  int16_t max_erase_count;          /* Max erase count amongst all blocks */
+  uint8_t mounted;                  /* Mounted flag */
+  uint8_t cleaning;                 /* Flag indicating that garbage collector is cleaning */
 };
 
 /* This structure represents the state of an open file */
@@ -244,10 +244,10 @@ struct spiffs_file_s
   int16_t crefs;                    /* Reference count */
   int16_t objid;                    /* Unique ID of the file object */
   uint8_t flags;                    /* See SFO_FLAG_* definitions */
-  int16_t objix_hdr_pix;            /* cached object index header page index */
-  int16_t cursor_objix_pix;         /* cached offset object index page index */
-  int16_t cursor_objix_spix;        /* cached offset object index span index */
-  uint16_t oflags;                  /* File object opent flags */
+  int16_t objhdr_pgndx;             /* Cached object index header page index */
+  int16_t objndx_pgndx;             /* Cached offset object index page index */
+  int16_t objndx_spndx;             /* Cached offset object index span index */
+  uint16_t oflags;                  /* File object open flags */
   off_t size;                       /* size of the file */
   off_t offset;                     /* current absolute offset */
 };
@@ -255,10 +255,10 @@ struct spiffs_file_s
 #if SPIFFS_IX_MAP
 struct spiffs_ix_map_s
 {
-  FAR int16_t *map_buf;             /* Buffer with looked up data pixes */
+  FAR int16_t *map_buf;             /* Buffer with looked up data pgndxes */
   uint32_t offset;                  /* Precise file byte offset */
-  int16_t start_spix;               /* Start data span index of lookup buffer */
-  int16_t end_spix;                 /* End data span index of lookup buffer */
+  int16_t start_spndx;              /* Start data span index of lookup buffer */
+  int16_t end_spndx;                /* End data span index of lookup buffer */
 };
 #endif
 
@@ -326,14 +326,6 @@ int32_t SPIFFS_mount(FAR struct spiffs_s *fs,
 
 void SPIFFS_unmount(FAR struct spiffs_s *fs);
 
-/* Removes a file by path
- *
- * Input Parameters:
- *   fs            the file system struct
- *   path          the path of the file to remove
- */
-  int32_t SPIFFS_remove(FAR struct spiffs_s *fs, const char *path);
-
 /* Renames a file
  *
  * Input Parameters:
@@ -342,7 +334,8 @@ void SPIFFS_unmount(FAR struct spiffs_s *fs);
  *   newPath       new path of file
  */
 
-int32_t SPIFFS_rename(FAR struct spiffs_s *fs, const char *old, const char *newPath);
+int32_t SPIFFS_rename(FAR struct spiffs_s *fs, FAR const char *oldpath,
+                      FAR const char *newpath);
 
 /* Runs a consistency check on given filesystem.
  *
@@ -417,10 +410,10 @@ int32_t SPIFFS_gc(FAR struct spiffs_s *fs, uint32_t size);
  *
  * Input Parameters:
  *   fs            the file system struct
- *   id            the ID of the file to check
+ *   objid         the ID of the file to check
  */
 
-int32_t SPIFFS_eof(FAR struct spiffs_s *fs, int16_t id);
+int32_t SPIFFS_eof(FAR struct spiffs_s *fs, int16_t objid);
 
 /* Registers a callback function that keeps track on operations on file
  * headers. Do note, that this callback is called from within internal spiffs
@@ -459,7 +452,7 @@ int32_t SPIFFS_set_file_callback_func(FAR struct spiffs_s *fs,
  *
  * Input Parameters:
  *   fs      the file system struct
- *   id      the ID of the file to map
+ *   objid   the ID of the file to map
  *   map     a struct spiffs_ix_map_s, describing the index map
  *   offset  absolute file offset where to start the index map
  *   len     length of the mapping in actual file bytes
@@ -468,7 +461,7 @@ int32_t SPIFFS_set_file_callback_func(FAR struct spiffs_s *fs,
  *           SPIFFS_bytes_to_ix_map_entries given the length
  */
 
-int32_t SPIFFS_ix_map(FAR struct spiffs_s *fs, int16_t id,
+int32_t SPIFFS_ix_map(FAR struct spiffs_s *fs, int16_t objid,
                       FAR struct spiffs_ix_map_s *map, off_t offset,
                       uint32_t len, FAR int16_t *map_buf);
 
@@ -482,21 +475,21 @@ int32_t SPIFFS_ix_map(FAR struct spiffs_s *fs, int16_t id,
  *
  * Input Parameters:
  *   fs      the file system struct
- *   id      the ID of the file to unmap
+ *   objid   the ID of the file to unmap
  */
 
-int32_t SPIFFS_ix_unmap(FAR struct spiffs_s *fs, int16_t id);
+int32_t SPIFFS_ix_unmap(FAR struct spiffs_s *fs, int16_t objid);
 
 /* Moves the offset for the index map given in function SPIFFS_ix_map. Parts or
  * all of the map buffer will repopulated.
  *
  * Input Parameters:
  *   fs      the file system struct
- *   id      the mapped ID of the file to remap
+ *   objid   the mapped ID of the file to remap
  *   offset  new absolute file offset where to start the index map
  */
 
-int32_t SPIFFS_ix_remap(FAR struct spiffs_s *fs, int16_t id, uint32_t offs);
+int32_t SPIFFS_ix_remap(FAR struct spiffs_s *fs, int16_t objid, uint32_t offs);
 
 /* Utility function to get number of int16_t entries a map buffer must
  * contain on order to map given amount of file data in bytes.

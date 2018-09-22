@@ -235,12 +235,12 @@ static void spiffs_unlock_reentrant(FAR struct spiffs_sem_s *rsem)
  ****************************************************************************/
 
 static int spiffs_readdir_callback(FAR struct spiffs_s *fs,
-                                   int16_t objid, int16_t bix, int ix_entry,
+                                   int16_t objid, int16_t blkndx, int ix_entry,
                                    FAR const void *user_const_p,
                                    FAR void *user_var_p)
 {
-  struct spiffs_pgobj_ixheader_s objix_hdr;
-  int16_t pix;
+  struct spiffs_pgobj_ixheader_s objhdr;
+  int16_t pgndx;
   int ret;
 
   if (objid == SPIFFS_OBJ_ID_FREE || objid == SPIFFS_OBJ_ID_DELETED ||
@@ -249,11 +249,11 @@ static int spiffs_readdir_callback(FAR struct spiffs_s *fs,
       return SPIFFS_VIS_COUNTINUE;
     }
 
-  pix = SPIFFS_OBJ_LOOKUP_ENTRY_TO_PIX(fs, bix, ix_entry);
+  pgndx = SPIFFS_OBJ_LOOKUP_ENTRY_TO_PIX(fs, blkndx, ix_entry);
   ret = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
-                   0, SPIFFS_PAGE_TO_PADDR(fs, pix),
+                   0, SPIFFS_PAGE_TO_PADDR(fs, pgndx),
                    sizeof(struct spiffs_pgobj_ixheader_s),
-                   (FAR uint8_t *) & objix_hdr);
+                   (FAR uint8_t *) & objhdr);
   if (ret < 0)
     {
       ferr("ERROR: _spiffs_rd failed: %d\n", ret);
@@ -261,8 +261,8 @@ static int spiffs_readdir_callback(FAR struct spiffs_s *fs,
     }
 
   if ((objid & SPIFFS_OBJ_ID_IX_FLAG) &&
-      objix_hdr.p_hdr.span_ix == 0 &&
-      (objix_hdr.p_hdr.flags & (SPIFFS_PH_FLAG_DELET | SPIFFS_PH_FLAG_FINAL |
+      objhdr.p_hdr.span_ix == 0 &&
+      (objhdr.p_hdr.flags & (SPIFFS_PH_FLAG_DELET | SPIFFS_PH_FLAG_FINAL |
                                 SPIFFS_PH_FLAG_IXDELE)) ==
       (SPIFFS_PH_FLAG_DELET | SPIFFS_PH_FLAG_IXDELE))
     {
@@ -272,8 +272,8 @@ static int spiffs_readdir_callback(FAR struct spiffs_s *fs,
       DEBUASSERT(dir != NULL);
       entryp = &dir->fd_dir;
 
-      strncpy(entryp->d_name, (FAR char *)objix_hdr.name, NAME_MAX + 1);
-      entryp->d_type = objix_hdr.type;
+      strncpy(entryp->d_name, (FAR char *)objhdr.name, NAME_MAX + 1);
+      entryp->d_type = objhdr.type;
       return OK;
     }
 
@@ -291,7 +291,7 @@ static int spiffs_open(FAR struct file *filep, FAR const char *relpath,
   FAR struct spiffs_s *fs;
   FAR struct spiffs_file_s *fobj;
   off_t offset;
-  int16_t pix;
+  int16_t pgndx;
   int ret;
 
   finfo("relpath: %s oflags; %04x\n", relpath, oflags);
@@ -333,9 +333,9 @@ static int spiffs_open(FAR struct file *filep, FAR const char *relpath,
 
   /* Check of the file object already exists */
 
-  ret = spiffs_object_find_object_index_header_by_name(fs,
+  ret = spiffs_find_objhdr_pgndx(fs,
                                                        (FAR const uint8_t *)relpath,
-                                                       &pix);
+                                                       &pgndx);
   if (ret < 0 && (oflags & O_CREAT) == 0)
     {
       /* It does not exist and we were not asked to create it */
@@ -361,8 +361,8 @@ static int spiffs_open(FAR struct file *filep, FAR const char *relpath,
           goto errout_with_fileobject;
         }
 
-      ret = spiffs_object_create(fs, objid, (FAR const uint8_t *)relpath, 0,
-                                 DTYPE_FILE, &pix);
+      ret = spiffs_object_create(fs, objid, (FAR const uint8_t *)relpath,
+                                 DTYPE_FILE, &pgndx);
       if (ret < 0)
         {
           goto errout_with_fileobject;
@@ -379,7 +379,7 @@ static int spiffs_open(FAR struct file *filep, FAR const char *relpath,
 
   /* Open the file */
 
-  ret = spiffs_object_open_by_page(fs, pix, fobj, oflags, mode);
+  ret = spiffs_object_open_bypage(fs, pgndx, fobj, oflags, mode);
   if (ret < 0)
     {
       goto errout_with_fileobject;
@@ -389,7 +389,7 @@ static int spiffs_open(FAR struct file *filep, FAR const char *relpath,
 
   if ((oflags & O_TRUNC) != 0)
     {
-      ret = spiffs_object_truncate(fobj, 0, false);
+      ret = spiffs_object_truncate(fs, fobj, 0, false);
       if (ret < 0)
         {
           goto errout_with_fileobject;
@@ -591,9 +591,9 @@ static ssize_t spiffs_write(FAR struct file *filep, FAR const char *buffer,
 
   if (fobj->cache_page == 0)
     {
-      /* See if object id is associated with cache already */
+      /* See if object ID is associated with cache already */
 
-      fobj->cache_page = spiffs_cache_page_get_by_fd(fs, fobj);
+      fobj->cache_page = spiffs_cache_page_get_byfd(fs, fobj);
     }
 
   if ((fobj->flags & O_DIRECT) == 0)
@@ -643,7 +643,7 @@ static ssize_t spiffs_write(FAR struct file *filep, FAR const char *buffer,
 
           if (alloc_cpage)
             {
-              fobj->cache_page = spiffs_cache_page_allocate_by_fd(fs, fobj);
+              fobj->cache_page = spiffs_cache_page_allocate_byfd(fs, fobj);
               if (fobj->cache_page)
                 {
                   fobj->cache_page->offset = offset;
@@ -750,8 +750,8 @@ static off_t spiffs_seek(FAR struct file *filep, off_t offset, int whence)
   FAR struct inode *inode;
   FAR struct spiffs_s *fs;
   FAR struct spiffs_file_s *fobj;
-  int16_t data_spix;
-  int16_t objix_spix;
+  int16_t data_spndx;
+  int16_t objndx_spndx;
   off_t fsize;
   off_t pos;
   int ret;
@@ -828,22 +828,22 @@ static off_t spiffs_seek(FAR struct file *filep, off_t offset, int whence)
   /* Set up for the new file position */
 
 
-  data_spix  = (pos > 0 ? (pos - 1) : 0) / SPIFFS_DATA_PAGE_SIZE(fs);
-  objix_spix = SPIFFS_OBJ_IX_ENTRY_SPAN_IX(fs, data_spix);
+  data_spndx  = (pos > 0 ? (pos - 1) : 0) / SPIFFS_DATA_PAGE_SIZE(fs);
+  objndx_spndx = SPIFFS_OBJ_IX_ENTRY_SPAN_IX(fs, data_spndx);
 
-  if (fobj->cursor_objix_spix != objix_spix)
+  if (fobj->objndx_spndx != objndx_spndx)
     {
-      int16_t pix;
+      int16_t pgndx;
 
       ret = spiffs_obj_lu_find_id_and_span(fs, fobj->objid | SPIFFS_OBJ_ID_IX_FLAG,
-                                           objix_spix, 0, &pix);
+                                           objndx_spndx, 0, &pgndx);
       if (ret < 0)
         {
           goto errout_with_lock;
         }
 
-      fobj->cursor_objix_spix = objix_spix;
-      fobj->cursor_objix_pix  = pix;
+      fobj->objndx_spndx = objndx_spndx;
+      fobj->objndx_pgndx  = pgndx;
     }
 
   filep->f_pos = pos;
@@ -979,10 +979,10 @@ static int spiffs_fstat(FAR const struct file *filep, FAR struct stat *buf)
 
   spiffs_fflush_cache(fobj);
 
-  ret = spiffs_stat_pix(fs, fobj->objix_hdr_pix, fobj->objid, buf);
+  ret = spiffs_stat_pgndx(fs, fobj->objhdr_pgndx, fobj->objid, buf);
   if (ret < 0)
     {
-      ferr("ERROR: spiffs_stat_pix failed: %d\n", ret);
+      ferr("ERROR: spiffs_stat_pgndx failed: %d\n", ret);
     }
 
   spiffs_unlock_file(fobj);
@@ -995,11 +995,21 @@ static int spiffs_fstat(FAR const struct file *filep, FAR struct stat *buf)
 
 static int spiffs_truncate(FAR struct file *filep, off_t length)
 {
+  FAR struct inode *inode;
+  FAR struct spiffs_s *fs;
   FAR struct spiffs_file_s *fobj;
   int ret;
 
   finfo("filep: %p length: %ld\n", filep, (long)length);
   DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL &&  length >= 0);
+
+  /* Get the mountpoint inode reference from the file structure and the
+   * volume state data from the inode structure
+   */
+
+  inode = filep->f_inode;
+  fs    = inode->i_private;
+  DEBUGASSERT(fs != NULL);
 
   /* Recover the file object state from the struct file instance */
 
@@ -1011,7 +1021,7 @@ static int spiffs_truncate(FAR struct file *filep, off_t length)
 
   /* REVISIT:  I believe that this can only truncate to smaller sizes. */
 
-  ret = spiffs_object_truncate(fobj, length, false);
+  ret = spiffs_object_truncate(fs, fobj, length, false);
 
   spiffs_unlock_file(fobj);
   return ret;
@@ -1059,7 +1069,7 @@ static int spiffs_readdir(FAR struct inode *mountpt,
                          FAR struct fs_dirent_s *dir)
 {
   FAR struct spiffs_s *fs;
-  int16_t bix;
+  int16_t blkndx;
   int entry;
   int status;
   int ret;
@@ -1080,10 +1090,10 @@ static int spiffs_readdir(FAR struct inode *mountpt,
 
   ret = spiffs_foreach_objlu(fs, dir->u.spiffs.block, dir->u.spiffs.entry,
                              SPIFFS_VIS_NO_WRAP, 0, spiffs_readdir_callback,
-                             NULL, dir, &bix, &entry);
+                             NULL, dir, &blkndx, &entry);
   if (ret == OK)
     {
-      dir->u.spiffs.block = bix;
+      dir->u.spiffs.block = blkndx;
       dir->u.spiffs.entry = entry + 1;
     }
 
@@ -1245,12 +1255,18 @@ static int spiffs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
 static int spiffs_unlink(FAR struct inode *mountpt, FAR const char *relpath)
 {
   FAR struct spiffs_s *fs;
-  FAR struct spiffs_file_s *fobj = NULL;
+  FAR struct spiffs_file_s *fobj;
   FAR const char *name;
+  int16_t pgndx;
   int ret;
 
   finfo("mountpt: %p relpath: %s\n", mountpt, relpath);
   DEBUGASSERT(mountpt != NULL && relpath != NULL);
+
+  if (strlen(relpath) > SPIFFS_NAME_MAX - 1)
+    {
+      return -ENAMETOOLONG;
+    }
 
   /* Get the file system structure from the inode reference. */
 
@@ -1261,69 +1277,73 @@ static int spiffs_unlink(FAR struct inode *mountpt, FAR const char *relpath)
 
   spiffs_lock_volume(fs);
 
-  /* Find the file object and parent directory associated with this relative
-   * path.  If successful, spiffs_find_file will lock both the file object
-   * and the parent directory and take one reference count on each.
-   */
+  /* Find the page index to the object header associated with this path */
 
-  ret = spiffs_find_file(fs, relpath, &fobj, 0);
-  if (ret < 0)
+  ret = spiffs_find_objhdr_pgndx(fs, (FAR const uint8_t *)relpath, &pgndx);
+  if (ret < OK)
     {
+      fwarn("WARNING: No objhdr found for relpath '%s': %d\n", relpath, ret);
+      goto errout_with_lock;
+    }
+  else if (ret != -ENOENT)
+    {
+      ferr("ERROR: spiffs_find_objhdr_pgndx failed: %d\n", ret);
       goto errout_with_lock;
     }
 
-  DEBUGASSERT(fobj != NULL);
-
-  /* Get the file name from the relative path */
-
-  name = strrchr(relpath, '/');
-  if (name != NULL)
-    {
-      /* Skip over the file '/' character */
-
-      name++;
-    }
-  else
-    {
-      /* The name must lie in the root directory */
-
-      name = relpath;
-    }
-
-#warning Missing logic
-
-  /* If the reference count is not one, then just mark the file as
-   * unlinked
+  /* Check to see if there is an open file reference for the object at this
+   * page index.
    */
 
-  if (fobj->crefs > 1)
+  ret = spiffs_find_fobj_bypgndx(fs, pgndx, &fobj);
+  if (ret >= 0)
     {
-      /* Make the file object as unlinked */
+      /* If so, then we cannot unlink the file now. Just mark the file as
+       * 'unlinked' so that it can be removed when the file object is
+       * released.
+       */
 
       fobj->flags |= SFO_FLAG_UNLINKED;
-
-      /* Release the reference count on the file object */
-
-      fobj->crefs--;
-      spiffs_unlock_file(fobj);
     }
-
-  /* Otherwise we can free resources held by the open file now */
-
   else
     {
-      nxsem_destroy(&fobj->exclsem.sem);
-      spiffs_file_free(fs, fobj);
+      /* Otherwise, we will ne to re-open the file */
+      /* Allocate  new file object */
+
+      fobj = (FAR struct spiffs_file_s *)kmm_zalloc(sizeof(struct spiffs_file_s));
+      if (fobj == NULL)
+        {
+          fwarn("WARNING: Failed to allocate fobjs\n");
+          ret = -ENOMEM;
+          goto errout_with_lock;
+        }
+
+      /* Use the page index to open the file */
+
+      ret = spiffs_object_open_bypage(fs, pgndx, fobj, 0, 0);
+      if (ret < 0)
+        {
+          ferr("ERROR: spiffs_object_open_bypage failed: %d\n", ret);
+          kmm_free(fobj);
+          goto errout_with_lock;
+        }
+
+      /* Now we can remove the file by truncating it to zero length */
+
+      ret = spiffs_object_truncate(fs, fobj, 0, true);
+      kmm_free(fobj);
+
+      if (ret < 0)
+        {
+          ferr("ERROR: spiffs_object_truncate failed: %d\n", ret);
+          goto errout_with_lock;
+        }
     }
 
   /* Release the lock on the volume */
 
   spiffs_unlock_volume(fs);
-
   return OK;
-
-errout_with_objects:
-#warning Missing logic
 
 errout_with_lock:
   spiffs_unlock_volume(fs);
@@ -1396,7 +1416,7 @@ static int spiffs_stat(FAR struct inode *mountpt, FAR const char *relpath,
                       FAR struct stat *buf)
 {
   FAR struct spiffs_s *fs;
-  int16_t pix;
+  int16_t pgndx;
   int ret;
 
   finfo("mountpt=%p relpath=%s buf=%p\n", mountpt, relpath, buf);
@@ -1418,9 +1438,9 @@ static int spiffs_stat(FAR struct inode *mountpt, FAR const char *relpath,
 
   /* Find the object associated with this relative path */
 
-  ret = spiffs_object_find_object_index_header_by_name(fs,
+  ret = spiffs_find_objhdr_pgndx(fs,
                                                        (FAR const uint8_t *)relpath,
-                                                       &pix);
+                                                       &pgndx);
   if (ret < 0)
     {
       goto errout_with_lock;
@@ -1428,10 +1448,10 @@ static int spiffs_stat(FAR struct inode *mountpt, FAR const char *relpath,
 
   /* And get information about the object */
 
-  ret = spiffs_stat_pix(fs, pix, 0, buf);
+  ret = spiffs_stat_pgndx(fs, pgndx, 0, buf);
   if (ret < 0)
     {
-      ferr("ERROR: spiffs_stat_pix failed: %d\n", ret);
+      ferr("ERROR: spiffs_stat_pgndx failed: %d\n", ret);
     }
 
 errout_with_lock:
@@ -1490,6 +1510,14 @@ void spiffs_file_free(FAR struct spiffs_s *fs, FAR struct spiffs_file_s *fobj)
     }
 
   DEBUGASSERT(curr != NULL);
+
+  /* Now we can remove the file by truncating it to zero length */
+
+  ret = spiffs_object_truncate(fs, fobj, 0, true);
+  if (ret < 0)
+    {
+      ferr("ERROR: spiffs_object_truncate failed: %d\n", ret);
+    }
 
   /* Then free the file object itself (which contains the lock we hold) */
 
