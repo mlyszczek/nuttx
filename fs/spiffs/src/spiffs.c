@@ -77,7 +77,8 @@
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
-/* TMPFS helpers */
+
+/* SPIFFS helpers */
 
 static void spiffs_lock_reentrant(FAR struct spiffs_sem_s *sem);
 static void spiffs_unlock_reentrant(FAR struct spiffs_sem_s *sem);
@@ -269,7 +270,7 @@ static int spiffs_readdir_callback(FAR struct spiffs_s *fs,
       FAR struct fs_dirent_s *dir = (FAR struct fs_dirent_s *)user_var_p;
       FAR struct dirent *entryp;
 
-      DEBUASSERT(dir != NULL);
+      DEBUGASSERT(dir != NULL);
       entryp = &dir->fd_dir;
 
       strncpy(entryp->d_name, (FAR char *)objhdr.name, NAME_MAX + 1);
@@ -421,15 +422,13 @@ static int spiffs_open(FAR struct file *filep, FAR const char *relpath,
 
   /* Add the new file object to the tail of the open file list */
 
-  dq_addlast((FAR sq_entry_t *)fobj, &fs->objq);
+  dq_addlast((FAR dq_entry_t *)fobj, &fs->objq);
 
   spiffs_unlock_volume(fs);
   return OK;
 
 errout_with_fileobject:
   kmm_free(fobj);
-
-errout_with_lock:
   spiffs_unlock_volume(fs);
   return ret;
 }
@@ -443,7 +442,6 @@ static int spiffs_close(FAR struct file *filep)
   FAR struct inode *inode;
   FAR struct spiffs_s *fs;
   FAR struct spiffs_file_s *fobj;
-  int ret;
 
   finfo("filep: %p\n", filep);
   DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
@@ -506,8 +504,6 @@ static ssize_t spiffs_read(FAR struct file *filep, FAR char *buffer,
   FAR struct spiffs_s *fs;
   FAR struct spiffs_file_s *fobj;
   ssize_t nread;
-  off_t startpos;
-  off_t endpos;
 
   finfo("filep: %p buffer: %p buflen: %lu\n",
         filep, buffer, (unsigned long)buflen);
@@ -1071,7 +1067,6 @@ static int spiffs_readdir(FAR struct inode *mountpt,
   FAR struct spiffs_s *fs;
   int16_t blkndx;
   int entry;
-  int status;
   int ret;
 
   finfo("mountpt: %p dir: %p\n",  mountpt, dir);
@@ -1192,9 +1187,7 @@ static int spiffs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
   uint32_t data_pgsize;
   uint32_t ndata_pages;
   uint32_t nfile_objs;
-  uint32_t total;
   uint32_t used;
-  int ret = OK;
 
   finfo("mountpt: %p buf: %p\n", mountpt, buf);
   DEBUGASSERT(mountpt != NULL && buf != NULL);
@@ -1218,7 +1211,6 @@ static int spiffs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
    /* -2 for  spare blocks, +1 for emergency page */
 
   ndata_pages      = (blocks - 2) * (pages_per_block - obj_lupages) + 1;
-  total            = ndata_pages * data_pgsize;
   used             = fs->stats_p_allocated * data_pgsize;
 
   /* Count the number of file objects */
@@ -1256,7 +1248,6 @@ static int spiffs_unlink(FAR struct inode *mountpt, FAR const char *relpath)
 {
   FAR struct spiffs_s *fs;
   FAR struct spiffs_file_s *fobj;
-  FAR const char *name;
   int16_t pgndx;
   int ret;
 
