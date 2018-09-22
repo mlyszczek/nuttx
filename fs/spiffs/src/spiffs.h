@@ -54,7 +54,10 @@ extern "C"
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <sys/mount.h>
 #include <queue.h>
+
+#include <nuttx/mtd/mtd.h>
 
 #include "spiffs_config.h"
 
@@ -173,6 +176,7 @@ struct spiffs_sem_s
 
 /* spiffs SPI configuration struct */
 
+#warning Obsolete: Remove struct spiffs_config_s
 struct spiffs_config_s
 {
   spiffs_read_t hal_read_f;         /* physical read function */
@@ -192,17 +196,20 @@ struct spiffs_config_s
 /* This structure represents the current state of an SPIFFS volume */
 
 struct spiffs_file_s;               /* Forward reference */
+
 struct spiffs_s
 {
+#warning Obsolete: Remove struct spiffs_config_s
   struct spiffs_config_s cfg;       /* File system configuration */
   struct spiffs_sem_s exclsem;      /* Supports mutually exclusive access */
+  struct mtd_geometry_s geo;        /* FLASH geometry */
   dq_queue_t objq;                  /* A doubly linked list of open file objects */
   spiffs_check_callback check_cb;   /* Check callback function */
   spiffs_file_callback file_cb;     /* File callback function */
+  FAR struct mtd_dev_s *mtd;        /* The contained MTD interface */
   FAR uint8_t *lu_work;             /* Primary work buffer, size of a logical page */
   FAR uint8_t *work;                /* Secondary work buffer, size of a logical page */
   FAR void *cache;                  /* Cache memory */
-  FAR void *user_data;              /* User data */
   int free_entry;                   /* Cursor for free blocks, entry index */
   int lu_entry;                     /* Cursor when searching, entry index */
   uint32_t block_count;             /* Number of logical blocks */
@@ -221,7 +228,6 @@ struct spiffs_s
   int16_t free_blkndx;              /* cursor for free blocks, block index */
   int16_t lu_blkndx;                /* Cursor when searching, block index */
   int16_t max_erase_count;          /* Max erase count amongst all blocks */
-  uint8_t mounted;                  /* Mounted flag */
   uint8_t cleaning;                 /* Flag indicating that garbage collector is cleaning */
 };
 
@@ -296,35 +302,6 @@ struct spiffs_ix_map_s
 int32_t SPIFFS_probe_fs(FAR struct spiffs_config_s *config);
 #endif  /* SPIFFS_USE_MAGIC && SPIFFS_USE_MAGIC_LENGTH */
 
-/* Initializes the file system dynamic parameters and mounts the filesystem.
- * If SPIFFS_USE_MAGIC is enabled the mounting may fail with SPIFFS_ERR_NOT_A_FS
- * if the flash does not contain a recognizable file system.
- * In this case, SPIFFS_format must be called prior to remounting.
- *
- * Input Parameters:
- *   fs            the file system struct
- *   config        the physical and logical configuration of the file system
- *   work          a memory work buffer comprising 2*config->log_page_size
- *                 bytes used throughout all file system operations
- *   cache         memory for cache, may be null
- *   cache_size    memory size of cache
- *   check_cb      callback function for reporting during consistency checks
- */
-
-int32_t SPIFFS_mount(FAR struct spiffs_s *fs,
-                     FAR struct spiffs_config_s *config, FAR uint8_t *work,
-                     void *cache, uint32_t cache_size,
-                     spiffs_check_callback check_cb);
-
-/* Unmounts the file system. All file handles will be flushed of any
- * cached writes and closed.
- *
- * Input Parameters:
- *   fs            the file system struct
- */
-
-void SPIFFS_unmount(FAR struct spiffs_s *fs);
-
 /* Renames a file
  *
  * Input Parameters:
@@ -348,10 +325,6 @@ int32_t SPIFFS_check(FAR struct spiffs_s *fs);
  *
  * NB: formatting is awkward. Due to backwards compatibility, SPIFFS_mount
  * MUST be called prior to formatting in order to configure the filesystem.
- * If SPIFFS_mount succeeds, SPIFFS_unmount must be called before calling
- * SPIFFS_format.
- * If SPIFFS_mount fails, SPIFFS_format can be called directly without calling
- * SPIFFS_unmount first.
  *
  * Input Parameters:
  *   fs            the file system struct

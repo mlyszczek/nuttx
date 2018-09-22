@@ -108,9 +108,9 @@ static int  spiffs_readdir(FAR struct inode *mountpt,
               FAR struct fs_dirent_s *dir);
 static int  spiffs_rewinddir(FAR struct inode *mountpt,
               FAR struct fs_dirent_s *dir);
-static int  spiffs_bind(FAR struct inode *blkdriver, FAR const void *data,
+static int  spiffs_bind(FAR struct inode *mtdinode, FAR const void *data,
               FAR void **handle);
-static int  spiffs_unbind(FAR void *handle, FAR struct inode **blkdriver,
+static int  spiffs_unbind(FAR void *handle, FAR struct inode **mtdinode,
               unsigned int flags);
 static int  spiffs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf);
 static int  spiffs_unlink(FAR struct inode *mountpt, FAR const char *relpath);
@@ -1120,56 +1120,206 @@ static int spiffs_rewinddir(FAR struct inode *mountpt,
  * Name: spiffs_bind
  ****************************************************************************/
 
-static int spiffs_bind(FAR struct inode *blkdriver, FAR const void *data,
-                      FAR void **handle)
+static int spiffs_bind(FAR struct inode *mtdinode, FAR const void *data,
+                       FAR void **handle)
 {
   FAR struct spiffs_s *fs;
+  FAR struct mtd_dev_s *mtd;
+  FAR uint8_t *work;
+  size_t cache_size;
+  size_t cache_max;
+  size_t work_size;
+  size_t addrmask;
+  int ret;
 
-  finfo("blkdriver: %p data: %p handle: %p\n", blkdriver, data, handle);
-  DEBUGASSERT(blkdriver == NULL && handle != NULL);
+  finfo("mtdinode: %p data: %p handle: %p\n", mtdinode, data, handle);
+  DEBUGASSERT(mtdinode == NULL && handle != NULL);
+
+  /* Extract the MTD interface reference */
+
+  DEBUGASSERT(INODE_IS_MTD(mtdinode) && mtdinode->u.i_mtd != NULL);
+  mtd = mtdinode->u.i_mtd;
 
   /* Create an instance of the SPIFFS file system */
 
   fs = (FAR struct spiffs_s *)kmm_zalloc(sizeof(struct spiffs_s));
   if (fs == NULL)
     {
+      ferr("ERROR:  Failed to allocate volume structure\n");
       return -ENOMEM;
     }
 
-#warning Missing logic
+  fs->mtd = mtd;
+
+  /* Get the MTD geometry */
+
+  ret = MTD_IOCTL(mtd, MTDIOC_GEOMETRY, (unsigned long)((uintptr_t)&fs->geo));
+  if (ret < 0)
+    {
+      ferr("ERROR:  MTD_IOCTL(MTDIOC_GEOMETRY) failed: %d\n", ret);
+      goto errout_with_volume;
+    }
+
+#warning REVISIT:  Need to get rid of obsolete config
+//  memcpy(&fs->cfg, config, sizeof(struct spiffs_config_s));
+  fs->block_count = SPIFFS_CFG_PHYS_SZ(fs) / SPIFFS_CFG_LOG_BLOCK_SZ(fs);
+
+  /* Get the aligned cache size */
+
+  addrmask   = (sizeof(FAR void *) - 1);
+  cache_size = (CONFIG_SPIFFS_CACHE_SIZE + addrmask) & ~addrmask;
+
+  /* Don't let the cache size exceed the maximum that is needed */
+
+  cache_max  = SPIFFS_CFG_LOG_PAGE_SZ(fs) << 5;
+  if (cache_size > cache_max)
+    {
+      cache_size = cache_max;
+    }
+
+  /* Allocate the cache */
+
+  fs->cache_size = cache_size;
+  fs->cache      = (FAR void *)kmm_malloc(cache_size);
+
+  if (fs->cache == NULL)
+    {
+      ferr("ERROR:  Failed to allocate volume structure\n");
+      ret = -ENOMEM;
+      goto errout_with_volume;
+    }
+
+  spiffs_cache_init(fs);
+
+  /* Allocate the memory work buffer comprising 2*config->log_page_size bytes
+   * used throughout all file system operations
+   */
+
+  work_size = SPIFFS_CFG_LOG_PAGE_SZ(fs) << 1;
+  work      = (FAR uint8_t *)kmm_malloc(work_size);
+
+  if (work == NULL)
+    {
+      ferr("ERROR:  Failed to allocate work buffer\n");
+      ret = -ENOMEM;
+      goto errout_with_cache;
+    }
+
+  fs->work    = &work[0];
+  fs->lu_work = &work[work_size >> 1];
+
+#if SPIFFS_USE_MAGIC
+  /* Check if magic is possible */
+
+  if (!SPIFFS_CHECK_MAGIC_POSSIBLE(fs))
+    {
+      ferr("ERROR: Magic is not possible\n");
+      ret = -ENXIO;
+      goto errout_with_work;
+    }
+#endif
+
+  fs->config_magic = SPIFFS_SUPER_MAGIC;
+
+  /* Check the file system */
+
+  ret = spiffs_obj_lu_scan(fs);
+  if (ret < 0)
+    {
+      ferr("ERROR: spiffs_obj_lu_scan() failed: %d\n", ret);
+      goto errout_with_work;
+    }
+
+  finfo("page index byte len:         %u\n",
+        (unsigned int)SPIFFS_CFG_LOG_PAGE_SZ(fs));
+  finfo("object lookup pages:         %u\n",
+        (unsigned int)SPIFFS_OBJ_LOOKUP_PAGES(fs));
+  finfo("page pages per block:        %u\n",
+        (unsigned int)SPIFFS_PAGES_PER_BLOCK(fs));
+  finfo("page header length:          %u\n",
+        (unsigned int)sizeof(struct spiffs_page_header_s));
+  finfo("object header index entries: %u\n",
+        (unsigned int)SPIFFS_OBJ_HDR_IX_LEN(fs));
+  finfo("object index entries:        %u\n",
+        (unsigned int)SPIFFS_OBJ_IX_LEN(fs));
+  finfo("free blocks:                 %u\n",
+        (unsigned int)fs->free_blocks);
+
+  fs->check_cb = check_cb;
 
   /* Return the new file system handle */
 
   *handle = (FAR void *)fs;
   return OK;
+
+errout_with_work:
+  kmm_free(fs->work);
+
+errout_with_cache:
+  kmm_free(fs->cache);
+
+errout_with_volume:
+  kmm_free(fs);
+  return ret;
 }
 
 /****************************************************************************
  * Name: spiffs_unbind
  ****************************************************************************/
 
-static int spiffs_unbind(FAR void *handle, FAR struct inode **blkdriver,
+static int spiffs_unbind(FAR void *handle, FAR struct inode **mtdinode,
                          unsigned int flags)
 {
   FAR struct spiffs_s *fs = (FAR struct spiffs_s *)handle;
+  FAR struct spiffs_file_s *fobj;
   int ret;
 
-  finfo("handle: %p blkdriver: %p flags: %02x\n",
-        handle, blkdriver, flags);
+  finfo("handle: %p mtdinode: %p flags: %02x\n",
+        handle, mtdinode, flags);
   DEBUGASSERT(fs != NULL);
 
   /* Lock the file system */
 
   spiffs_lock_volume(fs);
 
-  /* Traverse all directory entries (recursively), freeing all resources. */
-#warning Missing logic
+  /* Are there open file system?  If so, are we being forced to unmount? */
 
-  /* Now we can destroy the root file system and the file system itself. */
-#warning Missing logic
+  if (!dq_empty(&fs->objq) && (flags & MNT_FORCE) == 0)
+    {
+      fwarn("WARNING: Open files and umount not forced\n");
+      ret = -EBUSY;
+      goto errout_with_lock;
+    }
+
+  /* Release all of the open file objects... Very scary stuff. */
+
+  while ((fobj  = (FAR struct spiffs_file_s *)dq_peek(&fs->objq)) != NULL)
+    {
+      /* Free the file object */
+
+      spiffs_file_free(fs, fobj);
+    }
+
+ /* Free allocated working buffers */
+
+  if (fs->work != NULL)
+    {
+      kmm_free(fs->work);
+    }
+
+  if (fs->cache != NULL)
+    {
+      kmm_free(fs->cache);
+    }
+
+   /* Free the volume memory (note that the semaphore is now stale!) */
 
   nxsem_destroy(&fs->exclsem.sem);
   kmm_free(fs);
+  ret = OK;
+
+errout_with_lock:
+  spiffs_unlock_volume(fs);
   return ret;
 }
 
