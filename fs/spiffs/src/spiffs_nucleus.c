@@ -2940,7 +2940,7 @@ static int32_t spiffs_obj_lu_find_free_obj_id_bitmap_v(FAR struct spiffs_s *fs,
               if (strcmp((const char *)user_const_p, (char *)objhdr.name) ==
                   0)
                 {
-                  return SPIFFS_ERR_CONFLICTING_NAME;
+                  return -EEXIST;
                 }
             }
         }
@@ -2984,10 +2984,9 @@ static int32_t spiffs_obj_lu_find_free_obj_id_compact_v(FAR struct spiffs_s *fs,
           /* ok object look up entry */
 
           if (state->conflicting_name &&
-              strcmp((const char *)state->conflicting_name,
-                     (char *)objhdr.name) == 0)
+              strcmp((const char *)state->conflicting_name, (char *)objhdr.name) == 0)
             {
-              return SPIFFS_ERR_CONFLICTING_NAME;
+              return -EEXIST;
             }
 
           objid &= ~SPIFFS_OBJ_ID_IX_FLAG;

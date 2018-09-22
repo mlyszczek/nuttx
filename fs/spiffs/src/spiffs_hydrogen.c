@@ -371,38 +371,40 @@ static int spiffs_fflush_cache(FAR struct spiffs_file_s *fobj)
   return ret;
 }
 
-int32_t SPIFFS_rename(FAR struct spiffs_s *fs, const char *old_path, const char *new_path)
+int SPIFFS_rename(FAR struct spiffs_s *fs, FAR const char *oldpath,
+                  FAR const char *newpath)
 {
-  int16_t pgndx_old;
-  int16_t pgndx_dummy;
   FAR struct spiffs_file_s *fobj;
-  int32_t ret;
+  int16_t oldpgndx;
+  int16_t newpgndx;
+  int ret;
 
-  finfo("%s %s %s\n", __func__, old_path, new_path);
+  finfo("%s %s %s\n", __func__, oldpath, newpath);
 
-  if (strlen(new_path) > SPIFFS_NAME_MAX - 1 ||
-      strlen(old_path) > SPIFFS_NAME_MAX - 1)
+  if (strlen(newpath) > SPIFFS_NAME_MAX - 1 ||
+      strlen(oldpath) > SPIFFS_NAME_MAX - 1)
     {
       return -ENAMETOOLONG;
     }
 
+  /* Get the page index of the object header for the oldpath */
 
-  ret = spiffs_find_objhdr_pgndx(fs, (const uint8_t *)old_path,
-                                                       &pgndx_old);
+  ret = spiffs_find_objhdr_pgndx(fs, (FAR const uint8_t *)oldpath, &oldpgndx);
   if (ret < 0)
     {
       return ret;
     }
 
-  ret = spiffs_find_objhdr_pgndx(fs, (const uint8_t *)new_path,
-                                                       &pgndx_dummy);
+  /* Check if there is any file object corresponding to the newpath */
+
+  ret = spiffs_find_objhdr_pgndx(fs, (FAR const uint8_t *)newpath, &newpgndx);
   if (ret == -ENOENT)
     {
       ret = OK;
     }
   else if (ret == OK)
     {
-      ret = SPIFFS_ERR_CONFLICTING_NAME;
+      ret = -EEXIST;
     }
 
   if (ret < 0)
@@ -418,16 +420,15 @@ int32_t SPIFFS_rename(FAR struct spiffs_s *fs, const char *old_path, const char 
       return -ENOMEM;
     }
 
-  ret = spiffs_object_open_bypage(fs, pgndx_old, fobj, 0, 0);
+  ret = spiffs_object_open_bypage(fs, oldpgndx, fobj, 0, 0);
   if (ret < 0)
     {
       kmm_free(fobj);
       return ret;
     }
 
-
   ret = spiffs_object_update_index_hdr(fs, fobj, fobj->objid, fobj->objhdr_pgndx, 0,
-                                       (const uint8_t *)new_path, 0, &pgndx_dummy);
+                                       (const uint8_t *)newpath, 0, &newpgndx);
 
   kmm_free(fobj);
   return ret;

@@ -77,7 +77,6 @@ extern "C"
 #define SPIFFS_ERR_INDEX_FREE           -10018
 #define SPIFFS_ERR_INDEX_LU             -10019
 #define SPIFFS_ERR_INDEX_INVALID        -10020
-#define SPIFFS_ERR_CONFLICTING_NAME     -10023
 #define SPIFFS_ERR_NOT_A_FS             -10025
 #define SPIFFS_ERR_MAGIC_NOT_POSSIBLE   -10028
 #define SPIFFS_ERR_NO_DELETED_BLOCKS    -10029
@@ -330,12 +329,12 @@ void SPIFFS_unmount(FAR struct spiffs_s *fs);
  *
  * Input Parameters:
  *   fs            the file system struct
- *   old           path of file to rename
- *   newPath       new path of file
+ *   oldpath       path of file to rename
+ *   newpath       new path of file
  */
 
-int32_t SPIFFS_rename(FAR struct spiffs_s *fs, FAR const char *oldpath,
-                      FAR const char *newpath);
+int SPIFFS_rename(FAR struct spiffs_s *fs, FAR const char *oldpath,
+                  FAR const char *newpath);
 
 /* Runs a consistency check on given filesystem.
  *
