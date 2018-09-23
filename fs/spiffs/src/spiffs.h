@@ -81,7 +81,6 @@ extern "C"
 #define SPIFFS_ERR_INDEX_INVALID        -10020
 #define SPIFFS_ERR_NOT_A_FS             -10025
 #define SPIFFS_ERR_MAGIC_NOT_POSSIBLE   -10028
-#define SPIFFS_ERR_NO_DELETED_BLOCKS    -10029
 #define SPIFFS_ERR_PROBE_TOO_FEW_BLOCKS -10034
 #define SPIFFS_ERR_PROBE_NOT_A_FS       -10035
 #define SPIFFS_ERR_IX_MAP_UNMAPPED      -10037
@@ -233,7 +232,7 @@ int spiffs_stat_pgndx(FAR struct spiffs_s *fs, int16_t pgndx, int16_t objid,
  *            file object instance
  *
  * Returned Value:
- *   Zero (OK) is returned on success; A negated errno value is returnd on
+ *   Zero (OK) is returned on success; A negated errno value is returned on
  *   any failure.
  *
  ****************************************************************************/
@@ -254,7 +253,7 @@ int spiffs_find_fobj_bypgndx(FAR struct spiffs_s *fs, int16_t pgndx,
  *            file object instance
  *
  * Returned Value:
- *   Zero (OK) is returned on success; A negated errno value is returnd on
+ *   Zero (OK) is returned on success; A negated errno value is returned on
  *   any failure.
  *
  ****************************************************************************/
@@ -263,13 +262,14 @@ int spiffs_find_fobj_byobjid(FAR struct spiffs_s *fs, int16_t objid,
                              FAR struct spiffs_file_s **ppfobj);
 
 /****************************************************************************
- * Name: spiffs_fobj_write
+ * Name: spiffs_fflush_cache
  *
  * Description:
  *   Checks if there are any cached writes for the object ID associated with
  *   given file object. If so, these writes are flushed.
  *
  * Input Parameters:
+ *   fs     - A reference to the SPIFFS volume object instance
  *   fobj   - A reference to the file object to flush
  *
  * Returned Value:
@@ -278,7 +278,8 @@ int spiffs_find_fobj_byobjid(FAR struct spiffs_s *fs, int16_t objid,
  *
  ****************************************************************************/
 
-ssize_t spiffs_fflush_cache(FAR struct spiffs_file_s *fobj);
+ssize_t spiffs_fflush_cache(FAR struct spiffs_s *fs,
+                            FAR struct spiffs_file_s *fobj);
 
 /****************************************************************************
  * Name: spiffs_fobj_write
@@ -302,6 +303,30 @@ ssize_t spiffs_fflush_cache(FAR struct spiffs_file_s *fobj);
 ssize_t spiffs_fobj_write(FAR struct spiffs_s *fs,
                           FAR struct spiffs_file_s *fobj,
                           FAR const void *buffer, off_t offset, size_t len);
+
+/****************************************************************************
+ * Name: spiffs_fobj_read
+ *
+ * Description:
+ *   Read from a file object
+ *
+ * Input Parameters:
+ *   fs     - A reference to the volume structure
+ *   fobj   - A reference to the file object to read from
+ *   buffer - The location that the data is read to
+ *   offset - The FLASH offset to be read
+ *   len    - The number of bytes to be read
+ *   fpos   - The file position to read from
+ *
+ * Returned Value:
+ *   On success, then number of bytes written is returned.  A negated errno
+ *   value is returned on any failure.
+ *
+ ****************************************************************************/
+
+ssize_t spiffs_fobj_read(FAR struct spiffs_s *fs,
+                         FAR struct spiffs_file_s *fobj, FAR void *buffer,
+                         size_t buflen, off_t fpos);
 
 /****************************************************************************
  * Name: spiffs_fobj_free

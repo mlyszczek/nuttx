@@ -49,6 +49,7 @@
 
 #include "spiffs.h"
 #include "spiffs_mtd.h"
+#include "spiffs_gc.h"
 #include "spiffs_nucleus.h"
 
 /****************************************************************************
@@ -505,12 +506,17 @@ int32_t spiffs_obj_lu_find_free(FAR struct spiffs_s *fs,
   if (fs->free_blocks < 2)
     {
       ret = spiffs_gc_quick(fs, 0);
-      if (ret == SPIFFS_ERR_NO_DELETED_BLOCKS)
+
+      /* spiffs_gc_quick() will return -ENODATA if no blocks were freed */
+
+      if (ret == -ENODATA)
         {
           ret = OK;
         }
-
-      SPIFFS_CHECK_RES(ret);
+      else if (ret < 0)
+        {
+          return ret;
+        }
 
       if (fs->free_blocks < 2)
         {

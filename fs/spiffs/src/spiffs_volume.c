@@ -47,6 +47,7 @@
 #include <nuttx/config.h>
 
 #include <sys/stat.h>
+#include <fcntl.h>
 
 #include <nuttx/kmalloc.h>
 
@@ -132,7 +133,7 @@ int spiffs_stat_pgndx(FAR struct spiffs_s *fs, int16_t pgndx, int16_t objid,
  *            file object instance
  *
  * Returned Value:
- *   Zero (OK) is returned on success; A negated errno value is returnd on
+ *   Zero (OK) is returned on success; A negated errno value is returned on
  *   any failure.
  *
  ****************************************************************************/
@@ -175,7 +176,7 @@ int spiffs_find_fobj_bypgndx(FAR struct spiffs_s *fs, int16_t pgndx,
  *            file object instance
  *
  * Returned Value:
- *   Zero (OK) is returned on success; A negated errno value is returnd on
+ *   Zero (OK) is returned on success; A negated errno value is returned on
  *   any failure.
  *
  ****************************************************************************/
@@ -206,13 +207,14 @@ int spiffs_find_fobj_byobjid(FAR struct spiffs_s *fs, int16_t objid,
 }
 
 /****************************************************************************
- * Name: spiffs_fobj_write
+ * Name: spiffs_fflush_cache
  *
  * Description:
  *   Checks if there are any cached writes for the object ID associated with
  *   given file object. If so, these writes are flushed.
  *
  * Input Parameters:
+ *   fs     - A reference to the SPIFFS volume object instance
  *   fobj   - A reference to the file object to flush
  *
  * Returned Value:
@@ -221,9 +223,9 @@ int spiffs_find_fobj_byobjid(FAR struct spiffs_s *fs, int16_t objid,
  *
  ****************************************************************************/
 
-ssize_t spiffs_fflush_cache(FAR struct spiffs_file_s *fobj)
+ssize_t spiffs_fflush_cache(FAR struct spiffs_s *fs,
+                            FAR struct spiffs_file_s *fobj)
 {
-  FAR struct spiffs_s *fs = fobj->fs;
   ssize_t nwritten = 0;
 
   /* If we were asked to use direct hardware accessed, then don't bother
@@ -242,17 +244,17 @@ ssize_t spiffs_fflush_cache(FAR struct spiffs_file_s *fobj)
       if (fobj->cache_page)
         {
           spiffs_cacheinfo("Flushing cache page %d for objid=%d offset=%d size=%d\n",
-                           fobj->cache_page->ndx, fobj->objid,
+                           fobj->cache_page->ix, fobj->objid,
                            fobj->cache_page->offset, fobj->cache_page->size);
 
           nwritten =
             spiffs_fobj_write(fs, fobj,
                               spiffs_get_cache_page(fs, spiffs_get_cache(fs),
-                                                    fobj->cache_page->ndx),
+                                                    fobj->cache_page->ix),
                               fobj->cache_page->offset, fobj->cache_page->size);
           if (nwritten < 0)
             {
-              ferr("ERROR: spiffs_fobj_write failed %d\n", (int)ssize_t;
+              ferr("ERROR: spiffs_fobj_write failed %d\n", (int)nwritten);
             }
 
           spiffs_cache_fd_release(fs, fobj->cache_page);
@@ -290,7 +292,7 @@ ssize_t spiffs_fobj_write(FAR struct spiffs_s *fs,
 
   if (fobj->size != SPIFFS_UNDEFINED_LEN && offset < fobj->size)
     {
-      FAR uint8_t *tmp;
+      FAR const uint8_t *tmp;
       ssize_t wrsize;
 
       wrsize   = MIN((ssize_t)(fobj->size - offset), len);
@@ -303,8 +305,8 @@ ssize_t spiffs_fobj_write(FAR struct spiffs_s *fs,
 
       remaining -= nwritten;
 
-      tmp        = (FAR uint8_t *)buffer;
-      buf8      += nwritten;
+      tmp        = (FAR const uint8_t *)buffer;
+      tmp       += nwritten;
       buffer     = tmp;
       offset    += nwritten;
     }
@@ -367,7 +369,7 @@ ssize_t spiffs_fobj_read(FAR struct spiffs_s *fs,
       return 0;
     }
 
-  spiffs_fflush_cache(fobj);
+  spiffs_fflush_cache(fs, fobj);
 
   /* Check for attempts to read beyond the end of the file */
 
@@ -389,7 +391,7 @@ ssize_t spiffs_fobj_read(FAR struct spiffs_s *fs,
         {
           /* Then read from the file object */
 
-          nread = spiffs_object_read(fs, fobj, fpos, avail,
+          nread = spiffs_object_read(fs, fobj, fpos, buflen,
                                      (FAR uint8_t *)buffer);
         }
     }
@@ -397,7 +399,7 @@ ssize_t spiffs_fobj_read(FAR struct spiffs_s *fs,
     {
       /* Reading within file size */
 
-      nread = spiffs_object_read(fs, fobj, fs->f_pos, buflen,
+      nread = spiffs_object_read(fs, fobj, fpos, buflen,
                                  (FAR uint8_t *)buffer);
     }
 
@@ -426,7 +428,7 @@ void spiffs_fobj_free(FAR struct spiffs_s *fs, FAR struct spiffs_file_s *fobj)
 
   /* Flush any buffered write data */
 
-  ret = spiffs_fflush_cache(fobj);
+  ret = spiffs_fflush_cache(fs, fobj);
   if (ret < 0)
     {
       ferr("ERROR: spiffs_fflush_cache failed: %d\n", ret);

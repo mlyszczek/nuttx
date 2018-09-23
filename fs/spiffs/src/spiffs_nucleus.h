@@ -578,13 +578,6 @@ int     spiffs_object_modify(FAR struct spiffs_s *fs,
           size_t len);
 int32_t spiffs_find_objhdr_pgndx(FAR struct spiffs_s *fs,
           const uint8_t name[SPIFFS_NAME_MAX], FAR int16_t *pgndx);
-int     spiffs_gc_check(FAR struct spiffs_s *fs, off_t len);
-int32_t spiffs_gc_erase_page_stats(FAR struct spiffs_s *fs, int16_t blkndx);
-int32_t spiffs_gc_find_candidate(FAR struct spiffs_s *fs,
-          FAR int16_t ** block_candidate, FAR int *candidate_count,
-          char fs_crammed);
-int32_t spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx);
-int32_t spiffs_gc_quick(FAR struct spiffs_s *fs, uint16_t max_free_pages);
 void    spiffs_cache_init(FAR struct spiffs_s *fs);
 void    spiffs_cache_drop_page(FAR struct spiffs_s *fs, int16_t pgndx);
 FAR struct spiffs_cache_page_s *spiffs_cache_page_allocate_byfd(FAR struct spiffs_s *fs,

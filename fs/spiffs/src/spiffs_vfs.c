@@ -64,6 +64,7 @@
 
 #include "spiffs.h"
 #include "spiffs_nucleus.h"
+#include "spiffs_gc.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -522,10 +523,10 @@ static ssize_t spiffs_read(FAR struct file *filep, FAR char *buffer,
 
   /* Read from FLASH */
 
-  nread = spiffs_fobj_read(fs, fobj, buffer, buflen);
+  nread = spiffs_fobj_read(fs, fobj, buffer, buflen, filep->f_pos);
   if (nread > 0)
     {
-      filep->f_pos + = nread;
+      filep->f_pos += nread;
     }
 
   /* Release the lock on the file system */
@@ -768,7 +769,7 @@ static off_t spiffs_seek(FAR struct file *filep, off_t offset, int whence)
 
   /* Get the new file offset */
 
-  spiffs_fflush_cache(fobj);
+  spiffs_fflush_cache(fs, fobj);
 
   fsize = fobj->size == SPIFFS_UNDEFINED_LEN ? 0 : fobj->size;
 
@@ -992,7 +993,7 @@ static int spiffs_sync(FAR struct file *filep)
 
   /* Flush all cached write data */
 
-  ret = spiffs_fflush_cache(fobj);
+  ret = spiffs_fflush_cache(fs, fobj);
 
   spiffs_unlock_volume(fs);
   return ret;
@@ -1073,7 +1074,7 @@ static int spiffs_fstat(FAR const struct file *filep, FAR struct stat *buf)
 
   /* Flush the cache and perform the common stat() operation */
 
-  spiffs_fflush_cache(fobj);
+  spiffs_fflush_cache(fs, fobj);
 
   ret = spiffs_stat_pgndx(fs, fobj->objhdr_pgndx, fobj->objid, buf);
   if (ret < 0)
