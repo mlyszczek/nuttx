@@ -1122,7 +1122,7 @@ void spiffs_cb_object_event(FAR struct spiffs_s *fs,
 
               /* Remove the file object */
 
-              spiffs_file_free(fs, fobj);
+              spiffs_fobj_free(fs, fobj);
             }
         }
 
@@ -2528,7 +2528,7 @@ ssize_t spiffs_object_read(FAR struct spiffs_s *fs,
 
       if (len_to_read <= 0)
         {
-          ret = SPIFFS_ERR_END_OF_OBJECT;
+          ret = 0;
           break;
         }
 
@@ -2823,62 +2823,6 @@ int32_t spiffs_obj_lu_find_free_obj_id(FAR struct spiffs_s *fs, int16_t *objid,
           state.conflicting_name = 0;   /* searched for conflicting name once,
                                          * no need to do it again */
         }
-    }
-
-  return ret;
-}
-
-/* Given a object ID, find the corresponding file object instance */
-
-int spiffs_find_fobj_byobjid(FAR struct spiffs_s *fs, int16_t objid,
-                             FAR struct spiffs_file_s **ppfobj)
-{
-  FAR struct spiffs_file_s *fobj;
-  int ret = -ENOENT;
-
-  for (fobj  = (FAR struct spiffs_file_s *)dq_peek(&fs->objq);
-       fobj != NULL;
-       fobj  = (FAR struct spiffs_file_s *)dq_next((FAR dq_entry_t *)fobj))
-    {
-      if (fobj->objid == objid)
-        {
-          ret = OK;
-          break;
-        }
-    }
-
-  if (ppfobj != NULL)
-    {
-      *ppfobj = fobj;
-    }
-
-  return ret;
-}
-
-/* Given the page index of the object header, find the corresponding file
- * object instance.
- */
-
-int spiffs_find_fobj_bypgndx(FAR struct spiffs_s *fs, int16_t pgndx,
-                             FAR struct spiffs_file_s **ppfobj)
-{
-  FAR struct spiffs_file_s *fobj;
-  int ret = -ENOENT;
-
-  for (fobj  = (FAR struct spiffs_file_s *)dq_peek(&fs->objq);
-       fobj != NULL;
-       fobj  = (FAR struct spiffs_file_s *)dq_next((FAR dq_entry_t *)fobj))
-    {
-      if (fobj->objhdr_pgndx == pgndx)
-        {
-          ret = OK;
-          break;
-        }
-    }
-
-  if (ppfobj != NULL)
-    {
-      *ppfobj = fobj;
     }
 
   return ret;

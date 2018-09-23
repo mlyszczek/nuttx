@@ -1,5 +1,6 @@
 /****************************************************************************
  * fs/spiffs/spiffs.c
+ * Interface between SPIFFS and the NuttX VFS
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -477,7 +478,7 @@ static int spiffs_close(FAR struct file *filep)
        * have any other references.
        */
 
-      spiffs_file_free(fs, fobj);
+      spiffs_fobj_free(fs, fobj);
       return OK;
     }
 
@@ -521,10 +522,10 @@ static ssize_t spiffs_read(FAR struct file *filep, FAR char *buffer,
 
   /* Read from FLASH */
 
-  nread = spiffs_hydro_read(fs, fobj, buffer, buflen);
-  if (nread == SPIFFS_ERR_END_OF_OBJECT)
+  nread = spiffs_fobj_read(fs, fobj, buffer, buflen);
+  if (nread > 0)
     {
-      nread = 0;
+      filep->f_pos + = nread;
     }
 
   /* Release the lock on the file system */
@@ -611,7 +612,7 @@ static ssize_t spiffs_write(FAR struct file *filep, FAR const char *buffer,
                                    "Boundary violation, offset=%d size=%d\n",
                                    fobj->cache_page->ix, fobj->objid,
                                    fobj->cache_page->offset, fobj->cache_page->size);
-                  nwritten = spiffs_hydro_write(fs, fobj,
+                  nwritten = spiffs_fobj_write(fs, fobj,
                                                 spiffs_get_cache_page(fs, spiffs_get_cache(fs),
                                                                       fobj->cache_page->ix),
                                                 fobj->cache_page->offset,
@@ -665,7 +666,7 @@ static ssize_t spiffs_write(FAR struct file *filep, FAR const char *buffer,
             }
           else
             {
-              nwritten = spiffs_hydro_write(fs, fobj, buffer, offset, buflen);
+              nwritten = spiffs_fobj_write(fs, fobj, buffer, offset, buflen);
               if (nwritten < 0)
                 {
                   ret = (int)nwritten;
@@ -690,7 +691,7 @@ static ssize_t spiffs_write(FAR struct file *filep, FAR const char *buffer,
                                fobj->cache_page->ix, fobj->objid,
                                fobj->cache_page->offset, fobj->cache_page->size);
 
-              nwritten = spiffs_hydro_write(fs, fobj,
+              nwritten = spiffs_fobj_write(fs, fobj,
                                             spiffs_get_cache_page(fs,
                                                                   spiffs_get_cache(fs),
                                                                   fobj->cache_page->ix),
@@ -709,7 +710,7 @@ static ssize_t spiffs_write(FAR struct file *filep, FAR const char *buffer,
         }
     }
 
-  nwritten = spiffs_hydro_write(fs, fobj, buffer, offset, buflen);
+  nwritten = spiffs_fobj_write(fs, fobj, buffer, offset, buflen);
   if (nwritten < 0)
     {
       ret = (int)nwritten;
@@ -1382,7 +1383,7 @@ static int spiffs_unbind(FAR void *handle, FAR struct inode **mtdinode,
     {
       /* Free the file object */
 
-      spiffs_file_free(fs, fobj);
+      spiffs_fobj_free(fs, fobj);
     }
 
  /* Free allocated working buffers */
@@ -1748,64 +1749,3 @@ errout_with_lock:
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: spiffs_file_free
- *
- * Description:
- *   Free all resources used a file object
- *
- * Input Parameters:
- *   fs   - A reference to the volume structure
- *   fobj - A reference to the file object to be removed
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void spiffs_file_free(FAR struct spiffs_s *fs, FAR struct spiffs_file_s *fobj)
-{
-  FAR struct spiffs_file_s *curr;
-  int ret;
-
-  /* Flush any buffered write data */
-
-  ret = spiffs_fflush_cache(fobj);
-  if (ret < 0)
-    {
-      ferr("ERROR: spiffs_fflush_cache failed: %d\n", ret);
-    }
-
-  /* Remove the file object from the list of file objects in the volume
-   * structure.
-   */
-
-  for (curr  = (FAR struct spiffs_file_s *)dq_peek(&fs->objq);
-       curr != NULL;
-       curr  = (FAR struct spiffs_file_s *)dq_next((FAR dq_entry_t *)curr))
-    {
-      /* Is this the entry we are searching for? */
-
-      if (curr == fobj)
-        {
-          /* Yes, remove it from the list of of file objects */
-
-          dq_rem((FAR dq_entry_t *)curr, &fs->objq);
-        }
-    }
-
-  DEBUGASSERT(curr != NULL);
-
-  /* Now we can remove the file by truncating it to zero length */
-
-  ret = spiffs_object_truncate(fs, fobj, 0, true);
-  if (ret < 0)
-    {
-      ferr("ERROR: spiffs_object_truncate failed: %d\n", ret);
-    }
-
-  /* Then free the file object itself (which contains the lock we hold) */
-
-  kmm_free(fobj);
-}

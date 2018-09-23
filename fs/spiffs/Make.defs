@@ -37,7 +37,7 @@ ifeq ($(CONFIG_FS_SPIFFS),y)
 # Files required for spiffs file system support
 
 ASRCS +=
-CSRCS += spiffs.c spiffs_nucleus.c spiffs_gc.c spiffs_hydrogen.c
+CSRCS += spiffs_vfs.c spiffs_volume.c spiffs_nucleus.c spiffs_gc.c
 CSRCS += spiffs_cache.c spiffs_check.c spiffs_mtd.c
 
 # Include spiffs build support

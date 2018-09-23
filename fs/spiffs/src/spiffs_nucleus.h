@@ -585,10 +585,6 @@ int32_t spiffs_gc_find_candidate(FAR struct spiffs_s *fs,
           char fs_crammed);
 int32_t spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx);
 int32_t spiffs_gc_quick(FAR struct spiffs_s *fs, uint16_t max_free_pages);
-int     spiffs_find_fobj_byobjid(FAR struct spiffs_s *fs, int16_t f,
-          FAR struct spiffs_file_s ** fobj);
-int     spiffs_find_fobj_bypgndx(FAR struct spiffs_s *fs, int16_t pgndx,
-          FAR struct spiffs_file_s **ppfobj);
 void    spiffs_cache_init(FAR struct spiffs_s *fs);
 void    spiffs_cache_drop_page(FAR struct spiffs_s *fs, int16_t pgndx);
 FAR struct spiffs_cache_page_s *spiffs_cache_page_allocate_byfd(FAR struct spiffs_s *fs,

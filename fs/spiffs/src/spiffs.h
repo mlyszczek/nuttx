@@ -65,7 +65,6 @@ extern "C"
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define SPIFFS_ERR_END_OF_OBJECT        -10003
 #define SPIFFS_ERR_DELETED              -10004
 #define SPIFFS_ERR_NOT_FINALIZED        -10005
 #define SPIFFS_ERR_NOT_INDEX            -10006
@@ -202,7 +201,110 @@ struct spiffs_file_s
  ****************************************************************************/
 
 /****************************************************************************
- * Name: spiffs_file_free
+ * Name: spiffs_stat_pgndx
+ *
+ * Description:
+ *   Checks if there are any cached writes for the object ID associated with
+ *   given file object. If so, these writes are flushed.
+ *
+ * Input Parameters:
+ *   fobj   - A reference to the file object to flush
+ *
+ * Returned Value:
+ *   On success, then number of bytes flushed is returned.  A negated errno
+ *   value is returned on any failure.
+ *
+ ****************************************************************************/
+
+int spiffs_stat_pgndx(FAR struct spiffs_s *fs, int16_t pgndx, int16_t objid,
+                      FAR struct stat *buf);
+
+/****************************************************************************
+ * Name: spiffs_find_fobj_bypgndx
+ *
+ * Description:
+ *   Given the page index of the object header, find the corresponding file
+ *   object instance.
+ *
+ * Input Parameters:
+ *   fs     - A reference to the SPIFFS volume object instance
+ *   pgndx  - The page index to match
+ *   ppfobj - A user provided location in which to return the matching file
+ *            file object instance
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; A negated errno value is returnd on
+ *   any failure.
+ *
+ ****************************************************************************/
+
+int spiffs_find_fobj_bypgndx(FAR struct spiffs_s *fs, int16_t pgndx,
+                             FAR struct spiffs_file_s **ppfobj);
+
+/****************************************************************************
+ * Name: spiffs_find_fobj_byobjid
+ *
+ * Description:
+ *   Given a object ID, find the corresponding file object instance
+ *
+ * Input Parameters:
+ *   fs     - A reference to the SPIFFS volume object instance
+ *   objid  - The object ID to match
+ *   ppfobj - A user provided location in which to return the matching file
+ *            file object instance
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; A negated errno value is returnd on
+ *   any failure.
+ *
+ ****************************************************************************/
+
+int spiffs_find_fobj_byobjid(FAR struct spiffs_s *fs, int16_t objid,
+                             FAR struct spiffs_file_s **ppfobj);
+
+/****************************************************************************
+ * Name: spiffs_fobj_write
+ *
+ * Description:
+ *   Checks if there are any cached writes for the object ID associated with
+ *   given file object. If so, these writes are flushed.
+ *
+ * Input Parameters:
+ *   fobj   - A reference to the file object to flush
+ *
+ * Returned Value:
+ *   On success, then number of bytes flushed is returned.  A negated errno
+ *   value is returned on any failure.
+ *
+ ****************************************************************************/
+
+ssize_t spiffs_fflush_cache(FAR struct spiffs_file_s *fobj);
+
+/****************************************************************************
+ * Name: spiffs_fobj_write
+ *
+ * Description:
+ *   Write to a file object
+ *
+ * Input Parameters:
+ *   fs     - A reference to the volume structure
+ *   fobj   - A reference to the file object to write to
+ *   buffer - The data to be written
+ *   offset - The FLASH offset to be written
+ *   len    - The number of bytes to be written
+ *
+ * Returned Value:
+ *   On success, then number of bytes written is returned.  A negated errno
+ *   value is returned on any failure.
+ *
+ ****************************************************************************/
+
+ssize_t spiffs_fobj_write(FAR struct spiffs_s *fs,
+                          FAR struct spiffs_file_s *fobj,
+                          FAR const void *buffer, off_t offset, size_t len);
+
+/****************************************************************************
+ * Name: spiffs_fobj_free
  *
  * Description:
  *   Free all resources used by a file object
@@ -216,7 +318,7 @@ struct spiffs_file_s
  *
  ****************************************************************************/
 
-void spiffs_file_free(FAR struct spiffs_s *fs, FAR struct spiffs_file_s *fobj);
+void spiffs_fobj_free(FAR struct spiffs_s *fs, FAR struct spiffs_file_s *fobj);
 
 #if defined(__cplusplus)
 }
