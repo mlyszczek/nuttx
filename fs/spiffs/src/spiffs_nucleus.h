@@ -209,7 +209,7 @@
   ((int16_t)(0x20140529 ^ SPIFFS_CFG_LOG_PAGE_SZ(fs)))
 #  else
 #    define SPIFFS_MAGIC(fs, blkndx)           \
-  ((int16_t)(0x20140529 ^ SPIFFS_CFG_LOG_PAGE_SZ(fs) ^ ((fs)->block_count - (blkndx))))
+  ((int16_t)(0x20140529 ^ SPIFFS_CFG_LOG_PAGE_SZ(fs) ^ ((fs)->geo.neraseblocks - (blkndx))))
 #  endif
 #endif
 
@@ -599,11 +599,6 @@ int     spiffs_object_update_index_hdr(FAR struct spiffs_s *fs,
           FAR struct spiffs_file_s *fobj, int16_t objid, int16_t objhdr_pgndx,
           FAR uint8_t *new_objhdr_data, const uint8_t name[],
           uint32_t size, FAR int16_t *new_pgndx);
-#if SPIFFS_IX_MAP
-int32_t spiffs_populate_ix_map(FAR struct spiffs_s *fs,
-          FAR struct spiffs_file_s *fobj, uint32_t vec_entry_start,
-          uint32_t vec_entry_end);
-#endif
 void    spiffs_cb_object_event(FAR struct spiffs_s *fs,
           FAR spiffs_page_object_ix * objndx, int ev, int16_t objid,
           int16_t spndx, int16_t new_pgndx, uint32_t new_size);
@@ -626,7 +621,7 @@ int     spiffs_object_modify(FAR struct spiffs_s *fs,
           size_t len);
 int32_t spiffs_find_objhdr_pgndx(FAR struct spiffs_s *fs,
           const uint8_t name[SPIFFS_NAME_MAX], FAR int16_t *pgndx);
-int32_t spiffs_gc_check(FAR struct spiffs_s *fs, uint32_t len);
+int     spiffs_gc_check(FAR struct spiffs_s *fs, off_t len);
 int32_t spiffs_gc_erase_page_stats(FAR struct spiffs_s *fs, int16_t blkndx);
 int32_t spiffs_gc_find_candidate(FAR struct spiffs_s *fs,
           FAR int16_t ** block_candidate, FAR int *candidate_count,

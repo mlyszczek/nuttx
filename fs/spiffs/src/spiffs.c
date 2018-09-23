@@ -859,12 +859,108 @@ errout_with_lock:
 
 static int spiffs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
+  FAR struct inode *inode;
+  FAR struct spiffs_s *fs;
+  int ret;
+
   finfo("filep=%p cmd=%d arg=%ld\n", filep, cmd, (long)arg);
   DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
 
-  /* There are no supported IOCTL commands */
+  /* Get the mountpoint inode reference from the file structure and the
+   * volume state data from the inode structure
+   */
 
-  return -ENOTTY;
+  inode = filep->f_inode;
+  fs    = inode->i_private;
+  DEBUGASSERT(fs != NULL);
+
+  /* Get exclusive access to the file */
+
+  spiffs_lock_volume(fs);
+
+  /* Handle the IOCTL according tot he command */
+
+  switch (cmd)
+    {
+      /* Run a consistency check on the file system media.
+       * IN:  None
+       * OUT: None
+       */
+
+      case BIOC_CHECK:
+        {
+          if ((ret = spiffs_lookup_consistency_check(fs, 0)) < 0)
+            {
+              ferr("ERROR: spiffs_lookup_consistency_check failed: %d\n",
+                   ret);
+            }
+          else if ((ret = spiffs_object_index_consistency_check(fs)) < 0)
+            {
+              ferr("ERROR: spiffs_object_index_consistency_check failed: %d\n",
+                   ret);
+            }
+          else if ((ret = spiffs_page_consistency_check(fs)) < 0)
+            {
+              ferr("ERROR: spiffs_page_consistency_check failed: %d\n",
+                   ret);
+            }
+          else if ((ret = spiffs_obj_lu_scan(fs)) < 0)
+            {
+              ferr("ERROR: spiffs_obj_lu_scan failed: %d\n", ret);
+            }
+        }
+        break;
+
+      /* Force reformatting of media.  All data will be lost.
+       * IN:  None
+       * OUT: None
+       */
+
+      case BIOC_FORMAT:
+        {
+          /* Check if the MTD driver supports the MTDIOC_BULKERASE command */
+
+          ret = MTD_IOCTL(fs->mtd, MTDIOC_BULKERASE, 0);
+          if (ret < 0)
+            {
+              /* No.. we will have to erase a block at a time */
+
+              int16_t blkndx = 0;
+              while (blkndx < fs->geo.neraseblocks)
+                {
+                  fs->max_erase_count = 0;
+                  ret = spiffs_erase_block(fs, blkndx);
+                  if (ret < 0)
+                    {
+                      return ret;
+                    }
+
+                  blkndx++;
+                }
+            }
+        }
+        break;
+
+      /* Run garbage collection.
+       * IN:  On entry holds the number of bytes to be recovered.
+       * OUT: None
+       */
+
+      case BIOC_GC:
+        {
+          ret = spiffs_gc_check(fs, (size_t)arg);
+        }
+        break;
+
+      default:
+        /* Pass through to the contained MTD driver */
+
+        ret = MTD_IOCTL(fs->mtd, cmd, arg);
+        break;
+    }
+
+  spiffs_unlock_volume(fs);
+  return ret;
 }
 
 /****************************************************************************
@@ -1164,7 +1260,7 @@ static int spiffs_bind(FAR struct inode *mtdinode, FAR const void *data,
 
 #warning REVISIT:  Need to get rid of obsolete config
 //  memcpy(&fs->cfg, config, sizeof(struct spiffs_config_s));
-  fs->block_count = SPIFFS_CFG_PHYS_SZ(fs) / SPIFFS_CFG_LOG_BLOCK_SZ(fs);
+  fs->geo.neraseblocks = SPIFFS_CFG_PHYS_SZ(fs) / SPIFFS_CFG_LOG_BLOCK_SZ(fs);
 
   /* Get the aligned cache size */
 
@@ -1246,8 +1342,6 @@ static int spiffs_bind(FAR struct inode *mtdinode, FAR const void *data,
         (unsigned int)SPIFFS_OBJ_IX_LEN(fs));
   finfo("free blocks:                 %u\n",
         (unsigned int)fs->free_blocks);
-
-  fs->check_cb = check_cb;
 
   /* Return the new file system handle */
 
@@ -1356,7 +1450,7 @@ static int spiffs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
   /* Collect some statistics */
 
   pages_per_block  = SPIFFS_PAGES_PER_BLOCK(fs);
-  blocks           = fs->block_count;
+  blocks           = fs->geo.neraseblocks;
   obj_lupages      = SPIFFS_OBJ_LOOKUP_PAGES(fs);
   data_pgsize      = SPIFFS_DATA_PAGE_SIZE(fs);
 
@@ -1530,6 +1624,9 @@ static int spiffs_rename(FAR struct inode *mountpt, FAR const char *oldrelpath,
                         FAR const char *newrelpath)
 {
   FAR struct spiffs_s *fs;
+  FAR struct spiffs_file_s *fobj;
+  int16_t oldpgndx;
+  int16_t newpgndx;
   int ret;
 
   finfo("mountpt: %p oldrelpath: %s newrelpath: %s\n",
@@ -1541,12 +1638,71 @@ static int spiffs_rename(FAR struct inode *mountpt, FAR const char *oldrelpath,
   fs = mountpt->i_private;
   DEBUGASSERT(fs != NULL);
 
+  if (strlen(newrelpath) > SPIFFS_NAME_MAX - 1 ||
+      strlen(oldrelpath) > SPIFFS_NAME_MAX - 1)
+    {
+      return -ENAMETOOLONG;
+    }
+
   /* Get exclusive access to the file system */
 
   spiffs_lock_volume(fs);
 
-#warning Missing logic
+  /* Get the page index of the object header for the oldrelpath */
 
+  ret = spiffs_find_objhdr_pgndx(fs, (FAR const uint8_t *)oldrelpath,
+                                 &oldpgndx);
+  if (ret < 0)
+    {
+      fwarn("WARNING: spiffs_find_objhdr_pgndx failed: %d\n");
+      goto errout_with_lock;
+    }
+
+  /* Check if there is any file object corresponding to the newrelpath */
+
+  ret = spiffs_find_objhdr_pgndx(fs, (FAR const uint8_t *)newrelpath,
+                                 &newpgndx);
+  if (ret == -ENOENT)
+    {
+      ret = OK;
+    }
+  else if (ret == OK)
+    {
+      ret = -EEXIST;
+    }
+
+  if (ret < 0)
+    {
+      goto errout_with_lock;
+    }
+
+  /* Allocate new file object.  NOTE:  The file could already be open. */
+
+  fobj = (FAR struct spiffs_file_s *)kmm_zalloc(sizeof(struct spiffs_file_s));
+  if (fobj == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  /* Use the page index to open the file */
+
+  ret = spiffs_object_open_bypage(fs, oldpgndx, fobj, 0, 0);
+  if (ret < 0)
+    {
+      goto errout_with_fobj;
+    }
+
+  /* Then update the file name */
+
+  ret = spiffs_object_update_index_hdr(fs, fobj, fobj->objid,
+                                       fobj->objhdr_pgndx, 0,
+                                       (FAR const uint8_t *)newrelpath, 0,
+                                       &newpgndx);
+
+errout_with_fobj:
+  kmm_free(fobj);
+
+errout_with_lock:
   spiffs_unlock_volume(fs);
   return ret;
 }
@@ -1666,4 +1822,3 @@ void spiffs_file_free(FAR struct spiffs_s *fs, FAR struct spiffs_file_s *fobj)
 
   kmm_free(fobj);
 }
-

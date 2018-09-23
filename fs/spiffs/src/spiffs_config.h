@@ -209,24 +209,6 @@
 #  define SPIFFS_TEMPORAL_CACHE_HIT_SCORE     4
 #endif
 
-/* Enable to be able to map object indices to memory.
- * This allows for faster and more deterministic reading if cases of reading
- * large files and when changing file offset by seeking around a lot.
- * When mapping a file's index, the file system will be scanned for index pages
- * and the info will be put in memory provided by user. When reading, the
- * memory map can be looked up instead of searching for index pages on the
- * medium. This way, user can trade memory against performance.
- * Whole, parts of, or future parts not being written yet can be mapped. The
- * memory array will be owned by spiffs and updated accordingly during garbage
- * collecting or when modifying the indices. The latter is invoked by when the
- * file is modified in some way. The index buffer is tied to the file
- * descriptor.
- */
-
-#ifndef SPIFFS_IX_MAP
-#  define SPIFFS_IX_MAP                       1
-#endif
-
 /* By default SPIFFS in some cases relies on the property of NOR flash that bits
  * cannot be set from 0 to 1 by writing and that controllers will ignore such
  * bit changes. This results in fewer reads as SPIFFS can in some cases perform
