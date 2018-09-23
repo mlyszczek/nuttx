@@ -417,6 +417,8 @@ static int spiffs_open(FAR struct file *filep, FAR const char *relpath,
 
   /* Finish initialization of the file object */
 
+  fobj->crefs = 1;
+
   sem_init(&fobj->exclsem.sem, 0, 1);
   fobj->exclsem.holder = SPIFFS_NO_HOLDER;
 
