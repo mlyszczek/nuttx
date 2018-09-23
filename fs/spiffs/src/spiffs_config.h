@@ -103,18 +103,6 @@
 #  endif
 #endif
 
-/* Defines spiffs debug print formatters */
-
-#define _SPIPRIi   "%d"      /* Some general signed number */
-#define _SPIPRIad  "%08x"    /* Address */
-#define _SPIPRIbl  "%04x"    /* Block */
-#define _SPIPRIpg  "%04x"    /* Page */
-#define _SPIPRIsp  "%04x"    /* Span index */
-#define _SPIPRIfd  "%d"      /* File descriptor */
-#define _SPIPRIid  "%04x"    /* File object id */
-#define _SPIPRIfl  "%02x"    /* File flags */
-
-
 /* Always check header of each accessed page to ensure consistent state.
  * If enabled it will increase number of reads, will increase flash.
  */

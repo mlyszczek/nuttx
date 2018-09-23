@@ -313,20 +313,20 @@
 #define SPIFFS_DATA_SPAN_IX_FOR_OBJ_IX_SPAN_IX(fs, spndx) \
   ((spndx) == 0 ? 0 : (SPIFFS_OBJ_HDR_IX_LEN(fs) + (((spndx)-1) * SPIFFS_OBJ_IX_LEN(fs))))
 
-#define SPIFFS_OP_T_OBJ_LU    (0<<0)
-#define SPIFFS_OP_T_OBJ_LU2   (1<<0)
-#define SPIFFS_OP_T_OBJ_IX    (2<<0)
-#define SPIFFS_OP_T_OBJ_DA    (3<<0)
-#define SPIFFS_OP_C_DELE      (0<<2)
-#define SPIFFS_OP_C_UPDT      (1<<2)
-#define SPIFFS_OP_C_MOVS      (2<<2)
-#define SPIFFS_OP_C_MOVD      (3<<2)
-#define SPIFFS_OP_C_FLSH      (4<<2)
-#define SPIFFS_OP_C_READ      (5<<2)
-#define SPIFFS_OP_C_WRTHRU    (6<<2)
+#define SPIFFS_OP_T_OBJ_LU    (0 << 0)
+#define SPIFFS_OP_T_OBJ_LU2   (1 << 0)
+#define SPIFFS_OP_T_OBJ_IX    (2 << 0)
+#define SPIFFS_OP_T_OBJ_DA    (3 << 0)
+#define SPIFFS_OP_C_DELE      (0 << 2)
+#define SPIFFS_OP_C_UPDT      (1 << 2)
+#define SPIFFS_OP_C_MOVS      (2 << 2)
+#define SPIFFS_OP_C_MOVD      (3 << 2)
+#define SPIFFS_OP_C_FLSH      (4 << 2)
+#define SPIFFS_OP_C_READ      (5 << 2)
+#define SPIFFS_OP_C_WRTHRU    (6 << 2)
 
-#define SPIFFS_OP_TYPE_MASK (3<<0)
-#define SPIFFS_OP_COM_MASK  (7<<2)
+#define SPIFFS_OP_TYPE_MASK   (3 << 0)
+#define SPIFFS_OP_COM_MASK    (7 << 2)
 
 /* if 0, this page is written to, else clean */
 

@@ -97,8 +97,8 @@ static int32_t spiffs_cache_page_free(FAR struct spiffs_s *fs, int ix, uint8_t w
           (cp->flags & SPIFFS_CACHE_FLAG_DIRTY))
         {
           uint8_t *mem = spiffs_get_cache_page(fs, cache, ix);
-          spiffs_cacheinfo("CACHE_FREE: write cache page " _SPIPRIi " pgndx "
-                           _SPIPRIpg "\n", ix, cp->pgndx);
+          spiffs_cacheinfo("CACHE_FREE: write cache page %d pgndx "
+                           "%04x\n", ix, cp->pgndx);
           res =
             spiffs_mtd_write(fs, SPIFFS_PAGE_TO_PADDR(fs, cp->pgndx),
                              SPIFFS_CFG_LOG_PAGE_SZ(fs), mem);
@@ -106,13 +106,13 @@ static int32_t spiffs_cache_page_free(FAR struct spiffs_s *fs, int ix, uint8_t w
 
       if (cp->flags & SPIFFS_CACHE_FLAG_TYPE_WR)
         {
-          spiffs_cacheinfo("CACHE_FREE: free cache page " _SPIPRIi " objid "
-                           _SPIPRIid "\n", ix, cp->objid);
+          spiffs_cacheinfo("CACHE_FREE: free cache page %d objid=%04x\n",
+                           ix, cp->objid);
         }
       else
         {
-          spiffs_cacheinfo("CACHE_FREE: free cache page " _SPIPRIi " pgndx "
-                           _SPIPRIpg "\n", ix, cp->pgndx);
+          spiffs_cacheinfo("CACHE_FREE: free cache page %d pgndx "
+                           "%04x\n", ix, cp->pgndx);
         }
 
       cache->cpage_use_map &= ~(1 << ix);
@@ -254,8 +254,8 @@ int32_t spiffs_phys_rd(FAR struct spiffs_s *fs, uint8_t op, int16_t objid,
 
           cp->flags = SPIFFS_CACHE_FLAG_WRTHRU;
           cp->pgndx = SPIFFS_PADDR_TO_PAGE(fs, addr);
-          spiffs_cacheinfo("CACHE_ALLO: allocated cache page " _SPIPRIi
-                           " for pgndx " _SPIPRIpg "\n", cp->ix, cp->pgndx);
+          spiffs_cacheinfo("CACHE_ALLO: allocated cache page %d"
+                           " for pgndx %04x\n", cp->ix, cp->pgndx);
 
           res2 = spiffs_mtd_read(fs, addr -
                                  SPIFFS_PADDR_TO_PAGE_OFFSET(fs, addr),
@@ -389,8 +389,8 @@ spiffs_cache_page_allocate_byfd(FAR struct spiffs_s *fs,
   cp->flags = SPIFFS_CACHE_FLAG_TYPE_WR;
   cp->objid = fobj->objid;
   fobj->cache_page = cp;
-  spiffs_cacheinfo("CACHE_ALLO: allocated cache page " _SPIPRIi " for fobj "
-                   _SPIPRIfd "\n", cp->ix, fobj->objid);
+  spiffs_cacheinfo("Allocated cache page %d for objid=%d\n",
+                   cp->ix, fobj->objid);
   return cp;
 }
 

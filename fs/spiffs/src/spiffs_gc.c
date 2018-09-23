@@ -103,7 +103,7 @@ static int spiffs_gc_erase_block(FAR struct spiffs_s *fs, int16_t blkndx)
   int ret;
   int i;
 
-  spiffs_gcinfo("Erase block %d\n", blkndx);
+  spiffs_gcinfo("Erase block=%04x\n", blkndx);
 
   /* Erase the block */
   ret = spiffs_erase_block(fs, blkndx);
@@ -366,7 +366,7 @@ static int spiffs_gc_find_candidate(FAR struct spiffs_s *fs,
 
           candndx = 0;
 
-          spiffs_gcinfo("blkndx=%d del=%d use=%d score=%d\n",
+          spiffs_gcinfo("blkndx=%04x del=%d use=%d score=%d\n",
                         cur_block, deleted_pages_in_block,
                         used_pages_in_block, score);
 
@@ -454,7 +454,7 @@ static int spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
     (FAR struct spiffs_pgobj_ixheader_s *) fs->work;
   spiffs_page_object_ix *objndx = (spiffs_page_object_ix *)fs->work;
 
-  spiffs_gcinfo("Cleaning block %d\n", blkndx);
+  spiffs_gcinfo("Cleaning block %04x\n", blkndx);
 
   memset(&gc, 0, sizeof(struct spiffs_gc_s));
   gc.state = FIND_OBJ_DATA;
@@ -467,8 +467,7 @@ static int spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
 
       fs->free_blkndx = (blkndx + 1) % fs->geo.neraseblocks;
       fs->free_entry = 0;
-      spiffs_gcinfo("Move free cursor to block " _SPIPRIbl "\n",
-                    fs->free_blkndx);
+      spiffs_gcinfo("Move free cursor to block=%0rx\n", fs->free_blkndx);
     }
 
   while (ret == OK && gc.state != FINISHED)
@@ -524,7 +523,7 @@ static int spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
                        * case below
                        */
 
-                      spiffs_gcinfo("Found data page, state=%d, objid=%d\n",
+                      spiffs_gcinfo("Found data page, state=%d, objid=%04x\n",
                                      gc.state, id);
 
                       gc.objid_found    = true;
@@ -552,8 +551,8 @@ static int spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
                           ferr("ERROR: spiffs_phys_rd() failed: %d\n", ret);
                           return ret;
                         }
- 
-                      spiffs_gcinfo("Move dound data page %d:%d @%p\n",
+
+                      spiffs_gcinfo("Found data page %04x:%04x @%04x\n",
                                     gc.cur_objid, p_hdr.span_ix, cur_pgndx);
 
                       if (SPIFFS_OBJ_IX_ENTRY_SPAN_IX(fs, p_hdr.span_ix) !=
@@ -571,7 +570,7 @@ static int spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
                               ret = spiffs_page_move(fs, 0, 0, id, &p_hdr,
                                                     cur_pgndx, &new_data_pgndx);
 
-                              spiffs_gcinfo("MOVE_DATA move objndx=%d:%d page=%d to %d\n",
+                              spiffs_gcinfo("Move objndx=%04x:%04x page=%04x to %04x\n",
                                             gc.cur_objid, p_hdr.span_ix,
                                             cur_pgndx, new_data_pgndx);
 
@@ -598,12 +597,12 @@ static int spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
                             }
                           else
                             {
-                              /* Page is deleted but not deleted in lookup.  
+                              /* Page is deleted but not deleted in lookup.
                                * Scrap it - might seem unnecessary as we will
                                * erase this block, but we might get aborted
                                */
 
-                              spiffs_gcinfo("Wipe objndx=%d:%d page=%d\n",
+                              spiffs_gcinfo("Wipe objndx=%04x:%04x page=%04x\n",
                                             id, p_hdr.span_ix, cur_pgndx);
 
                               ret = spiffs_page_delete(fs, cur_pgndx);
@@ -628,7 +627,7 @@ static int spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
                                  sizeof(struct spiffs_pgobj_ixheader_s)))[p_hdr.span_ix] =
                                    new_data_pgndx;
 
-                              spiffs_gcinfo("Wrote page=%d to objhdr entry=%d in mem\n",
+                              spiffs_gcinfo("Wrote page=%04x to objhdr entry=%04x in mem\n",
                                             new_data_pgndx,
                                             (int16_t)SPIFFS_OBJ_IX_ENTRY(fs, p_hdr.span_ix));
                             }
@@ -640,7 +639,7 @@ static int spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
                                 sizeof(spiffs_page_object_ix)))[SPIFFS_OBJ_IX_ENTRY(fs, p_hdr.span_ix)] =
                                   new_data_pgndx;
 
-                              spiffs_gcinfo("Wrote page=%d to objndx entry=%d in mem\n",
+                              spiffs_gcinfo("Wrote page=%04x to objndx entry=%04x in mem\n",
                                             new_data_pgndx,
                                             (int16_t)SPIFFS_OBJ_IX_ENTRY(fs, p_hdr.span_ix));
                             }
@@ -660,7 +659,7 @@ static int spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
                       struct spiffs_page_header_s p_hdr;
                       int16_t new_pgndx;
 
-                      /* load header */
+                      /* Load header */
 
                       ret = spiffs_phys_rd(fs,
                                            SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
@@ -681,7 +680,7 @@ static int spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
                           ret = spiffs_page_move(fs, 0, 0, id, &p_hdr,
                                                  cur_pgndx, &new_pgndx);
 
-                          spiffs_gcinfo("Move objndx=%d:%d page=%d to %d\n",
+                          spiffs_gcinfo("Move objndx=%04x:%04x page=%04x to %04x\n",
                                         id, p_hdr.span_ix, cur_pgndx,
                                         new_pgndx);
 
@@ -717,7 +716,7 @@ static int spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
                            * block, but we might get aborted
                            */
 
-                          spiffs_gcinfo("Wipe objndx=%d:%d page=%d\n",
+                          spiffs_gcinfo("Wipe objndx=%04x:%04x page=%04x\n",
                                         id, p_hdr.span_ix, cur_pgndx);
 
                           ret = spiffs_page_delete(fs, cur_pgndx);
@@ -747,7 +746,7 @@ static int spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
                                  * obj_lookup_page is set in start of loop
                                  */
         }
-        
+
 
       if (ret < 0)
         {
@@ -785,7 +784,7 @@ static int spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
               gc.cur_objndx_spndx =
                 SPIFFS_OBJ_IX_ENTRY_SPAN_IX(fs, p_hdr.span_ix);
 
-              spiffs_gcinfo("Find objndx span_ix=%d\n", gc.cur_objndx_spndx);
+              spiffs_gcinfo("Find objndx span_ix=%04x\n", gc.cur_objndx_spndx);
 
               ret = spiffs_obj_lu_find_id_and_span(fs,
                                                    gc.cur_objid | SPIFFS_OBJ_ID_IX_FLAG,
@@ -798,7 +797,7 @@ static int spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
                    * referenced from anywhere
                    */
 
-                  spiffs_gcinfo("objndx not found! Wipe page %d\n",
+                  spiffs_gcinfo("objndx not found! Wipe page %04x\n",
                                 gc.cur_data_pgndx);
 
                   ret = spiffs_page_delete(fs, gc.cur_data_pgndx);
@@ -822,7 +821,7 @@ static int spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
                   return ret;
                 }
 
-              spiffs_gcinfo("Found object index at page=%d\n", objndx_pgndx);
+              spiffs_gcinfo("Found object index at page=%04x\n", objndx_pgndx);
 
               ret = spiffs_phys_rd(fs,
                                    SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
@@ -858,7 +857,7 @@ static int spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
         case MOVE_OBJ_DATA:
           {
             int16_t new_objndx_pgndx;
- 
+
             /* Store modified objndx (hdr) page residing in memory now that all
              * data pages belonging to this object index and residing in the
              * block we want to evacuate
@@ -876,7 +875,7 @@ static int spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
                                                      gc.cur_objndx_pgndx, fs->work, 0,
                                                      0, &new_objndx_pgndx);
 
-                spiffs_gcinfo("Store modified objhdr page=%d:%d\n",
+                spiffs_gcinfo("Store modified objhdr page=%04x:%04x\n",
                               new_objndx_pgndx, 0);
 
                 if (ret < 0)
@@ -894,7 +893,7 @@ static int spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
                                         0, gc.cur_objndx_pgndx,
                                         &new_objndx_pgndx);
 
-                spiffs_gcinfo("Store modified objndx page=%d:%d\n",
+                spiffs_gcinfo("Store modified objndx page=%04x:%04x\n",
                               new_objndx_pgndx, objndx->p_hdr.span_ix);
 
                 if (ret < 0)
@@ -1109,9 +1108,9 @@ int spiffs_gc_check(FAR struct spiffs_s *fs, off_t len)
 #if 0
   if (fs->free_blocks <= 2 && (int32_t)needed_pages > free_pages)
     {
-      spiffs_gcinfo("Full freeblk:" _SPIPRIi " needed:" _SPIPRIi " free:"
-                    _SPIPRIi " dele:" _SPIPRIi "\n",
-                    fs->free_blocks, needed_pages, free_pages, fs->stats_p_deleted);
+      spiffs_gcinfo("Full freeblk=%d" needed=%d" free=%d dele=%d\n",
+                    fs->free_blocks, needed_pages, free_pages,
+                    fs->stats_p_deleted);
       return -ENOSPC;
     }
 #endif
@@ -1137,7 +1136,7 @@ int spiffs_gc_check(FAR struct spiffs_s *fs, off_t len)
                     (free_pages + fs->stats_p_allocated + fs->stats_p_deleted),
                     len, (uint32_t)(free_pages * SPIFFS_DATA_PAGE_SIZE(fs)));
 
-      /* If the fs is crammed, ignore block age when selecting candidate - kind 
+      /* If the fs is crammed, ignore block age when selecting candidate - kind
        * of a bad state
        */
 

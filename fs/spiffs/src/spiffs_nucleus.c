@@ -362,8 +362,9 @@ int32_t spiffs_erase_block(FAR struct spiffs_s *fs, int16_t blkndx)
 
   while (size > 0)
     {
-      finfo("erase " _SPIPRIad ":" _SPIPRIi "\n", addr,
-                 SPIFFS_CFG_PHYS_ERASE_SZ(fs));
+      finfo("erase %08lx:%d\n",
+            (unsigned long)addr, SPIFFS_CFG_PHYS_ERASE_SZ(fs));
+
       spiffs_mtd_erase(fs, addr, SPIFFS_CFG_PHYS_ERASE_SZ(fs));
 
       addr += SPIFFS_CFG_PHYS_ERASE_SZ(fs);
@@ -903,8 +904,8 @@ int spiffs_object_create(FAR struct spiffs_s *fs,
     spiffs_obj_lu_find_free(fs, fs->free_blkndx,
                             fs->free_entry, &blkndx, &entry);
   SPIFFS_CHECK_RES(ret);
-  finfo("create: found free page @ " _SPIPRIpg " blkndx:" _SPIPRIbl " entry:"
-             _SPIPRIsp "\n", (int16_t) SPIFFS_OBJ_LOOKUP_ENTRY_TO_PIX(fs,
+  finfo("create: found free page @ %04x blkndx=%04x entry:"
+             "%04x\n", (int16_t) SPIFFS_OBJ_LOOKUP_ENTRY_TO_PIX(fs,
                                                                              blkndx,
                                                                              entry),
              blkndx, entry);
@@ -1042,8 +1043,8 @@ void spiffs_cb_object_event(FAR struct spiffs_s *fs,
   FAR struct spiffs_file_s *next;
   int16_t objid = obj_id_raw & ~SPIFFS_OBJ_ID_IX_FLAG;
 
-  finfo("       CALLBACK  %s objid:" _SPIPRIid " spndx:" _SPIPRIsp " npgndx:"
-             _SPIPRIpg " nsz:" _SPIPRIi "\n", (const char *[])
+  finfo("       CALLBACK  %s objid=%04x spndx=%04x npgndx:"
+             "%04x nsz=%d\n", (const char *[])
              {
              "UPD", "NEW", "DEL", "MOV", "HUP", "???"}[MIN(ev, 5)],
              obj_id_raw, spndx, new_pgndx, new_size);
@@ -1071,7 +1072,7 @@ void spiffs_cb_object_event(FAR struct spiffs_s *fs,
 
           if (ev != SPIFFS_EV_IX_DEL)
             {
-              finfo("Setting fobj %d (offset=%d) objhdr_pgndx to %04x size=%d\n",
+              finfo("Setting objid=%d (offset=%d) objhdr_pgndx to %04x size=%d\n",
                     fobj->objid, fobj->offset, new_pgndx, new_size);
 
               fobj->objhdr_pgndx = new_pgndx;
@@ -1105,7 +1106,7 @@ void spiffs_cb_object_event(FAR struct spiffs_s *fs,
                     {
                       spiffs_cacheinfo
                         ("CACHE_DROP: file trunced, dropping cache page "
-                         _SPIPRIi ", no writeback\n", fobj->cache_page->ix);
+                         "%d, no writeback\n", fobj->cache_page->ix);
                       spiffs_cache_fd_release(fs, fobj->cache_page);
                     }
                 }
@@ -1117,14 +1118,13 @@ void spiffs_cb_object_event(FAR struct spiffs_s *fs,
               if (fobj->cache_page)
                 {
                   spiffs_cacheinfo
-                    ("CACHE_DROP: file deleted, dropping cache page " _SPIPRIi
+                    ("CACHE_DROP: file deleted, dropping cache page=%d"
                      ", no writeback\n", fobj->cache_page->ix);
                   spiffs_cache_fd_release(fs, fobj->cache_page);
                 }
 
-              finfo("       callback: release fobj " _SPIPRIfd
-                         " span:" _SPIPRIsp " objndx_pgndx to " _SPIPRIpg "\n",
-                         fobj->objid, spndx, new_pgndx);
+              finfo("callback: release objid=%d span=%04x objndx_pgndx to %04x\n",
+                    fobj->objid, spndx, new_pgndx);
 
               /* Remove the file object */
 
@@ -1136,9 +1136,9 @@ void spiffs_cb_object_event(FAR struct spiffs_s *fs,
         {
           if (ev != SPIFFS_EV_IX_DEL)
             {
-              finfo("       callback: setting fobj " _SPIPRIfd
-                         " span:" _SPIPRIsp " objndx_pgndx to " _SPIPRIpg "\n",
-                         fobj->objid, spndx, new_pgndx);
+              finfo("callback: setting objid=%d span=%04x objndx_pgndx to %04x\n",
+                     fobj->objid, spndx, new_pgndx);
+
               fobj->objndx_pgndx = new_pgndx;
             }
           else
@@ -1205,7 +1205,7 @@ int spiffs_object_open_bypage(FAR struct spiffs_s *fs, int16_t pgndx,
 
   SPIFFS_VALIDATE_OBJIX(objndx_hdr.p_hdr, fobj->objid, 0);
 
-  finfo("open: fobj " _SPIPRIfd "\n", fobj->objid);
+  finfo("open: objid=%d\n", fobj->objid);
   return ret;
 }
 
@@ -1218,7 +1218,7 @@ int spiffs_object_append(FAR struct spiffs_s *fs,
   size_t written = 0;
   int ret = OK;
 
-  finfo("append: " _SPIPRIi " bytes @ offs " _SPIPRIi " of size " _SPIPRIi
+  finfo("append: %d bytes @ offs=%d of size=%d"
              "\n", len, offset, fobj->size);
 
   if (offset > fobj->size)
@@ -1232,7 +1232,7 @@ int spiffs_object_append(FAR struct spiffs_s *fs,
                                                                  * worth for meta */
   if (ret != OK)
     {
-      finfo("append: gc check fail " _SPIPRIi "\n", ret);
+      ferr("ERROR: spiffs_gc_check() failed: %d\n", ret);
     }
 
   SPIFFS_CHECK_RES(ret);
@@ -1271,8 +1271,8 @@ int spiffs_object_append(FAR struct spiffs_s *fs,
             {
               /* store previous object index page, unless first pass */
 
-              finfo("append: " _SPIPRIid " store objndx " _SPIPRIpg ":"
-                         _SPIPRIsp ", written " _SPIPRIi "\n", fobj->objid,
+              finfo("append: %04x store objndx %04x:"
+                         "%04x, written=%d\n", fobj->objid,
                          cur_objndx_pgndx, prev_objndx_spndx, written);
 
               if (prev_objndx_spndx == 0)
@@ -1304,8 +1304,8 @@ int spiffs_object_append(FAR struct spiffs_s *fs,
                                                            offset + written,
                                                            &new_objhdr_page);
                       SPIFFS_CHECK_RES(ret);
-                      finfo("append: " _SPIPRIid " store new objhdr, "
-                                 _SPIPRIpg ":" _SPIPRIsp ", written " _SPIPRIi
+                      finfo("append: %04x store new objhdr, "
+                                 "%04x:%04x, written=%d"
                                  "\n", fobj->objid, new_objhdr_page, 0,
                                  written);
                     }
@@ -1336,9 +1336,9 @@ int spiffs_object_append(FAR struct spiffs_s *fs,
                                                        offset + written,
                                                        &new_objhdr_page);
                   SPIFFS_CHECK_RES(ret);
-                  finfo("append: " _SPIPRIid " store new size I " _SPIPRIi
-                             " in objhdr, " _SPIPRIpg ":" _SPIPRIsp
-                             ", written " _SPIPRIi "\n", fobj->objid,
+                  finfo("append: %04x store new size I %d"
+                             " in objhdr, %04x:%04x"
+                             ", written=%d\n", fobj->objid,
                              offset + written, new_objhdr_page, 0, written);
                 }
 
@@ -1352,9 +1352,8 @@ int spiffs_object_append(FAR struct spiffs_s *fs,
             {
               /* load object index header page, must always exist */
 
-              finfo("append: " _SPIPRIid " load objndxhdr page " _SPIPRIpg
-                         ":" _SPIPRIsp "\n", fobj->objid, cur_objndx_pgndx,
-                         cur_objndx_spndx);
+              finfo("append: %04x load objndxhdr page %04x:%04x\n",
+                    fobj->objid, cur_objndx_pgndx, cur_objndx_spndx);
               ret =
                 spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_IX | SPIFFS_OP_C_READ,
                            fobj->objid, SPIFFS_PAGE_TO_PADDR(fs,
@@ -1393,8 +1392,8 @@ int spiffs_object_append(FAR struct spiffs_s *fs,
                   spiffs_cb_object_event(fs, (spiffs_page_object_ix *) fs->work,
                                          SPIFFS_EV_IX_NEW, fobj->objid,
                                          cur_objndx_spndx, cur_objndx_pgndx, 0);
-                  finfo("append: " _SPIPRIid " create objndx page, "
-                             _SPIPRIpg ":" _SPIPRIsp ", written " _SPIPRIi "\n",
+                  finfo("append: %04x create objndx page, "
+                             "%04x:%04x, written=%d\n",
                              fobj->objid, cur_objndx_pgndx, cur_objndx_spndx,
                              written);
                 }
@@ -1403,8 +1402,8 @@ int spiffs_object_append(FAR struct spiffs_s *fs,
                   /* on first pass, we load existing object index page */
 
                   int16_t pgndx;
-                  finfo("append: " _SPIPRIid " find objndx span_ix:"
-                             _SPIPRIsp "\n", fobj->objid, cur_objndx_spndx);
+                  finfo("append: %04x find objndx span_ix:"
+                             "%04x\n", fobj->objid, cur_objndx_spndx);
                   if (fobj->objndx_spndx == cur_objndx_spndx)
                     {
                       pgndx = fobj->objndx_pgndx;
@@ -1417,8 +1416,8 @@ int spiffs_object_append(FAR struct spiffs_s *fs,
                                                        cur_objndx_spndx, 0, &pgndx);
                       SPIFFS_CHECK_RES(ret);
                     }
-                  finfo("append: " _SPIPRIid " found object index at page "
-                             _SPIPRIpg " [fobj size " _SPIPRIi "]\n", fobj->objid,
+                  finfo("append: %04x found object index at page "
+                             "%04x [fobj size=%d]\n", fobj->objid,
                              pgndx, fobj->size);
                   ret =
                     spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_IX | SPIFFS_OP_C_READ,
@@ -1454,9 +1453,9 @@ int spiffs_object_append(FAR struct spiffs_s *fs,
             spiffs_page_allocate_data(fs, fobj->objid & ~SPIFFS_OBJ_ID_IX_FLAG,
                                       &p_hdr, &data[written], to_write,
                                       page_offs, 1, &data_page);
-          finfo("append: " _SPIPRIid " store new data page, " _SPIPRIpg ":"
-                     _SPIPRIsp " offset:" _SPIPRIi ", len " _SPIPRIi
-                     ", written " _SPIPRIi "\n", fobj->objid, data_page,
+          finfo("append: %04x store new data page, %04x:"
+                     "%04x offset=%d, len=%d"
+                     ", written=%d\n", fobj->objid, data_page,
                      data_spndx, page_offs, to_write, written);
         }
       else
@@ -1490,9 +1489,9 @@ int spiffs_object_append(FAR struct spiffs_s *fs,
                                                               data_page) +
                            sizeof(struct spiffs_page_header_s) + page_offs, to_write,
                            &data[written]);
-          finfo("append: " _SPIPRIid " store to existing data page, "
-                     _SPIPRIpg ":" _SPIPRIsp " offset:" _SPIPRIi ", len "
-                     _SPIPRIi ", written " _SPIPRIi "\n", fobj->objid, data_page,
+          finfo("append: %04x store to existing data page, "
+                     "%04x:%04x offset=%d, len "
+                     "%d, written=%d\n", fobj->objid, data_page,
                      data_spndx, page_offs, to_write, written);
         }
 
@@ -1511,8 +1510,8 @@ int spiffs_object_append(FAR struct spiffs_s *fs,
                                sizeof(struct spiffs_pgobj_ixheader_s)))[data_spndx]
             = data_page;
 
-          finfo("append: " _SPIPRIid " wrote page " _SPIPRIpg
-                     " to objhdr entry " _SPIPRIsp " in mem\n", fobj->objid,
+          finfo("append: %04x wrote page %04x"
+                     " to objhdr entry %04x in mem\n", fobj->objid,
                      data_page, data_spndx);
 
           objhdr->size = offset + written;
@@ -1525,8 +1524,8 @@ int spiffs_object_append(FAR struct spiffs_s *fs,
                                sizeof(spiffs_page_object_ix)))
             [SPIFFS_OBJ_IX_ENTRY(fs, data_spndx)] = data_page;
 
-          finfo("append: " _SPIPRIid " wrote page " _SPIPRIpg
-                     " to objndx entry " _SPIPRIsp " in mem\n", fobj->objid,
+          finfo("append: %04x wrote page %04x"
+                     " to objndx entry %04x in mem\n", fobj->objid,
                      data_page, (int16_t) SPIFFS_OBJ_IX_ENTRY(fs,
                                                                      data_spndx));
         }
@@ -1552,8 +1551,8 @@ int spiffs_object_append(FAR struct spiffs_s *fs,
        * index page, unless object header index page
        */
 
-      finfo("append: " _SPIPRIid " store objndx page, " _SPIPRIpg ":"
-                 _SPIPRIsp ", written " _SPIPRIi "\n", fobj->objid,
+      finfo("append: %04x store objndx page, %04x:"
+                 "%04x, written=%d\n", fobj->objid,
                  cur_objndx_pgndx, cur_objndx_spndx, written);
 
       res2 = spiffs_page_index_check(fs, fobj, cur_objndx_pgndx, cur_objndx_spndx);
@@ -1573,9 +1572,9 @@ int spiffs_object_append(FAR struct spiffs_s *fs,
                                             fobj->objhdr_pgndx, 0, 0,
                                             offset + written,
                                             &new_objhdr_page);
-      finfo("append: " _SPIPRIid " store new size II " _SPIPRIi
-                 " in objhdr, " _SPIPRIpg ":" _SPIPRIsp ", written " _SPIPRIi
-                 ", ret " _SPIPRIi "\n", fobj->objid, offset + written,
+      finfo("append: %04x store new size II %d"
+                 " in objhdr, %04x:%04x, written=%d"
+                 ", ret=%d\n", fobj->objid, offset + written,
                  new_objhdr_page, 0, written, res2);
       SPIFFS_CHECK_RES(res2);
     }
@@ -1588,8 +1587,8 @@ int spiffs_object_append(FAR struct spiffs_s *fs,
           /* wrote to empty object - simply update size and write whole page */
 
           objhdr->size = offset + written;
-          finfo("append: " _SPIPRIid " store fresh objhdr page, "
-                     _SPIPRIpg ":" _SPIPRIsp ", written " _SPIPRIi "\n",
+          finfo("append: %04x store fresh objhdr page, "
+                     "%04x:%04x, written=%d\n",
                      fobj->objid, cur_objndx_pgndx, cur_objndx_spndx, written);
 
           res2 = spiffs_page_index_check(fs, fobj, cur_objndx_pgndx, cur_objndx_spndx);
@@ -1615,8 +1614,8 @@ int spiffs_object_append(FAR struct spiffs_s *fs,
                                                 fobj->objhdr_pgndx, fs->work, 0,
                                                 offset + written,
                                                 &new_objhdr_page);
-          finfo("append: " _SPIPRIid " store modified objhdr page, "
-                     _SPIPRIpg ":" _SPIPRIsp ", written " _SPIPRIi "\n",
+          finfo("append: %04x store modified objhdr page, "
+                     "%04x:%04x, written=%d\n",
                      fobj->objid, new_objhdr_page, 0, written);
           SPIFFS_CHECK_RES(res2);
         }
@@ -1679,8 +1678,8 @@ int spiffs_object_modify(FAR struct spiffs_s *fs,
                                                        fobj->objhdr_pgndx,
                                                        fs->work, 0, 0,
                                                        &new_objhdr_pgndx);
-                  finfo("modify: store modified objhdr page, " _SPIPRIpg
-                             ":" _SPIPRIsp ", written " _SPIPRIi "\n",
+                  finfo("modify: store modified objhdr page, %04x"
+                             ":%04x, written=%d\n",
                              new_objhdr_pgndx, 0, written);
                   SPIFFS_CHECK_RES(ret);
                 }
@@ -1699,7 +1698,7 @@ int spiffs_object_modify(FAR struct spiffs_s *fs,
                                          fobj->objid, 0, cur_objndx_pgndx,
                                          &new_objndx_pgndx);
                   finfo("modify: store previous modified objndx page, "
-                             _SPIPRIid ":" _SPIPRIsp ", written " _SPIPRIi "\n",
+                             "%04x:%04x, written=%d\n",
                              new_objndx_pgndx, objndx->p_hdr.span_ix, written);
                   SPIFFS_CHECK_RES(ret);
                   spiffs_cb_object_event(fs, (spiffs_page_object_ix *) objndx,
@@ -1715,7 +1714,7 @@ int spiffs_object_modify(FAR struct spiffs_s *fs,
             {
               /* load object index header page, must exist */
 
-              finfo("modify: load objndxhdr page " _SPIPRIpg ":" _SPIPRIsp
+              finfo("modify: load objndxhdr page %04x:%04x"
                          "\n", cur_objndx_pgndx, cur_objndx_spndx);
               ret =
                 spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_IX | SPIFFS_OP_C_READ,
@@ -1731,7 +1730,7 @@ int spiffs_object_modify(FAR struct spiffs_s *fs,
               /* load existing object index page on first pass */
 
               int16_t pgndx;
-              finfo("modify: find objndx span_ix:" _SPIPRIsp "\n",
+              finfo("modify: find objndx span_ix=%04x\n",
                          cur_objndx_spndx);
               if (fobj->objndx_spndx == cur_objndx_spndx)
                 {
@@ -1745,7 +1744,7 @@ int spiffs_object_modify(FAR struct spiffs_s *fs,
                                                    cur_objndx_spndx, 0, &pgndx);
                   SPIFFS_CHECK_RES(ret);
                 }
-              finfo("modify: found object index at page " _SPIPRIpg "\n",
+              finfo("modify: found object index at page %04x\n",
                          pgndx);
               ret =
                 spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_IX | SPIFFS_OP_C_READ,
@@ -1800,8 +1799,8 @@ int spiffs_object_modify(FAR struct spiffs_s *fs,
             spiffs_page_allocate_data(fs, fobj->objid & ~SPIFFS_OBJ_ID_IX_FLAG,
                                       &p_hdr, &data[written], to_write,
                                       page_offs, 1, &data_pgndx);
-          finfo("modify: store new data page, " _SPIPRIpg ":" _SPIPRIsp
-                     " offset:" _SPIPRIi ", len " _SPIPRIi ", written " _SPIPRIi
+          finfo("modify: store new data page, %04x:%04x"
+                     " offset=%d, len=%d, written=%d"
                      "\n", data_pgndx, data_spndx, page_offs, to_write, written);
         }
       else
@@ -1870,9 +1869,9 @@ int spiffs_object_modify(FAR struct spiffs_s *fs,
               break;
             }
 
-          finfo("modify: store to existing data page, src:" _SPIPRIpg
-                     ", dst:" _SPIPRIpg ":" _SPIPRIsp " offset:" _SPIPRIi
-                     ", len " _SPIPRIi ", written " _SPIPRIi "\n",
+          finfo("modify: store to existing data page, src=%04x"
+                     ", dst=%04x:%04x offset:%d"
+                     ", len=%d, written=%d\n",
                      orig_data_pgndx, data_pgndx, data_spndx, page_offs, to_write,
                      written);
         }
@@ -1894,8 +1893,8 @@ int spiffs_object_modify(FAR struct spiffs_s *fs,
           ((int16_t *) ((uint8_t *) objhdr +
                                sizeof(struct spiffs_pgobj_ixheader_s)))[data_spndx]
             = data_pgndx;
-          finfo("modify: wrote page " _SPIPRIpg " to objhdr entry "
-                     _SPIPRIsp " in mem\n", data_pgndx, data_spndx);
+          finfo("modify: wrote page %04x to objhdr entry "
+                     "%04x in mem\n", data_pgndx, data_spndx);
         }
       else
         {
@@ -1904,8 +1903,8 @@ int spiffs_object_modify(FAR struct spiffs_s *fs,
           ((int16_t *) ((uint8_t *) objndx +
                                sizeof(spiffs_page_object_ix)))
             [SPIFFS_OBJ_IX_ENTRY(fs, data_spndx)] = data_pgndx;
-          finfo("modify: wrote page " _SPIPRIpg " to objndx entry "
-                     _SPIPRIsp " in mem\n", data_pgndx,
+          finfo("modify: wrote page %04x to objndx entry "
+                     "%04x in mem\n", data_pgndx,
                      (int16_t) SPIFFS_OBJ_IX_ENTRY(fs, data_spndx));
         }
 
@@ -1936,8 +1935,8 @@ int spiffs_object_modify(FAR struct spiffs_s *fs,
 
       res2 = spiffs_page_move(fs, fobj->objid, (uint8_t *) objndx, fobj->objid, 0,
                               cur_objndx_pgndx, &new_objndx_pgndx);
-      finfo("modify: store modified objndx page, " _SPIPRIpg ":" _SPIPRIsp
-                 ", written " _SPIPRIi "\n", new_objndx_pgndx, cur_objndx_spndx,
+      finfo("modify: store modified objndx page, %04x:%04x"
+                 ", written=%d\n", new_objndx_pgndx, cur_objndx_spndx,
                  written);
       fobj->objndx_pgndx = new_objndx_pgndx;
       fobj->objndx_spndx = cur_objndx_spndx;
@@ -1954,8 +1953,8 @@ int spiffs_object_modify(FAR struct spiffs_s *fs,
       res2 = spiffs_object_update_index_hdr(fs, fobj, fobj->objid,
                                             fobj->objhdr_pgndx, fs->work, 0,
                                             0, &new_objhdr_pgndx);
-      finfo("modify: store modified objhdr page, " _SPIPRIpg ":"
-                 _SPIPRIsp ", written " _SPIPRIi "\n", new_objhdr_pgndx, 0,
+      finfo("modify: store modified objhdr page, %04x:"
+                 "%04x, written=%d\n", new_objhdr_pgndx, 0,
                  written);
       SPIFFS_CHECK_RES(res2);
     }
@@ -2096,7 +2095,7 @@ int spiffs_object_truncate(FAR struct spiffs_s *fs,
             {
               /* remove previous object index page */
 
-              finfo("truncate: delete objndx page " _SPIPRIpg ":" _SPIPRIsp
+              finfo("truncate: delete objndx page %04x:%04x"
                          "\n", objndx_pgndx, prev_objndx_spndx);
 
               ret = spiffs_page_index_check(fs, fobj, objndx_pgndx, prev_objndx_spndx);
@@ -2123,8 +2122,8 @@ int spiffs_object_truncate(FAR struct spiffs_s *fs,
 
                   if (!remove_full)
                     {
-                      finfo("truncate: update objndx hdr page " _SPIPRIpg
-                                 ":" _SPIPRIsp " to size " _SPIPRIi "\n",
+                      finfo("truncate: update objndx hdr page %04x"
+                                 ":%04x to size=%d\n",
                                  fobj->objhdr_pgndx, prev_objndx_spndx, cur_size);
                       ret =
                         spiffs_object_update_index_hdr(fs, fobj, fobj->objid,
@@ -2151,8 +2150,8 @@ int spiffs_object_truncate(FAR struct spiffs_s *fs,
               SPIFFS_CHECK_RES(ret);
             }
 
-          finfo("truncate: load objndx page " _SPIPRIpg ":" _SPIPRIsp
-                     " for data spndx:" _SPIPRIsp "\n", objndx_pgndx,
+          finfo("truncate: load objndx page %04x:%04x"
+                     " for data spndx=%04x\n", objndx_pgndx,
                      cur_objndx_spndx, data_spndx);
           ret =
             spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_IX | SPIFFS_OP_C_READ, fobj->objid,
@@ -2192,7 +2191,7 @@ int spiffs_object_truncate(FAR struct spiffs_s *fs,
             [SPIFFS_OBJ_IX_ENTRY(fs, data_spndx)] = SPIFFS_OBJ_ID_FREE;
         }
 
-      finfo("truncate: got data pgndx " _SPIPRIpg "\n", data_pgndx);
+      finfo("truncate: got data pgndx %04x\n", data_pgndx);
 
       if (new_size == 0 || remove_full ||
           cur_size - new_size >= SPIFFS_DATA_PAGE_SIZE(fs))
@@ -2203,7 +2202,7 @@ int spiffs_object_truncate(FAR struct spiffs_s *fs,
           if (ret != SPIFFS_ERR_DELETED && ret != OK &&
               ret != SPIFFS_ERR_INDEX_REF_FREE)
             {
-              finfo("truncate: err validating data pgndx " _SPIPRIi "\n",
+              finfo("truncate: err validating data pgndx=%d\n",
                          ret);
               break;
             }
@@ -2213,7 +2212,7 @@ int spiffs_object_truncate(FAR struct spiffs_s *fs,
               ret = spiffs_page_delete(fs, data_pgndx);
               if (ret != OK)
                 {
-                  finfo("truncate: err deleting data pgndx " _SPIPRIi "\n",
+                  finfo("truncate: err deleting data pgndx=%d\n",
                              ret);
                   break;
                 }
@@ -2237,8 +2236,8 @@ int spiffs_object_truncate(FAR struct spiffs_s *fs,
 
           fobj->size = cur_size;
           fobj->offset = cur_size;
-          finfo("truncate: delete data page " _SPIPRIpg " for data spndx:"
-                _SPIPRIsp ", cur_size:" _SPIPRIi "\n", data_pgndx, data_spndx,
+          finfo("truncate: delete data page %04x for data spndx:"
+                "%04x, cur_size=%d\n", data_pgndx, data_spndx,
                 cur_size);
         }
       else
@@ -2249,9 +2248,9 @@ int spiffs_object_truncate(FAR struct spiffs_s *fs,
           int16_t new_data_pgndx;
           uint32_t bytes_to_remove =
             SPIFFS_DATA_PAGE_SIZE(fs) - (new_size % SPIFFS_DATA_PAGE_SIZE(fs));
-          finfo("truncate: delete " _SPIPRIi " bytes from data page "
-                     _SPIPRIpg " for data spndx:" _SPIPRIsp ", cur_size:"
-                     _SPIPRIi "\n", bytes_to_remove, data_pgndx, data_spndx,
+          finfo("truncate: delete %d bytes from data page "
+                     "%04x for data spndx=%04x, cur_size:"
+                     "%d\n", bytes_to_remove, data_pgndx, data_spndx,
                      cur_size);
 
           ret = spiffs_page_data_check(fs, fobj, data_pgndx, data_spndx);
@@ -2316,8 +2315,8 @@ int spiffs_object_truncate(FAR struct spiffs_s *fs,
               ((int16_t *) ((uint8_t *) objhdr +
                                    sizeof(struct spiffs_pgobj_ixheader_s)))
                 [data_spndx] = new_data_pgndx;
-              finfo("truncate: wrote page " _SPIPRIpg
-                         " to objhdr entry " _SPIPRIsp " in mem\n",
+              finfo("truncate: wrote page %04x"
+                         " to objhdr entry %04x in mem\n",
                          new_data_pgndx, (int16_t) SPIFFS_OBJ_IX_ENTRY(fs,
                                                                             data_spndx));
             }
@@ -2328,8 +2327,8 @@ int spiffs_object_truncate(FAR struct spiffs_s *fs,
               ((int16_t *) ((uint8_t *) objndx +
                                    sizeof(spiffs_page_object_ix)))
                 [SPIFFS_OBJ_IX_ENTRY(fs, data_spndx)] = new_data_pgndx;
-              finfo("truncate: wrote page " _SPIPRIpg " to objndx entry "
-                         _SPIPRIsp " in mem\n", new_data_pgndx,
+              finfo("truncate: wrote page %04x to objndx entry "
+                         "%04x in mem\n", new_data_pgndx,
                          (int16_t) SPIFFS_OBJ_IX_ENTRY(fs, data_spndx));
             }
 
@@ -2354,7 +2353,7 @@ int spiffs_object_truncate(FAR struct spiffs_s *fs,
             {
               /* remove object altogether */
 
-              finfo("truncate: remove object index header page " _SPIPRIpg
+              finfo("truncate: remove object index header page %04x"
                          "\n", objndx_pgndx);
 
               ret = spiffs_page_index_check(fs, fobj, objndx_pgndx, 0);
@@ -2370,7 +2369,7 @@ int spiffs_object_truncate(FAR struct spiffs_s *fs,
             {
               /* make uninitialized object */
 
-              finfo("truncate: reset objhdr page " _SPIPRIpg "\n",
+              finfo("truncate: reset objhdr page %04x\n",
                          objndx_pgndx);
               memset(fs->work + sizeof(struct spiffs_pgobj_ixheader_s), 0xff,
                      SPIFFS_CFG_LOG_PAGE_SZ(fs) -
@@ -2411,7 +2410,7 @@ int spiffs_object_truncate(FAR struct spiffs_s *fs,
       spiffs_cb_object_event(fs, (spiffs_page_object_ix *) objhdr,
                              SPIFFS_EV_IX_UPD, fobj->objid, objndx->p_hdr.span_ix,
                              new_objndx_pgndx, 0);
-      finfo("truncate: store modified objndx page, " _SPIPRIpg ":" _SPIPRIsp
+      finfo("truncate: store modified objndx page, %04x:%04x"
                  "\n", new_objndx_pgndx, cur_objndx_spndx);
       fobj->objndx_pgndx = new_objndx_pgndx;
       fobj->objndx_spndx = cur_objndx_spndx;
@@ -2457,7 +2456,7 @@ ssize_t spiffs_object_read(FAR struct spiffs_s *fs,
             }
           else
             {
-              finfo("read: find objndx " _SPIPRIid ":" _SPIPRIsp "\n",
+              finfo("read: find objndx %04x:%04x\n",
                      fobj->objid, cur_objndx_spndx);
               if (fobj->objndx_spndx == cur_objndx_spndx)
                 {
@@ -2692,7 +2691,7 @@ int32_t spiffs_obj_lu_find_free_obj_id(FAR struct spiffs_s *fs, int16_t *objid,
           /* possible to represent in bitmap */
 
           uint32_t i, j;
-          finfo("free_obj_id: BITM min:" _SPIPRIid " max:" _SPIPRIid "\n",
+          finfo("free_obj_id: BITM min=%04x max=%04x\n",
                      state.min_obj_id, state.max_obj_id);
 
           memset(fs->work, 0, SPIFFS_CFG_LOG_PAGE_SZ(fs));
@@ -2768,9 +2767,9 @@ int32_t spiffs_obj_lu_find_free_obj_id(FAR struct spiffs_s *fs, int16_t *objid,
                   return -ENOSPC;
                 }
 
-              finfo("free_obj_id: COMP select index:" _SPIPRIi
-                         " min_count:" _SPIPRIi " min:" _SPIPRIid " max:"
-                         _SPIPRIid " compact:" _SPIPRIi "\n", min_i, min_count,
+              finfo("free_obj_id: COMP select index:%d"
+                         " min_count=%d min=%04x max:"
+                         "%04x compact:%d\n", min_i, min_count,
                          state.min_obj_id, state.max_obj_id, state.compaction);
 
               if (min_count == 0)
@@ -2782,8 +2781,8 @@ int32_t spiffs_obj_lu_find_free_obj_id(FAR struct spiffs_s *fs, int16_t *objid,
                 }
               else
                 {
-                  finfo("free_obj_id: COMP SEL chunk:" _SPIPRIi " min:"
-                             _SPIPRIid " -> " _SPIPRIid "\n", state.compaction,
+                  finfo("free_obj_id: COMP SEL chunk=%d min:"
+                             "%04x -> %04x\n", state.compaction,
                              state.min_obj_id,
                              state.min_obj_id + min_i * state.compaction);
                   state.min_obj_id += min_i * state.compaction;
@@ -2811,8 +2810,8 @@ int32_t spiffs_obj_lu_find_free_obj_id(FAR struct spiffs_s *fs, int16_t *objid,
             (state.max_obj_id -
              state.min_obj_id) / ((SPIFFS_CFG_LOG_PAGE_SZ(fs) / sizeof(uint8_t)));
 
-          finfo("free_obj_id: COMP min:" _SPIPRIid " max:" _SPIPRIid
-                     " compact:" _SPIPRIi "\n", state.min_obj_id,
+          finfo("free_obj_id: COMP min=%04x max=%04x"
+                     " compact=%d\n", state.min_obj_id,
                      state.max_obj_id, state.compaction);
 
           memset(fs->work, 0, SPIFFS_CFG_LOG_PAGE_SZ(fs));
