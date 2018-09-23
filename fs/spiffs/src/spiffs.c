@@ -69,10 +69,7 @@
  ****************************************************************************/
 
 #define spiffs_lock_volume(fs)       (spiffs_lock_reentrant(&fs->exclsem))
-#define spiffs_lock_file(fobj)       (spiffs_lock_reentrant(&fobj->exclsem))
-
 #define spiffs_unlock_volume(fs)     (spiffs_unlock_reentrant(&fs->exclsem))
-#define spiffs_unlock_file(fobj)     (spiffs_unlock_reentrant(&fobj->exclsem))
 
 /****************************************************************************
  * Private Function Prototypes
@@ -320,13 +317,15 @@ static int spiffs_open(FAR struct file *filep, FAR const char *relpath,
       return -ENAMETOOLONG;
     }
 
-  /* Allocate a new file object */
+  /* Allocate a new file object with a reference count of one. */
 
   fobj = (FAR struct spiffs_file_s *)kmm_zalloc(sizeof(struct spiffs_file_s));
   if (fobj == NULL)
     {
       return -ENOMEM;
     }
+
+  fobj->crefs = 1;
 
   /* Get exclusive access to the file system */
 
@@ -415,13 +414,6 @@ static int spiffs_open(FAR struct file *filep, FAR const char *relpath,
 
   filep->f_pos = offset;
 
-  /* Finish initialization of the file object */
-
-  fobj->crefs = 1;
-
-  sem_init(&fobj->exclsem.sem, 0, 1);
-  fobj->exclsem.holder = SPIFFS_NO_HOLDER;
-
   /* Add the new file object to the tail of the open file list */
 
   dq_addlast((FAR dq_entry_t *)fobj, &fs->objq);
@@ -460,9 +452,9 @@ static int spiffs_close(FAR struct file *filep)
 
   fobj = filep->f_priv;
 
-  /* Get exclusive access to the file */
+  /* Get exclusive access to the file system */
 
-  spiffs_lock_file(fobj);
+  spiffs_lock_volume(fs);
 
   /* Decrement the reference count on the file */
 
@@ -489,9 +481,9 @@ static int spiffs_close(FAR struct file *filep)
       return OK;
     }
 
-  /* Release the lock on the file */
+  /* Release the lock on the file system */
 
-  spiffs_unlock_file(fobj);
+  spiffs_unlock_volume(fs);
   return OK;
 }
 
@@ -523,9 +515,9 @@ static ssize_t spiffs_read(FAR struct file *filep, FAR char *buffer,
 
   fobj = filep->f_priv;
 
-  /* Get exclusive access to the file */
+  /* Get exclusive access to the file system */
 
-  spiffs_lock_file(fobj);
+  spiffs_lock_volume(fs);
 
   /* Read from FLASH */
 
@@ -535,9 +527,9 @@ static ssize_t spiffs_read(FAR struct file *filep, FAR char *buffer,
       nread = 0;
     }
 
-  /* Release the lock on the file */
+  /* Release the lock on the file system */
 
-  spiffs_unlock_file(fobj);
+  spiffs_unlock_volume(fs);
   return nread;
 }
 
@@ -571,9 +563,9 @@ static ssize_t spiffs_write(FAR struct file *filep, FAR const char *buffer,
 
   fobj = filep->f_priv;
 
-  /* Get exclusive access to the file */
+  /* Get exclusive access to the file system */
 
-  spiffs_lock_file(fobj);
+  spiffs_lock_volume(fs);
 
   /* Verify that the file was opened with write access */
 
@@ -729,13 +721,13 @@ success_with_lock:
 
   filep->f_pos += nwritten;
 
-  /* Release our access to the file object */
+  /* Release our access to the volume */
 
-  spiffs_unlock_file(fobj);
+  spiffs_unlock_volume(fs);
   return nwritten;
 
 errout_with_lock:
-  spiffs_unlock_file(fobj);
+  spiffs_unlock_volume(fs);
   return (ssize_t)ret;
 }
 
@@ -769,9 +761,9 @@ static off_t spiffs_seek(FAR struct file *filep, off_t offset, int whence)
 
   fobj = filep->f_priv;
 
-  /* Get exclusive access to the file */
+  /* Get exclusive access to the file system */
 
-  spiffs_lock_file(fobj);
+  spiffs_lock_volume(fs);
 
   /* Get the new file offset */
 
@@ -845,11 +837,11 @@ static off_t spiffs_seek(FAR struct file *filep, off_t offset, int whence)
     }
 
   filep->f_pos = pos;
-  spiffs_unlock_file(fobj);
+  spiffs_unlock_volume(fs);
   return pos;
 
 errout_with_lock:
-  spiffs_unlock_file(fobj);
+  spiffs_unlock_volume(fs);
   return (off_t)ret;
 }
 
@@ -874,7 +866,7 @@ static int spiffs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   fs    = inode->i_private;
   DEBUGASSERT(fs != NULL);
 
-  /* Get exclusive access to the file */
+  /* Get exclusive access to the file system */
 
   spiffs_lock_volume(fs);
 
@@ -993,15 +985,15 @@ static int spiffs_sync(FAR struct file *filep)
 
   fobj = filep->f_priv;
 
-  /* Get exclusive access to the file */
+  /* Get exclusive access to the file system */
 
-  spiffs_lock_file(fobj);
+  spiffs_lock_volume(fs);
 
   /* Flush all cached write data */
 
   ret = spiffs_fflush_cache(fobj);
 
-  spiffs_unlock_file(fobj);
+  spiffs_unlock_volume(fs);
   return ret;
 }
 
@@ -1011,22 +1003,31 @@ static int spiffs_sync(FAR struct file *filep)
 
 static int spiffs_dup(FAR const struct file *oldp, FAR struct file *newp)
 {
+  FAR struct inode *inode;
+  FAR struct spiffs_s *fs;
   FAR struct spiffs_file_s *fobj;
 
   finfo("Dup %p->%p\n", oldp, newp);
   DEBUGASSERT(oldp->f_priv != NULL && oldp->f_inode != NULL &&
               newp->f_priv == NULL && newp->f_inode != NULL);
 
+  /* Get the mountpoint inode reference from the file structure and the
+   * volume state data from the inode structure
+   */
+
+  inode = oldp->f_inode;
+  fs    = inode->i_private;
+  DEBUGASSERT(fs != NULL);
+
   /* Recover our private data from the struct file instance */
 
   fobj = oldp->f_priv;
-  DEBUGASSERT(fobj != NULL);
 
   /* Increment the reference count (atomically)*/
 
-  spiffs_lock_file(fobj);
+  spiffs_lock_volume(fs);
   fobj->crefs++;
-  spiffs_unlock_file(fobj);
+  spiffs_unlock_volume(fs);
 
   /* Save a copy of the file object as the dup'ed file. */
 
@@ -1065,9 +1066,9 @@ static int spiffs_fstat(FAR const struct file *filep, FAR struct stat *buf)
 
   fobj = filep->f_priv;
 
-  /* Get exclusive access to the file */
+  /* Get exclusive access to the file system */
 
-  spiffs_lock_file(fobj);
+  spiffs_lock_volume(fs);
 
   /* Flush the cache and perform the common stat() operation */
 
@@ -1079,7 +1080,7 @@ static int spiffs_fstat(FAR const struct file *filep, FAR struct stat *buf)
       ferr("ERROR: spiffs_stat_pgndx failed: %d\n", ret);
     }
 
-  spiffs_unlock_file(fobj);
+  spiffs_unlock_volume(fs);
   return ret;
 }
 
@@ -1109,15 +1110,15 @@ static int spiffs_truncate(FAR struct file *filep, off_t length)
 
   fobj = filep->f_priv;
 
-  /* Get exclusive access to the file */
+  /* Get exclusive access to the file system */
 
-  spiffs_lock_file(fobj);
+  spiffs_lock_volume(fs);
 
   /* REVISIT:  I believe that this can only truncate to smaller sizes. */
 
   ret = spiffs_object_truncate(fs, fobj, length, false);
 
-  spiffs_unlock_file(fobj);
+  spiffs_unlock_volume(fs);
   return ret;
 }
 
@@ -1737,9 +1738,7 @@ static int spiffs_stat(FAR struct inode *mountpt, FAR const char *relpath,
 
   /* Find the object associated with this relative path */
 
-  ret = spiffs_find_objhdr_pgndx(fs,
-                                                       (FAR const uint8_t *)relpath,
-                                                       &pgndx);
+  ret = spiffs_find_objhdr_pgndx(fs, (FAR const uint8_t *)relpath, &pgndx);
   if (ret < 0)
     {
       goto errout_with_lock;

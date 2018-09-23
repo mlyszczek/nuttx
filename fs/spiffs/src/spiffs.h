@@ -205,7 +205,6 @@ struct spiffs_file_s
 {
   dq_entry_t entry;                 /* Supports a doubly linked list */
   FAR struct spiffs_cache_page_s *cache_page;
-  struct spiffs_sem_s exclsem;      /* Supports mutually exclusive access to the open file */
   int16_t crefs;                    /* Reference count */
   int16_t objid;                    /* Unique ID of the file object */
   uint8_t flags;                    /* See SFO_FLAG_* definitions */
@@ -213,8 +212,8 @@ struct spiffs_file_s
   int16_t objndx_pgndx;             /* Cached offset object index page index */
   int16_t objndx_spndx;             /* Cached offset object index span index */
   uint16_t oflags;                  /* File object open flags */
-  off_t size;                       /* size of the file */
-  off_t offset;                     /* current absolute offset */
+  off_t size;                       /* Size of the file */
+  off_t offset;                     /* Current absolute offset */
 };
 
 /****************************************************************************
