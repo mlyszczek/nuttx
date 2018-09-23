@@ -248,13 +248,13 @@ static int spiffs_readdir_callback(FAR struct spiffs_s *fs,
     }
 
   pgndx = SPIFFS_OBJ_LOOKUP_ENTRY_TO_PIX(fs, blkndx, ix_entry);
-  ret = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
-                   0, SPIFFS_PAGE_TO_PADDR(fs, pgndx),
-                   sizeof(struct spiffs_pgobj_ixheader_s),
-                   (FAR uint8_t *) & objhdr);
+  ret = spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
+                       0, SPIFFS_PAGE_TO_PADDR(fs, pgndx),
+                       sizeof(struct spiffs_pgobj_ixheader_s),
+                       (FAR uint8_t *) & objhdr);
   if (ret < 0)
     {
-      ferr("ERROR: _spiffs_rd failed: %d\n", ret);
+      ferr("ERROR: spiffs_phys_rd failed: %d\n", ret);
       return ret;
     }
 
@@ -1259,9 +1259,7 @@ static int spiffs_bind(FAR struct inode *mtdinode, FAR const void *data,
       goto errout_with_volume;
     }
 
-#warning REVISIT:  Need to get rid of obsolete config
-//  memcpy(&fs->cfg, config, sizeof(struct spiffs_config_s));
-  fs->geo.neraseblocks = SPIFFS_CFG_PHYS_SZ(fs) / SPIFFS_CFG_LOG_BLOCK_SZ(fs);
+  fs->phys_size = fs->geo.neraseblocks * fs->geo.erasesize;
 
   /* Get the aligned cache size */
 
@@ -1290,8 +1288,10 @@ static int spiffs_bind(FAR struct inode *mtdinode, FAR const void *data,
 
   spiffs_cache_init(fs);
 
-  /* Allocate the memory work buffer comprising 2*config->log_page_size bytes
-   * used throughout all file system operations
+  /* Allocate the memory work buffer comprising 2*config->page_size bytes
+   * used throughout all file system operations.
+   *
+   * NOTE: Currently page size is equivalent to block size.
    */
 
   work_size = SPIFFS_CFG_LOG_PAGE_SZ(fs) << 1;
@@ -1304,20 +1304,8 @@ static int spiffs_bind(FAR struct inode *mtdinode, FAR const void *data,
       goto errout_with_cache;
     }
 
-  fs->work    = &work[0];
-  fs->lu_work = &work[work_size >> 1];
-
-#if SPIFFS_USE_MAGIC
-  /* Check if magic is possible */
-
-  if (!SPIFFS_CHECK_MAGIC_POSSIBLE(fs))
-    {
-      ferr("ERROR: Magic is not possible\n");
-      ret = -ENXIO;
-      goto errout_with_work;
-    }
-#endif
-
+  fs->work         = &work[0];
+  fs->lu_work      = &work[work_size >> 1];
   fs->config_magic = SPIFFS_SUPER_MAGIC;
 
   /* Check the file system */

@@ -132,7 +132,7 @@ int32_t spiffs_gc_quick(FAR struct spiffs_s *fs, uint16_t max_free_pages)
              obj_lookup_page < (int)SPIFFS_OBJ_LOOKUP_PAGES(fs))
         {
           int entry_offset = obj_lookup_page * entries_per_page;
-          ret = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_READ,
+          ret = spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_READ,
                            0, cur_block_addr + SPIFFS_PAGE_TO_PADDR(fs,
                                                                     obj_lookup_page),
                            SPIFFS_CFG_LOG_PAGE_SZ(fs), fs->lu_work);
@@ -296,10 +296,8 @@ int spiffs_gc_check(FAR struct spiffs_s *fs, off_t len)
       fs->stats_gc_runs++;
 #endif
       cand = cands[0];
-      fs->cleaning = 1;
 
       ret = spiffs_gc_clean(fs, cand);
-      fs->cleaning = 0;
       if (ret < 0)
         {
           spiffs_gcinfo("Cleaning block " _SPIPRIi ", result " _SPIPRIi "\n",
@@ -372,7 +370,7 @@ int32_t spiffs_gc_erase_page_stats(FAR struct spiffs_s *fs, int16_t blkndx)
   while (ret == OK && obj_lookup_page < (int)SPIFFS_OBJ_LOOKUP_PAGES(fs))
     {
       int entry_offset = obj_lookup_page * entries_per_page;
-      ret = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_READ,
+      ret = spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_READ,
                        0,
                        blkndx * SPIFFS_CFG_LOG_BLOCK_SZ(fs) +
                        SPIFFS_PAGE_TO_PADDR(fs, obj_lookup_page),
@@ -467,7 +465,7 @@ int32_t spiffs_gc_find_candidate(FAR struct spiffs_s *fs,
              obj_lookup_page < (int)SPIFFS_OBJ_LOOKUP_PAGES(fs))
         {
           int entry_offset = obj_lookup_page * entries_per_page;
-          ret = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_READ,
+          ret = spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_READ,
                            0, cur_block_addr + SPIFFS_PAGE_TO_PADDR(fs,
                                                                     obj_lookup_page),
                            SPIFFS_CFG_LOG_PAGE_SZ(fs), fs->lu_work);
@@ -519,7 +517,7 @@ int32_t spiffs_gc_find_candidate(FAR struct spiffs_s *fs,
           /* read erase count */
 
           int16_t erase_count;
-          ret = _spiffs_rd(fs, SPIFFS_OP_C_READ | SPIFFS_OP_T_OBJ_LU2, 0,
+          ret = spiffs_phys_rd(fs, SPIFFS_OP_C_READ | SPIFFS_OP_T_OBJ_LU2, 0,
                            SPIFFS_ERASE_COUNT_PADDR(fs, cur_block),
                            sizeof(int16_t), (uint8_t *) & erase_count);
           SPIFFS_CHECK_RES(ret);
@@ -646,7 +644,7 @@ int32_t spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
              obj_lookup_page < (int)SPIFFS_OBJ_LOOKUP_PAGES(fs))
         {
           int entry_offset = obj_lookup_page * entries_per_page;
-          ret = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_READ,
+          ret = spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_READ,
                            0,
                            blkndx * SPIFFS_CFG_LOG_BLOCK_SZ(fs) +
                            SPIFFS_PAGE_TO_PADDR(fs, obj_lookup_page),
@@ -697,7 +695,7 @@ int32_t spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
                     {
                       struct spiffs_page_header_s p_hdr;
                       ret =
-                        _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
+                        spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
                                    0, SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx),
                                    sizeof(struct spiffs_page_header_s),
                                    (uint8_t *) & p_hdr);
@@ -731,7 +729,7 @@ int32_t spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
                               /* move wipes obj_lu, reload it */
 
                               ret =
-                                _spiffs_rd(fs,
+                                spiffs_phys_rd(fs,
                                            SPIFFS_OP_T_OBJ_LU |
                                            SPIFFS_OP_C_READ, 0,
                                            blkndx * SPIFFS_CFG_LOG_BLOCK_SZ(fs) +
@@ -808,7 +806,7 @@ int32_t spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
                       /* load header */
 
                       ret =
-                        _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
+                        spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
                                    0, SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx),
                                    sizeof(struct spiffs_page_header_s),
                                    (uint8_t *) & p_hdr);
@@ -834,7 +832,7 @@ int32_t spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
                           /* move wipes obj_lu, reload it */
 
                           ret =
-                            _spiffs_rd(fs,
+                            spiffs_phys_rd(fs,
                                        SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_READ, 0,
                                        blkndx * SPIFFS_CFG_LOG_BLOCK_SZ(fs) +
                                        SPIFFS_PAGE_TO_PADDR(fs,
@@ -903,7 +901,7 @@ int32_t spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
               gc.stored_scan_entry_index = cur_entry;   /* push cursor */
               cur_entry = 0;    /* restart scan from start */
               gc.state = MOVE_OBJ_DATA;
-              ret = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
+              ret = spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
                                0, SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx),
                                sizeof(struct spiffs_page_header_s), (uint8_t *) & p_hdr);
               SPIFFS_CHECK_RES(ret);
@@ -942,7 +940,7 @@ int32_t spiffs_gc_clean(FAR struct spiffs_s *fs, int16_t blkndx)
               spiffs_gcinfo("FIND_DATA found object index at page "
                             _SPIPRIpg "\n", objndx_pgndx);
               ret =
-                _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ, 0,
+                spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ, 0,
                            SPIFFS_PAGE_TO_PADDR(fs, objndx_pgndx),
                            SPIFFS_CFG_LOG_PAGE_SZ(fs), fs->work);
               SPIFFS_CHECK_RES(ret);

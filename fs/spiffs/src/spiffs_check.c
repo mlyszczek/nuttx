@@ -116,7 +116,7 @@ static int32_t spiffs_object_get_data_page_index_reference(FAR struct spiffs_s *
               sizeof(int16_t);
     }
 
-  ret = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ, 0, addr,
+  ret = spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ, 0, addr,
                    sizeof(int16_t), (uint8_t *) pgndx);
 
   return ret;
@@ -184,7 +184,7 @@ static int32_t spiffs_rewrite_index(FAR struct spiffs_s *fs, int16_t objid,
 
   /* load index */
 
-  ret = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
+  ret = spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
                    0, SPIFFS_PAGE_TO_PADDR(fs, objndx_pgndx),
                    SPIFFS_CFG_LOG_PAGE_SZ(fs), fs->lu_work);
   SPIFFS_CHECK_RES(ret);
@@ -229,11 +229,11 @@ static int32_t spiffs_rewrite_index(FAR struct spiffs_s *fs, int16_t objid,
         new_data_pgndx;
     }
 
-  ret = _spiffs_wr(fs, SPIFFS_OP_T_OBJ_DA | SPIFFS_OP_C_UPDT,
+  ret = spiffs_phys_wr(fs, SPIFFS_OP_T_OBJ_DA | SPIFFS_OP_C_UPDT,
                    0, SPIFFS_PAGE_TO_PADDR(fs, free_pgndx),
                    SPIFFS_CFG_LOG_PAGE_SZ(fs), fs->lu_work);
   SPIFFS_CHECK_RES(ret);
-  ret = _spiffs_wr(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_UPDT,
+  ret = spiffs_phys_wr(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_UPDT,
                    0, SPIFFS_BLOCK_TO_PADDR(fs, SPIFFS_BLOCK_FOR_PAGE(fs,free_pgndx)) +
                    SPIFFS_OBJ_LOOKUP_ENTRY_FOR_PAGE(fs, free_pgndx) *
                    sizeof(int16_t), sizeof(int16_t),
@@ -260,14 +260,14 @@ static int32_t spiffs_delete_obj_lazy(FAR struct spiffs_s *fs, int16_t objid)
 
   SPIFFS_CHECK_RES(ret);
 #if SPIFFS_NO_BLIND_WRITES
-  ret = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_READ, 0,
+  ret = spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_READ, 0,
                    SPIFFS_PAGE_TO_PADDR(fs, objhdr_pgndx) +
                    offsetof(struct spiffs_page_header_s, flags), sizeof(flags),
                    &flags);
   SPIFFS_CHECK_RES(ret);
 #endif
   flags &= ~SPIFFS_PH_FLAG_IXDELE;
-  ret = _spiffs_wr(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_UPDT, 0,
+  ret = spiffs_phys_wr(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_UPDT, 0,
                    SPIFFS_PAGE_TO_PADDR(fs, objhdr_pgndx) +
                    offsetof(struct spiffs_page_header_s, flags), sizeof(flags),
                    &flags);
@@ -749,14 +749,14 @@ static int32_t spiffs_lookup_check_validate(FAR struct spiffs_s *fs, int16_t lu_
                     ("LU: FIXUP: unfinalized page is referred, finalizing\n");
 
 #if SPIFFS_NO_BLIND_WRITES
-                  ret = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_DA | SPIFFS_OP_C_READ,
+                  ret = spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_DA | SPIFFS_OP_C_READ,
                                    0, SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx) +
                                    offsetof(struct spiffs_page_header_s, flags),
                                    sizeof(flags), &flags);
                   SPIFFS_CHECK_RES(ret);
 #endif
                   flags &= ~SPIFFS_PH_FLAG_FINAL;
-                  ret = _spiffs_wr(fs, SPIFFS_OP_T_OBJ_DA | SPIFFS_OP_C_UPDT,
+                  ret = spiffs_phys_wr(fs, SPIFFS_OP_T_OBJ_DA | SPIFFS_OP_C_UPDT,
                                    0, SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx) +
                                    offsetof(struct spiffs_page_header_s, flags),
                                    sizeof(flags), &flags);
@@ -789,7 +789,7 @@ static int32_t spiffs_lookup_check_v(FAR struct spiffs_s *fs, int16_t objid,
 
   /* load header */
 
-  ret = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
+  ret = spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
                    0, SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx),
                    sizeof(struct spiffs_page_header_s), (uint8_t *) & p_hdr);
   SPIFFS_CHECK_RES(ret);
@@ -879,7 +879,7 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
               /* read header */
 
               struct spiffs_page_header_s p_hdr;
-              ret = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
+              ret = spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
                                0, SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx),
                                sizeof(struct spiffs_page_header_s), (uint8_t *) & p_hdr);
               SPIFFS_CHECK_RES(ret);
@@ -914,7 +914,7 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
 
                   /* load non-deleted index */
 
-                  ret = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
+                  ret = spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
                                    0, SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx),
                                    SPIFFS_CFG_LOG_PAGE_SZ(fs), fs->lu_work);
                   SPIFFS_CHECK_RES(ret);
@@ -1033,7 +1033,7 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                           /* valid reference. read referenced page header */
 
                           struct spiffs_page_header_s rp_hdr;
-                          ret = _spiffs_rd(fs,
+                          ret = spiffs_phys_rd(fs,
                                            SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
                                            0, SPIFFS_PAGE_TO_PADDR(fs, rpgndx),
                                            sizeof(struct spiffs_page_header_s),
@@ -1206,7 +1206,7 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
 
                       struct spiffs_page_header_s p_hdr;
                       ret =
-                        _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
+                        spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
                                    0, SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx),
                                    sizeof(struct spiffs_page_header_s),
                                    (uint8_t *) & p_hdr);
@@ -1237,7 +1237,7 @@ static int32_t spiffs_page_consistency_check_i(FAR struct spiffs_s *fs)
                               /* pointing to something else, check what */
 
                               struct spiffs_page_header_s rp_hdr;
-                              ret = _spiffs_rd(fs,
+                              ret = spiffs_phys_rd(fs,
                                                SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ, 0,
                                                SPIFFS_PAGE_TO_PADDR(fs, rpgndx),
                                                sizeof(struct spiffs_page_header_s),
@@ -1459,7 +1459,7 @@ static int32_t spiffs_object_index_consistency_check_v(FAR struct spiffs_s *fs,
 
       /* load header */
 
-      ret = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
+      ret = spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
                        0, SPIFFS_PAGE_TO_PADDR(fs, cur_pgndx),
                        sizeof(struct spiffs_page_header_s), (uint8_t *) & p_hdr);
       SPIFFS_CHECK_RES(ret);

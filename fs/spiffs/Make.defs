@@ -38,7 +38,7 @@ ifeq ($(CONFIG_FS_SPIFFS),y)
 
 ASRCS +=
 CSRCS += spiffs.c spiffs_nucleus.c spiffs_gc.c spiffs_hydrogen.c
-CSRCS += spiffs_cache.c spiffs_check.c
+CSRCS += spiffs_cache.c spiffs_check.c spiffs_mtd.c
 
 # Include spiffs build support
 

@@ -145,38 +145,20 @@ struct spiffs_sem_s
 
 /* spiffs SPI configuration struct */
 
-#warning Obsolete: Remove struct spiffs_config_s
-struct spiffs_config_s
-{
-  spiffs_read_t hal_read_f;         /* physical read function */
-  spiffs_write_t hal_write_f;       /* physical write function */
-  spiffs_erase_t hal_erase_f;       /* physical erase function */
-  uint32_t phys_size;               /* physical size of the SPI flash */
-  uint32_t phys_addr;               /* physical offset in SPI flash used for
-                                     * SPIFFS, must be on block boundary */
-  uint32_t phys_erase_block;        /* physical size when erasing a block */
-  uint32_t log_block_size;          /* logical size of a block, must be on
-                                     * physical block size boundary and
-                                     * must never be less than a physical block */
-  uint32_t log_page_size;           /* logical size of a page, must be at least
-                                     * log_block_size / 8 */
-};
-
 /* This structure represents the current state of an SPIFFS volume */
 
 struct spiffs_file_s;               /* Forward reference */
 
 struct spiffs_s
 {
-#warning Obsolete: Remove struct spiffs_config_s
-  struct spiffs_config_s cfg;       /* File system configuration */
-  struct spiffs_sem_s exclsem;      /* Supports mutually exclusive access */
   struct mtd_geometry_s geo;        /* FLASH geometry */
+  struct spiffs_sem_s exclsem;      /* Supports mutually exclusive access */
   dq_queue_t objq;                  /* A doubly linked list of open file objects */
   FAR struct mtd_dev_s *mtd;        /* The contained MTD interface */
   FAR uint8_t *lu_work;             /* Primary work buffer, size of a logical page */
   FAR uint8_t *work;                /* Secondary work buffer, size of a logical page */
   FAR void *cache;                  /* Cache memory */
+  off_t phys_size;                  /* physical size of the SPI flash */
   int free_entry;                   /* Cursor for free blocks, entry index */
   int lu_entry;                     /* Cursor when searching, entry index */
   uint32_t free_blocks;             /* Current number of free blocks */
@@ -194,7 +176,6 @@ struct spiffs_s
   int16_t free_blkndx;              /* cursor for free blocks, block index */
   int16_t lu_blkndx;                /* Cursor when searching, block index */
   int16_t max_erase_count;          /* Max erase count amongst all blocks */
-  uint8_t cleaning;                 /* Flag indicating that garbage collector is cleaning */
 };
 
 /* This structure represents the state of an open file */

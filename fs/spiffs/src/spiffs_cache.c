@@ -45,7 +45,10 @@
 
 #include <nuttx/config.h>
 
+#include <nuttx/mtd/mtd.h>
+
 #include "spiffs.h"
+#include "spiffs_mtd.h"
 #include "spiffs_nucleus.h"
 
 /****************************************************************************
@@ -97,7 +100,7 @@ static int32_t spiffs_cache_page_free(FAR struct spiffs_s *fs, int ix, uint8_t w
           spiffs_cacheinfo("CACHE_FREE: write cache page " _SPIPRIi " pgndx "
                            _SPIPRIpg "\n", ix, cp->pgndx);
           res =
-            SPIFFS_HAL_WRITE(fs, SPIFFS_PAGE_TO_PADDR(fs, cp->pgndx),
+            spiffs_mtd_write(fs, SPIFFS_PAGE_TO_PADDR(fs, cp->pgndx),
                              SPIFFS_CFG_LOG_PAGE_SZ(fs), mem);
         }
 
@@ -227,11 +230,11 @@ int32_t spiffs_phys_rd(FAR struct spiffs_s *fs, uint8_t op, int16_t objid,
     {
       if ((op & SPIFFS_OP_TYPE_MASK) == SPIFFS_OP_T_OBJ_LU2)
         {
-          /* for second layer lookup functions, we do not cache in order to
+          /* For second layer lookup functions, we do not cache in order to
            * prevent shredding
            */
 
-          return SPIFFS_HAL_READ(fs, addr, len, dst);
+          return spiffs_mtd_read(fs, addr, len, dst);
         }
 #  if CONFIG_SPIFFS_CACHEDBG
       fs->cache_misses++;
@@ -254,7 +257,7 @@ int32_t spiffs_phys_rd(FAR struct spiffs_s *fs, uint8_t op, int16_t objid,
           spiffs_cacheinfo("CACHE_ALLO: allocated cache page " _SPIPRIi
                            " for pgndx " _SPIPRIpg "\n", cp->ix, cp->pgndx);
 
-          res2 = SPIFFS_HAL_READ(fs, addr -
+          res2 = spiffs_mtd_read(fs, addr -
                                  SPIFFS_PADDR_TO_PAGE_OFFSET(fs, addr),
                                  SPIFFS_CFG_LOG_PAGE_SZ(fs),
                                  spiffs_get_cache_page(fs, cache, cp->ix));
@@ -272,7 +275,7 @@ int32_t spiffs_phys_rd(FAR struct spiffs_s *fs, uint8_t op, int16_t objid,
         {
           /* this will never happen, last resort for sake of symmetry */
 
-          int32_t res2 = SPIFFS_HAL_READ(fs, addr, len, dst);
+          int32_t res2 = spiffs_mtd_read(fs, addr, len, dst);
           if (res2 != OK)
             {
               /* honor read failure before possible write failure (bad idea?) */
@@ -296,17 +299,17 @@ int32_t spiffs_phys_wr(FAR struct spiffs_s *fs, uint8_t op, int16_t objid,
 
   if (cp && (op & SPIFFS_OP_COM_MASK) != SPIFFS_OP_C_WRTHRU)
     {
-      /* have a cache page.  copy in data to cache page */
+      /* Have a cache page.  Copy in data to cache page */
 
       if ((op & SPIFFS_OP_COM_MASK) == SPIFFS_OP_C_DELE &&
           (op & SPIFFS_OP_TYPE_MASK) != SPIFFS_OP_T_OBJ_LU)
         {
-          /* page is being deleted, wipe from cache - unless it is a lookup
+          /* Page is being deleted, wipe from cache - unless it is a lookup
            * page
            */
 
           spiffs_cache_page_free(fs, cp->ix, 0);
-          return SPIFFS_HAL_WRITE(fs, addr, len, src);
+          return spiffs_mtd_write(fs, addr, len, src);
         }
 
       uint8_t *mem = spiffs_get_cache_page(fs, cache, cp->ix);
@@ -319,7 +322,7 @@ int32_t spiffs_phys_wr(FAR struct spiffs_s *fs, uint8_t op, int16_t objid,
         {
           /* page is being updated, no write-cache, just pass thru */
 
-          return SPIFFS_HAL_WRITE(fs, addr, len, src);
+          return spiffs_mtd_write(fs, addr, len, src);
         }
       else
         {
@@ -330,11 +333,11 @@ int32_t spiffs_phys_wr(FAR struct spiffs_s *fs, uint8_t op, int16_t objid,
     {
       /* no cache page, no write cache - just write thru */
 
-      return SPIFFS_HAL_WRITE(fs, addr, len, src);
+      return spiffs_mtd_write(fs, addr, len, src);
     }
 }
 
-/* returns the cache page that this fobj refers, or null if no cache page */
+/* Returns the cache page that this fobj refers, or null if no cache page */
 
 FAR struct spiffs_cache_page_s *spiffs_cache_page_get_byfd(FAR struct spiffs_s *fs,
                                                             FAR struct spiffs_file_s *fobj)

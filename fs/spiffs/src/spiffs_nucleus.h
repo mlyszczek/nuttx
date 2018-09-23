@@ -51,6 +51,7 @@
 #include <stdbool.h>
 
 #include "spiffs.h"
+#include "spiffs_mtd.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -203,36 +204,20 @@
 #define SPIFFS_OBJ_ID_DELETED           ((int16_t)0)
 #define SPIFFS_OBJ_ID_FREE              ((int16_t)-1)
 
-#if SPIFFS_USE_MAGIC
-#  if !SPIFFS_USE_MAGIC_LENGTH
-#    define SPIFFS_MAGIC(fs, blkndx)           \
-  ((int16_t)(0x20140529 ^ SPIFFS_CFG_LOG_PAGE_SZ(fs)))
-#  else
-#    define SPIFFS_MAGIC(fs, blkndx)           \
-  ((int16_t)(0x20140529 ^ SPIFFS_CFG_LOG_PAGE_SZ(fs) ^ ((fs)->geo.neraseblocks - (blkndx))))
-#  endif
-#endif
-
-#define SPIFFS_CFG_LOG_PAGE_SZ(fs)      ((fs)->cfg.log_page_size)
-#define SPIFFS_CFG_LOG_BLOCK_SZ(fs)     ((fs)->cfg.log_block_size)
-#define SPIFFS_CFG_PHYS_SZ(fs)          ((fs)->cfg.phys_size)
-#define SPIFFS_CFG_PHYS_ERASE_SZ(fs)    ((fs)->cfg.phys_erase_block)
-#define SPIFFS_CFG_PHYS_ADDR(fs)        ((fs)->cfg.phys_addr)
-
 /* total number of pages */
 
 #define SPIFFS_MAX_PAGES(fs) \
-  (SPIFFS_CFG_PHYS_SZ(fs)/SPIFFS_CFG_LOG_PAGE_SZ(fs) )
+  (SPIFFS_CFG_PHYS_SZ(fs)/SPIFFS_CFG_LOG_PAGE_SZ(fs))
 
 /* total number of pages per block, including object lookup pages */
 
 #define SPIFFS_PAGES_PER_BLOCK(fs) \
-  (SPIFFS_CFG_LOG_BLOCK_SZ(fs)/SPIFFS_CFG_LOG_PAGE_SZ(fs) )
+  (SPIFFS_CFG_LOG_BLOCK_SZ(fs)/SPIFFS_CFG_LOG_PAGE_SZ(fs))
 
 /* number of object lookup pages per block */
 
 #define SPIFFS_OBJ_LOOKUP_PAGES(fs)     \
-  (MAX(1, (SPIFFS_PAGES_PER_BLOCK(fs) * sizeof(int16_t)) / SPIFFS_CFG_LOG_PAGE_SZ(fs)) )
+  (MAX(1, (SPIFFS_PAGES_PER_BLOCK(fs) * sizeof(int16_t)) / SPIFFS_CFG_LOG_PAGE_SZ(fs)))
 
 /* checks if page index belongs to object lookup */
 
@@ -246,8 +231,7 @@
 
 /* converts a block to physical address */
 
-#define SPIFFS_BLOCK_TO_PADDR(fs, block) \
-  ( SPIFFS_CFG_PHYS_ADDR(fs) + (block)* SPIFFS_CFG_LOG_BLOCK_SZ(fs) )
+#define SPIFFS_BLOCK_TO_PADDR(fs, block)       ((block) * SPIFFS_CFG_LOG_BLOCK_SZ(fs))
 
 /* converts a object lookup entry to page index */
 
@@ -257,62 +241,50 @@
 /* converts a object lookup entry to physical address of corresponding page */
 
 #define SPIFFS_OBJ_LOOKUP_ENTRY_TO_PADDR(fs, block, entry) \
-  (SPIFFS_BLOCK_TO_PADDR(fs, block) + (SPIFFS_OBJ_LOOKUP_PAGES(fs) + entry) * SPIFFS_CFG_LOG_PAGE_SZ(fs) )
+  (SPIFFS_BLOCK_TO_PADDR(fs, block) + (SPIFFS_OBJ_LOOKUP_PAGES(fs) + entry) * SPIFFS_CFG_LOG_PAGE_SZ(fs))
 
 /* converts a page to physical address */
 
-#define SPIFFS_PAGE_TO_PADDR(fs, page) \
-  ( SPIFFS_CFG_PHYS_ADDR(fs) + (page) * SPIFFS_CFG_LOG_PAGE_SZ(fs) )
+#define SPIFFS_PAGE_TO_PADDR(fs, page)         ((page) * SPIFFS_CFG_LOG_PAGE_SZ(fs))
 
 /* converts a physical address to page */
 
-#define SPIFFS_PADDR_TO_PAGE(fs, addr) \
-  ( ((addr) -  SPIFFS_CFG_PHYS_ADDR(fs)) / SPIFFS_CFG_LOG_PAGE_SZ(fs) )
+#define SPIFFS_PADDR_TO_PAGE(fs, addr)         ((addr) / SPIFFS_CFG_LOG_PAGE_SZ(fs))
 
 /* gives index in page for a physical address */
 
-#define SPIFFS_PADDR_TO_PAGE_OFFSET(fs, addr) \
-  ( ((addr) - SPIFFS_CFG_PHYS_ADDR(fs)) % SPIFFS_CFG_LOG_PAGE_SZ(fs) )
+#define SPIFFS_PADDR_TO_PAGE_OFFSET(fs, addr)  ((addr) % SPIFFS_CFG_LOG_PAGE_SZ(fs))
 
 /* returns containing block for given page */
 
-#define SPIFFS_BLOCK_FOR_PAGE(fs, page) \
-  ( (page) / SPIFFS_PAGES_PER_BLOCK(fs) )
+#define SPIFFS_BLOCK_FOR_PAGE(fs, page)        ((page) / SPIFFS_PAGES_PER_BLOCK(fs))
 
 /* returns starting page for block */
 
-#define SPIFFS_PAGE_FOR_BLOCK(fs, block) \
-  ( (block) * SPIFFS_PAGES_PER_BLOCK(fs) )
+#define SPIFFS_PAGE_FOR_BLOCK(fs, block)       ((block) * SPIFFS_PAGES_PER_BLOCK(fs))
 
 /* converts page to entry in object lookup page */
 
 #define SPIFFS_OBJ_LOOKUP_ENTRY_FOR_PAGE(fs, page) \
-  ( (page) % SPIFFS_PAGES_PER_BLOCK(fs) - SPIFFS_OBJ_LOOKUP_PAGES(fs) )
+  ((page) % SPIFFS_PAGES_PER_BLOCK(fs) - SPIFFS_OBJ_LOOKUP_PAGES(fs))
 
 /* returns data size in a data page */
 
 #define SPIFFS_DATA_PAGE_SIZE(fs) \
-    ( SPIFFS_CFG_LOG_PAGE_SZ(fs) - sizeof(struct spiffs_page_header_s) )
+    (SPIFFS_CFG_LOG_PAGE_SZ(fs) - sizeof(struct spiffs_page_header_s))
 
 /* returns physical address for block's erase count,
  * always in the physical last entry of the last object lookup page
  */
 
 #define SPIFFS_ERASE_COUNT_PADDR(fs, blkndx) \
-  ( SPIFFS_BLOCK_TO_PADDR(fs, blkndx) + SPIFFS_OBJ_LOOKUP_PAGES(fs) * SPIFFS_CFG_LOG_PAGE_SZ(fs) - sizeof(int16_t) )
-
-/* returns physical address for block's magic,
- * always in the physical second last entry of the last object lookup page
- */
-
-#define SPIFFS_MAGIC_PADDR(fs, blkndx) \
-  ( SPIFFS_BLOCK_TO_PADDR(fs, blkndx) + SPIFFS_OBJ_LOOKUP_PAGES(fs) * SPIFFS_CFG_LOG_PAGE_SZ(fs) - sizeof(int16_t)*2 )
+  (SPIFFS_BLOCK_TO_PADDR(fs, blkndx) + SPIFFS_OBJ_LOOKUP_PAGES(fs) * SPIFFS_CFG_LOG_PAGE_SZ(fs) - sizeof(int16_t))
 
 /* checks if there is any room for magic in the object luts */
 
 #define SPIFFS_CHECK_MAGIC_POSSIBLE(fs) \
-  ( (SPIFFS_OBJ_LOOKUP_MAX_ENTRIES(fs) % (SPIFFS_CFG_LOG_PAGE_SZ(fs)/sizeof(int16_t))) * sizeof(int16_t) \
-    <= (SPIFFS_CFG_LOG_PAGE_SZ(fs)-sizeof(int16_t)*2) )
+  ((SPIFFS_OBJ_LOOKUP_MAX_ENTRIES(fs) % (SPIFFS_CFG_LOG_PAGE_SZ(fs)/sizeof(int16_t))) * sizeof(int16_t) \
+    <= (SPIFFS_CFG_LOG_PAGE_SZ(fs)-sizeof(int16_t)*2))
 
 /* define helpers object */
 
@@ -339,7 +311,7 @@
 /* get data span index for object index span index */
 
 #define SPIFFS_DATA_SPAN_IX_FOR_OBJ_IX_SPAN_IX(fs, spndx) \
-  ( (spndx) == 0 ? 0 : (SPIFFS_OBJ_HDR_IX_LEN(fs) + (((spndx)-1) * SPIFFS_OBJ_IX_LEN(fs))) )
+  ((spndx) == 0 ? 0 : (SPIFFS_OBJ_HDR_IX_LEN(fs) + (((spndx)-1) * SPIFFS_OBJ_IX_LEN(fs))))
 
 #define SPIFFS_OP_T_OBJ_LU    (0<<0)
 #define SPIFFS_OP_T_OBJ_LU2   (1<<0)
@@ -412,13 +384,6 @@
 
 #define SPIFFS_VIS_NO_WRAP      (1<<2)
 
-#define SPIFFS_HAL_WRITE(_fs, _paddr, _len, _src) \
-  (_fs)->cfg.hal_write_f((_paddr), (_len), (_src))
-#define SPIFFS_HAL_READ(_fs, _paddr, _len, _dst) \
-  (_fs)->cfg.hal_read_f((_paddr), (_len), (_dst))
-#define SPIFFS_HAL_ERASE(_fs, _paddr, _len) \
-  (_fs)->cfg.hal_erase_f((_paddr), (_len))
-
 #define SPIFFS_CACHE_FLAG_DIRTY       (1<<0)
 #define SPIFFS_CACHE_FLAG_WRTHRU      (1<<1)
 #define SPIFFS_CACHE_FLAG_OBJLU       (1<<2)
@@ -437,11 +402,6 @@
 
 #define spiffs_get_cache_page(fs, c, ix) \
   ((uint8_t *)(&((c)->cpages[(ix) * SPIFFS_CACHE_PAGE_SIZE(fs)])) + sizeof(struct spiffs_cache_page_s))
-
-#define _spiffs_rd(fs, op, objid, addr, len, dst) \
-  spiffs_phys_rd((fs), (op), (objid), (addr), (len), (dst))
-#define _spiffs_wr(fs, op, objid, addr, len, src) \
-  spiffs_phys_wr((fs), (op), (objid), (addr), (len), (src))
 
 #ifndef MIN
 #  define MIN(a,b) ((a) < (b) ? (a) : (b))
@@ -565,9 +525,6 @@ int32_t spiffs_foreach_objlu(FAR struct spiffs_s *fs, int16_t starting_block,
           spiffs_visitor_f v, FAR const void *user_const_p,
           FAR void *user_var_p, FAR int16_t *block_ix, int *lu_entry);
 int32_t spiffs_erase_block(FAR struct spiffs_s *fs, int16_t blkndx);
-#if SPIFFS_USE_MAGIC && SPIFFS_USE_MAGIC_LENGTH
-int32_t spiffs_probe(spiffs_config * cfg);
-#endif
 int32_t spiffs_obj_lu_scan(FAR struct spiffs_s *fs);
 int32_t spiffs_obj_lu_find_free_obj_id(FAR struct spiffs_s *fs,
           int16_t *objid, FAR const uint8_t *conflicting_name);

@@ -175,29 +175,6 @@
 #  define SPIFFS_COPY_BUFFER_STACK      (64)
 #endif
 
-/* Enable this to have an identifiable spiffs filesystem. This will look for
- * a magic in all sectors to determine if this is a valid spiffs system or
- * not on mount point. If not, SPIFFS_format must be called prior to mounting
- * again.
- */
-
-#ifndef SPIFFS_USE_MAGIC
-#  define SPIFFS_USE_MAGIC              (0)
-#endif
-
-#if SPIFFS_USE_MAGIC
-/* Only valid when SPIFFS_USE_MAGIC is enabled. If SPIFFS_USE_MAGIC_LENGTH is
- * enabled, the magic will also be dependent on the length of the filesystem.
- * For example, a filesystem configured and formatted for 4 megabytes will not
- * be accepted for mounting with a configuration defining the filesystem as 2
- * megabytes.
- */
-
-#ifndef SPIFFS_USE_MAGIC_LENGTH
-#  define SPIFFS_USE_MAGIC_LENGTH         (0)
-#endif
-#endif
-
 /* Temporal file cache hit score. Each time a file is opened, all cached files
  * will lose one point. If the opened file is found in cache, that entry will
  * gain SPIFFS_TEMPORAL_CACHE_HIT_SCORE points. One can experiment with this

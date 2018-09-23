@@ -164,7 +164,7 @@ int spiffs_stat_pgndx(FAR struct spiffs_s *fs, int16_t pgndx, int16_t objid,
   mode_t mode;
   int ret;
 
-  ret = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_IX | SPIFFS_OP_C_READ, objid,
+  ret = spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_IX | SPIFFS_OP_C_READ, objid,
                    SPIFFS_PAGE_TO_PADDR(fs, pgndx),
                    sizeof(struct spiffs_pgobj_ixheader_s),
                    (uint8_t *) & objhdr);
@@ -175,7 +175,7 @@ int spiffs_stat_pgndx(FAR struct spiffs_s *fs, int16_t pgndx, int16_t objid,
 
   obj_id_addr = SPIFFS_BLOCK_TO_PADDR(fs, SPIFFS_BLOCK_FOR_PAGE(fs, pgndx)) +
     SPIFFS_OBJ_LOOKUP_ENTRY_FOR_PAGE(fs, pgndx) * sizeof(int16_t);
-  ret = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_READ, objid, obj_id_addr,
+  ret = spiffs_phys_rd(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_READ, objid, obj_id_addr,
                    sizeof(int16_t), (FAR uint8_t *)&ix);
   if (ret < 0)
     {
