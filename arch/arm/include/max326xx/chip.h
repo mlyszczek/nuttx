@@ -157,7 +157,7 @@
 
 /* Peripherals */
 
-#  define MAX326XX_NWDOG       1    /* One Watchog Timers */
+#  define MAX326XX_NWDOG       1    /* One Watchog Timer */
 #  define MAX326XX_NWWDOG      0    /* No Windowed Watchog Timers */
 #  define MAX326XX_NRWDOG      0    /* No Recovery Watchog Timer */
 #  define MAX326XX_NWAKEUP     0    /* No Wakeup Timer */
@@ -172,7 +172,7 @@
 #  define MAX326XX_NSPIS       2    /* Two SPI slave */
 #  define MAX326XX_NSPIXIP     0    /* No SPI XIP */
 #  define MAX326XX_NI2SS       1    /* One I2S slave */
-#  define MAX326XX_NI2CM       2    /* Three I2C master */
+#  define MAX326XX_NI2CM       2    /* Two I2C master */
 #  define MAX326XX_NI2CS       2    /* One I2C slave */
 #  define MAX326XX_NUART       2    /* Two UARTs */
 #  define MAX326XX_N1WIREM     0    /* No 1-Wire master */
