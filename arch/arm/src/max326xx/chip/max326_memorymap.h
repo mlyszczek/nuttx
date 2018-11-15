@@ -51,4 +51,3 @@
 #endif
 
 #endif /* __ARCH_ARM_SRC_MAX326XX_CHIP_MAX326_MEMORYMAP_H */
-
