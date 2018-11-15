@@ -46,9 +46,16 @@
  * Pre-processor Definitions
  ************************************************************************************/
 
-/* Get customizations for each supported chip.  Only sizes and numbers of things are
- * provided here.  See arch/arm/src/max326xx/Kconfig for other, boolean configuration
- * settings.
+/* Get customizations for each supported MAX326xx family.  Only sizes and numbers of
+ * things are provided here.  See arch/arm/src/max326xx/Kconfig for other, boolean
+ * configuration settings.
+ *
+ * MAX326xx Families are determined by sharing a common User Guide for the chip
+ * specification:
+ *
+ *   MAX32620/32621 Family:  MAX32620 Rev C, User Guide, AN6242, Rev 2, 2/17
+ *   MAX32630/32632 Family:  MAX32630 Rev B, User Guide, AN6349, Rev 0, 10/16
+ *   MAX32660 Family:        MAX32660 User Guide, AN6659, Rev0, 7/18
  */
 
 /* MAX32620/32621 Family:

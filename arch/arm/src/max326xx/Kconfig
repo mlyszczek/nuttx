@@ -35,6 +35,15 @@ config ARCH_CHIP_MAX32632
 endchoice # MAX326xx Chip Selection
 
 # Chip Families
+#
+# Chip Families are determined by sharing a common User Guide for the chip
+# specification:
+#
+# CONFIG_ARCH_FAMILY_MAX32620:  MAX32620 Rev C, User Guide, AN6242,
+#                               Rev 2, 2/17
+# CONFIG_ARCH_FAMILY_MAX32630:  MAX32630 Rev B, User Guide, AN6349,
+#                               Rev 0, 10/16
+# CONFIG_ARCH_FAMILY_MAX32660:  MAX32660 User Guide, AN6659, Rev0, 7/18
 
 config ARCH_FAMILY_MAX32620
 	bool
