@@ -76,11 +76,9 @@
 
 #define MAX326_IRQ_EXTINT      (16) /* Vector number of the first external interrupt */
 
-#if defined(CONFIG_ARCH_CHIP_MAX32620) || defined(CONFIG_ARCH_CHIP_MAX32621)
-#  include <arch/max326xx/max32620_irq.h>
-#elif defined(CONFIG_ARCH_CHIP_MAX32630) || defined(CONFIG_ARCH_CHIP_MAX32632)
-#  include <arch/max326xx/max32630_irq.h>
-#elif defined(CONFIG_ARCH_CHIP_MAX32660)
+#if defined(CONFIG_ARCH_FAMILY_MAX32620) || defined(CONFIG_ARCH_FAMILY_MAX32630)
+#  include <arch/max326xx/max32620_30_irq.h>
+#if defined(CONFIG_ARCH_FAMILY_MAX32660)
 #  include <arch/max326xx/max32660_irq.h>
 #else
 #  error "Unsupported MAX326XX family"
