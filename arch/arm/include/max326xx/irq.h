@@ -37,8 +37,8 @@
  * nuttx/irq.h
  */
 
-#ifndef __ARCH_ARM_INCLUDE_MAX326XX_IRQ_H
-#define __ARCH_ARM_INCLUDE_MAX326XX_IRQ_H
+#ifndef __ARCH_ARM_INCLUDE_MAX326_IRQ_H
+#define __ARCH_ARM_INCLUDE_MAX326_IRQ_H
 
 /****************************************************************************************
  * Included Files
@@ -58,23 +58,23 @@
 
 /* Common Processor Exceptions (vectors 0-15) */
 
-#define MAX326XX_IRQ_RESERVED     (0) /* Reserved vector (only used with CONFIG_DEBUG_FEATURES) */
+#define MAX326_IRQ_RESERVED     (0) /* Reserved vector (only used with CONFIG_DEBUG_FEATURES) */
                                       /* Vector  0: Reset stack pointer value */
                                       /* Vector  1: Reset (not handler as an IRQ) */
-#define MAX326XX_IRQ_NMI          (2) /* Vector  2: Non-Maskable Interrupt (NMI) */
-#define MAX326XX_IRQ_HARDFAULT    (3) /* Vector  3: Hard fault */
-#define MAX326XX_IRQ_MEMFAULT     (4) /* Vector  4: Memory management (MPU) */
-#define MAX326XX_IRQ_BUSFAULT     (5) /* Vector  5: Bus fault */
-#define MAX326XX_IRQ_USAGEFAULT   (6) /* Vector  6: Usage fault */
-#define MAX326XX_IRQ_SVCALL      (11) /* Vector 11: SVC call */
-#define MAX326XX_IRQ_DBGMONITOR  (12) /* Vector 12: Debug Monitor */
+#define MAX326_IRQ_NMI          (2) /* Vector  2: Non-Maskable Interrupt (NMI) */
+#define MAX326_IRQ_HARDFAULT    (3) /* Vector  3: Hard fault */
+#define MAX326_IRQ_MEMFAULT     (4) /* Vector  4: Memory management (MPU) */
+#define MAX326_IRQ_BUSFAULT     (5) /* Vector  5: Bus fault */
+#define MAX326_IRQ_USAGEFAULT   (6) /* Vector  6: Usage fault */
+#define MAX326_IRQ_SVCALL      (11) /* Vector 11: SVC call */
+#define MAX326_IRQ_DBGMONITOR  (12) /* Vector 12: Debug Monitor */
                                       /* Vector 13: Reserved */
-#define MAX326XX_IRQ_PENDSV      (14) /* Vector 14: Pendable system service request */
-#define MAX326XX_IRQ_SYSTICK     (15) /* Vector 15: System tick */
+#define MAX326_IRQ_PENDSV      (14) /* Vector 14: Pendable system service request */
+#define MAX326_IRQ_SYSTICK     (15) /* Vector 15: System tick */
 
 /* Chip-Specific External interrupts */
 
-#define MAX326XX_IRQ_EXTINT      (16) /* Vector number of the first external interrupt */
+#define MAX326_IRQ_EXTINT      (16) /* Vector number of the first external interrupt */
 
 #if defined(CONFIG_ARCH_CHIP_MAX32620) || defined(CONFIG_ARCH_CHIP_MAX32621)
 #  include <arch/max326xx/max32620_irq.h>
@@ -114,4 +114,4 @@ extern "C"
 #endif
 #endif
 
-#endif /* __ARCH_ARM_INCLUDE_MAX326XX_IRQ_H */
+#endif /* __ARCH_ARM_INCLUDE_MAX326_IRQ_H */

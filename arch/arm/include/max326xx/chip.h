@@ -69,26 +69,26 @@
 
 /* Peripherals */
 
-#  define MAX326XX_NWDOG       0    /* No Watchog Timers */
-#  define MAX326XX_NWWDOG      2    /* Two Windowed Watchog Timers */
-#  define MAX326XX_NRWDOG      1    /* One Recovery Watchog Timer */
-#  define MAX326XX_NWAKEUP     1    /* One Wakeup Timer */
-#  define MAX326XX_NRTC        1    /* One RTC */
-#  define MAX326XX_NCRC        1    /* One CRC16/32 */
-#  define MAX326XX_NAES        1    /* One AES 128,192, 256 */
-#  define MAX326XX_NUSB20      1    /* One USB 2.0 device */
-#  define MAX326XX_NTIMER32    6    /* Six 32-bit Timers */
-#  define MAX326XX_NTIMER8     0    /* No 8-bit Timers */
-#  define MAX326XX_NPTENGINE  16    /* Sixteen pulse train engines */
-#  define MAX326XX_NSPIM       3    /* Three SPI master */
-#  define MAX326XX_NSPIS       1    /* One SPI slave */
-#  define MAX326XX_NSPIXIP     1    /* One SPI XIP */
-#  define MAX326XX_NI2SS       0    /* No I2S slave */
-#  define MAX326XX_NI2CM       3    /* Three I2C master */
-#  define MAX326XX_NI2CS       1    /* One I2C slave */
-#  define MAX326XX_NUART       4    /* Four UARTs */
-#  define MAX326XX_N1WIREM     1    /* One 1-Wire master */
-#  define MAX326XX_NADC10      1    /* One 10-bit ADC */
+#  define MAX326_NWDOG       0    /* No Watchog Timers */
+#  define MAX326_NWWDOG      2    /* Two Windowed Watchog Timers */
+#  define MAX326_NRWDOG      1    /* One Recovery Watchog Timer */
+#  define MAX326_NWAKEUP     1    /* One Wakeup Timer */
+#  define MAX326_NRTC        1    /* One RTC */
+#  define MAX326_NCRC        1    /* One CRC16/32 */
+#  define MAX326_NAES        1    /* One AES 128,192, 256 */
+#  define MAX326_NUSB20      1    /* One USB 2.0 device */
+#  define MAX326_NTMR32      6    /* Six 32-bit Timers */
+#  define MAX326_NTMR8       0    /* No 8-bit Timers */
+#  define MAX326_NPTENGINE  16    /* Sixteen pulse train engines */
+#  define MAX326_NSPIM       3    /* Three SPI master */
+#  define MAX326_NSPIS       1    /* One SPI slave */
+#  define MAX326_NSPIXIP     1    /* One SPI XIP */
+#  define MAX326_NI2SS       0    /* No I2S slave */
+#  define MAX326_NI2CM       3    /* Three I2C master */
+#  define MAX326_NI2CS       1    /* One I2C slave */
+#  define MAX326_NUART       4    /* Four UARTs */
+#  define MAX326_N1WIREM     1    /* One 1-Wire master */
+#  define MAX326_NADC10      1    /* One 10-bit ADC */
 
 /* MAX32630/32632 Family:
  *
@@ -108,26 +108,26 @@
 
 /* Peripherals */
 
-#  define MAX326XX_NWDOG       0    /* No Watchog Timers */
-#  define MAX326XX_NWWDOG      2    /* Two Windowed Watchog Timers */
-#  define MAX326XX_NRWDOG      0    /* No Recovery Watchog Timer */
-#  define MAX326XX_NWAKEUP     1    /* One Wakeup Timer */
-#  define MAX326XX_NRTC        1    /* One RTC */
-#  define MAX326XX_NCRC        1    /* One CRC16/32 */
-#  define MAX326XX_NAES        1    /* One AES 128,192, 256 */
-#  define MAX326XX_NUSB20      1    /* One USB 2.0 device */
-#  define MAX326XX_NTIMER32    6    /* Six 32-bit Timers */
-#  define MAX326XX_NTIMER8     0    /* No 8-bit Timers */
-#  define MAX326XX_NPTENGINE  16    /* Sixteen pulse train engines */
-#  define MAX326XX_NSPIM       3    /* Three SPI master */
-#  define MAX326XX_NSPIS       1    /* One SPI slave */
-#  define MAX326XX_NSPIXIP     1    /* One SPI XIP */
-#  define MAX326XX_NI2SS       0    /* No I2S slave */
-#  define MAX326XX_NI2CM       3    /* Three I2C master */
-#  define MAX326XX_NI2CS       1    /* One I2C slave */
-#  define MAX326XX_NUART       4    /* Four UARTs */
-#  define MAX326XX_N1WIREM     1    /* One 1-Wire master */
-#  define MAX326XX_NADC10      1    /* One 10-bit ADC */
+#  define MAX326_NWDOG       0    /* No Watchog Timers */
+#  define MAX326_NWWDOG      2    /* Two Windowed Watchog Timers */
+#  define MAX326_NRWDOG      0    /* No Recovery Watchog Timer */
+#  define MAX326_NWAKEUP     1    /* One Wakeup Timer */
+#  define MAX326_NRTC        1    /* One RTC */
+#  define MAX326_NCRC        1    /* One CRC16/32 */
+#  define MAX326_NAES        1    /* One AES 128,192, 256 */
+#  define MAX326_NUSB20      1    /* One USB 2.0 device */
+#  define MAX326_NTMR32      6    /* Six 32-bit Timers */
+#  define MAX326_NTMR8       0    /* No 8-bit Timers */
+#  define MAX326_NPTENGINE  16    /* Sixteen pulse train engines */
+#  define MAX326_NSPIM       3    /* Three SPI master */
+#  define MAX326_NSPIS       1    /* One SPI slave */
+#  define MAX326_NSPIXIP     1    /* One SPI XIP */
+#  define MAX326_NI2SS       0    /* No I2S slave */
+#  define MAX326_NI2CM       3    /* Three I2C master */
+#  define MAX326_NI2CS       1    /* One I2C slave */
+#  define MAX326_NUART       4    /* Four UARTs */
+#  define MAX326_N1WIREM     1    /* One 1-Wire master */
+#  define MAX326_NADC10      1    /* One 10-bit ADC */
 
 /* MAX32660 Family:
  *
@@ -157,26 +157,26 @@
 
 /* Peripherals */
 
-#  define MAX326XX_NWDOG       1    /* One Watchog Timer */
-#  define MAX326XX_NWWDOG      0    /* No Windowed Watchog Timers */
-#  define MAX326XX_NRWDOG      0    /* No Recovery Watchog Timer */
-#  define MAX326XX_NWAKEUP     0    /* No Wakeup Timer */
-#  define MAX326XX_NRTC        1    /* One RTC */
-#  define MAX326XX_NCRC        0    /* No CRC16/32 */
-#  define MAX326XX_NAES        0    /* No AES 128,192, 256 */
-#  define MAX326XX_NUSB20      0    /* No USB 2.0 device */
-#  define MAX326XX_NTIMER32    2    /* Two 32-bit Timers */
-#  define MAX326XX_NTIMER8     1    /* One 8-bit Timers */
-#  define MAX326XX_NPTENGINE   0    /* No pulse train engines */
-#  define MAX326XX_NSPIM       2    /* Three SPI master */
-#  define MAX326XX_NSPIS       2    /* Two SPI slave */
-#  define MAX326XX_NSPIXIP     0    /* No SPI XIP */
-#  define MAX326XX_NI2SS       1    /* One I2S slave */
-#  define MAX326XX_NI2CM       2    /* Two I2C master */
-#  define MAX326XX_NI2CS       2    /* One I2C slave */
-#  define MAX326XX_NUART       2    /* Two UARTs */
-#  define MAX326XX_N1WIREM     0    /* No 1-Wire master */
-#  define MAX326XX_NADC10      0    /* No 10-bit ADC */
+#  define MAX326_NWDOG       1    /* One Watchog Timer */
+#  define MAX326_NWWDOG      0    /* No Windowed Watchog Timers */
+#  define MAX326_NRWDOG      0    /* No Recovery Watchog Timer */
+#  define MAX326_NWAKEUP     0    /* No Wakeup Timer */
+#  define MAX326_NRTC        1    /* One RTC */
+#  define MAX326_NCRC        0    /* No CRC16/32 */
+#  define MAX326_NAES        0    /* No AES 128,192, 256 */
+#  define MAX326_NUSB20      0    /* No USB 2.0 device */
+#  define MAX326_NTMR32      2    /* Two 32-bit Timers */
+#  define MAX326_NTMR8       1    /* One 8-bit Timers */
+#  define MAX326_NPTENGINE   0    /* No pulse train engines */
+#  define MAX326_NSPIM       2    /* Three SPI master */
+#  define MAX326_NSPIS       2    /* Two SPI slave */
+#  define MAX326_NSPIXIP     0    /* No SPI XIP */
+#  define MAX326_NI2SS       1    /* One I2S slave */
+#  define MAX326_NI2CM       2    /* Two I2C master */
+#  define MAX326_NI2CS       2    /* One I2C slave */
+#  define MAX326_NUART       2    /* Two UARTs */
+#  define MAX326_N1WIREM     0    /* No 1-Wire master */
+#  define MAX326_NADC10      0    /* No 10-bit ADC */
 
 #else
 #  error Unrecognized MAX326XX chip
