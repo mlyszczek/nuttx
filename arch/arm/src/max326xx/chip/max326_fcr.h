@@ -1,5 +1,5 @@
 /************************************************************************************
- * arch/arm/src/max326xx/chip/max326_icc.h
+ * arch/arm/src/max326xx/chip/max326_fcr.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -33,8 +33,8 @@
  *
  ************************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_MAX326XX_CHIP_MAX326_ICC_H
-#define __ARCH_ARM_SRC_MAX326XX_CHIP_MAX326_ICC_H
+#ifndef __ARCH_ARM_SRC_MAX326XX_CHIP_MAX326_FCR_H
+#define __ARCH_ARM_SRC_MAX326XX_CHIP_MAX326_FCR_H
 
 /************************************************************************************
  * Included Files
@@ -49,47 +49,19 @@
 
 /* Register Offsets *****************************************************************/
 
-#define MAX326_ICC_ID_OFFSET          0x0000 /* Cache ID Register */
-#define MAX326_ICC_MEMCFG_OFFSET      0x0004 /* Memory Configuration Register */
-#define MAX326_ICC_CTRLSTAT_OFFSET    0x0100 /* Cache Control and Status Register */
-#define MAX326_ICC_INVDTALL_OFFSET    0x0700 /* Cache Invalidate Register */
+#define MAX326_FCR_REG0_OFFSET      0x0000    /* Function Control Register 0 */
 
 /* Register Addresses ***************************************************************/
 
-#define MAX326_ICC_ID                 (MAX326_ICC_BASE + MAX326_ICC_ID_OFFSET)
-#define MAX326_ICC_MEMCFG             (MAX326_ICC_BASE + MAX326_ICC_MEMCFG_OFFSET)
-#define MAX326_ICC_CTRLSTAT           (MAX326_ICC_BASE + MAX326_ICC_CTRLSTAT_OFFSET)
-#define MAX326_ICC_INVDTALL           (MAX326_ICC_BASE + MAX326_ICC_INVDTALL_OFFSET)
+#define MAX326_FCR_REG0             (MAX326_FCR_BASE + MAX326_FCR_REG0_OFFSET)
 
 /* Register Bit-field Definitions ***************************************************/
 
-/* Cache ID Register */
+/* Function Control Register 0 */
 
-#define ICC_ID_RELNUM_SHIFT           (0)       /* Bits 0-5: Cache Release Number */
-#define ICC_ID_RELNUM_MASK            (0x3f << ICC_ID_RELNUM_SHIFT)
-#define ICC_ID_PARTNUM_SHIFT          (6)       /* Bits 6-9: Cache Part Number */
-#define ICC_ID_PARTNUM_MASK           (15 << ICC_ID_PARTNUM_SHIFT)
-#define ICC_ID_CCHID_SHIFT            (10)      /* Bits 10-15: Cache ID */
-#define ICC_ID_CCHID_MASK             (0x3f << ICC_ID_CCHID_SHIFT)
+#define FCR_REG0_I2C0_SDA_FILTER    (1 << 20) /* Bit 20: I2C0 SDA Filter Enable */
+#define FCR_REG0_I2C0_SCL_FILTER    (1 << 21) /* Bit 21: I2C0 SCL Filter Enable */
+#define FCR_REG0_I2C1_SDA_FILTER    (1 << 22) /* Bit 22: I2C1 SDA Filter Enable */
+#define FCR_REG0_I2C1_SCL_FILTER    (1 << 23) /* Bit 23: I2C1 SCL Filter Enable */
 
-/* Memory Configuration Register:
- *
- * Cache size is in units 1Kb.
- * Memory size is in units of 32Kb (MAX32620/30) or 128Kb (MAX32660)
- */
-
-#define ICC_MEMCFG_CCHSZ_SHIFT        (0)       /* Bits 0-15: Cache Size */
-#define ICC_MEMCFG_CCHSZ_MASK         (0xffff << ICC_MEMCFG_CCHSZ_SHIFT)
-#define ICC_MEMCFG_MEMSZ_SHIFT        (16)      /* Bits 16-31: Addressable Memory Size */
-#define ICC_MEMCFG_MEMSZ_MASK         (0xffff << ICC_MEMCFG_MEMSZ_SHIFT)
-
-/* Cache Control and Status Register */
-
-#define ICC_CTRLSTAT_ENABLE           (1 << 0)  /* Bit 0:  Cache enable */
-#define ICC_CTRLSTAT_READY            (1 << 16) /* Bit 16: Cache is ready */
-
-/* Cache Invalidate Register.  Any write to this register of any value invalidates
- * the cache
- */
-
-#endif /* __ARCH_ARM_SRC_MAX326XX_CHIP_MAX326_ICC_H */
+#endif /* __ARCH_ARM_SRC_MAX326XX_CHIP_MAX326_FCR_H */
