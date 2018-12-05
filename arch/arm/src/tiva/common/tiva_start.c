@@ -218,12 +218,8 @@ void __start(void)
 
   /* Configure the UART so that we can get debug output as soon as possible */
 
-#ifdef CONFIG_TIVA_BOARD_EARLYINIT
-  board_earlyinit();
-#else
-  up_clockconfig();
+  tiva_clock_configure();
   up_lowsetup();
-#endif
   tiva_fpuconfig();
   showprogress('A');
 

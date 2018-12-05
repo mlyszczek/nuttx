@@ -265,10 +265,6 @@ config LM_REVA2
 		Some early silicon returned an increase LDO voltage or 2.75V to work
 		around a PLL bug
 
-config TIVA_BOARD_EARLYINIT
-	bool
-	default n
-
 menu "Tiva/Stellaris Peripheral Support"
 
 # MCU capabilities
@@ -640,14 +636,6 @@ config TIVA_RAMVBAR
 		Set the ARM VBAR register to position interrupt vectors at the
 		beginning of RAM (vs the beginning of FLASH).  The beginning of RAM
 		is that address defined by CONFIG_RAM_START.
-
-config TIVA_BOARD_CLOCKCONFIG
-	bool "Board-specific clock configuration"
-	default n
-	---help---
-		If CONFIG_TIVA_BOARD_CLOCKCONFIG is defined, then the board-specific
-		logic must provide the function tiva_board_clockconfig().  That
-		function will then be called to perform all clock initialization.
 
 menu "Enable GPIO Interrupts"
 
