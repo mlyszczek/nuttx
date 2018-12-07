@@ -1,9 +1,8 @@
 /************************************************************************************
- * arch/arm/src/tiva/hardware/tiva_gpio.h
+ * arch/arm/src/tiva/hardware/cc13x2_cc26x2/cc13x2_cc26x2_timer.h
  *
- *   Copyright (C) 2009-2010, 2013, 2018 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>
- *            Jose Pablo Carballo <jcarballo@nx-engineering.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,8 +33,8 @@
  *
  ************************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_TIVA_HARDWARE_TIVA_GPIO_H
-#define __ARCH_ARM_SRC_TIVA_HARDWARE_TIVA_GPIO_H
+#ifndef __ARCH_ARM_SRC_TIVA_HARDWARE_CC13X2_CC26X2_CC13X2_CC26X2_TIMER_H
+#define __ARCH_ARM_SRC_TIVA_HARDWARE_CC13X2_CC26X2_CC13X2_CC26X2_TIMER_H
 
 /************************************************************************************
  * Included Files
@@ -43,27 +42,15 @@
 
 #include <nuttx/config.h>
 
-/* Include the GPIO header file for the specific Tiva/Stellaris/SimpleLink chip */
-
-#if defined(CONFIG_ARCH_CHIP_LM3S)
-#  include "hardware/lm/lm3s_gpio.h"
-#elif defined(CONFIG_ARCH_CHIP_LM4F)
-#  include "hardware/lm/lm4f_gpio.h"
-#elif defined(CONFIG_ARCH_CHIP_TM4C123)
-#  include "hardware/tm4c/tm4c123_gpio.h"
-#elif defined(CONFIG_ARCH_CHIP_TM4C129)
-#  include "hardware/tm4c/tm4c129_gpio.h"
-#elif defined(CONFIG_ARCH_CHIP_CC13X0)
-#  include "hardware/cc13x0/cc13x0_gpio.h"
-#elif defined(CONFIG_ARCH_CHIP_CC13X2)
-#  include "hardware/cc13x2_cc26x2/cc13x2_cc26x2_gpio.h"
-#else
-#  error "Unsupported Tiva/Stellaris system GPIO"
-#endif
-
 /************************************************************************************
  * Pre-processor Definitions
  ************************************************************************************/
+
+/* TIMER Register Offsets ***********************************************************/
+
+/* TIMER Register Addresses *********************************************************/
+
+/* TIMER Register Bitfield Definitions **********************************************/
 
 /************************************************************************************
  * Public Types
@@ -77,4 +64,4 @@
  * Public Function Prototypes
  ************************************************************************************/
 
-#endif /* __ARCH_ARM_SRC_TIVA_HARDWARE_TIVA_GPIO_H */
+#endif /* __ARCH_ARM_SRC_TIVA_HARDWARE_CC13X2_CC26X2_CC13X2_CC26X2_TIMER_H */
