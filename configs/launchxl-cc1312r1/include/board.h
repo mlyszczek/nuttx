@@ -52,6 +52,13 @@
 
 #define SYSCLK_FREQUENCY      48000000
 
+/* Peripheral Clock (PCLK)
+ *
+ * Same frequency as the SYSCLK
+ */
+
+#define PCLK_FREQUENCY       SYSCLK_FREQUENCY
+
 /* LED definitions **********************************************************/
 
 /* The LaunchXL-cc1312R1 and two LEDs controlled by software: DIO7_GLED (CR1)
@@ -100,18 +107,32 @@
 
 /* Button definitions *******************************************************/
 
-/* Pin Disambiguation *******************************************************/
+/* Pin configuration ********************************************************/
 
+#ifdef CONFIG_TIVA_UART0
 /* UART0:
  *
  * The on-board XDS110 Debugger provide a USB virtual serial console using
  * UART0 (PA0/U0RX and PA1/U0TX).
  */
 
-#define GPIO_UART0_RX (GPIO_PORTID(IOC_IOCFG_PORTID_UART0_RX) | IOC_IOCFG_IE | \
-                       GPIO_DIO(0))
-#define GPIO_UART0_TX (GPIO_PORTID(IOC_IOCFG_PORTID_UART0_TX) | GPIO_DIO(1))
+#  define GPIO_UART0_RX &g_gpio_uart0_rx
+#  define GPIO_UART0_TX &g_gpio_uart0_tx
+#endif
 
 /* DMA **********************************************************************/
+
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+/* Pin configuration ********************************************************/
+
+struct cc134xx_pinconfig_s; /* Forward reference */
+
+#ifdef CONFIG_TIVA_UART0
+extern const struct cc134xx_pinconfig_s g_gpio_uart0_rx;
+extern const struct cc134xx_pinconfig_s g_gpio_uart0_tx;
+#endif
 
 #endif /* __CONFIG_NUCLEO_F303ZE_INCLUDE_BOARD_H */

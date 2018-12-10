@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/tiva/cc13xx/cc13x_start.c
+ * arch/arm/src/tiva/cc13xx/cc13xx_start.c
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -44,6 +44,7 @@
 #include <debug.h>
 
 #include <nuttx/init.h>
+#include <arch/irq.h>
 
 #ifdef CONFIG_ARCH_FPU
 #  include "nvic.h"
@@ -270,15 +271,23 @@ void __start(void)
   showprogress('E');
 #endif
 
+  /* Initialize the Power Manager internal state.  It must be called prior
+   * to any other Power API.
+   */
+
+  cc13xx_power_initialize();
+  showprogress('F');
+
   /* Initialize onboard resources */
 
   tiva_boardinitialize();
-  showprogress('F');
+  showprogress('G');
 
 #ifdef CONFIG_TIVA_EEPROM
   /*Initialize the EEPROM */
 
   tiva_eeprom_initialize();
+  showprogress('H');
 #endif
 
   /* Then start NuttX */

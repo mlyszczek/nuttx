@@ -44,11 +44,13 @@
  ************************************************************************************/
 
 #include <nuttx/config.h>
-#include <arch/chip/chip.h>
+#include "hardware/tiva_memorymap.h"
 
 /************************************************************************************
  * Pre-processor Definitions
  ************************************************************************************/
+
+#define TIVA_NDIO                  32      /* DIO0-31 */
 
 /* IOC register offsets ************************************************************/
 
@@ -88,7 +90,7 @@
 
 /* IOC register addresses **********************************************************/
 
-#define TIVA_IOC_IOCFG_(n)         (TIVA_IOC_BASE + TIVA_IOC_IOCFG_OFFSET(n))
+#define TIVA_IOC_IOCFG(n)          (TIVA_IOC_BASE + TIVA_IOC_IOCFG_OFFSET(n))
 #  define TIVA_IOC_IOCFG0          (TIVA_IOC_BASE + TIVA_IOC_IOCFG0_OFFSET)
 #  define TIVA_IOC_IOCFG1          (TIVA_IOC_BASE + TIVA_IOC_IOCFG1_OFFSET)
 #  define TIVA_IOC_IOCFG2          (TIVA_IOC_BASE + TIVA_IOC_IOCFG2_OFFSET)
@@ -124,9 +126,9 @@
 
 /* IOC register bit settings *******************************************************/
 
-#define IOC_IOCFG_PORTID_MASK      (0)       /* Bits 0-5:  Selects DIO usage */
-#define IOC_IOCFG_PORTID_SHIFT     (0x3f << IOC_IOCFG_PORTID_MASK)
-#  define IOC_IOCFG_PORTID(n)        ((uint32_t)(n) << IOC_IOCFG_PORTID_MASK) /* See PORT ID definitions */
+#define IOC_IOCFG_PORTID_SHIFT     (0)       /* Bits 0-5:  Selects DIO usage */
+#define IOC_IOCFG_PORTID_MASK      (0x3f << IOC_IOCFG_PORTID_SHIFT)
+#  define IOC_IOCFG_PORTID(n)        ((uint32_t)(n) << IOC_IOCFG_PORTID_SHIFT) /* See PORT ID definitions */
 #define IOC_IOCFG_IOEV_MCU_WUEN    (1 << 6)  /* Bit 6:  Input edge asserts MCU_WU event */
 #define IOC_IOCFG_IOEV_RTCEN       (1 << 7)  /* Bit 7:  Input edge asserts RTC event */
 #define IOC_IOCFG_IOSTR_SHIFT      (8)       /* Bits 8-9: I/O drive strength */
@@ -157,13 +159,13 @@
 #define IOC_IOCFG_IOEV_AON_PROG1   (1 << 22) /* Bit 22: Input edge asserts AON_PROG1 */
 #define IOC_IOCFG_IOEV_AON_PROG2   (1 << 23) /* Bit 23: Input edge assert AON_PROG2 */
 #define IOC_IOCFG_IOMODE_SHIFT     (24)      /* Bits 24-26:  I/O Mode */
-#define IOC_IOCFG_IOMODE_MASK      (7 << IOC_IOCFG1_IOMODE_SHIFT)
-#  define IOC_IOCFG_IOMODE_NORMAL     (0 << IOC_IOCFG1_IOMODE_SHIFT) /* Normal I/O */
-#  define IOC_IOCFG_IOMODE_INV        (1 << IOC_IOCFG1_IOMODE_SHIFT) /* Inverted I/O */
-#  define IOC_IOCFG_IOMODE_OPENDR     (4 << IOC_IOCFG1_IOMODE_SHIFT) /* Open drain */
-#  define IOC_IOCFG_IOMODE_OPENDRINV  (5 << IOC_IOCFG1_IOMODE_SHIFT) /* Open drain, inverted I/O */
-#  define IOC_IOCFG_IOMODE_OPENSRC    (6 << IOC_IOCFG1_IOMODE_SHIFT) /* Open source */
-#  define IOC_IOCFG_IOMODE_OPENSRCINV (7 << IOC_IOCFG1_IOMODE_SHIFT) /* Open source, inverted I/O */
+#define IOC_IOCFG_IOMODE_MASK      (7 << IOC_IOCFG_IOMODE_SHIFT)
+#  define IOC_IOCFG_IOMODE_NORMAL     (0 << IOC_IOCFG_IOMODE_SHIFT) /* Normal I/O */
+#  define IOC_IOCFG_IOMODE_INV        (1 << IOC_IOCFG_IOMODE_SHIFT) /* Inverted I/O */
+#  define IOC_IOCFG_IOMODE_OPENDR     (4 << IOC_IOCFG_IOMODE_SHIFT) /* Open drain */
+#  define IOC_IOCFG_IOMODE_OPENDRINV  (5 << IOC_IOCFG_IOMODE_SHIFT) /* Open drain, inverted I/O */
+#  define IOC_IOCFG_IOMODE_OPENSRC    (6 << IOC_IOCFG_IOMODE_SHIFT) /* Open source */
+#  define IOC_IOCFG_IOMODE_OPENSRCINV (7 << IOC_IOCFG_IOMODE_SHIFT) /* Open source, inverted I/O */
 #define IOC_IOCFG_WUCFG_SHIFT      (27)      /* Bits 27-28:  Wakeup Configuration */
 #define IOC_IOCFG_WUCFG_MASK       (3 << IOC_IOCFG_WUCFG_SHIFT)
 #  define IOC_IOCFG_WUCFG_NONE       (0 << IOC_IOCFG_WUCFG_SHIFT) /* 0, 1: Wakeup disabled */

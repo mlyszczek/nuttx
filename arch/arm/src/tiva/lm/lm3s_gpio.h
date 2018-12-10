@@ -44,6 +44,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <arch/tiva/chip.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -233,6 +234,16 @@
 #  define GPIO_PIN_5                  (5 << GPIO_PIN_SHIFT)
 #  define GPIO_PIN_6                  (6 << GPIO_PIN_SHIFT)
 #  define GPIO_PIN_7                  (7 << GPIO_PIN_SHIFT)
+
+/****************************************************************************
+ * Public Types
+ ****************************************************************************/
+
+/* This opaque type permits common function prototype for GPIO functions
+ * across all MCUs.
+ */
+
+typedef uint32_t pinconfig_t;
 
 /****************************************************************************
  * Public Function Prototypes
