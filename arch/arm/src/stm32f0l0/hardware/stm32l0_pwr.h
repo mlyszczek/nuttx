@@ -77,15 +77,15 @@
 #  define PWR_CR_2p7V          (5 << PWR_CR_PLS_SHIFT) /* 101: 2.7V */
 #  define PWR_CR_2p8V          (6 << PWR_CR_PLS_SHIFT) /* 110: 2.8V */
 #  define PWR_CR_2p9V          (7 << PWR_CR_PLS_SHIFT) /* 111: 2.9V */
-#define PWR_CR_DBP             (1 << 8)  /* Bit 8: Disable Backup Domain write protection */
-#define PWR_CR_ULP             (1 << 9)  /* Ultralow power mode */
-#define PWR_CR_FWU             (1 << 10) /* Fast wake-up */
+#define PWR_CR_DBP             (1 << 8)  /* Bit 8:  Disable Backup Domain write protection */
+#define PWR_CR_ULP             (1 << 9)  /* Bit 9:  Ultralow power mode */
+#define PWR_CR_FWU             (1 << 10) /* Bit 10: Fast wake-up */
 #define PWR_CR_VOS_MASK        (3 << 11) /* Bits 11-12: Regulator voltage scaling output selection */
 #  define PWR_CR_VOS_SCALE_1   (1 << 11) /* 1.8 V (range 1) PLL VCO Max = 96MHz */
 #  define PWR_CR_VOS_SCALE_2   (2 << 11) /* 1.5 V (range 2) PLL VCO Max = 64MHz */
 #  define PWR_CR_VOS_SCALE_3   (3 << 11) /* 1.2 V (range 3) PLL VCO Max = 24MHz */
-#define PWR_CR_DSEEKOFF        (1 << 13) /* Deepsleep mode with non-volatile memory kept off */
-#define PWR_CR_LPRUN           (1 << 14) /* Low power run mode */
+#define PWR_CR_DSEEKOFF        (1 << 13) /* Bit 13: Deepsleep mode with non-volatile memory kept off */
+#define PWR_CR_LPRUN           (1 << 14) /* Bit 14: Low power run mode */
 
 /* Power control/status register */
 
