@@ -270,7 +270,7 @@ static uint8_t compress_ipaddr(FAR const net_ipv6addr_t ipaddr, uint8_t bitpos)
     {
       /* Compress IID to 16 bits: xxxx:xxxx:xxxx:xxxx:0000:00ff:fe00:XXXX */
 
-#ifdef CONFIG_BIG_ENDIAN
+#ifdef CONFIG_ENDIAN_BIG
       *g_hc06ptr++ = ipaddr[7] >> 8;        /* Preserve big-endian, network order */
       *g_hc06ptr++ = ipaddr[7] & 0xff;
 #else
@@ -288,7 +288,7 @@ static uint8_t compress_ipaddr(FAR const net_ipv6addr_t ipaddr, uint8_t bitpos)
 
       for (i = 4; i < 8; i++)
         {
-#ifdef CONFIG_BIG_ENDIAN
+#ifdef CONFIG_ENDIAN_BIG
           *g_hc06ptr++ = ipaddr[i] >> 8;    /* Preserve big-endian, network order */
           *g_hc06ptr++ = ipaddr[i] & 0xff;
 #else
@@ -447,12 +447,6 @@ static void uncompress_addr(FAR const struct netdev_varaddr_s *addr,
         {
           postcount = addr->nv_addrlen;
         }
-
-      /* If we are converting the entire MAC address, then we need to some some
-       * special bit operations.
-       */
-
-      fullmac = (postcount == addr->nv_addrlen);
     }
 
   /* Copy any prefix */
@@ -498,7 +492,7 @@ static void uncompress_addr(FAR const struct netdev_varaddr_s *addr,
 
       if ((postcount & 1) != 0)
         {
-#ifdef CONFIG_BIG_ENDIAN
+#ifdef CONFIG_ENDIAN_BIG
           /* Preserve big-endian, network order */
 
           ipaddr[destndx - 1] = (uint16_t)(*srcptr) << 8;
@@ -513,23 +507,32 @@ static void uncompress_addr(FAR const struct netdev_varaddr_s *addr,
 
       for (i = destndx; i < 8; i++)
         {
-#ifdef CONFIG_BIG_ENDIAN
-          /* Preserve big-endian, network order */
+          if (usemac)
+            {
+              ipaddr[i] = (uint16_t)srcptr[0] << 8 | (uint16_t)srcptr[1];
+            }
+          else
+            {
+#ifdef CONFIG_ENDIAN_BIG
+              /* Preserve big-endian, network order */
 
-          ipaddr[i] = (uint16_t)srcptr[0] << 8 | (uint16_t)srcptr[1];
+              ipaddr[i] = (uint16_t)srcptr[0] << 8 | (uint16_t)srcptr[1];
 #else
-          /* Preserve big-endian, network order */
+              /* Preserve big-endian, network order */
 
-          ipaddr[i] = (uint16_t)srcptr[1] << 8 | (uint16_t)srcptr[0];
+              ipaddr[i] = (uint16_t)srcptr[1] << 8 | (uint16_t)srcptr[0];
 #endif
+            }
           srcptr += 2;
         }
 
-      /* If the was a standard MAC based address then toggle */
+      /* If the IP is dervied from a MAC address big enough to include the U/L bit,
+       * invert it.
+       */
 
-      if (fullmac)
+      if (usemac && postcount == 8)
         {
-          ipaddr[7] ^= 0x0200;
+          ipaddr[4] ^= HTONS(0x0200);
         }
 
       /* If we took the data from packet, then update the packet pointer */
