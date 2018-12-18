@@ -249,17 +249,35 @@ int stm32_configgpio(uint32_t cfgset)
       switch (cfgset & GPIO_SPEED_MASK)
         {
           default:
-          case GPIO_SPEED_2MHz:    /* 2 MHz Low speed output */
+#if defined(STM32_GPIO_VERY_LOW_SPEED)
+          case GPIO_SPPED_VERYLOW: /* 400KHz Very Low speed output */
             setting = GPIO_OSPEED_2MHz;
             break;
 
-          case GPIO_SPEED_10MHz:   /* 10 MHz Medium speed output */
+          case GPIO_SPEED_LOW:     /* 2 MHz Low speed output */
+            setting = GPIO_OSPEED_2MHz;
+            break;
+
+          case GPIO_SPEED_MEDIUM:  /* 10 MHz Medium speed output */
             setting = GPIO_OSPEED_10MHz;
             break;
 
-          case GPIO_SPEED_50MHz:   /* 50 MHz High speed output  */
+          case GPIO_SPEED_HIGH:    /* 40 MHz High speed output  */
             setting = GPIO_OSPEED_50MHz;
             break;
+#else
+          case GPIO_SPEED_LOW:     /* 2 MHz Low speed output */
+            setting = GPIO_OSPEED_2MHz;
+            break;
+
+          case GPIO_SPEED_MEDIUM:  /* 10 MHz Medium speed output */
+            setting = GPIO_OSPEED_10MHz;
+            break;
+
+          case GPIO_SPEED_HIGH:    /* 50 MHz High speed output  */
+            setting = GPIO_OSPEED_50MHz;
+            break;
+#endif
         }
     }
   else

@@ -50,7 +50,7 @@
 #elif defined(CONFIG_ARCH_CHIP_STM32L0)
 #  include "hardware/stm32l0_gpio.h"
 #else
-#  error "Unrecognized STM32F0/L0 chip"
+#  error "Unrecognized STM32F0/L0 GPIO"
 #endif
 
 #endif /* __ARCH_ARM_SRC_STM32F0L0_CHIP_STM32_GPIO_H */

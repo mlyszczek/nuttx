@@ -41,6 +41,8 @@
  * Pre-processor Definitions
  ************************************************************************************/
 
+#undef STM32_GPIO_VERY_LOW_SPEED
+
 /* Register Offsets *****************************************************************/
 
 #define STM32_GPIO_MODER_OFFSET    0x0000 /* GPIO port mode register */
