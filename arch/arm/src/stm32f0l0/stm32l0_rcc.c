@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/stm32f0l0/stm32l0xxx_rcc.c
+ * arch/arm/src/stm32f0l0/stm32l0_rcc.c
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Mateusz Szafoni <raiden00@railab.me>

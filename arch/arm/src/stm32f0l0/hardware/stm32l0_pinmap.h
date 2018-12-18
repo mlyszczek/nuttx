@@ -1,5 +1,5 @@
 /************************************************************************************
- * arch/arm/src/stm32f0l0/hardware/stm32l0xxx_pinmap.h
+ * arch/arm/src/stm32f0l0/hardware/stm32l0_pinmap.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Mateusz Szafoni <raiden00@railab.me>
@@ -33,8 +33,8 @@
  *
  ************************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0XXXX_PINMAP_H
-#define __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0XXXX_PINMAP_H
+#ifndef __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0_PINMAP_H
+#define __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0_PINMAP_H
 
 /************************************************************************************
  * Included Files
@@ -47,6 +47,7 @@
 /************************************************************************************
  * Pre-processor Definitions
  ************************************************************************************/
+
 /* Alternate Pin Functions.
  *
  * Alternative pin selections are provided with a numeric suffix like _1, _2, etc.
@@ -337,4 +338,4 @@
 
 /* TODO: LCD */
 
-#endif /* __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0XXXX_PINMAP_H */
+#endif /* __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0_PINMAP_H */

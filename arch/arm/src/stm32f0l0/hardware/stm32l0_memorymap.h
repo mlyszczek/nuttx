@@ -1,5 +1,5 @@
 /************************************************************************************
- * arch/arm/src/stm32f0l0/hardware/stm32l0xxxx_memorymap.h
+ * arch/arm/src/stm32f0l0/hardware/stm32l0_memorymap.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Mateusz Szafoni <raiden00@railab.me>
@@ -33,14 +33,14 @@
  *
  ************************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0XXXX_MEMORYMAP_H
-#define __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0XXXX_MEMORYMAP_H
+#ifndef __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0_MEMORYMAP_H
+#define __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0_MEMORYMAP_H
 
 /************************************************************************************
  * Pre-processor Definitions
  ************************************************************************************/
 
-/* STM32L0XXXX Address Blocks *******************************************************/
+/* STM32L0 Address Blocks ***********************************************************/
 
 #define STM32_CODE_BASE      0x00000000     /* 0x00000000-0x1fffffff: 512Mb code block */
 #define STM32_SRAM_BASE      0x20000000     /* 0x20000000-0x3fffffff: 512Mb sram block */
@@ -127,4 +127,4 @@
 #define STM32_GPIOE_BASE     0x50001000     /* 0x50001000-0x500013ff GPIO Port E */
 #define STM32_GPIOH_BASE     0x50001c00     /* 0x50001c00-0x50001fff GPIO Port H */
 
-#endif /* __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0XXXX_MEMORYMAP_H */
+#endif /* __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0_MEMORYMAP_H */

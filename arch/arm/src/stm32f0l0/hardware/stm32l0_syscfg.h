@@ -1,5 +1,5 @@
 /****************************************************************************************************
- * arch/arm/src/stm32f0l0/hardware/stm32l0xxx_syscfg.h
+ * arch/arm/src/stm32f0l0/hardware/stm32l0_syscfg.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Mateusz Szafoni <raiden00@railab.me>
@@ -33,8 +33,8 @@
  *
  ****************************************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0XXX_SYSCFG_H
-#define __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0XXX_SYSCFG_H
+#ifndef __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0_SYSCFG_H
+#define __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0_SYSCFG_H
 
 /****************************************************************************************************
  * Included Files
@@ -129,4 +129,4 @@
 #define SYSCFG_EXTICR4_EXTI15_SHIFT   (12)      /* Bits 12-15: EXTI 15 configuration */
 #define SYSCFG_EXTICR4_EXTI15_MASK    (SYSCFG_EXTICR_PORT_MASK << SYSCFG_EXTICR4_EXTI15_SHIFT)
 
-#endif /* __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0XXX_SYSCFG_H */
+#endif /* __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0_SYSCFG_H */

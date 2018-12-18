@@ -1,5 +1,5 @@
 /************************************************************************************
- * arch/arm/src/stm32f0l0/hardware/stm32l0xxx_gpio.h
+ * arch/arm/src/stm32f0l0/hardware/stm32l0_gpio.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Mateusz Szafoni <raiden00@railab.me>
@@ -33,8 +33,8 @@
  *
  ************************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0XXX_GPIO_H
-#define __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0XXX_GPIO_H
+#ifndef __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0_GPIO_H
+#define __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0_GPIO_H
 
 /************************************************************************************
  * Pre-processor Definitions
@@ -308,7 +308,7 @@
 /* GPIO port bit set/reset register */
 
 #define GPIO_BSRR_SET(n)           (1 << (n))
-#define GPIO_BSRR_RESET(n)         (1 << ((n)+16))
+#define GPIO_BSRR_RESET(n)         (1 << ((n) + 16))
 
 /* GPIO port configuration lock register */
 
@@ -341,4 +341,4 @@
 
 #define GPIO_BRR(n)                (1 << (n))
 
-#endif /* __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0XXX_GPIO_H */
+#endif /* __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0_GPIO_H */

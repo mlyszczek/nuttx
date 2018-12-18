@@ -71,7 +71,7 @@ CHIP_CSRCS += stm32_lowputc.c stm32_serial.c stm32_start.c
 # Configuration-dependent STM32F0/L0 files
 
 ifdef ($(CONFIG_ARCH_CHIP_STM32L0),y
-CHIP_CSRCS += stm32l0xxx_rcc.c
+CHIP_CSRCS += stm32l0_rcc.c
 endif
 
 ifneq ($(CONFIG_ARCH_IDLE_CUSTOM),y)

@@ -1,5 +1,5 @@
 /************************************************************************************
- * arch/arm/src/stm32f0l0/hardware/stm32l0xxxx_uart.h
+ * arch/arm/src/stm32f0l0/hardware/stm32l0_uart.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Mateusz Szafoni <raiden00@railab.me>
@@ -33,8 +33,8 @@
  *
  ************************************************************************************/
 
-#ifndef __ARCH_ARM_STC_STM32F0L0_HARDWARE_STM32L0XXXX_UART_H
-#define __ARCH_ARM_STC_STM32F0L0_HARDWARE_STM32L0XXXX_UART_H
+#ifndef __ARCH_ARM_STC_STM32F0L0_HARDWARE_STM32L0_UART_H
+#define __ARCH_ARM_STC_STM32F0L0_HARDWARE_STM32L0_UART_H
 
 /************************************************************************************
  * Included Files
@@ -333,4 +333,4 @@
 
 #define USART_SR_ALLBITS          USART_ISR_ALLBITS
 
-#endif /* __ARCH_ARM_STC_STM32F0L0_HARDWARE_STM32L0XXXX_UART_H */
+#endif /* __ARCH_ARM_STC_STM32F0L0_HARDWARE_STM32L0_UART_H */

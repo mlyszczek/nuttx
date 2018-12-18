@@ -1,5 +1,5 @@
 /************************************************************************************
- * arch/arm/src/stm32f0l0/hardware/stm32l0xxx_rcc.h
+ * arch/arm/src/stm32f0l0/hardware/stm32l0_rcc.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Mateusz Szafoni <raiden00@railab.me>
@@ -33,8 +33,8 @@
  *
  ************************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0XXXX_RCC_H
-#define __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0XXXX_RCC_H
+#ifndef __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0_RCC_H
+#define __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0_RCC_H
 
 /************************************************************************************
  * Pre-processor Definitions
@@ -551,4 +551,4 @@
 #define RCC_CSR_WWDGRSTF                (30) /* Bit 30: WWDG reset flag */
 #define RCC_CSR_LPWRRSTF                (31) /* Bit 31: Low-power reset flag */
 
-#endif /* __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0XXXX_RCC_H */
+#endif /* __ARCH_ARM_SRC_STM32F0L0_HARDWARE_STM32L0_RCC_H */
