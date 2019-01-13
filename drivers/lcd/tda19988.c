@@ -77,8 +77,9 @@ struct tda1988_dev_s
 
 static int     tda19988_select_page(FAR struct tda1988_dev_s *priv,
                                     uint8_t page);
-static int     tda19988_hdmi_getreg(FAR struct tda1988_dev_s *priv,
-                 uint8_t page, uint8_t regaddr, FAR uint8_t *regval);
+static int     tda19988_hdmi_getregs(FAR struct tda1988_dev_s *priv,
+                 uint8_t page, uint8_t regaddr, FAR uint8_t *regval,
+                 int nregs);
 static int     tda19988_hdmi_putreg(FAR struct tda1988_dev_s *priv,
                  uint8_t page, uint8_t regaddr, uint8_t regval);
 static int     tda19988_hdmi_modifyreg(FAR struct tda1988_dev_s *priv,
@@ -156,10 +157,10 @@ static int tda19988_select_page(FAR struct tda1988_dev_s *priv, uint8_t page)
 }
 
 /****************************************************************************
- * Name: tda19988_hdmi_getreg
+ * Name: tda19988_hdmi_getregs
  *
  * Description:
- *   Read the value from one TDA19988 register
+ *   Read the value from one or more TDA19988 registers
  *
  * Returned Value:
  *   Zero (OK) is returned on success; otherwise a negated errno value is
@@ -167,13 +168,14 @@ static int tda19988_select_page(FAR struct tda1988_dev_s *priv, uint8_t page)
  *
  ****************************************************************************/
 
-static int tda19988_hdmi_getreg(FAR struct tda1988_dev_s *priv, uint8_t page,
-                                uint8_t regaddr, FAR uint8_t *regval)
+static int tda19988_hdmi_getregs(FAR struct tda1988_dev_s *priv, uint8_t page,
+                                 uint8_t regaddr, FAR uint8_t *regval,
+                                 int nregs)
 {
   uint8_t buffer[1];
   int ret;
 
-  DEBUGASSERT(priv != NULL && regval != NULL);
+  DEBUGASSERT(priv != NULL && regval != NULL && nregs > 0);
 
   /* Select the HDMI page */
 
@@ -188,7 +190,7 @@ static int tda19988_hdmi_getreg(FAR struct tda1988_dev_s *priv, uint8_t page,
 
   buffer[0] = regaddr;
   ret = i2c_writeread(priv->lower->hdmi.i2c, &priv->lower->hdmi.config,
-                      buffer, 1, regval, 1);
+                      buffer, 1, regval, nregs);
   if (ret < 0)
     {
       lcdwarn("WARNING: i2c_writeread() failed: %d\n", ret);
@@ -274,10 +276,10 @@ static int tda19988_hdmi_modifyreg(FAR struct tda1988_dev_s *priv,
 
   /* Read the register contents */
 
-  ret = tda19988_hdmi_getreg(priv, page, regaddr, &regval);
+  ret = tda19988_hdmi_getregs(priv, page, regaddr, &regval, 1);
   if (ret < 0)
     {
-      lcdwarn("WARNING: tda19988_hdmi_getreg failed: %d\n", ret);
+      lcdwarn("WARNING: tda19988_hdmi_getregs failed: %d\n", ret);
       return ret;
     }
 
