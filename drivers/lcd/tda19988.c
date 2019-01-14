@@ -67,9 +67,13 @@ struct tda1988_dev_s
 
   /* Upper half driver state */
 
-  sem_t exclsem; /* Assures exclusive access to the driver */
-  uint8_t page;  /* Currently selected page */
-}
+  sem_t exclsem;              /* Assures exclusive access to the driver */
+  uint8_t page;               /* Currently selected page */
+  uint8_t crefs;              /* Number of open references */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  bool unlinked;              /* True, driver has been unlinked */
+#endif
+};
 
 /****************************************************************************
  * Private Function Prototypes
@@ -256,7 +260,7 @@ static int tda19988_hdmi_putreg(FAR struct tda1988_dev_s *priv,
 }
 
 /****************************************************************************
- * Name: tda19988_hdmi_putreg
+ * Name: tda19988_hdmi_modifyreg
  *
  * Description:
  *   Write a value to one TDA19988 register
@@ -323,15 +327,33 @@ static int tda19988_hdmi_modifyreg(FAR struct tda1988_dev_s *priv,
 
 static int tda19988_open(FAR struct file *filep)
 {
-  FAR struct inode *inode = filep->f_inode;
+  FAR struct inode *inode;
   FAR struct tda1988_dev_s *priv;
   int ret;
 
-  DEBUGASSERT(inode != NULL && inode->i_private != NULl);
-  priv = (FAR struct tda1988_dev_s*)inode->i_private;
+  /* Get the private driver state instance */
 
-  #warning Missing logic
-  return -ENOSYS;
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
+  inode = filep->f_inode;
+
+  priv = (FAR struct spi_driver_s *)inode->i_private;
+  DEBUGASSERT(priv != NULL);
+
+  /* Get exclusive access to the driver instance */
+
+  ret = nxsem_wait(&priv->exclsem);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  /* Increment the reference count on the driver instance */
+
+  DEBUGASSERT(priv->crefs != UINT8_MAX);
+  priv->crefs++;
+
+  nxsem_post(&priv->exclsem);
+  return OK;
 }
 
 /****************************************************************************
@@ -348,14 +370,45 @@ static int tda19988_open(FAR struct file *filep)
 
 static int tda19988_close(FAR struct file *filep)
 {
-  FAR struct inode *inode = filep->f_inode;
+  FAR struct inode *inode;
   FAR struct tda1988_dev_s *priv;
   int ret;
 
-  DEBUGASSERT(inode != NULL && inode->i_private != NULl);
-  priv = (FAR struct tda1988_dev_s*)inode->i_private;
+  /* Get the private driver state instance */
 
-#warning Missing logic
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
+  inode = filep->f_inode;
+
+  priv = (FAR struct spi_driver_s *)inode->i_private;
+  DEBUGASSERT(priv != NULL);
+
+  /* Get exclusive access to the driver */
+
+  ret = nxsem_wait(&priv->exclsem);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  /* Decrement the count of open references on the driver */
+
+  DEBUGASSERT(priv->crefs > 0);
+  priv->crefs--;
+
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  /* If the count has decremented to zero and the driver has been unlinked,
+   * then self-destruct now.
+   */
+
+  if (priv->crefs == 0 && priv->unlinked)
+    {
+      nxsem_destroy(&priv->exclsem);
+      kmm_free(priv);
+      return OK;
+    }
+#endif
+
+  nxsem_post(&priv->exclsem);
   return -ENOSYS;
 }
 
@@ -374,12 +427,17 @@ static int tda19988_close(FAR struct file *filep)
 static ssize_t tda19988_read(FAR struct file *filep, FAR char *buffer,
                              size_t len)
 {
-  FAR struct inode *inode = filep->f_inode;
+  FAR struct inode *inode;
   FAR struct tda1988_dev_s *priv;
   int ret;
 
-  DEBUGASSERT(inode != NULL && inode->i_private != NULl);
-  priv = (FAR struct tda1988_dev_s*)inode->i_private;
+  /* Get the private driver state instance */
+
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
+  inode = filep->f_inode;
+
+  priv = (FAR struct spi_driver_s *)inode->i_private;
+  DEBUGASSERT(priv != NULL);
 
   /* Get exclusive access to the driver */
 
@@ -410,12 +468,17 @@ static ssize_t tda19988_read(FAR struct file *filep, FAR char *buffer,
 static ssize_t tda19988_write(FAR struct file *filep, FAR const char *buffer,
                               size_t len)
 {
-  FAR struct inode *inode = filep->f_inode;
+  FAR struct inode *inode;
   FAR struct tda1988_dev_s *priv;
   int ret;
 
-  DEBUGASSERT(inode != NULL && inode->i_private != NULl);
-  priv = (FAR struct tda1988_dev_s*)inode->i_private;
+  /* Get the private driver state instance */
+
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
+  inode = filep->f_inode;
+
+  priv = (FAR struct spi_driver_s *)inode->i_private;
+  DEBUGASSERT(priv != NULL);
 
   /* Get exclusive access to the driver */
 
@@ -445,12 +508,17 @@ static ssize_t tda19988_write(FAR struct file *filep, FAR const char *buffer,
 
 static off_t tda19988_seek(FAR struct file *filep, off_t offset, int whence)
 {
-  FAR struct inode *inode = filep->f_inode;
+  FAR struct inode *inode;
   FAR struct tda1988_dev_s *priv;
   int ret;
 
-  DEBUGASSERT(inode != NULL && inode->i_private != NULl);
-  priv = (FAR struct tda1988_dev_s*)inode->i_private;
+  /* Get the private driver state instance */
+
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
+  inode = filep->f_inode;
+
+  priv = (FAR struct spi_driver_s *)inode->i_private;
+  DEBUGASSERT(priv != NULL);
 
   /* Get exclusive access to the driver */
 
@@ -480,25 +548,9 @@ static off_t tda19988_seek(FAR struct file *filep, off_t offset, int whence)
 
 static int tda19988_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
-  FAR struct inode *inode = filep->f_inode;
-  FAR struct tda1988_dev_s *priv;
-  int ret;
+  /* No IOCTL commands support at this time */
 
-  DEBUGASSERT(inode != NULL && inode->i_private != NULl);
-  priv = (FAR struct tda1988_dev_s*)inode->i_private;
-
-  /* Get exclusive access to the driver */
-
-  ret = nxsem_wait(&priv->exclsem);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-#warning Missing logic
-
-  nxsem_post(&priv->exclsem);
-  return -ENOSYS;
+  return -ENOTTY;
 }
 
 /****************************************************************************
@@ -517,12 +569,17 @@ static int tda19988_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 static int tda19988_poll(FAR struct file *filep, FAR struct pollfd *fds,
                          bool setup)
 {
-  FAR struct inode *inode = filep->f_inode;
+  FAR struct inode *inode;
   FAR struct tda1988_dev_s *priv;
   int ret;
 
-  DEBUGASSERT(inode != NULL && inode->i_private != NULl);
-  priv = (FAR struct tda1988_dev_s*)inode->i_private;
+  /* Get the private driver state instance */
+
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
+  inode = filep->f_inode;
+
+  priv = (FAR struct spi_driver_s *)inode->i_private;
+  DEBUGASSERT(priv != NULL);
 
   /* Get exclusive access to the driver */
 
@@ -564,8 +621,10 @@ static int tda19988_unlink(FAR struct inode *inode)
   FAR struct tda1988_dev_s *priv;
   int ret;
 
+  /* Get the private driver state instance */
+
   DEBUGASSERT(inode != NULL && inode->i_private != NULL);
-  priv = (FAR struct tda1988_dev_s*)inode->i_private;
+  priv = (FAR struct spi_driver_s *)inode->i_private;
 
   /* Get exclusive access to the driver */
 
@@ -575,10 +634,22 @@ static int tda19988_unlink(FAR struct inode *inode)
       return ret;
     }
 
-#warning Missing logic
+  /* Are there open references to the driver data structure? */
 
+  if (priv->crefs <= 0)
+    {
+      nxsem_destroy(&priv->exclsem);
+      kmm_free(priv);
+      return OK;
+    }
+
+  /* No... just mark the driver as unlinked and free the resources when the
+   * last client closes their reference to the driver.
+   */
+
+  priv->unlinked = true;
   nxsem_post(&priv->exclsem);
-  return -ENOSYS;
+  return OK;
 #endif
 
 /****************************************************************************
