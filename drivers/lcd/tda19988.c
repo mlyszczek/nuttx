@@ -4,6 +4,12 @@
  *   Copyright (C) 2019 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
+ * Derives rather loosely from the FreeBSD driver which has a compatible
+ * two-clause BSD license:
+ *
+ *   Copyright (c) 2015 Oleksandr Tymoshenko <gonzo@freebsd.org>
+ *   All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -94,6 +100,8 @@ static int     tda19988_getregs(FAR struct tda19988_i2c_s *dev,
                  uint8_t regaddr, FAR uint8_t *regval, int nregs);
 static int     tda19988_putreg(FAR struct tda19988_i2c_s *dev,
                  uint8_t regaddr, uint8_t regval);
+static int     tda19988_putreg16(FAR struct tda19988_i2c_s *dev,
+                 uint8_t regaddr, uint16_t regval);
 static int     tda19988_modifyreg(FAR struct tda19988_i2c_s *dev,
                  uint8_t regaddr, uint8_t clrbits, uint8_t setbits);
 
@@ -111,13 +119,13 @@ static inline int tda19988_cec_modifyreg(FAR struct tda1988_dev_s *priv,
 static int     tda19988_select_page(FAR struct tda1988_dev_s *priv,
                  uint8_t page);
 static int     tda19988_hdmi_getregs(FAR struct tda1988_dev_s *priv,
-                 uint8_t page, uint8_t regaddr, FAR uint8_t *regval,
-                 int nregs);
+                 uint16_t reginfo, FAR uint8_t *regval, int nregs);
 static int     tda19988_hdmi_putreg(FAR struct tda1988_dev_s *priv,
-                 uint8_t page, uint8_t regaddr, uint8_t regval);
+                 uint16_t reginfo, uint8_t regval);
+static int     tda19988_hdmi_putreg16(FAR struct tda1988_dev_s *priv,
+                 uint16_t reginfo, uint16_t regval);
 static int     tda19988_hdmi_modifyreg(FAR struct tda1988_dev_s *priv,
-                 uint8_t page, uint8_t regaddr, uint8_t clrbits,
-                 uint8_t setbits)
+                 uint16_t reginfo, uint8_t clrbits, uint8_t setbits)
 
 /* CEC Module Helpers */
 
@@ -208,7 +216,7 @@ static int tda19988_getregs(FAR struct tda19988_i2c_s *dev, uint8_t regaddr,
  * Name: tda19988_putreg
  *
  * Description:
- *   Write a value to one TDA19988 CEC or HDMI register
+ *   Write an 8-bit value to one TDA19988 CEC or HDMI register
  *
  * Returned Value:
  *   Zero (OK) is returned on success; otherwise a negated errno value is
@@ -234,7 +242,42 @@ static int tda19988_putreg(FAR struct tda19988_i2c_s *dev, uint8_t regaddr,
       return ret;
     }
 
-  lcdinfo("Read: %02x:%02x<-%02x\n", page, regaddr, regval);
+  lcdinfo("Wrote: %02x:%02x<-%02x\n", page, regaddr, regval);
+  return OK;
+}
+
+/****************************************************************************
+ * Name: tda19988_putreg16
+ *
+ * Description:
+ *   Write a 16-bit value to one TDA19988 CEC or HDMI register
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; otherwise a negated errno value is
+ *   returned.
+ *
+ ****************************************************************************/
+
+static int tda19988_putreg16(FAR struct tda19988_i2c_s *dev, uint8_t regaddr,
+                             uint16_t regval)
+{
+  uint8_t buffer[3];
+  int ret;
+
+  /* Write the register address and the register value */
+
+  buffer[0] = regaddr;
+  buffer[1] = (regval >> 8);
+  buffer[2] = (regval & 0xff);
+
+  ret = i2c_write(dev->i2c, &dev->config, buffer, 3);
+  if (ret < 0)
+    {
+      lcderr("ERROR: i2c_write() failed: %d\n", ret);
+      return ret;
+    }
+
+  lcdinfo("Wrote: %02x:%02x<-%02x\n", page, regaddr, regval);
   return OK;
 }
 
@@ -259,7 +302,7 @@ static int tda19988_modifyreg(FAR struct tda19988_i2c_s *dev,
 
   /* Read the register contents */
 
-  ret = tda19988_getregs(dev, page, regaddr, &regval, 1);
+  ret = tda19988_getregs(dev, regaddr, &regval, 1);
   if (ret < 0)
     {
       lcderr("ERROR: tda19988_getregs failed: %d\n", ret);
@@ -273,7 +316,7 @@ static int tda19988_modifyreg(FAR struct tda19988_i2c_s *dev,
 
   /* Write the modified register content */
 
-  ret = tda19988_putreg(dev, page, regaddr, regval);
+  ret = tda19988_putreg(dev, regaddr, regval);
   if (ret < 0)
     {
       lcderr("ERROR: tda19988_putreg failed: %d\n", ret);
@@ -359,7 +402,8 @@ static int tda19988_select_page(FAR struct tda1988_dev_s *priv, uint8_t page)
 
   if (page != HDMI_NO_PAGE && page != priv->page)
     {
-      ret = tda19988_putreg(&priv->lower->hdmi, HDMI_PAGE_SELECT_REG, page);
+      ret = tda19988_putreg(&priv->lower->hdmi,
+                            REGADDR(HDMI_PAGE_SELECT_REG), page);
     }
 
   return ret;
@@ -377,10 +421,12 @@ static int tda19988_select_page(FAR struct tda1988_dev_s *priv, uint8_t page)
  *
  ****************************************************************************/
 
-static int tda19988_hdmi_getregs(FAR struct tda1988_dev_s *priv, uint8_t page,
-                                 uint8_t regaddr, FAR uint8_t *regval,
+static int tda19988_hdmi_getregs(FAR struct tda1988_dev_s *priv,
+                                 uint16_t reginfo, FAR uint8_t *regval,
                                  int nregs)
 {
+  uint8_t page    = REGPAGE(reginfo);
+  uint8_t regaddr = REGADDR(reginfo)
   int ret;
 
   DEBUGASSERT(priv != NULL && regval != NULL && nregs > 0);
@@ -411,7 +457,7 @@ static int tda19988_hdmi_getregs(FAR struct tda1988_dev_s *priv, uint8_t page,
  * Name: tda19988_hdmi_putreg
  *
  * Description:
- *   Write a value to one TDA19988 HDMI register
+ *   Write an 8-bit value to one TDA19988 HDMI register
  *
  * Returned Value:
  *   Zero (OK) is returned on success; otherwise a negated errno value is
@@ -420,9 +466,10 @@ static int tda19988_hdmi_getregs(FAR struct tda1988_dev_s *priv, uint8_t page,
  ****************************************************************************/
 
 static int tda19988_hdmi_putreg(FAR struct tda1988_dev_s *priv,
-                                uint8_t page, uint8_t regaddr,
-                                uint8_t regval)
+                                uint16_t reginfo, uint8_t regval)
 {
+  uint8_t page    = REGPAGE(reginfo);
+  uint8_t regaddr = REGADDR(reginfo)
   int ret;
 
   /* Select the HDMI page */
@@ -449,6 +496,48 @@ static int tda19988_hdmi_putreg(FAR struct tda1988_dev_s *priv,
 }
 
 /****************************************************************************
+ * Name: tda19988_hdmi_putreg16
+ *
+ * Description:
+ *   Write a 16-bit value to one TDA19988 HDMI register
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; otherwise a negated errno value is
+ *   returned.
+ *
+ ****************************************************************************/
+
+static int tda19988_hdmi_putreg16(FAR struct tda1988_dev_s *priv,
+                                  uint16_t reginfo, uint16_t regval)
+{
+  uint8_t page    = REGPAGE(reginfo);
+  uint8_t regaddr = REGADDR(reginfo)
+  int ret;
+
+  /* Select the HDMI page */
+
+  ret = tda19988_select_page(priv, page);
+  if (ret < 0)
+    {
+      lcderr("ERROR: tda19988_select_page failed page %02x: %d\n",
+             page, ret);
+      return ret;
+    }
+
+  /* Write the register address and the register value */
+
+  ret = tda19988_putreg16(&priv->lower->hdmi, regaddr, regval);
+  if (ret < 0)
+    {
+      lcderr("ERROR: tda19988_putreg16() failed: %d\n", ret);
+      return ret;
+    }
+
+  lcdinfo("Read: %02x:%02x<-%04x\n", page, regaddr, regval);
+  return OK;
+}
+
+/****************************************************************************
  * Name: tda19988_hdmi_modifyreg
  *
  * Description:
@@ -461,9 +550,11 @@ static int tda19988_hdmi_putreg(FAR struct tda1988_dev_s *priv,
  ****************************************************************************/
 
 static int tda19988_hdmi_modifyreg(FAR struct tda1988_dev_s *priv,
-                                   uint8_t page, uint8_t regaddr,
-                                   uint8_t clrbits, uint8_t setbits)
+                                   uint16_t reginfo, uint8_t clrbits,
+                                   uint8_t setbits)
 {
+  uint8_t page    = REGPAGE(reginfo);
+  uint8_t regaddr = REGADDR(reginfo)
   int ret;
 
   /* Select the HDMI page */
