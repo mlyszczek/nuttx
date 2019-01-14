@@ -43,6 +43,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <poll.h>
+#include <semaphore.h>
 #include <errno.h>
 
 #include <nuttx/semaphore.h>
@@ -66,6 +67,7 @@ struct tda1988_dev_s
 
   /* Upper half driver state */
 
+  sem_t exclsem; /* Assures exclusive access to the driver */
   uint8_t page;  /* Currently selected page */
 }
 
@@ -88,13 +90,20 @@ static int     tda19988_hdmi_modifyreg(FAR struct tda1988_dev_s *priv,
 
 /* Character driver methods */
 
+static int     tda19988_open(FAR struct file *filep);
+static int     tda19988_close(FAR struct file *filep);
 static ssize_t tda19988_read(FAR struct file *filep, FAR char *buffer,
                  size_t buflen);
 static ssize_t tda19988_write(FAR struct file *filep, FAR const char *buffer,
                  size_t buflen);
+static off_t   tda19988_seek(FAR struct file *filep, off_t offset, int whence);
+static int     tda19988_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
 #ifndef CONFIG_DISABLE_POLL
 static int     tda19988_poll(FAR struct file *filep, FAR struct pollfd *fds,
                  bool setup);
+#endif
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+static int     tda19988_unlink(FAR struct inode *inode);
 #endif
 
 /****************************************************************************
@@ -103,17 +112,17 @@ static int     tda19988_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
 static const struct file_operations tda19988_fops =
 {
-  NULL,           /* open */
-  NULL,           /* close */
-  tda19988_read,  /* read */
-  tda19988_write, /* write */
-  NULL,           /* seek */
-  NULL            /* ioctl */
+  tda19988_open,     /* open */
+  tda19988_close,    /* close */
+  tda19988_read,     /* read */
+  tda19988_write,    /* write */
+  tda19988_seek,     /* seek */
+  tda19988_ioctl     /* ioctl */
 #ifndef CONFIG_DISABLE_POLL
-  , tda19988_poll /* poll */
+  , tda19988_poll    /* poll */
 #endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL          /* unlink */
+  , tda19988_unlink  /* unlink */
 #endif
 };
 
@@ -182,7 +191,7 @@ static int tda19988_hdmi_getregs(FAR struct tda1988_dev_s *priv, uint8_t page,
   ret = tda19988_select_page(priv, page);
   if (ret < 0)
     {
-      lcdwarn("WARNING: Failed to select page %02x: %d\n", page, ret);
+      lcderr("ERROR: Failed to select page %02x: %d\n", page, ret);
       return ret;
     }
 
@@ -193,7 +202,7 @@ static int tda19988_hdmi_getregs(FAR struct tda1988_dev_s *priv, uint8_t page,
                       buffer, 1, regval, nregs);
   if (ret < 0)
     {
-      lcdwarn("WARNING: i2c_writeread() failed: %d\n", ret);
+      lcderr("ERROR: i2c_writeread() failed: %d\n", ret);
       return -1;
     }
 
@@ -225,7 +234,7 @@ static int tda19988_hdmi_putreg(FAR struct tda1988_dev_s *priv,
   ret = tda19988_select_page(priv, page);
   if (ret < 0)
     {
-      lcdwarn("WARNING: Failed to select page %02x: %d\n", page, ret);
+      lcderr("ERROR: Failed to select page %02x: %d\n", page, ret);
       return ret;
     }
 
@@ -238,7 +247,7 @@ static int tda19988_hdmi_putreg(FAR struct tda1988_dev_s *priv,
                   buffer, 2);
   if (ret < 0)
     {
-      lcdwarn("WARNING: i2c_write() failed: %d\n", ret);
+      lcderr("ERROR: i2c_write() failed: %d\n", ret);
       return ret;
     }
 
@@ -270,7 +279,7 @@ static int tda19988_hdmi_modifyreg(FAR struct tda1988_dev_s *priv,
   ret = tda19988_select_page(priv, page);
   if (ret < 0)
     {
-      lcdwarn("WARNING: Failed to select page %02x: %d\n", page, ret);
+      lcderr("ERROR: Failed to select page %02x: %d\n", page, ret);
       return ret;
     }
 
@@ -279,7 +288,7 @@ static int tda19988_hdmi_modifyreg(FAR struct tda1988_dev_s *priv,
   ret = tda19988_hdmi_getregs(priv, page, regaddr, &regval, 1);
   if (ret < 0)
     {
-      lcdwarn("WARNING: tda19988_hdmi_getregs failed: %d\n", ret);
+      lcderr("ERROR: tda19988_hdmi_getregs failed: %d\n", ret);
       return ret;
     }
 
@@ -288,12 +297,12 @@ static int tda19988_hdmi_modifyreg(FAR struct tda1988_dev_s *priv,
   regval &= ~clrbits;
   regval |= setbits;
 
-  /* Write the modified regiser content */
+  /* Write the modified register content */
 
   ret = tda19988_hdmi_putreg(priv, page, regaddr, regval);
   if (ret < 0)
     {
-      lcdwarn("WARNING: tda19988_hdmi_putreg failed: %d\n", ret);
+      lcderr("ERROR: tda19988_hdmi_putreg failed: %d\n", ret);
       return ret;
     }
 
@@ -301,33 +310,228 @@ static int tda19988_hdmi_modifyreg(FAR struct tda1988_dev_s *priv,
 }
 
 /****************************************************************************
+ * Name: tda19988_open
+ *
+ * Description:
+ *   Standard character driver open method.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; A negated errno value is returned on
+ *   any failure.
+ *
+ ****************************************************************************/
+
+static int tda19988_open(FAR struct file *filep)
+{
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct tda1988_dev_s *priv;
+  int ret;
+
+  DEBUGASSERT(inode != NULL && inode->i_private != NULl);
+  priv = (FAR struct tda1988_dev_s*)inode->i_private;
+
+  #warning Missing logic
+  return -ENOSYS;
+}
+
+/****************************************************************************
+ * Name: tda19988_close
+ *
+ * Description:
+ *   Standard character driver cl;ose method.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; A negated errno value is returned on
+ *   any failure.
+ *
+ ****************************************************************************/
+
+static int tda19988_close(FAR struct file *filep)
+{
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct tda1988_dev_s *priv;
+  int ret;
+
+  DEBUGASSERT(inode != NULL && inode->i_private != NULl);
+  priv = (FAR struct tda1988_dev_s*)inode->i_private;
+
+#warning Missing logic
+  return -ENOSYS;
+}
+
+/****************************************************************************
  * Name: tda19988_read
+ *
+ * Description:
+ *   Standard character driver read method.
+ *
+ * Returned Value:
+ *   The number of bytes read is returned on success; A negated errno value
+ *   is returned on any failure.  End-of-file (zero) is never returned.
+ *
  ****************************************************************************/
 
 static ssize_t tda19988_read(FAR struct file *filep, FAR char *buffer,
                              size_t len)
 {
-  return 0; /* Return EOF */
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct tda1988_dev_s *priv;
+  int ret;
+
+  DEBUGASSERT(inode != NULL && inode->i_private != NULl);
+  priv = (FAR struct tda1988_dev_s*)inode->i_private;
+
+  /* Get exclusive access to the driver */
+
+  ret = nxsem_wait(&priv->exclsem);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+#warning Missing logic
+
+  nxsem_post(&priv->exclsem);
+  return -ENOSYS;
 }
 
 /****************************************************************************
  * Name: tda19988_write
+ *
+ * Description:
+ *   Standard character driver write method.
+ *
+ * Returned Value:
+ *   The number of bytes written is returned on success; A negated errno value
+ *   is returned on any failure.
+ *
  ****************************************************************************/
 
 static ssize_t tda19988_write(FAR struct file *filep, FAR const char *buffer,
                               size_t len)
 {
-  return len; /* Say that everything was written */
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct tda1988_dev_s *priv;
+  int ret;
+
+  DEBUGASSERT(inode != NULL && inode->i_private != NULl);
+  priv = (FAR struct tda1988_dev_s*)inode->i_private;
+
+  /* Get exclusive access to the driver */
+
+  ret = nxsem_wait(&priv->exclsem);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+#warning Missing logic
+
+  nxsem_post(&priv->exclsem);
+  return -ENOSYS;
+}
+
+/****************************************************************************
+ * Name: tda19988_seek
+ *
+ * Description:
+ *   Standard character driver poll method.
+ *
+ * Returned Value:
+ *   The current file position is returned on success; A negated errno value
+ *   is returned on any failure.
+ *
+ ****************************************************************************/
+
+static off_t tda19988_seek(FAR struct file *filep, off_t offset, int whence)
+{
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct tda1988_dev_s *priv;
+  int ret;
+
+  DEBUGASSERT(inode != NULL && inode->i_private != NULl);
+  priv = (FAR struct tda1988_dev_s*)inode->i_private;
+
+  /* Get exclusive access to the driver */
+
+  ret = nxsem_wait(&priv->exclsem);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+#warning Missing logic
+
+  nxsem_post(&priv->exclsem);
+  return (off_t)-ENOSYS;
+}
+
+/****************************************************************************
+ * Name: tda19988_ioctl
+ *
+ * Description:
+ *   Standard character driver poll method.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; A negated errno value is returned on
+ *   any failure.
+ *
+ ****************************************************************************/
+
+static int tda19988_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
+{
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct tda1988_dev_s *priv;
+  int ret;
+
+  DEBUGASSERT(inode != NULL && inode->i_private != NULl);
+  priv = (FAR struct tda1988_dev_s*)inode->i_private;
+
+  /* Get exclusive access to the driver */
+
+  ret = nxsem_wait(&priv->exclsem);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+#warning Missing logic
+
+  nxsem_post(&priv->exclsem);
+  return -ENOSYS;
 }
 
 /****************************************************************************
  * Name: tda19988_poll
+ *
+ * Description:
+ *   Standard character driver poll method.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; A negated errno value is returned on
+ *   any failure.
+ *
  ****************************************************************************/
 
 #ifndef CONFIG_DISABLE_POLL
 static int tda19988_poll(FAR struct file *filep, FAR struct pollfd *fds,
                          bool setup)
 {
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct tda1988_dev_s *priv;
+  int ret;
+
+  DEBUGASSERT(inode != NULL && inode->i_private != NULl);
+  priv = (FAR struct tda1988_dev_s*)inode->i_private;
+
+  /* Get exclusive access to the driver */
+
+  ret = nxsem_wait(&priv->exclsem);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
   if (setup)
     {
       fds->revents |= (fds->events & (POLLIN | POLLOUT));
@@ -337,8 +541,44 @@ static int tda19988_poll(FAR struct file *filep, FAR struct pollfd *fds,
         }
     }
 
+  nxsem_post(&priv->exclsem);
   return OK;
 }
+#endif
+
+/****************************************************************************
+ * Name: tda19988_unlink
+ *
+ * Description:
+ *   Standard character driver unlink method.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; A negated errno value is returned on
+ *   any failure.
+ *
+ ****************************************************************************/
+
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+static int tda19988_unlink(FAR struct inode *inode)
+{
+  FAR struct tda1988_dev_s *priv;
+  int ret;
+
+  DEBUGASSERT(inode != NULL && inode->i_private != NULL);
+  priv = (FAR struct tda1988_dev_s*)inode->i_private;
+
+  /* Get exclusive access to the driver */
+
+  ret = nxsem_wait(&priv->exclsem);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+#warning Missing logic
+
+  nxsem_post(&priv->exclsem);
+  return -ENOSYS;
 #endif
 
 /****************************************************************************
@@ -381,6 +621,8 @@ int tda19988_register(FAR const char *devpath,
 
   priv->lower = lower;
   priv->page  = HDMI_NO_PAGE;
+
+  sem_init(&priv->exclsem, 0, 1);
 
   /* Register the driver */
 
