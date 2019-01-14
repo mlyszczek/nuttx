@@ -60,7 +60,7 @@
  * only the address is sent in order accessing memory locations within the selected
  * page.
  */
- 
+
 #define HDMI_CTRL_PAGE                           0x00  /* General control page */
 #define HDMI_PLL_PAGE                            0x02  /* PLL settings page */
 #define HDMI_EDID_PAGE                           0x09  /* EDID control page */
@@ -282,5 +282,23 @@
 /* Page Select Register (no page) */
 
 #define HDMI_PAGE_SELECT_REG                     MKREG(HDMI_NO_PAGE, 0xff)
+
+/* EDID Definitions */
+
+#define EDID_LENGTH                              128
+
+/* EDID fields */
+
+#define EDID_MODES0                              35
+#define EDID_MODES1                              36
+#define EDID_TIMING_START                        38
+#define EDID_TIMING_END                          54
+#define EDID_TIMING_X(v)                         (((v) + 31) * 8)
+#define EDID_FREQ(v)                             (((v) & 0x3f) + 60)
+#define EDID_RATIO(v)                            (((v) >> 6) & 0x3)
+#define EDID_RATIO_10x16                         0
+#define EDID_RATIO_3x4                           1
+#define EDID_RATIO_4x5                           2
+#define EDID_RATIO_9x16                          3
 
 #endif /* __DRIVERS_LCD_TDA19988_H */

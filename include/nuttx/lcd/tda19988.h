@@ -185,17 +185,43 @@ TDA19988_HANDLE tda19988_register(FAR const char *devpath,
  *   logic outside of the OS.
  *
  * Input Parameters:
- *   devpath - The location to register the TDA19988 driver instance
- *   lower   - The interface to the the TDA19988 lower half driver.
+ *   handle - The handle previously returned by tda19988_register().
+ *   mode   - The new video mode.
  *
  * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is returne on
+ *   Zero (OK) is returned on success; a negated errno value is returned on
  *   any failure.
  *
  ****************************************************************************/
 
 int tda19988_videomode(TDA19988_HANDLE handle,
                        FAR const struct tda19988_videomode_s *mode);
+
+/****************************************************************************
+ * Name: tda19988_read_edid
+ *
+ * Description:
+ *   Read the EDID (Extended Display Identification Data).
+ *
+ *   NOTE:  This may be done in two ways:  (1) via a call to
+ *   tda19988_read_edid() from board-specific logic within the OS, or
+ *   equivalently (2) using a standard read() to read the EDID from
+ *   application logic outside of the OS.
+ *
+ * Input Parameters:
+ *   handle - The handle previously returned by tda19988_register().
+ *   offset - The offset into the EDID to begin reading (0..127)
+ *   buffer - Location in which to return the EDID data
+ *   buflen - Size of buffer in bytes
+ *
+ * Returned Value:
+ *   On success, the number of bytes read is returned; a negated errno value
+ *   is returned on any failure.
+ *
+ ****************************************************************************/
+
+ssize_t tda19988_read_edid(TDA19988_HANDLE handle, off_t offset,
+                           FAR uint8_t *buffer, size_t buflen);
 
 #undef EXTERN
 #ifdef __cplusplus

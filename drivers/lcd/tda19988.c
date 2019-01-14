@@ -155,7 +155,9 @@ static int     tda19988_unlink(FAR struct inode *inode);
 /* Initialization */
 
 static int     tda19988_videomode_internal(FAR struct tda1988_dev_s *priv,
-                 FAR const struct tda19988_videomode_s *mode)
+                 FAR const struct tda19988_videomode_s *mode);
+static ssize_t tda19988_read_edid_internal(FAR struct tda1988_dev_s *priv,
+                 off_t offset, FAR uint8_t *buffer, size_t buflen);
 
 /****************************************************************************
  * Private Data
@@ -842,6 +844,7 @@ static off_t tda19988_seek(FAR struct file *filep, off_t offset, int whence)
 {
   FAR struct inode *inode;
   FAR struct tda1988_dev_s *priv;
+  off_t pos;
   int ret;
 
   /* Get the private driver state instance */
@@ -860,10 +863,63 @@ static off_t tda19988_seek(FAR struct file *filep, off_t offset, int whence)
       return ret;
     }
 
-#warning Missing logic
+  /* Perform the seek operation */
+
+  pos = filep->f_pos;
+
+  switch (whence)
+    {
+      case SEEK_CUR:
+        pos += offset;
+        if (pos > EDID_LENGTH)
+          {
+            pos = EDID_LENGTH;
+          }
+        else if (pos < 0)
+          {
+            pos = 0;
+          }
+
+        filep->f_pos = pos;
+        break;
+
+      case SEEK_SET:
+        pos = offset;
+        if (pos > EDID_LENGTH)
+          {
+            pos = EDID_LENGTH;
+          }
+        else if (pos < 0)
+          {
+            pos = 0;
+          }
+
+        filep->f_pos = pos;
+        break;
+
+      case SEEK_END:
+        pos = EDID_LENGTH + offset;
+        if (pos > EDID_LENGTH)
+          {
+            pos = EDID_LENGTH;
+          }
+        else if (pos < 0)
+          {
+            pos = 0;
+          }
+
+        filep->f_pos = pos;
+        break;
+
+      default:
+        /* Return EINVAL if the whence argument is invalid */
+
+        pos = (off_t)-EINVAL;
+        break;
+    }
 
   nxsem_post(&priv->exclsem);
-  return (off_t)-ENOSYS;
+  return pos;
 }
 
 /****************************************************************************
@@ -1056,7 +1112,7 @@ static int tda19988_unlink(FAR struct inode *inode)
  *   mode   - The new video mode.
  *
  * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is returne on
+ *   Zero (OK) is returned on success; a negated errno value is returned on
  *   any failure.
  *
  ****************************************************************************/
@@ -1070,6 +1126,9 @@ static int
 #warning Missing logic
   return -ENOSYS;
 }
+
+static ssize_t tda19988_read_edid_internal(FAR struct tda1988_dev_s *priv, off_t offset,
+                                  FAR uint8_t *buffer, size_t buflen);
 
 /****************************************************************************
  * Public Functions
@@ -1146,7 +1205,7 @@ TDA19988_HANDLE tda19988_register(FAR const char *devpath,
  *   mode   - The new video mode.
  *
  * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is returne on
+ *   Zero (OK) is returned on success; a negated errno value is returned on
  *   any failure.
  *
  ****************************************************************************/
@@ -1155,6 +1214,7 @@ int tda19988_videomode(TDA19988_HANDLE handle,
                        FAR const struct tda19988_videomode_s *mode)
 {
   FAR struct tda1988_dev_s *priv = (FAR struct tda1988_dev_s *)handle;
+  int ret;
 
   DEBUGASSERT(priv != NULL && mode != NULL);
 
@@ -1177,3 +1237,57 @@ int tda19988_videomode(TDA19988_HANDLE handle,
   nxsem_post(&priv->exclsem);
   return ret;
 }
+
+/****************************************************************************
+ * Name: tda19988_read_edid
+ *
+ * Description:
+ *   Read the EDID (Extended Display Identification Data).
+ *
+ *   NOTE:  This may be done in two ways:  (1) via a call to
+ *   tda19988_read_edid() from board-specific logic within the OS, or
+ *   equivalently (2) using a standard read() to read the EDID from
+ *   application logic outside of the OS.
+ *
+ * Input Parameters:
+ *   handle - The handle previously returned by tda19988_register().
+ *   offset - The offset into the EDID to begin reading (0..127)
+ *   buffer - Location in which to return the EDID data
+ *   buflen - Size of buffer in bytes
+ *
+ * Returned Value:
+ *   On success, the number of bytes read is returned; a negated errno value
+ *   is returned on any failure.
+ *
+ ****************************************************************************/
+
+ssize_t tda19988_read_edid(TDA19988_HANDLE handle, off_t offset,
+                           FAR uint8_t *buffer, size_t buflen)
+{
+  FAR struct tda1988_dev_s *priv = (FAR struct tda1988_dev_s *)handle;
+  size_t nread;
+  int ret;
+
+  DEBUGASSERT(priv != NULL && mode != NULL);
+
+  /* Get exclusive access to the driver */
+
+  ret = nxsem_wait(&priv->exclsem);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  /* Defer the heavy lifting to tda19988_read_edid_internal() */
+
+  nread = tda19988_read_edid_internal(priv, offset, buffer, buflen);
+  if (nread < 0)
+    {
+      lcderr("ERROR: tda19988_read_edid_internal failed: %d\n",
+             (int)nread);
+    }
+
+  nxsem_post(&priv->exclsem);
+  return nread;
+}
+
