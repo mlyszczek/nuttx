@@ -54,6 +54,15 @@
 #include "tda19988.h"
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+/* Returned values from tda19988_connected() */
+
+#define DISPLAY_CONNECTED 0
+#define DISPLAY_DETACHED  1
+
+/****************************************************************************
  * Private Types
  ****************************************************************************/
 
@@ -79,10 +88,28 @@ struct tda1988_dev_s
  * Private Function Prototypes
  ****************************************************************************/
 
-/* I2C Helpers */
+/* General I2C Helpers */
+
+static int     tda19988_getregs(FAR struct tda19988_i2c_s *dev,
+                 uint8_t regaddr, FAR uint8_t *regval, int nregs);
+static int     tda19988_putreg(FAR struct tda19988_i2c_s *dev,
+                 uint8_t regaddr, uint8_t regval);
+static int     tda19988_modifyreg(FAR struct tda19988_i2c_s *dev,
+                 uint8_t regaddr, uint8_t clrbits, uint8_t setbits);
+
+/* CEC I2C Helpers */
+
+static inline int tda19988_cec_getregs(FAR struct tda1988_dev_s *priv,
+                 uint8_t regaddr, FAR uint8_t *regval, int nregs);
+static inline int tda19988_cec_putreg(FAR struct tda1988_dev_s *priv,
+                 uint8_t regaddr, uint8_t regval);
+static inline int tda19988_cec_modifyreg(FAR struct tda1988_dev_s *priv,
+                 uint8_t regaddr, uint8_t clrbits, uint8_t setbits);
+
+/* HDMI I2C Helpers */
 
 static int     tda19988_select_page(FAR struct tda1988_dev_s *priv,
-                                    uint8_t page);
+                 uint8_t page);
 static int     tda19988_hdmi_getregs(FAR struct tda1988_dev_s *priv,
                  uint8_t page, uint8_t regaddr, FAR uint8_t *regval,
                  int nregs);
@@ -91,6 +118,13 @@ static int     tda19988_hdmi_putreg(FAR struct tda1988_dev_s *priv,
 static int     tda19988_hdmi_modifyreg(FAR struct tda1988_dev_s *priv,
                  uint8_t page, uint8_t regaddr, uint8_t clrbits,
                  uint8_t setbits)
+
+/* CEC Module Helpers */
+
+static int     tda19988_connected(FAR struct tda1988_dev_s *priv)
+static int     tda19988_hdmi_enable(FAR struct tda1988_dev_s *priv);
+
+/* HDMI Module Helpers */
 
 /* Character driver methods */
 
@@ -109,6 +143,8 @@ static int     tda19988_poll(FAR struct file *filep, FAR struct pollfd *fds,
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
 static int     tda19988_unlink(FAR struct inode *inode);
 #endif
+
+/* Initialization */
 
 /****************************************************************************
  * Private Data
@@ -135,6 +171,175 @@ static const struct file_operations tda19988_fops =
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: tda19988_getregs
+ *
+ * Description:
+ *   Read the value from one or more TDA19988 CEC or HDMI registers
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; otherwise a negated errno value is
+ *   returned.
+ *
+ ****************************************************************************/
+
+static int tda19988_getregs(FAR struct tda19988_i2c_s *dev, uint8_t regaddr,
+                            FAR uint8_t *regval, int nregs)
+{
+  uint8_t buffer[1];
+  int ret;
+
+  DEBUGASSERT(dev != NULL && regval != NULL && nregs > 0);
+
+  /* Write the register address and read the register value */
+
+  buffer[0] = regaddr;
+  ret = i2c_writeread(dev->i2c, &dev->config, buffer, 1, regval, nregs);
+  if (ret < 0)
+    {
+      lcderr("ERROR: i2c_writeread() failed: %d\n", ret);
+      return -1;
+    }
+
+  lcdinfo("Read: %02x:%02x->%02x\n", page, regaddr, *regval);
+  return OK;
+}
+
+/****************************************************************************
+ * Name: tda19988_putreg
+ *
+ * Description:
+ *   Write a value to one TDA19988 CEC or HDMI register
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; otherwise a negated errno value is
+ *   returned.
+ *
+ ****************************************************************************/
+
+static int tda19988_putreg(FAR struct tda19988_i2c_s *dev, uint8_t regaddr,
+                           uint8_t regval)
+{
+  uint8_t buffer[2];
+  int ret;
+
+  /* Write the register address and the register value */
+
+  buffer[0] = regaddr;
+  buffer[1] = regval;
+
+  ret = i2c_write(dev->i2c, &dev->config, buffer, 2);
+  if (ret < 0)
+    {
+      lcderr("ERROR: i2c_write() failed: %d\n", ret);
+      return ret;
+    }
+
+  lcdinfo("Read: %02x:%02x<-%02x\n", page, regaddr, regval);
+  return OK;
+}
+
+/****************************************************************************
+ * Name: tda19988_modifyreg
+ *
+ * Description:
+ *   Modify bits in one TDA19988 CEC or HDMI register
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; otherwise a negated errno value is
+ *   returned.
+ *
+ ****************************************************************************/
+
+static int tda19988_modifyreg(FAR struct tda19988_i2c_s *dev,
+                              uint8_t regaddr, uint8_t clrbits,
+                              uint8_t setbits)
+{
+  uint8_t regval;
+  int ret;
+
+  /* Read the register contents */
+
+  ret = tda19988_getregs(dev, page, regaddr, &regval, 1);
+  if (ret < 0)
+    {
+      lcderr("ERROR: tda19988_getregs failed: %d\n", ret);
+      return ret;
+    }
+
+  /* Modify the register content */
+
+  regval &= ~clrbits;
+  regval |= setbits;
+
+  /* Write the modified register content */
+
+  ret = tda19988_putreg(dev, page, regaddr, regval);
+  if (ret < 0)
+    {
+      lcderr("ERROR: tda19988_putreg failed: %d\n", ret);
+      return ret;
+    }
+
+  return OK;
+}
+
+/****************************************************************************
+ * Name: tda19988_cec_getregs
+ *
+ * Description:
+ *   Read the value from one or more TDA19988 CEC registers
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; otherwise a negated errno value is
+ *   returned.
+ *
+ ****************************************************************************/
+
+static inline int tda19988_cec_getregs(FAR struct tda1988_dev_s *priv,
+                                       uint8_t regaddr, FAR uint8_t *regval,
+                                       int nregs)
+{
+  return tda19988_getregs(&priv->lower->cec, regaddr, regal, nregs);
+}
+
+/****************************************************************************
+ * Name: tda19988_cec_putreg
+ *
+ * Description:
+ *   Write a value to one TDA19988 CEC register
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; otherwise a negated errno value is
+ *   returned.
+ *
+ ****************************************************************************/
+
+static inine int tda19988_cec_putreg(FAR struct tda1988_dev_s *priv,
+                                     uint8_t regaddr, uint8_t regval)
+{
+  return tda19988_putreg(&priv->lower->cec, regaddr, regval);
+}
+
+/****************************************************************************
+ * Name: tda19988_cec_modifyreg
+ *
+ * Description:
+ *   Modify bits in one TDA19988 CEC register
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; otherwise a negated errno value is
+ *   returned.
+ *
+ ****************************************************************************/
+
+static inline int tda19988_cec_modifyreg(FAR struct tda1988_dev_s *priv,
+                                         uint8_t regaddr, uint8_t clrbits,
+                                         uint8_t setbits)
+{
+  return tda19988_modifyreg(&priv->lower->cec, regaddr, clrbits, setbits);
+}
+
+/****************************************************************************
  * Name: tda19988_select_page
  *
  * Description:
@@ -148,22 +353,13 @@ static const struct file_operations tda19988_fops =
 
 static int tda19988_select_page(FAR struct tda1988_dev_s *priv, uint8_t page)
 {
-  uint8_t buffer[2];
   int ret = OK;
 
   /* Check if we need to select a new page for this transfer */
 
   if (page != HDMI_NO_PAGE && page != priv->page)
     {
-      buffer[0] = HDMI_PAGE_SELECT_REG;
-      buffer[1] = page;
-
-      ret = i2c_write(priv->lower->hdmi.i2c, &priv->lower->hdmi.config,
-                      buffer, 2);
-      if (ret >= 0)
-        {
-          priv->page = page;
-        }
+      ret = tda19988_putreg(&priv->lower->hdmi, HDMI_PAGE_SELECT_REG, page);
     }
 
   return ret;
@@ -173,7 +369,7 @@ static int tda19988_select_page(FAR struct tda1988_dev_s *priv, uint8_t page)
  * Name: tda19988_hdmi_getregs
  *
  * Description:
- *   Read the value from one or more TDA19988 registers
+ *   Read the value from one or more TDA19988 HDMI registers
  *
  * Returned Value:
  *   Zero (OK) is returned on success; otherwise a negated errno value is
@@ -185,7 +381,6 @@ static int tda19988_hdmi_getregs(FAR struct tda1988_dev_s *priv, uint8_t page,
                                  uint8_t regaddr, FAR uint8_t *regval,
                                  int nregs)
 {
-  uint8_t buffer[1];
   int ret;
 
   DEBUGASSERT(priv != NULL && regval != NULL && nregs > 0);
@@ -201,12 +396,10 @@ static int tda19988_hdmi_getregs(FAR struct tda1988_dev_s *priv, uint8_t page,
 
   /* Write the register address and read the register value */
 
-  buffer[0] = regaddr;
-  ret = i2c_writeread(priv->lower->hdmi.i2c, &priv->lower->hdmi.config,
-                      buffer, 1, regval, nregs);
+  ret = tda19988_getregs(&priv->lower->hdmi, regaddr, regal, nregs);
   if (ret < 0)
     {
-      lcderr("ERROR: i2c_writeread() failed: %d\n", ret);
+      lcderr("ERROR: tda19988_getregs() failed: %d\n", ret);
       return -1;
     }
 
@@ -218,7 +411,7 @@ static int tda19988_hdmi_getregs(FAR struct tda1988_dev_s *priv, uint8_t page,
  * Name: tda19988_hdmi_putreg
  *
  * Description:
- *   Write a value to one TDA19988 register
+ *   Write a value to one TDA19988 HDMI register
  *
  * Returned Value:
  *   Zero (OK) is returned on success; otherwise a negated errno value is
@@ -230,7 +423,6 @@ static int tda19988_hdmi_putreg(FAR struct tda1988_dev_s *priv,
                                 uint8_t page, uint8_t regaddr,
                                 uint8_t regval)
 {
-  uint8_t buffer[2];
   int ret;
 
   /* Select the HDMI page */
@@ -238,20 +430,17 @@ static int tda19988_hdmi_putreg(FAR struct tda1988_dev_s *priv,
   ret = tda19988_select_page(priv, page);
   if (ret < 0)
     {
-      lcderr("ERROR: Failed to select page %02x: %d\n", page, ret);
+      lcderr("ERROR: tda19988_select_page failed page %02x: %d\n",
+             page, ret);
       return ret;
     }
 
   /* Write the register address and the register value */
 
-  buffer[0] = regaddr;
-  buffer[1] = regval;
-
-  ret = i2c_write(priv->lower->hdmi.i2c, &priv->lower->hdmi.config,
-                  buffer, 2);
+  ret = tda19988_putreg(&priv->lower->hdmi, regaddr, regval);
   if (ret < 0)
     {
-      lcderr("ERROR: i2c_write() failed: %d\n", ret);
+      lcderr("ERROR: tda19988_putreg() failed: %d\n", ret);
       return ret;
     }
 
@@ -263,7 +452,7 @@ static int tda19988_hdmi_putreg(FAR struct tda1988_dev_s *priv,
  * Name: tda19988_hdmi_modifyreg
  *
  * Description:
- *   Write a value to one TDA19988 register
+ *   Modify bits in one TDA19988 HDMI register
  *
  * Returned Value:
  *   Zero (OK) is returned on success; otherwise a negated errno value is
@@ -275,7 +464,6 @@ static int tda19988_hdmi_modifyreg(FAR struct tda1988_dev_s *priv,
                                    uint8_t page, uint8_t regaddr,
                                    uint8_t clrbits, uint8_t setbits)
 {
-  uint8_t regval;
   int ret;
 
   /* Select the HDMI page */
@@ -287,29 +475,79 @@ static int tda19988_hdmi_modifyreg(FAR struct tda1988_dev_s *priv,
       return ret;
     }
 
-  /* Read the register contents */
+  /* Read-modify-write the register contents */
 
-  ret = tda19988_hdmi_getregs(priv, page, regaddr, &regval, 1);
+  ret = tda19988_modifyreg(&priv->lower->hdmi, regaddr, clrbits, setbits);
   if (ret < 0)
     {
-      lcderr("ERROR: tda19988_hdmi_getregs failed: %d\n", ret);
+      lcderr("ERROR: tda19988_modifyreg failed: %d\n", ret);
       return ret;
     }
 
-  /* Modify the register content */
+  return OK;
+}
 
-  regval &= ~clrbits;
-  regval |= setbits;
+/****************************************************************************
+ * Name: tda19988_hdmi_enable
+ *
+ * Description:
+ *   Check if a display is connected.
+ *
+ * Returned Values:
+ *   DISPLAY_CONNECTED - A display is connected
+ *   DISPLAY_DETACHED  - No display is connected
+ *   A negated errno value is returned on any failure.
+ *
+ ****************************************************************************/
 
-  /* Write the modified register content */
+static int tda19988_connected(FAR struct tda1988_dev_s *priv)
+{
+  uint8_t regval;
+  int ret;
 
-  ret = tda19988_hdmi_putreg(priv, page, regaddr, regval);
+  ret = tda19988_cec_getregs(priv, CEC_STATUS_REG, &regval, 1);
   if (ret < 0)
     {
-      lcderr("ERROR: tda19988_hdmi_putreg failed: %d\n", ret);
+      lcderr("ERROR: tda19988_cec_getregs failed: %d\n", ret);
       return ret;
     }
 
+  if ((regval & CEC_STATUS_CONNECTED) == 0)
+    {
+      lcdwarn("WARNING:  Display not connected\n");
+      return DISPLAY_DETACHED;
+    }
+  else
+    {
+      lcdinfo("Display connect\n");
+      return DISPLAY_CONNECTED;
+    }
+}
+
+/****************************************************************************
+ * Name: tda19988_hdmi_enable
+ *
+ * Description:
+ *   Enable all the modules and clocks.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; A negated errno value is returned on
+ *   any failure.
+ *
+ ****************************************************************************/
+
+static int tda19988_hdmi_enable(FAR struct tda1988_dev_s *priv)
+{
+  int ret;
+
+  ret = tda19988_cec_putreg(priv, CEC_ENABLE_REG, CEC_ENABLE_ALL);
+  if (ret < 0)
+    {
+      lcderr("ERROR: tda19988_cec_putreg failed: %d\n", ret);
+      return ret;
+    }
+
+  lcdinfo("HDMI module enabled\n");
   return OK;
 }
 
