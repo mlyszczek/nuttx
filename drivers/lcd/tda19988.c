@@ -154,6 +154,9 @@ static int     tda19988_unlink(FAR struct inode *inode);
 
 /* Initialization */
 
+static int     tda19988_videomode_internal(FAR struct tda1988_dev_s *priv,
+                 FAR const struct tda19988_videomode_s *mode)
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -877,9 +880,68 @@ static off_t tda19988_seek(FAR struct file *filep, off_t offset, int whence)
 
 static int tda19988_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
-  /* No IOCTL commands support at this time */
+  FAR struct inode *inode;
+  FAR struct tda1988_dev_s *priv;
+  int ret;
 
-  return -ENOTTY;
+  /* Get the private driver state instance */
+
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
+  inode = filep->f_inode;
+
+  priv = (FAR struct spi_driver_s *)inode->i_private;
+  DEBUGASSERT(priv != NULL);
+
+  /* Get exclusive access to the driver */
+
+  ret = nxsem_wait(&priv->exclsem);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  /* Handle the IOCTL command */
+
+  switch (cmd)
+    {
+      /* TDA19988_IOC_VIDEOMODE:
+       *   Description:  Select the video mode.  This must be done as part
+       *                 of the initialization of the driver.  This is
+       *                 equivalent to calling tda18899_videomode() within
+       *                 the OS.
+       *   Argument:     A reference to a tda19988_videomode_s structure
+       *                 instance.
+       *   Returns:      None
+       */
+
+      case TDA19988_IOC_VIDEOMODE:
+        {
+          FAR const struct tda19988_videomode_s *mode =
+            (FAR const struct tda19988_videomode_s *)((uintptr_t)arg)
+
+          if (mode == NULL)
+            {
+              ret = -EINVAL;
+            }
+          else
+            {
+              ret = tda19988_videomode_internal(priv, mode);
+              if (ret < 0)
+                {
+                  lcderr("ERROR: tda19988_videomode_internal failed: %d\n",
+                         ret);
+                }
+            }
+        }
+        break;
+
+      default:
+        ret = -ENOTTY;
+        break;
+    }
+
+  nxsem_post(&priv->exclsem);
+  return ret;
 }
 
 /****************************************************************************
@@ -982,6 +1044,34 @@ static int tda19988_unlink(FAR struct inode *inode)
 #endif
 
 /****************************************************************************
+ * Name: tda19988_videomode_internal
+ *
+ * Description:
+ *   Initialize the TDA19988 driver to a specified video mode.  This is a
+ *   necessary part of the TDA19988 initialization:  A video mode  must be
+ *   configured before the driver is usable.
+ *
+ * Input Parameters:
+ *   handle - The handle previously returned by tda19988_register().
+ *   mode   - The new video mode.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; a negated errno value is returne on
+ *   any failure.
+ *
+ ****************************************************************************/
+
+static int
+  tda19988_videomode_internal(FAR struct tda1988_dev_s *priv,
+                              FAR const struct tda19988_videomode_s *mode)
+{
+  DEBUGASSERT(priv != NULL && mode != NULL);
+
+#warning Missing logic
+  return -ENOSYS;
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -989,20 +1079,20 @@ static int tda19988_unlink(FAR struct inode *inode)
  * Name: tda19988_register
  *
  * Description:
- *   Initialize and register the the TDA19988 driver at 'devpath'
+ *   Create and register the the TDA19988 driver at 'devpath'
  *
  * Input Parameters:
  *   devpath - The location to register the TDA19988 driver instance
  *   lower   - The interface to the the TDA19988 lower half driver.
  *
  * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is return on
- *   any failure to indicate the nature of the failure.
+ *   On success, non-NULL handle is returned that may be subsequently used
+ *   with tda19988_videomode().  NULL is returned on failure.
  *
  ****************************************************************************/
 
-int tda19988_register(FAR const char *devpath,
-                      FAR const struct tda19088_lower_s *lower);
+TDA19988_HANDLE tda19988_register(FAR const char *devpath,
+                                  FAR const struct tda19088_lower_s *lower)
 {
   FAR struct tda1988_dev_s *priv;
   int ret;
@@ -1014,7 +1104,8 @@ int tda19988_register(FAR const char *devpath,
   priv = (FAR struct tda1988_dev_s *)kmm_zalloc(sizeof(struct tda1988_dev_s));
   if (priv == NULL)
     {
-      return -ENOMEM;
+      lcderr("ERROR: Failed to allocat device structure\n");
+      return NULL;
     }
 
   /* Initialize the driver structure */
@@ -1029,9 +1120,60 @@ int tda19988_register(FAR const char *devpath,
   ret = register_driver(devpath, &tda19988_fops, 0666, NULL);
   if (ret < 0)
     {
+      lcderr("ERROR: register_driver() failed: %d\n", ret);
       kmm_free(priv);
+      return NULL;
+    }
+
+  return (TDA19988_HANDLE)priv;
+}
+
+/****************************************************************************
+ * Name: tda19988_videomode
+ *
+ * Description:
+ *   Initialize the TDA19988 driver to a specified video mode.  This is a
+ *   necessary part of the TDA19988 initialization:  A video mode  must be
+ *   configured before the driver is usable.
+ *
+ *   NOTE:  This may be done in two ways:  (1) via a call to
+ *   tda19988_videomode() from board-specific logic within the OS, or
+ *   equivalently (2) using the TDA19988_IOC_VIDEOMODE from application
+ *   logic outside of the OS.
+ *
+ * Input Parameters:
+ *   handle - The handle previously returned by tda19988_register().
+ *   mode   - The new video mode.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; a negated errno value is returne on
+ *   any failure.
+ *
+ ****************************************************************************/
+
+int tda19988_videomode(TDA19988_HANDLE handle,
+                       FAR const struct tda19988_videomode_s *mode)
+{
+  FAR struct tda1988_dev_s *priv = (FAR struct tda1988_dev_s *)handle;
+
+  DEBUGASSERT(priv != NULL && mode != NULL);
+
+  /* Get exclusive access to the driver */
+
+  ret = nxsem_wait(&priv->exclsem);
+  if (ret < 0)
+    {
       return ret;
     }
 
-  return OK;
+  /* Defer the heavy lifting to tda19988_videomode_internal() */
+
+  ret = tda19988_videomode_internal(priv, mode);
+  if (ret < 0)
+    {
+      lcderr("ERROR: tda19988_videomode_internal failed: %d\n", ret);
+    }
+
+  nxsem_post(&priv->exclsem);
+  return ret;
 }

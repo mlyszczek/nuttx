@@ -44,12 +44,71 @@
 #include <stdbool.h>
 
 #include <nuttx/irq.h>
+#include <nuttx/lcd/lcd_ioctl.h>
 
 #ifdef CONFIG_LCD_TDA19988
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+/* TDA19988 IOCTL commands **************************************************
+ *
+ * TDA19988_IOC_VIDEOMODE:
+ *   Description:  Select the video mode.  This must be done as part of the
+ *                 initialization of the driver.  This is equivalent to
+ *                 calling tda18899_videomode() within the OS.
+ *   Argument:     A reference to a tda19988_videomode_s structure instance.
+ *                 See struct tda19988_videomode_s below.
+ *   Returns:      None
+ */
+
+#define TDA19988_IOC_VIDEOMODE _LCDIOC(TDA19988_NIOCTL_BASE + 0)
+
+/* Values for video mode flags */
+
+#define VID_PHSYNC             0x0001
+#define VID_NHSYNC             0x0002
+#define VID_PVSYNC             0x0004
+#define VID_NVSYNC             0x0008
+#define VID_INTERLACE          0x0010
+#define VID_DBLSCAN            0x0020
+#define VID_CSYNC              0x0040
+#define VID_PCSYNC             0x0080
+#define VID_NCSYNC             0x0100
+#define VID_HSKEW              0x0200
+#define VID_BCAST              0x0400
+#define VID_PIXMUX             0x1000
+#define VID_DBLCLK             0x2000
+#define VID_CLKDIV2            0x4000
+
+/****************************************************************************
  * Public Types
  ****************************************************************************/
+
+/* Opaque handle returned by tda19988_register() */
+
+typedef FAR void *TDA19988_HANDLE;
+
+/* Structure that provides the TDA19988 video mode */
+
+struct tda19988_videomode_s
+{
+  int dot_clock;          /* Dot clock frequency in kHz. */
+
+  int hdisplay;
+  int hsync_start;
+  int hsync_end;
+  int htotal;
+
+  int vdisplay;
+  int vsync_start;
+  int vsync_end;
+  int vtotal;
+
+  int flags;              /* Video mode flags; see above. */
+  int hskew;
+};
 
 /* This structure defines the I2C interface */
 
@@ -97,20 +156,46 @@ extern "C"
  * Name: tda19988_register
  *
  * Description:
- *   Initialize and register the the TDA19988 driver at 'devpath'
+ *   Create and register the the TDA19988 driver at 'devpath'
  *
  * Input Parameters:
  *   devpath - The location to register the TDA19988 driver instance
  *   lower   - The interface to the the TDA19988 lower half driver.
  *
  * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is return on
- *   any failure to indicate the nature of the failure.
+ *   On success, non-NULL handle is returned that may be subsequently used
+ *   with tda19988_videomode().  NULL is returned on failure.
  *
  ****************************************************************************/
 
-int tda19988_register(FAR const char *devpath,
-                      FAR const struct tda19088_lower_s *lower);
+TDA19988_HANDLE tda19988_register(FAR const char *devpath,
+                                  FAR const struct tda19088_lower_s *lower);
+
+/****************************************************************************
+ * Name: tda19988_videomode
+ *
+ * Description:
+ *   Initialize the TDA19988 driver to a specified video mode.  This is a
+ *   necessary part of the TDA19988 initialization:  A video mode  must be
+ *   configured before the driver is usable.
+ *
+ *   NOTE:  This may be done in two ways:  (1) via a call to
+ *   tda19988_videomode() from board-specific logic within the OS, or
+ *   equivalently (2) using the TDA19988_IOC_VIDEOMODE from application
+ *   logic outside of the OS.
+ *
+ * Input Parameters:
+ *   devpath - The location to register the TDA19988 driver instance
+ *   lower   - The interface to the the TDA19988 lower half driver.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; a negated errno value is returne on
+ *   any failure.
+ *
+ ****************************************************************************/
+
+int tda19988_videomode(TDA19988_HANDLE handle,
+                       FAR const struct tda19988_videomode_s *mode);
 
 #undef EXTERN
 #ifdef __cplusplus
