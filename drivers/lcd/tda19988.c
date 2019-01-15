@@ -68,6 +68,10 @@
 #define DISPLAY_CONNECTED 0
 #define DISPLAY_DETACHED  1
 
+/* Number of times to try reading EDID */
+
+#define MAX_READ_ATTEMPTS  100
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -88,6 +92,9 @@ struct tda1988_dev_s
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   bool unlinked;              /* True, driver has been unlinked */
 #endif
+  uint16_t version;           /* TDA19988 version */
+  FAR uint8_t *edid;          /* Extended Display Identification Data */
+  uint32_t edid_len;          /* Size of EDID */
 };
 
 /****************************************************************************
@@ -133,6 +140,9 @@ static int     tda19988_connected(FAR struct tda1988_dev_s *priv)
 static int     tda19988_hdmi_enable(FAR struct tda1988_dev_s *priv);
 
 /* HDMI Module Helpers */
+
+static int     tda19988_read_edid_block(FAR struct tda1988_dev_s *priv,
+                 FAR uint8_t *buf, int block)
 
 /* Character driver methods */
 
@@ -645,6 +655,66 @@ static int tda19988_hdmi_enable(FAR struct tda1988_dev_s *priv)
 
   lcdinfo("HDMI module enabled\n");
   return OK;
+}
+
+/****************************************************************************
+ * Name: tda19988_read_edid_block
+ *
+ * Description:
+ *   Read one EDID block.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; A negated errno value is returned on
+ *   any failure.
+ *
+ ****************************************************************************/
+
+static int tda19988_read_edid_block(FAR struct tda1988_dev_s *priv,
+                                    FAR uint8_t *buf, int block)
+{
+  uint8_t data;
+  int attempt;
+  int ret;
+
+  ret = OK;
+
+  tda19988_hdmi_modifyreg(priv, HDMI_CTRL_INT_REG, 0, HDMI_CTRL_INT_EDID);
+
+  /* Block 0 */
+
+  tda19988_hdmi_putreg(priv, HDMI_EDID_DEV_ADDR_REG, 0xa0);
+  tda19988_hdmi_putreg(priv, HDMI_EDID_OFFSET_REG, (block & 1) != 0 ? 128 : 0);
+  tda19988_hdmi_putreg(priv, HDMI_EDID_SEGM_ADDR_REG, 0x60);
+  tda19988_hdmi_putreg(priv, HDMI_EDID_DDC_SEGM_REG, block >> 1);
+
+  tda19988_hdmi_putreg(priv, HDMI_EDID_REQ_REG, HDMI_EDID_REQ_READ);
+  tda19988_hdmi_putreg(priv, HDMI_EDID_REQ_REG, 0);
+
+  data = 0;
+  for (attempt = 0; attempt < MAX_READ_ATTEMPTS; attempt++)
+    {
+      tda19988_hdmi_getregs(priv, HDMI_CTRL_INT_REG, &data, 1);
+      if ((data & HDMI_CTRL_INT_EDID) != 0)
+        {
+          break;
+        }
+    }
+
+  if (attempt == MAX_READ_ATTEMPTS)
+    {
+      ret = -ETIMEDOUT;
+      goto done;
+    }
+
+  if (tda19988_hdmi_getregs(priv, HDMI_EDID_DATA_REG, buf, EDID_LENGTH) != 0)
+    {
+      ret = -EIO;
+      goto done;
+    }
+
+done:
+  tda19988_hdmi_modifyreg(priv, HDMI_CTRL_INT_REG, HDMI_CTRL_INT_EDID, 0);
+  return ret;
 }
 
 /****************************************************************************
@@ -1163,9 +1233,21 @@ TDA19988_HANDLE tda19988_register(FAR const char *devpath,
   priv = (FAR struct tda1988_dev_s *)kmm_zalloc(sizeof(struct tda1988_dev_s));
   if (priv == NULL)
     {
-      lcderr("ERROR: Failed to allocat device structure\n");
+      lcderr("ERROR: Failed to allocate device structure\n");
       return NULL;
     }
+
+  /* Assume a single block in EDID */
+
+  priv->edid = (FAR uint8_t *)kmm_malloc(EDID_LENGTH);
+  if (priv->edid == NULL)
+    {
+      lcderr("ERROR: Failed to allocate EDID\n");
+      kmm_free(priv);
+      return NULL;
+    }
+
+  priv->edid_len = EDID_LENGTH;
 
   /* Initialize the driver structure */
 

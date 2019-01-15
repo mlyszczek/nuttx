@@ -89,7 +89,10 @@
 #  define HDMI_CTRL_MAIN_CNTRL0_SR               (1 << 0)
 
 #define HDMI_CTRL_REV_HI_REG                     MKREF(HDMI_CTRL_PAGE, 0x02)
-#  define HDMI_REV_TDA19988                      0x0331
+#  define HDMI_REV_TDA9989N2                     0x0101  /* Masking out bits 4-5 */
+#  define HDMI_REV_TDA19989                      0x0201
+#  define HDMI_REV_TDA19989N2                    0x0202
+#  define HDMI_REV_TDA19988                      0x0301
 
 #define HDMI_CTRL_RESET_REG                      MKREG(HDMI_CTRL_PAGE, 0x0a)
 #  define HDMI_CTRL_RESET_AUDIO                  (1 << 0)
