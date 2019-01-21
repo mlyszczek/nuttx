@@ -143,12 +143,12 @@ void SetupSetVddrLevel(uint32_t ccfg_ModeConfReg)
 
 /******************************************************************************
  *
- * SetupAfterColdResetWakeupFromShutDownCfg1
+ * rom_setup_coldreset_from_shutdown_cfg1
  *
  ******************************************************************************
  */
 
-void SetupAfterColdResetWakeupFromShutDownCfg1(uint32_t ccfg_ModeConfReg)
+void rom_setup_coldreset_from_shutdown_cfg1(uint32_t ccfg_ModeConfReg)
 {
   int32_t i32VddrSleepTrim;
   int32_t i32VddrSleepDelta;
@@ -249,12 +249,12 @@ void SetupAfterColdResetWakeupFromShutDownCfg1(uint32_t ccfg_ModeConfReg)
 
 /******************************************************************************
  *
- * SetupAfterColdResetWakeupFromShutDownCfg2
+ * rom_setup_coldreset_from_shutdown_cfg2
  *
  ******************************************************************************
  */
 
-void SetupAfterColdResetWakeupFromShutDownCfg2(uint32_t ui32Fcfg1Revision,
+void rom_setup_coldreset_from_shutdown_cfg2(uint32_t ui32Fcfg1Revision,
                                                uint32_t ccfg_ModeConfReg)
 {
   uint32_t ui32Trim;
@@ -263,14 +263,14 @@ void SetupAfterColdResetWakeupFromShutDownCfg2(uint32_t ui32Fcfg1Revision,
    * crashes when trying to switch to XOSCHF. Trim CAP settings. Get and set
    * trim value for the ANABYPASS_VALUE1 register */
 
-  ui32Trim = SetupGetTrimForAnabypassValue1(ccfg_ModeConfReg);
-  DDI32RegWrite(AUX_DDI0_OSC_BASE, DDI_0_OSC_O_ANABYPASSVAL1, ui32Trim);
+  ui32Trim = rom_setup_get_trim_anabypass_value1(ccfg_ModeConfReg);
+  rom_ddi_write32(AUX_DDI0_OSC_BASE, DDI_0_OSC_O_ANABYPASSVAL1, ui32Trim);
 
   /* Trim RCOSC_LF. Get and set trim values for the RCOSCLF_RTUNE_TRIM and
    * RCOSCLF_CTUNE_TRIM fields in the XOSCLF_RCOSCLF_CTRL register. */
 
-  ui32Trim = SetupGetTrimForRcOscLfRtuneCtuneTrim();
-  DDI16BitfieldWrite(AUX_DDI0_OSC_BASE, DDI_0_OSC_O_LFOSCCTL,
+  ui32Trim = rom_setup_get_trim_rcosc_lfrtunectuntrim();
+  rom_ddi_bitfield_write16(AUX_DDI0_OSC_BASE, DDI_0_OSC_O_LFOSCCTL,
                      (DDI_0_OSC_LFOSCCTL_RCOSCLF_CTUNE_TRIM_M |
                       DDI_0_OSC_LFOSCCTL_RCOSCLF_RTUNE_TRIM_M),
                      DDI_0_OSC_LFOSCCTL_RCOSCLF_CTUNE_TRIM_S, ui32Trim);
@@ -279,28 +279,28 @@ void SetupAfterColdResetWakeupFromShutDownCfg2(uint32_t ui32Fcfg1Revision,
    * bit field in the ANABYPASS_VALUE2 register. Other register bit fields are
    * set to 0. */
 
-  ui32Trim = SetupGetTrimForXoscHfIbiastherm();
-  DDI32RegWrite(AUX_DDI0_OSC_BASE, DDI_0_OSC_O_ANABYPASSVAL2,
+  ui32Trim = rom_setup_get_trim_xosc_hfibiastherm();
+  rom_ddi_write32(AUX_DDI0_OSC_BASE, DDI_0_OSC_O_ANABYPASSVAL2,
                 ui32Trim << DDI_0_OSC_ANABYPASSVAL2_XOSC_HF_IBIASTHERM_S);
 
   /* Trim AMPCOMP settings required before switch to XOSCHF */
 
-  ui32Trim = SetupGetTrimForAmpcompTh2();
-  DDI32RegWrite(AUX_DDI0_OSC_BASE, DDI_0_OSC_O_AMPCOMPTH2, ui32Trim);
-  ui32Trim = SetupGetTrimForAmpcompTh1();
-  DDI32RegWrite(AUX_DDI0_OSC_BASE, DDI_0_OSC_O_AMPCOMPTH1, ui32Trim);
+  ui32Trim = rom_setup_get_trim_ampcompth2();
+  rom_ddi_write32(AUX_DDI0_OSC_BASE, DDI_0_OSC_O_AMPCOMPTH2, ui32Trim);
+  ui32Trim = rom_setup_get_trim_ampcompth1();
+  rom_ddi_write32(AUX_DDI0_OSC_BASE, DDI_0_OSC_O_AMPCOMPTH1, ui32Trim);
 #if ( CCFG_BASE == CCFG_BASE_DEFAULT )
-  ui32Trim = SetupGetTrimForAmpcompCtrl(ui32Fcfg1Revision);
+  ui32Trim = rom_setup_get_trim_ampcompctrl(ui32Fcfg1Revision);
 #else
-  ui32Trim = NOROM_SetupGetTrimForAmpcompCtrl(ui32Fcfg1Revision);
+  ui32Trim = NOROM_rom_setup_get_trim_ampcompctrl(ui32Fcfg1Revision);
 #endif
-  DDI32RegWrite(AUX_DDI0_OSC_BASE, DDI_0_OSC_O_AMPCOMPCTL, ui32Trim);
+  rom_ddi_write32(AUX_DDI0_OSC_BASE, DDI_0_OSC_O_AMPCOMPCTL, ui32Trim);
 
   /* Set trim for DDI_0_OSC_ADCDOUBLERNANOAMPCTL_ADC_SH_MODE_EN in accordance
    * to FCFG1 setting This is bit[5] in the DDI_0_OSC_O_ADCDOUBLERNANOAMPCTL
    * register Using MASK4 write + 1 => writing to bits[7:4] */
 
-  ui32Trim = SetupGetTrimForAdcShModeEn(ui32Fcfg1Revision);
+  ui32Trim = rom_setup_get_trim_adcshmodeen(ui32Fcfg1Revision);
   HWREGB(AUX_DDI0_OSC_BASE + DDI_O_MASK4B +
          (DDI_0_OSC_O_ADCDOUBLERNANOAMPCTL * 2) + 1) = (0x20 | (ui32Trim << 1));
 
@@ -308,7 +308,7 @@ void SetupAfterColdResetWakeupFromShutDownCfg2(uint32_t ui32Fcfg1Revision,
    * to FCFG1 setting This is bit[4] in the DDI_0_OSC_O_ADCDOUBLERNANOAMPCTL
    * register Using MASK4 write + 1 => writing to bits[7:4] */
 
-  ui32Trim = SetupGetTrimForAdcShVbufEn(ui32Fcfg1Revision);
+  ui32Trim = rom_setup_get_trim_adcshvbufen(ui32Fcfg1Revision);
   HWREGB(AUX_DDI0_OSC_BASE + DDI_O_MASK4B +
          (DDI_0_OSC_O_ADCDOUBLERNANOAMPCTL * 2) + 1) = (0x10 | (ui32Trim));
 
@@ -316,8 +316,8 @@ void SetupAfterColdResetWakeupFromShutDownCfg2(uint32_t ui32Fcfg1Revision,
    * in the DDI0_OSC_O_XOSCHFCTL register in accordance to FCFG1 setting.
    * Remaining register bit fields are set to their reset values of 0. */
 
-  ui32Trim = SetupGetTrimForXoscHfCtl(ui32Fcfg1Revision);
-  DDI32RegWrite(AUX_DDI0_OSC_BASE, DDI_0_OSC_O_XOSCHFCTL, ui32Trim);
+  ui32Trim = rom_setup_get_trim_xosc_hfctrl(ui32Fcfg1Revision);
+  rom_ddi_write32(AUX_DDI0_OSC_BASE, DDI_0_OSC_O_XOSCHFCTL, ui32Trim);
 
   /* Set trim for DBLR_LOOP_FILTER_RESET_VOLTAGE in accordance to FCFG1 setting
    * (This is bits [18:17] in DDI_0_OSC_O_ADCDOUBLERNANOAMPCTL) (Using MASK4
@@ -326,7 +326,7 @@ void SetupAfterColdResetWakeupFromShutDownCfg2(uint32_t ui32Fcfg1Revision,
    * that DDI_0_OSC_ADCDOUBLERNANOAMPCTL_DBLR_LOOP_FILTER_RESET_VOLTAGE_M =
    * 0x00060000) */
 
-  ui32Trim = SetupGetTrimForDblrLoopFilterResetVoltage(ui32Fcfg1Revision);
+  ui32Trim = rom_setup_get_trim_dblrloopfilter_resetvoltage(ui32Fcfg1Revision);
   HWREGB(AUX_DDI0_OSC_BASE + DDI_O_MASK4B +
          (DDI_0_OSC_O_ADCDOUBLERNANOAMPCTL * 2) + 4) = (0x60 | (ui32Trim << 1));
 
@@ -335,7 +335,7 @@ void SetupAfterColdResetWakeupFromShutDownCfg2(uint32_t ui32Fcfg1Revision,
    * bit[7] ( DDI_0_OSC_O_ATESTCTL is currently hidden (but=0x00000020)) Using
    * MASK4 write + 1 => writing to bits[7:4] */
 
-  ui32Trim = SetupGetTrimForRcOscLfIBiasTrim(ui32Fcfg1Revision);
+  ui32Trim = rom_setup_get_trim_rcosc_lfibiastrim(ui32Fcfg1Revision);
   HWREGB(AUX_DDI0_OSC_BASE + DDI_O_MASK4B + (0x00000020 * 2) + 1) =
     (0x80 | (ui32Trim << 3));
 
@@ -345,7 +345,7 @@ void SetupAfterColdResetWakeupFromShutDownCfg2(uint32_t ui32Fcfg1Revision,
    * in FCFG1 and in the HW register. This spans DDI_0_OSC_O_LFOSCCTL
    * bits[23:18] Using MASK8 write + 4 => writing to bits[23:16] */
 
-  ui32Trim = SetupGetTrimForXoscLfRegulatorAndCmirrwrRatio(ui32Fcfg1Revision);
+  ui32Trim = rom_setup_get_trim_lfregulator_cmirrwr_ratio(ui32Fcfg1Revision);
   HWREGH(AUX_DDI0_OSC_BASE + DDI_O_MASK8B + (DDI_0_OSC_O_LFOSCCTL * 2) + 4) =
     (0xfc00 | (ui32Trim << 2));
 
@@ -353,8 +353,8 @@ void SetupAfterColdResetWakeupFromShutDownCfg2(uint32_t ui32Fcfg1Revision,
    * fields in the DDI0_OSC_O_RADCEXTCFG register in accordance to FCFG1
    * setting. Remaining register bit fields are set to their reset values of 0. */
 
-  ui32Trim = SetupGetTrimForRadcExtCfg(ui32Fcfg1Revision);
-  DDI32RegWrite(AUX_DDI0_OSC_BASE, DDI_0_OSC_O_RADCEXTCFG, ui32Trim);
+  ui32Trim = rom_setup_get_trim_radc_extcfg(ui32Fcfg1Revision);
+  rom_ddi_write32(AUX_DDI0_OSC_BASE, DDI_0_OSC_O_RADCEXTCFG, ui32Trim);
 
   /* Setting FORCE_KICKSTART_EN (ref. CC26_V1_BUG00261). Should also be done
    * for PG2 (This is bit 22 in DDI_0_OSC_O_CTL0) */
@@ -365,12 +365,12 @@ void SetupAfterColdResetWakeupFromShutDownCfg2(uint32_t ui32Fcfg1Revision,
 
 /******************************************************************************
  *
- * SetupAfterColdResetWakeupFromShutDownCfg3
+ * rom_setup_coldreset_from_shutdown_cfg3
  *
  ******************************************************************************
  */
 
-void SetupAfterColdResetWakeupFromShutDownCfg3(uint32_t ccfg_ModeConfReg)
+void rom_setup_coldreset_from_shutdown_cfg3(uint32_t ccfg_ModeConfReg)
 {
   uint32_t fcfg1OscConf;
   uint32_t ui32Trim;
@@ -490,7 +490,7 @@ void SetupAfterColdResetWakeupFromShutDownCfg3(uint32_t ccfg_ModeConfReg)
   /* Setting DDI_0_OSC_CTL1_XOSC_HF_FAST_START according to value found in
    * FCFG1 */
 
-  ui32Trim = SetupGetTrimForXoscHfFastStart();
+  ui32Trim = rom_setup_get_trim_xosc_hffaststart();
   HWREGB(AUX_DDI0_OSC_BASE + DDI_O_MASK4B + (DDI_0_OSC_O_CTL1 * 2)) =
     (0x30 | ui32Trim);
 
@@ -502,8 +502,8 @@ void SetupAfterColdResetWakeupFromShutDownCfg3(uint32_t ccfg_ModeConfReg)
     case 0:                    /* XOSC_HF_DLF (XOSCHF/1536) -> SCLK_LF (=31250 
                                  * Hz) */
 
-      OSCClockSourceSet(OSC_SRC_CLK_LF, OSC_XOSC_HF);
-      SetupSetAonRtcSubSecInc(0x8637bd);        /* RTC_INCREMENT = 2^38 /
+      rom_osc_set_clocksource(OSC_SRC_CLK_LF, OSC_XOSC_HF);
+      rom_setup_aonrtc_subsecinc(0x8637bd);        /* RTC_INCREMENT = 2^38 /
                                                  * frequency */
 
       break;
@@ -513,22 +513,22 @@ void SetupAfterColdResetWakeupFromShutDownCfg3(uint32_t ccfg_ModeConfReg)
                                  * * Can be simplified a bit since possible return
                                  * values for HF matches LF settings */
 
-      currentHfClock = OSCClockSourceGet(OSC_SRC_CLK_HF);
-      OSCClockSourceSet(OSC_SRC_CLK_LF, currentHfClock);
-      while (OSCClockSourceGet(OSC_SRC_CLK_LF) != currentHfClock)
+      currentHfClock = rom_osc_get_clocksource(OSC_SRC_CLK_HF);
+      rom_osc_set_clocksource(OSC_SRC_CLK_LF, currentHfClock);
+      while (rom_osc_get_clocksource(OSC_SRC_CLK_LF) != currentHfClock)
         {
           /* Wait until switched */
 
         }
       ccfgExtLfClk = HWREG(CCFG_BASE + CCFG_O_EXT_LF_CLK);
-      SetupSetAonRtcSubSecInc((ccfgExtLfClk & CCFG_EXT_LF_CLK_RTC_INCREMENT_M)
+      rom_setup_aonrtc_subsecinc((ccfgExtLfClk & CCFG_EXT_LF_CLK_RTC_INCREMENT_M)
                               >> CCFG_EXT_LF_CLK_RTC_INCREMENT_S);
 
        /* Route external clock to AON IOC w/hysteresis.  Set XOSC_LF in
         * bypass mode to allow external 32 kHz clock
         */
 
-      IOCPortConfigureSet((ccfgExtLfClk & CCFG_EXT_LF_CLK_DIO_M) >> CCFG_EXT_LF_CLK_DIO_S, IOC_PORT_AON_CLK32K, IOC_STD_INPUT | IOC_HYST_ENABLE);
+      rom_iocport_set_configuration((ccfgExtLfClk & CCFG_EXT_LF_CLK_DIO_M) >> CCFG_EXT_LF_CLK_DIO_S, IOC_PORT_AON_CLK32K, IOC_STD_INPUT | IOC_HYST_ENABLE);
 
       HWREG(AUX_DDI0_OSC_BASE + DDI_O_SET + DDI_0_OSC_O_CTL0) =
         DDI_0_OSC_CTL0_XOSC_LF_DIG_BYPASS;
@@ -537,11 +537,11 @@ void SetupAfterColdResetWakeupFromShutDownCfg3(uint32_t ccfg_ModeConfReg)
 
     case 2:                    /* XOSC_LF -> SLCK_LF (32768 Hz) */
 
-      OSCClockSourceSet(OSC_SRC_CLK_LF, OSC_XOSC_LF);
+      rom_osc_set_clocksource(OSC_SRC_CLK_LF, OSC_XOSC_LF);
       break;
     default:                   /* (=3) RCOSC_LF */
 
-      OSCClockSourceSet(OSC_SRC_CLK_LF, OSC_RCOSC_LF);
+      rom_osc_set_clocksource(OSC_SRC_CLK_LF, OSC_RCOSC_LF);
       break;
     }
 
@@ -559,12 +559,12 @@ void SetupAfterColdResetWakeupFromShutDownCfg3(uint32_t ccfg_ModeConfReg)
 
 /******************************************************************************
  *
- * SetupGetTrimForAnabypassValue1
+ * rom_setup_get_trim_anabypass_value1
  *
  ******************************************************************************
  */
 
-uint32_t SetupGetTrimForAnabypassValue1(uint32_t ccfg_ModeConfReg)
+uint32_t rom_setup_get_trim_anabypass_value1(uint32_t ccfg_ModeConfReg)
 {
   uint32_t ui32Fcfg1Value;
   uint32_t ui32XoscHfRow;
@@ -654,12 +654,12 @@ uint32_t SetupGetTrimForAnabypassValue1(uint32_t ccfg_ModeConfReg)
 
 /******************************************************************************
  *
- * SetupGetTrimForRcOscLfRtuneCtuneTrim
+ * rom_setup_get_trim_rcosc_lfrtunectuntrim
  *
  ******************************************************************************
  */
 
-uint32_t SetupGetTrimForRcOscLfRtuneCtuneTrim(void)
+uint32_t rom_setup_get_trim_rcosc_lfrtunectuntrim(void)
 {
   uint32_t ui32TrimValue;
 
@@ -682,12 +682,12 @@ uint32_t SetupGetTrimForRcOscLfRtuneCtuneTrim(void)
 
 /******************************************************************************
  *
- * SetupGetTrimForXoscHfIbiastherm
+ * rom_setup_get_trim_xosc_hfibiastherm
  *
  ******************************************************************************
  */
 
-uint32_t SetupGetTrimForXoscHfIbiastherm(void)
+uint32_t rom_setup_get_trim_xosc_hfibiastherm(void)
 {
   uint32_t ui32TrimValue;
 
@@ -703,12 +703,12 @@ uint32_t SetupGetTrimForXoscHfIbiastherm(void)
 
 /******************************************************************************
  *
- * SetupGetTrimForAmpcompTh2
+ * rom_setup_get_trim_ampcompth2
  *
  ******************************************************************************
  */
 
-uint32_t SetupGetTrimForAmpcompTh2(void)
+uint32_t rom_setup_get_trim_ampcompth2(void)
 {
   uint32_t ui32TrimValue;
   uint32_t ui32Fcfg1Value;
@@ -740,12 +740,12 @@ uint32_t SetupGetTrimForAmpcompTh2(void)
 
 /******************************************************************************
  *
- * SetupGetTrimForAmpcompTh1
+ * rom_setup_get_trim_ampcompth1
  *
  ******************************************************************************
  */
 
-uint32_t SetupGetTrimForAmpcompTh1(void)
+uint32_t rom_setup_get_trim_ampcompth1(void)
 {
   uint32_t ui32TrimValue;
   uint32_t ui32Fcfg1Value;
@@ -777,12 +777,12 @@ uint32_t SetupGetTrimForAmpcompTh1(void)
 
 /******************************************************************************
  *
- * SetupGetTrimForAmpcompCtrl
+ * rom_setup_get_trim_ampcompctrl
  *
  ******************************************************************************
  */
 
-uint32_t SetupGetTrimForAmpcompCtrl(uint32_t ui32Fcfg1Revision)
+uint32_t rom_setup_get_trim_ampcompctrl(uint32_t ui32Fcfg1Revision)
 {
   uint32_t ui32TrimValue;
   uint32_t ui32Fcfg1Value;
@@ -885,12 +885,12 @@ uint32_t SetupGetTrimForAmpcompCtrl(uint32_t ui32Fcfg1Revision)
 
 /******************************************************************************
  *
- * SetupGetTrimForDblrLoopFilterResetVoltage
+ * rom_setup_get_trim_dblrloopfilter_resetvoltage
  *
  ******************************************************************************
  */
 
-uint32_t SetupGetTrimForDblrLoopFilterResetVoltage(uint32_t ui32Fcfg1Revision)
+uint32_t rom_setup_get_trim_dblrloopfilter_resetvoltage(uint32_t ui32Fcfg1Revision)
 {
   uint32_t dblrLoopFilterResetVoltageValue = 0; /* Reset value */
 
@@ -907,12 +907,12 @@ uint32_t SetupGetTrimForDblrLoopFilterResetVoltage(uint32_t ui32Fcfg1Revision)
 
 /******************************************************************************
  *
- * SetupGetTrimForAdcShModeEn
+ * rom_setup_get_trim_adcshmodeen
  *
  ******************************************************************************
  */
 
-uint32_t SetupGetTrimForAdcShModeEn(uint32_t ui32Fcfg1Revision)
+uint32_t rom_setup_get_trim_adcshmodeen(uint32_t ui32Fcfg1Revision)
 {
   uint32_t getTrimForAdcShModeEnValue = 1;      /* Recommended default setting */
 
@@ -928,12 +928,12 @@ uint32_t SetupGetTrimForAdcShModeEn(uint32_t ui32Fcfg1Revision)
 
 /******************************************************************************
  *
- * SetupGetTrimForAdcShVbufEn
+ * rom_setup_get_trim_adcshvbufen
  *
  ******************************************************************************
  */
 
-uint32_t SetupGetTrimForAdcShVbufEn(uint32_t ui32Fcfg1Revision)
+uint32_t rom_setup_get_trim_adcshvbufen(uint32_t ui32Fcfg1Revision)
 {
   uint32_t getTrimForAdcShVbufEnValue = 1;      /* Recommended default setting */
 
@@ -949,12 +949,12 @@ uint32_t SetupGetTrimForAdcShVbufEn(uint32_t ui32Fcfg1Revision)
 
 /******************************************************************************
  *
- * SetupGetTrimForXoscHfCtl
+ * rom_setup_get_trim_xosc_hfctrl
  *
  ******************************************************************************
  */
 
-uint32_t SetupGetTrimForXoscHfCtl(uint32_t ui32Fcfg1Revision)
+uint32_t rom_setup_get_trim_xosc_hfctrl(uint32_t ui32Fcfg1Revision)
 {
   uint32_t getTrimForXoschfCtlValue = 0;        /* Recommended default setting */
 
@@ -984,12 +984,12 @@ uint32_t SetupGetTrimForXoscHfCtl(uint32_t ui32Fcfg1Revision)
 
 /******************************************************************************
  *
- * SetupGetTrimForXoscHfFastStart
+ * rom_setup_get_trim_xosc_hffaststart
  *
  ******************************************************************************
  */
 
-uint32_t SetupGetTrimForXoscHfFastStart(void)
+uint32_t rom_setup_get_trim_xosc_hffaststart(void)
 {
   uint32_t ui32XoscHfFastStartValue;
 
@@ -1004,12 +1004,12 @@ uint32_t SetupGetTrimForXoscHfFastStart(void)
 
 /******************************************************************************
  *
- * SetupGetTrimForRadcExtCfg
+ * rom_setup_get_trim_radc_extcfg
  *
  ******************************************************************************
  */
 
-uint32_t SetupGetTrimForRadcExtCfg(uint32_t ui32Fcfg1Revision)
+uint32_t rom_setup_get_trim_radc_extcfg(uint32_t ui32Fcfg1Revision)
 {
   uint32_t getTrimForRadcExtCfgValue = 0x403f8000;      /* Recommended default
                                                          * setting */
@@ -1040,12 +1040,12 @@ uint32_t SetupGetTrimForRadcExtCfg(uint32_t ui32Fcfg1Revision)
 
 /******************************************************************************
  *
- * SetupGetTrimForRcOscLfIBiasTrim
+ * rom_setup_get_trim_rcosc_lfibiastrim
  *
  ******************************************************************************
  */
 
-uint32_t SetupGetTrimForRcOscLfIBiasTrim(uint32_t ui32Fcfg1Revision)
+uint32_t rom_setup_get_trim_rcosc_lfibiastrim(uint32_t ui32Fcfg1Revision)
 {
   uint32_t trimForRcOscLfIBiasTrimValue = 0;    /* Default value */
 
@@ -1061,12 +1061,12 @@ uint32_t SetupGetTrimForRcOscLfIBiasTrim(uint32_t ui32Fcfg1Revision)
 
 /******************************************************************************
  *
- * SetupGetTrimForXoscLfRegulatorAndCmirrwrRatio
+ * rom_setup_get_trim_lfregulator_cmirrwr_ratio
  *
  ******************************************************************************
  */
 
-uint32_t SetupGetTrimForXoscLfRegulatorAndCmirrwrRatio(uint32_t
+uint32_t rom_setup_get_trim_lfregulator_cmirrwr_ratio(uint32_t
                                                        ui32Fcfg1Revision)
 {
   /* Default value for both fields */
@@ -1087,12 +1087,12 @@ uint32_t SetupGetTrimForXoscLfRegulatorAndCmirrwrRatio(uint32_t
 
 /******************************************************************************
  *
- * SetupSetCacheModeAccordingToCcfgSetting
+ * rom_setup_cachemode
  *
  ******************************************************************************
  */
 
-void SetupSetCacheModeAccordingToCcfgSetting(void)
+void rom_setup_cachemode(void)
 {
   /* - Make sure to enable aggressive VIMS clock gating for power optimization
    * Only for PG2 devices. - Enable cache prefetch enable as default setting
@@ -1151,12 +1151,12 @@ void SetupSetCacheModeAccordingToCcfgSetting(void)
 
 /******************************************************************************
  *
- * SetupSetAonRtcSubSecInc
+ * rom_setup_aonrtc_subsecinc
  *
  ******************************************************************************
  */
 
-void SetupSetAonRtcSubSecInc(uint32_t subSecInc)
+void rom_setup_aonrtc_subsecinc(uint32_t subSecInc)
 {
   /* Loading a new RTCSUBSECINC value is done in 5 steps: 1. Write bit[15:0] of 
    * new SUBSECINC value to AUX_WUC_O_RTCSUBSECINC0 2. Write bit[23:16] of new

@@ -151,13 +151,13 @@ static void trim_wakeup_fromshutdown(uint32_t fcfg1_revision)
    * -Configure DCDC.
    */
 
-  SetupAfterColdResetWakeupFromShutDownCfg1(ccfg_modeconf);
+  rom_setup_coldreset_from_shutdown_cfg1(ccfg_modeconf);
 
   /* Second part of trim done after cold reset and wakeup from shutdown:
    * -Configure XOSC.
    */
 
-  SetupAfterColdResetWakeupFromShutDownCfg2(fcfg1_revision,
+  rom_setup_coldreset_from_shutdown_cfg2(fcfg1_revision,
                                             ccfg_modeconf);
 
   /* Increased margin between digital supply voltage and VDD BOD during
@@ -213,7 +213,7 @@ static void trim_wakeup_fromshutdown(uint32_t fcfg1_revision)
    * -Configure HPOSC. -Setup the LF clock.
    */
 
-  SetupAfterColdResetWakeupFromShutDownCfg3(ccfg_modeconf);
+  rom_setup_coldreset_from_shutdown_cfg3(ccfg_modeconf);
 
   /* Allow AUX to power down */
 
@@ -309,7 +309,7 @@ void cc13xx_trim_device(void)
 
   /* Select correct CACHE mode and set correct CACHE configuration */
 
-  SetupSetCacheModeAccordingToCcfgSetting();
+  rom_setup_cachemode();
 
   /* 1. Check for powerdown 2. Check for shutdown 3. Assume cold reset if none
    * of the above. It is always assumed that the application will freeze the
