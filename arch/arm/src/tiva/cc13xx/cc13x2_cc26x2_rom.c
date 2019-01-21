@@ -107,7 +107,7 @@ void rom_setup_stepvaddrtrimto(uint32_t toCode)
       while (targetTrim != currentTrim)
         {
           HWREG(AON_RTC_BASE + AON_RTC_O_SYNCLF);       /* Wait for next edge
-                                                         * on SCLK_LF (positive 
+                                                         * on SCLK_LF (positive
                                                          * or negative) */
 
           if (targetTrim > currentTrim)
@@ -135,11 +135,11 @@ void rom_setup_stepvaddrtrimto(uint32_t toCode)
       if (pmctlResetctl_reg & AON_PMCTL_RESETCTL_VDDR_LOSS_EN_M)
         {
           HWREG(AON_RTC_BASE + AON_RTC_O_SYNCLF);       /* Wait for next edge
-                                                         * on SCLK_LF (positive 
+                                                         * on SCLK_LF (positive
                                                          * or negative) */
 
           HWREG(AON_RTC_BASE + AON_RTC_O_SYNCLF);       /* Wait for next edge
-                                                         * on SCLK_LF (positive 
+                                                         * on SCLK_LF (positive
                                                          * or negative) */
 
           HWREG(AON_PMCTL_BASE + AON_PMCTL_O_RESETCTL) = pmctlResetctl_reg;
@@ -248,7 +248,7 @@ void rom_setup_coldreset_from_shutdown_cfg2(uint32_t ui32Fcfg1Revision,
                       DDI_0_OSC_LFOSCCTL_RCOSCLF_RTUNE_TRIM_M),
                      DDI_0_OSC_LFOSCCTL_RCOSCLF_CTUNE_TRIM_S, ui32Trim);
 
-  /* Trim XOSCHF IBIAS THERM. Get and set trim value for the XOSCHF IBIAS THERM 
+  /* Trim XOSCHF IBIAS THERM. Get and set trim value for the XOSCHF IBIAS THERM
    * bit field in the ANABYPASS_VALUE2 register. Other register bit fields are
    * set to 0. */
 
@@ -345,7 +345,7 @@ void rom_setup_coldreset_from_shutdown_cfg3(uint32_t ccfg_ModeConfReg)
   uint32_t currentHfClock;
   uint32_t ccfgExtLfClk;
 
-  /* Examine the XOSC_FREQ field to select 0x1=HPOSC, 0x2=48MHz XOSC, 0x3=24MHz 
+  /* Examine the XOSC_FREQ field to select 0x1=HPOSC, 0x2=48MHz XOSC, 0x3=24MHz
    * XOSC */
 
   switch ((ccfg_ModeConfReg & CCFG_MODE_CONF_XOSC_FREQ_M) >>
@@ -449,7 +449,7 @@ void rom_setup_coldreset_from_shutdown_cfg3(uint32_t ccfg_ModeConfReg)
     }
 
   /* Clear DDI_0_OSC_CTL0_CLK_LOSS_EN (ClockLossEventEnable()). This is bit 9
-   * in DDI_0_OSC_O_CTL0. This is typically already 0 except on Lizard where it 
+   * in DDI_0_OSC_O_CTL0. This is typically already 0 except on Lizard where it
    * is set in ROM-boot */
 
   HWREG(AUX_DDI0_OSC_BASE + DDI_O_CLR + DDI_0_OSC_O_CTL0) =
@@ -467,7 +467,7 @@ void rom_setup_coldreset_from_shutdown_cfg3(uint32_t ccfg_ModeConfReg)
   switch ((ccfg_ModeConfReg & CCFG_MODE_CONF_SCLK_LF_OPTION_M) >>
           CCFG_MODE_CONF_SCLK_LF_OPTION_S)
     {
-    case 0:                    /* XOSC_HF_DLF (XOSCHF/1536) -> SCLK_LF (=31250 
+    case 0:                    /* XOSC_HF_DLF (XOSCHF/1536) -> SCLK_LF (=31250
                                  * Hz) */
 
       rom_osc_set_clocksource(OSC_SRC_CLK_LF, OSC_XOSC_HF);
@@ -491,16 +491,16 @@ void rom_setup_coldreset_from_shutdown_cfg3(uint32_t ccfg_ModeConfReg)
       ccfgExtLfClk = HWREG(CCFG_BASE + CCFG_O_EXT_LF_CLK);
       rom_setup_aonrtc_subsecinc((ccfgExtLfClk & CCFG_EXT_LF_CLK_RTC_INCREMENT_M)
                               >> CCFG_EXT_LF_CLK_RTC_INCREMENT_S);
-      rom_iocport_set_configuration((ccfgExtLfClk & CCFG_EXT_LF_CLK_DIO_M) >> CCFG_EXT_LF_CLK_DIO_S, IOC_PORT_AON_CLK32K, IOC_STD_INPUT | IOC_HYST_ENABLE);       /* Route 
-                                                                                                                                                         * external 
-                                                                                                                                                         * clock 
-                                                                                                                                                         * to 
-                                                                                                                                                         * AON 
-                                                                                                                                                         * IOC 
+      rom_iocport_set_configuration((ccfgExtLfClk & CCFG_EXT_LF_CLK_DIO_M) >> CCFG_EXT_LF_CLK_DIO_S, IOC_PORT_AON_CLK32K, IOC_STD_INPUT | IOC_HYST_ENABLE);       /* Route
+                                                                                                                                                         * external
+                                                                                                                                                         * clock
+                                                                                                                                                         * to
+                                                                                                                                                         * AON
+                                                                                                                                                         * IOC
                                                                                                                                                          * w/hysteresis
                                                                                                                                                          * Set XOSC_LF
                                                                                                                                                          * in bypass
-                                                                                                                                                         * mode to allow 
+                                                                                                                                                         * mode to allow
                                                                                                                                                          * external 32
                                                                                                                                                          * kHz clock */
 
@@ -560,9 +560,9 @@ uint32_t rom_setup_get_trim_anabypass_value1(uint32_t ccfg_ModeConfReg)
     {
       /* XOSC_CAP_MOD = 0 means: CAP_ARRAY_DELTA is in use -> Apply
        * compensation XOSC_CAPARRAY_DELTA is located in bit[15:8] of
-       * ccfg_ModeConfReg Note: HW_REV_DEPENDENT_IMPLEMENTATION. Field width is 
+       * ccfg_ModeConfReg Note: HW_REV_DEPENDENT_IMPLEMENTATION. Field width is
        * not given by a define and sign extension must therefore be hard coded.
-       * ( A small test program is created verifying the code lines below: Ref.: 
+       * ( A small test program is created verifying the code lines below: Ref.:
        * ..\test\small_standalone_test_programs\CapArrayDeltaAdjust_test.c) */
 
       int32_t i32CustomerDeltaAdjust =
@@ -723,8 +723,8 @@ uint32_t rom_setup_get_trim_ampcompth1(void)
   uint32_t ui32TrimValue;
   uint32_t ui32Fcfg1Value;
 
-  /* Use device specific trim values located in factory configuration area. All 
-   * defined register bit fields have a corresponding trim value in the factory 
+  /* Use device specific trim values located in factory configuration area. All
+   * defined register bit fields have a corresponding trim value in the factory
    * configuration area */
 
   ui32Fcfg1Value = HWREG(FCFG1_BASE + FCFG1_O_AMPCOMP_TH1);
@@ -1070,7 +1070,7 @@ void rom_setup_cachemode(void)
   /* - Make sure to enable aggressive VIMS clock gating for power optimization
    * Only for PG2 devices. - Enable cache prefetch enable as default setting
    * (Slightly higher power consumption, but higher CPU performance) - IF (
-   * CCFG_..._DIS_GPRAM == 1 ) then: Enable cache (set cache mode = 1), even if 
+   * CCFG_..._DIS_GPRAM == 1 ) then: Enable cache (set cache mode = 1), even if
    * set by ROM boot code (This is done because it's not set by boot code when
    * running inside a debugger supporting the Halt In Boot (HIB)
    * functionality).  else: Set MODE_GPRAM if not already set (see inline
@@ -1131,7 +1131,7 @@ void rom_setup_cachemode(void)
 
 void rom_setup_aonrtc_subsecinc(uint32_t subSecInc)
 {
-  /* Loading a new RTCSUBSECINC value is done in 5 steps: 1. Write bit[15:0] of 
+  /* Loading a new RTCSUBSECINC value is done in 5 steps: 1. Write bit[15:0] of
    * new SUBSECINC value to AUX_SYSIF_O_RTCSUBSECINC0 2. Write bit[23:16] of
    * new SUBSECINC value to AUX_SYSIF_O_RTCSUBSECINC1 3. Set
    * AUX_SYSIF_RTCSUBSECINCCTL_UPD_REQ 4. Wait for
