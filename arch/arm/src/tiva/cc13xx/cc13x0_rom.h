@@ -659,5 +659,33 @@ struct hard_api_s
 
 typedef struct hard_api_s hard_api_t;
 
+/************************************************************************************
+ * Global Function Prototypes
+ ************************************************************************************/
+
+/* ROM functions implemented in FLASH */
+
+void     rom_setup_coldreset_from_shutdown_cfg1(uint32_t ccfg_modeconf);
+void     rom_setup_coldreset_from_shutdown_cfg2(uint32_t fcfg1_revision,
+                                                uint32_t ccfg_modeconf);
+void     rom_setup_coldreset_from_shutdown_cfg3(uint32_t ccfg_modeconf);
+uint32_t rom_setup_get_trim_anabypass_value1(uint32_t ccfg_modeconf);
+uint32_t rom_setup_get_trim_anabypass_value1(uint32_t ccfg_modeconf);
+uint32_t rom_setup_get_trim_rcosc_lfrtunectuntrim(void);
+uint32_t rom_setup_get_trim_xosc_hfibiastherm(void);
+uint32_t rom_setup_get_trim_ampcompth1(void);
+uint32_t rom_setup_get_trim_ampcompth2(void);
+uint32_t rom_setup_get_trim_ampcompctrl(uint32_t fcfg1_revision);
+uint32_t rom_setup_get_trim_dblrloopfilter_resetvoltage(uint32_t fcfg1_revision);
+uint32_t rom_setup_get_trim_adcshmodeen(uint32_t fcfg1_revision);
+uint32_t rom_setup_get_trim_adcshvbufen(uint32_t fcfg1_revision);
+uint32_t rom_setup_get_trim_xosc_hfctrl(uint32_t fcfg1_revision);
+uint32_t rom_setup_get_trim_xosc_hffaststart(void);
+uint32_t rom_setup_get_trim_radc_extcfg(uint32_t fcfg1_revision);
+uint32_t rom_setup_get_trim_rcosc_lfibiastrim(uint32_t fcfg1_revision);
+uint32_t rom_setup_get_trim_lfregulator_cmirrwr_ratio(uint32_t fcfg1_revision);
+void     rom_setup_cachemode(void);
+void     rom_setup_aonrtc_subsecinc(uint32_t subsecinc);
+
 #endif /* __ARCH_ARM_SRC_TIVA_CC13XX_CC13X0_ROM_H */
 

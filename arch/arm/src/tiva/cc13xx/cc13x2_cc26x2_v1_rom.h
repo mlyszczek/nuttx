@@ -891,5 +891,15 @@ struct hard_api_s
 
 typedef struct hard_api_s hard_api_t;
 
+/************************************************************************************
+ * Global Function Prototypes
+ ************************************************************************************/
+
+/* ROM functions implemented in FLASH */
+
+void rom_setup_coldreset_from_shutdown_cfg1(uint32_t ccfg_modeconf);
+void rom_setup_coldreset_from_shutdown_cfg1(uint32_t ccfg_modeconf);
+void rom_setup_stepvaddrtrimto(uint32_t tocode);
+
 #endif /* __ARCH_ARM_SRC_TIVA_CC13XX_CC13X2_CC26X2_V1_ROM_H */
 
