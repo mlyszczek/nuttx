@@ -42,27 +42,19 @@
  * Included Files
  ************************************************************************************/
 
-/* Hardware headers */
+#include <stdint.h>
 
-#include "../inc/hw_types.h"
-#include "../inc/hw_memmap.h"
-#include "../inc/hw_adi.h"
-#include "../inc/hw_adi_2_refsys.h"
-#include "../inc/hw_adi_3_refsys.h"
-#include "../inc/hw_adi_4_aux.h"
-#include "../inc/hw_aon_batmon.h"
-#include "../inc/hw_aux_sysif.h"
-#include "../inc/hw_ccfg.h"
-#include "../inc/hw_ddi_0_osc.h"
-#include "../inc/hw_fcfg1.h"
+#include "up_arch.h"
 
-/* Driverlib headers */
-
-#include "ddi.h"
-#include "ioc.h"
-#include "osc.h"
-#include "sys_ctrl.h"
-#include "setup_rom.h"
+#include "hardware/tiva_adi2_refsys.h"
+#include "hardware/tiva_adi3_refsys.h"
+#include "hardware/tiva_adi4_aux.h"
+#include "hardware/tiva_aon_pmctl.h"
+#include "hardware/tiva_aon_rtc.h"
+#include "hardware/tiva_aux_sysif.h"
+#include "hardware/tiva_ccfg.h"
+#include "hardware/tiva_ddi0_osc.h"
+#include "hardware/tiva_fcfg1.h"
 
 /************************************************************************************
  * Public Functions
@@ -72,75 +64,69 @@
  * Name: rom_setup_stepvaddrtrimto
  ************************************************************************************/
 
-void rom_setup_stepvaddrtrimto(uint32_t toCode)
+void rom_setup_stepvaddrtrimto(uint32_t tocode)
 {
   uint32_t pmctlResetctl_reg;
-  int32_t targetTrim;
-  int32_t currentTrim;
+  int32_t target_trim;
+  int32_t current_trim;
 
-  targetTrim =
-    SetupSignExtendVddrTrimValue(toCode &
-                                 (ADI_3_REFSYS_DCDCCTL0_VDDR_TRIM_M >>
-                                  ADI_3_REFSYS_DCDCCTL0_VDDR_TRIM_S));
-  currentTrim =
-    SetupSignExtendVddrTrimValue((HWREGB(ADI3_BASE + ADI_3_REFSYS_O_DCDCCTL0) &
-                                  ADI_3_REFSYS_DCDCCTL0_VDDR_TRIM_M) >>
-                                 ADI_3_REFSYS_DCDCCTL0_VDDR_TRIM_S);
+  target_trim =
+    SetupSignExtendVddrTrimValue(tocode &
+                                 (ADI3_REFSYS_DCDCCTL0_VDDR_TRIM_MASK >>
+                                  ADI3_REFSYS_DCDCCTL0_VDDR_TRIM_SHIFT));
+  current_trim =
+    SetupSignExtendVddrTrimValue((getreg16(TIVA_ADI3_REFSYS_DCDCCTL0) &
+                                  ADI3_REFSYS_DCDCCTL0_VDDR_TRIM_MASK) >>
+                                 ADI3_REFSYS_DCDCCTL0_VDDR_TRIM_SHIFT);
 
-  if (targetTrim != currentTrim)
+  if (target_trim != current_trim)
     {
       pmctlResetctl_reg =
-        (HWREG(AON_PMCTL_BASE + AON_PMCTL_O_RESETCTL) &
-         ~AON_PMCTL_RESETCTL_MCU_WARM_RESET_M);
-      if (pmctlResetctl_reg & AON_PMCTL_RESETCTL_VDDR_LOSS_EN_M)
+        (getreg32(TIVA_AON_PMCTL_RESETCTL) &
+         ~AON_PMCTL_RESETCTL_MCU_WARM_RESET);
+      if (pmctlResetctl_reg & AON_PMCTL_RESETCTL_VDDR_LOSS_EN)
         {
-          HWREG(AON_PMCTL_BASE + AON_PMCTL_O_RESETCTL) =
-            (pmctlResetctl_reg & ~AON_PMCTL_RESETCTL_VDDR_LOSS_EN_M);
-          HWREG(AON_RTC_BASE + AON_RTC_O_SYNC); /* Wait for VDDR_LOSS_EN
+          putreg32(pmctlResetctl_reg & ~AON_PMCTL_RESETCTL_VDDR_LOSS_EN,
+                   TIVA_AON_PMCTL_RESETCTL);
+          (void)getreg32(TIVA_AON_RTC_SYNC); /* Wait for VDDR_LOSS_EN
                                                  * setting to propagate */
-
         }
 
-      while (targetTrim != currentTrim)
+      while (target_trim != current_trim)
         {
-          HWREG(AON_RTC_BASE + AON_RTC_O_SYNCLF);       /* Wait for next edge
+          (void)getreg32(TIVA_AON_RTC_SYNCLF);       /* Wait for next edge
                                                          * on SCLK_LF (positive
                                                          * or negative) */
 
-          if (targetTrim > currentTrim)
-            currentTrim++;
+          if (target_trim > current_trim)
+            current_trim++;
           else
-            currentTrim--;
+            current_trim--;
 
-          HWREGB(ADI3_BASE + ADI_3_REFSYS_O_DCDCCTL0) = ((HWREGB
-                                                          (ADI3_BASE +
-                                                           ADI_3_REFSYS_O_DCDCCTL0)
-                                                          &
-                                                          ~ADI_3_REFSYS_DCDCCTL0_VDDR_TRIM_M)
-                                                         |
-                                                         ((((uint32_t)
-                                                            currentTrim) <<
-                                                           ADI_3_REFSYS_DCDCCTL0_VDDR_TRIM_S)
-                                                          &
-                                                          ADI_3_REFSYS_DCDCCTL0_VDDR_TRIM_M));
+          putreg8(((retreg8(TIVA_ADI3_REFSYS_DCDCCTL0) &
+                   ~ADI3_REFSYS_DCDCCTL0_VDDR_TRIM_MASK) |
+                   ((((uint32_t)current_trim) <<
+                     ADI3_REFSYS_DCDCCTL0_VDDR_TRIM_SHIFT) &
+                    ADI3_REFSYS_DCDCCTL0_VDDR_TRIM_MASK)),
+                   TIVA_ADI3_REFSYS_DCDCCTL0);
         }
 
-      HWREG(AON_RTC_BASE + AON_RTC_O_SYNCLF);   /* Wait for next edge on
+      (void)getreg32(TIVA_AON_RTC_SYNCLF);   /* Wait for next edge on
                                                  * SCLK_LF (positive or
                                                  * negative) */
 
-      if (pmctlResetctl_reg & AON_PMCTL_RESETCTL_VDDR_LOSS_EN_M)
+      if (pmctlResetctl_reg & AON_PMCTL_RESETCTL_VDDR_LOSS_EN)
         {
-          HWREG(AON_RTC_BASE + AON_RTC_O_SYNCLF);       /* Wait for next edge
+          (void)getreg32(TIVA_AON_RTC_SYNCLF);       /* Wait for next edge
                                                          * on SCLK_LF (positive
                                                          * or negative) */
 
-          HWREG(AON_RTC_BASE + AON_RTC_O_SYNCLF);       /* Wait for next edge
+          (void)getreg32(TIVA_AON_RTC_SYNCLF);       /* Wait for next edge
                                                          * on SCLK_LF (positive
                                                          * or negative) */
 
-          HWREG(AON_PMCTL_BASE + AON_PMCTL_O_RESETCTL) = pmctlResetctl_reg;
-          HWREG(AON_RTC_BASE + AON_RTC_O_SYNC); /* And finally wait for
+          (void)getreg32(TIVA_AON_PMCTL_RESETCTL) = pmctlResetctl_reg;
+          (void)getreg32(TIVA_AON_RTC_SYNC); /* And finally wait for
                                                  * VDDR_LOSS_EN setting to
                                                  * propagate */
 
@@ -165,51 +151,55 @@ void rom_setup_coldreset_from_shutdown_cfg1(uint32_t ccfg_modeconf)
        * BOD_BG_TRIM_EN (bit[7] of REFSYSCTL3) to latch new VDDS BOD. Set to 0
        * first to guarantee a positive transition. */
 
-      HWREGB(ADI3_BASE + ADI_O_CLR + ADI_3_REFSYS_O_REFSYSCTL3) =
-        ADI_3_REFSYS_REFSYSCTL3_BOD_BG_TRIM_EN;
+      HWREGB(TIVA_ADI3_REFSYS_CLR + ADI3_REFSYS_REFSYSCTL3_OFFSET) =
+        ADI3_REFSYS_REFSYSCTL3_BOD_BG_TRIM_EN;
 
-      *VDDS_BOD_LEVEL = 1 means that boost mode is selected
-        * -Max out the VDDS_BOD trim( = VDDS_BOD_POS_31)
-        * /HWREGH(ADI3_BASE + ADI_O_MASK8B + (ADI_3_REFSYS_O_REFSYSCTL1 * 2)) =
-        (ADI_3_REFSYS_REFSYSCTL1_TRIM_VDDS_BOD_M << 8) |
-        (ADI_3_REFSYS_REFSYSCTL1_TRIM_VDDS_BOD_POS_31);
-      HWREGB(ADI3_BASE + ADI_O_SET + ADI_3_REFSYS_O_REFSYSCTL3) =
-        ADI_3_REFSYS_REFSYSCTL3_BOD_BG_TRIM_EN;
+      /* VDDS_BOD_LEVEL = 1 means that boost mode is selected
+       * -Max out the VDDS_BOD trim( = VDDS_BOD_POS_31)
+       */
 
-      rom_setup_stepvaddrtrimto((HWREG(FCFG1_BASE + FCFG1_O_VOLT_TRIM) &
-                           FCFG1_VOLT_TRIM_VDDR_TRIM_HH_M) >>
-                          FCFG1_VOLT_TRIM_VDDR_TRIM_HH_S);
+      putreg16((ADI3_REFSYS_REFSYSCTL1_TRIM_VDDS_BOD_MASK << 8) |
+               (ADI3_REFSYS_REFSYSCTL1_TRIM_VDDS_BOD_POS_31),
+               TIVA_ADI3_REFSYS_MASK8B + (TIVA_ADI3_REFSYS_REFSYSCTL1_OFFSET * 2));
+
+      HWREGB(TIVA_ADI3_REFSYS_SET + ADI3_REFSYS_REFSYSCTL3_OFFSET) =
+        ADI3_REFSYS_REFSYSCTL3_BOD_BG_TRIM_EN;
+
+      rom_setup_stepvaddrtrimto((getreg32(TIVA_FCFG1_VOLT_TRIM) &
+                           FCFG1_VOLT_TRIM_VDDR_TRIM_HH_MASK) >>
+                          FCFG1_VOLT_TRIM_VDDR_TRIM_HH_SHIFT);
     }
 
   /* 1. Do not allow DCDC to be enabled if in external regulator mode.
    * Preventing this by setting both the RECHARGE and the ACTIVE bits bit in
    * the CCFG_MODE_CONF copy register (ccfg_modeconf). 2. Adjusted battery
    * monitor low limit in internal regulator mode. This is done by setting
-   * AON_BATMON_FLASHPUMPP0_LOWLIM=0 in internal regulator mode. */
+   * AON_BATMON_FLASHPUMPP0_LOWLIM=0 in internal regulator mode.
+   */
 
-  if (HWREG(AON_PMCTL_BASE + AON_PMCTL_O_PWRCTL) &
+  if (getreg32(TIVA_AON_PMCTL_PWRCTL) &
       AON_PMCTL_PWRCTL_EXT_REG_MODE)
     {
-      ccfg_modeconf |=
-        (CCFG_MODE_CONF_DCDC_RECHARGE_M | CCFG_MODE_CONF_DCDC_ACTIVE_M);
+      ccfg_modeconf |= (CCFG_MODE_CONF_DCDC_RECHARGE |
+                        CCFG_MODE_CONF_DCDC_ACTIVE);
     }
   else
     {
-      HWREGBITW(AON_BATMON_BASE + AON_BATMON_O_FLASHPUMPP0,
+      HWREGBITW(TIVA_AON_BATMON_FLASHPUMPP0,
                 AON_BATMON_FLASHPUMPP0_LOWLIM_BITN) = 0;
     }
 
   /* set the RECHARGE source based upon CCFG:MODE_CONF:DCDC_RECHARGE Note:
    * Inverse polarity */
 
-  HWREGBITW(AON_PMCTL_BASE + AON_PMCTL_O_PWRCTL,
+  HWREGBITW(TIVA_AON_PMCTL_PWRCTL,
             AON_PMCTL_PWRCTL_DCDC_EN_BITN) =
-    (((ccfg_modeconf >> CCFG_MODE_CONF_DCDC_RECHARGE_S) & 1) ^ 1);
+    (((ccfg_modeconf >> CCFG_MODE_CONF_DCDC_RECHARGE_SHIFT) & 1) ^ 1);
 
   /* set the ACTIVE source based upon CCFG:MODE_CONF:DCDC_ACTIVE Note: Inverse
    * polarity */
 
-  HWREGBITW(AON_PMCTL_BASE + AON_PMCTL_O_PWRCTL,
+  HWREGBITW(TIVA_AON_PMCTL_PWRCTL,
             AON_PMCTL_PWRCTL_DCDC_ACTIVE_BITN) =
-    (((ccfg_modeconf >> CCFG_MODE_CONF_DCDC_ACTIVE_S) & 1) ^ 1);
+    (((ccfg_modeconf >> CCFG_MODE_CONF_DCDC_ACTIVE_SHIFT) & 1) ^ 1);
 }
