@@ -584,51 +584,51 @@
 
 /* CRYPTO FUNCTIONS */
 
-#define CRYPTOAesEcb \
+#define rom_crypto_aesecb \
     ((uint32_t (*)(uint32_t *pui32MsgIn, uint32_t *pui32MsgOut, uint32_t ui32KeyLocation, bool bEncrypt, bool brom_int_enable)) \
     ROM_API_CRYPTO_TABLE[0])
 
-#define CRYPTOAesEcbStatus \
+#define rom_crypto_aesecbStatus \
     ((uint32_t (*)(void)) \
     ROM_API_CRYPTO_TABLE[1])
 
-#define CRYPTOCcmAuthEncrypt \
+#define rom_crypto_encrypt_ccmauth \
     ((uint32_t (*)(bool bEncrypt, uint32_t ui32AuthLength, uint32_t *pui32Nonce, uint32_t *pui32PlainText, uint32_t ui32PlainTextLength, uint32_t *pui32Header, uint32_t ui32HeaderLength, uint32_t ui32KeyLocation, uint32_t ui32FieldLength, bool brom_int_enable)) \
     ROM_API_CRYPTO_TABLE[3])
 
-#define CRYPTOCcmAuthEncryptResultGet \
+#define rom_crypto_encrypt_ccmauthResultGet \
     ((uint32_t (*)(uint32_t ui32TagLength, uint32_t *pui32CcmTag)) \
     ROM_API_CRYPTO_TABLE[4])
 
-#define CRYPTOCcmAuthEncryptStatus \
+#define rom_crypto_encrypt_ccmauthStatus \
     ((uint32_t (*)(void)) \
     ROM_API_CRYPTO_TABLE[5])
 
-#define CRYPTOCcmInvAuthDecrypt \
+#define rom_crypto_decrypt_ccminvauth \
     ((uint32_t (*)(bool bDecrypt, uint32_t ui32AuthLength, uint32_t *pui32Nonce, uint32_t *pui32CipherText, uint32_t ui32CipherTextLength, uint32_t *pui32Header, uint32_t ui32HeaderLength, uint32_t ui32KeyLocation, uint32_t ui32FieldLength, bool brom_int_enable)) \
     ROM_API_CRYPTO_TABLE[6])
 
-#define CRYPTOCcmInvAuthDecryptResultGet \
+#define rom_crypto_decrypt_ccminvauthResultGet \
     ((uint32_t (*)(uint32_t ui32AuthLength, uint32_t *pui32CipherText, uint32_t ui32CipherTextLength, uint32_t *pui32CcmTag)) \
     ROM_API_CRYPTO_TABLE[7])
 
-#define CRYPTOCcmInvAuthDecryptStatus \
+#define rom_crypto_decrypt_ccminvauthStatus \
     ((uint32_t (*)(void)) \
     ROM_API_CRYPTO_TABLE[8])
 
-#define CRYPTOAesCbc \
+#define rom_crypto_aescbc \
     ((uint32_t (*)(uint32_t *pui32MsgIn, uint32_t *pui32MsgOut, uint32_t ui32MsgLength, uint32_t *pui32Nonce, uint32_t ui32KeyLocation, bool bEncrypt, bool brom_int_enable)) \
     ROM_API_CRYPTO_TABLE[9])
 
-#define CRYPTOAesCbcStatus \
+#define rom_crypto_aescbcStatus \
     ((uint32_t (*)(void)) \
     ROM_API_CRYPTO_TABLE[10])
 
-#define CRYPTODmaDisable \
+#define rom_crypto_disable_dma \
     ((void (*)(uint32_t ui32Channels)) \
     ROM_API_CRYPTO_TABLE[11])
 
-#define CRYPTODmaEnable \
+#define rom_crypto_enable_dma \
     ((void (*)(uint32_t ui32Channels)) \
     ROM_API_CRYPTO_TABLE[12])
 

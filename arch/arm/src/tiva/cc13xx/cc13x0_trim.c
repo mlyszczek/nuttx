@@ -217,7 +217,7 @@ static void trim_wakeup_fromshutdown(uint32_t fcfg1_revision)
 
   /* Allow AUX to power down */
 
-  AUXWUCPowerCtrl(AUX_WUC_POWER_DOWN);
+  rom_aonwuc_powerctrl(AUX_WUC_POWER_DOWN);
 
   /* Leaving on AUX and clock for AUX_DDI0_OSC on but turn off clock for
    * AUX_ADI4

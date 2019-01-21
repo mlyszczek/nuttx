@@ -166,11 +166,11 @@
     ((uint32_t (*)(uint32_t ui32MCUWUEvent)) \
     ROM_API_AON_EVENT_TABLE[1])
 
-#define AONEventAuxWakeUpSet \
+#define rom_aonevent_set_auxwakeup \
     ((void (*)(uint32_t ui32AUXWUEvent, uint32_t ui32EventSrc)) \
     ROM_API_AON_EVENT_TABLE[2])
 
-#define AONEventAuxWakeUpGet \
+#define rom_aonevent_get_auxwakeup \
     ((uint32_t (*)(uint32_t ui32AUXWUEvent)) \
     ROM_API_AON_EVENT_TABLE[3])
 
@@ -184,15 +184,15 @@
 
 /* AON_WUC FUNCTIONS */
 
-#define AONWUCAuxReset \
+#define rom_aonwuc_reset_aux \
     ((void (*)(void)) \
     ROM_API_AON_WUC_TABLE[3])
 
-#define AONWUCRechargeCtrlConfigSet \
+#define rom_aonwuc_set_rechargectrl_config \
     ((void (*)(bool bAdaptEnable, uint32_t ui32AdaptRate, uint32_t ui32Period, uint32_t ui32MaxPeriod)) \
     ROM_API_AON_WUC_TABLE[4])
 
-#define AONWUCOscConfig \
+#define rom_aonwuc_oscconfig \
     ((void (*)(uint32_t ui32Period)) \
     ROM_API_AON_WUC_TABLE[5])
 
@@ -208,19 +208,19 @@
 
 /* AUX_WUC FUNCTIONS */
 
-#define AUXWUCClockEnable \
+#define rom_aonwuc_enable_clock \
     ((void (*)(uint32_t ui32Clocks)) \
     ROM_API_AUX_WUC_TABLE[0])
 
-#define AUXWUCClockDisable \
+#define rom_aonwuc_disable_clock \
     ((void (*)(uint32_t ui32Clocks)) \
     ROM_API_AUX_WUC_TABLE[1])
 
-#define AUXWUCClockStatus \
+#define rom_aonwuc_status_clock \
     ((uint32_t (*)(uint32_t ui32Clocks)) \
     ROM_API_AUX_WUC_TABLE[2])
 
-#define AUXWUCPowerCtrl \
+#define rom_aonwuc_powerctrl \
     ((void (*)(uint32_t ui32PowerMode)) \
     ROM_API_AUX_WUC_TABLE[3])
 
