@@ -341,11 +341,11 @@
     ((void (*)(uint32_t ui32IOId, uint32_t ui32PortId)) \
     ROM_API_IOC_TABLE[11])
 
-#define IOCrom_int_enable \
+#define rom_iocint_enable \
     ((void (*)(uint32_t ui32IOId)) \
     ROM_API_IOC_TABLE[12])
 
-#define IOCrom_int_disable \
+#define rom_iocint_disable \
     ((void (*)(uint32_t ui32IOId)) \
     ROM_API_IOC_TABLE[13])
 
