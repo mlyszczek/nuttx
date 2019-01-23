@@ -1,8 +1,13 @@
 /****************************************************************************
- *  arch/misoc/src/common/hw/common.h
+ * arch/misoc/src/minerva/minerva_syscall.S
  *
  *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
  *   Author: Ramtin Amin <keytwo@gmail.com>
+ *
+ * Derives from RISC-V version:
+ *
+ *   Copyright (C) 2016 Ken Pettit. All rights reserved.
+ *   Author: Ken Pettit <pettitkd@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,66 +38,66 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_MISOC_SRC_COMMON_HW_COMMON_H
-#define __ARCH_MISOC_SRC_COMMON_HW_COMMON_H
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <stdint.h>
+#include <nuttx/config.h>
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Public Symbols
  ****************************************************************************/
 
-/* To overwrite CSR accessors, define extern, non-inlined versions
- * of csr_read[bwl]() and csr_write[bwl](), and define
- * CSR_ACCESSORS_DEFINED.
- */
-
-#ifndef CSR_ACCESSORS_DEFINED
-#define CSR_ACCESSORS_DEFINED
+	.file	"up_syscall.S"
+	.global sys_call0
+	.global sys_call1
+	.global sys_call2
+	.global sys_call3
+	.global sys_call4
+	.global sys_call5
 
 /****************************************************************************
- * Inline Functions
+ * Public Functions
  ****************************************************************************/
 
-#ifdef __ASSEMBLER__
-#  define MMPTR(x) x
-#else /* !__ASSEMBLER__ */
-#  define MMPTR(x) (*((volatile unsigned int *)(x)))
+/****************************************************************************
+ * Name: up_syscall0, up_syscall1, up_syscall2, up_syscall3
+ *
+ * Description:
+ *   up_syscall0 - System call SYS_ argument and no additional parameters.
+ *   up_syscall1 - System call SYS_ argument and one additional parameter.
+ *   up_syscall2 - System call SYS_ argument and two additional parameters.
+ *   up_syscall3 - System call SYS_ argument and three additional parameters.
+ *   up_syscall4 - System call SYS_ argument and four additional parameters.
+ *   up_syscall5 - System call SYS_ argument and five additional parameters.
+ *
+ * Assumption:
+ *   All interrupts are disabled except for the software interrupts.
+ *
+ ****************************************************************************/
 
-static inline void csr_writeb(uint8_t value, uint32_t addr)
-{
-  *((volatile uint8_t *)addr) = value;
-}
+	.text
 
-static inline uint8_t csr_readb(uint32_t addr)
-{
-  return *(volatile uint8_t *)addr;
-}
+sys_call0:	/* a0 holds the syscall number */
+sys_call1:	/* a0 holds the syscall number, argument in a1 */
+sys_call2:	/* a0 holds the syscall number, arguments in a1 and a2 */
+sys_call3:	/* a0 holds the syscall number, arguments in a1, a2, and a3 */
+sys_call4:	/* a0 holds the syscall number, arguments in a1, a2, a3 and a4 */
+sys_call5:	/* a0 holds the syscall number, arguments in a1, a2, a3, a4 and a5 */
 
-static inline void csr_writew(uint16_t value, uint32_t addr)
-{
-  *((volatile uint16_t *)addr) = value;
-}
+	/* Issue the ECALL opcode to perform a SW interrupt to the OS */
 
-static inline uint16_t csr_readw(uint32_t addr)
-{
-  return *(volatile uint16_t *)addr;
-}
+	ecall
+	
+	/* The actual interrupt may not a occur for a few more cycles.  Let's
+	 * put a few nop's here in hope that the SW interrupt occurs during
+	 * the sequence of nops.
+	 */
 
-static inline void csr_writel(uint32_t value, uint32_t addr)
-{
-  *((volatile uint32_t *)addr) = value;
-}
+	nop
+	nop
 
-static inline uint32_t csr_readl(uint32_t addr)
-{
-  return *(volatile uint32_t *)addr;
-}
+	/* Then return with the result of the software interrupt in v0 */
 
-#endif /* !__ASSEMBLER__ */
-#endif /* !CSR_ACCESSORS_DEFINED */
-#endif /* __ARCH_MISOC_SRC_COMMON_HW_COMMON_H */
+	ret
+	nop

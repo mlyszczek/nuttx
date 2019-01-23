@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/misoc/src/lm32/lm32_swint.c
+ * arch/misoc/src/minerva/minerva_swint.c
  *
  *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -49,7 +49,7 @@
 #include <nuttx/sched.h>
 #include <arch/irq.h>
 
-#include "lm32.h"
+#include "minerva.h"
 
 /****************************************************************************
  * Private Functions
@@ -64,7 +64,7 @@ static void up_registerdump(const uint32_t *regs)
 {
 #if 0
   svcinfo("EPC:%08x\n",
-          regs[REG_EPC]);
+          regs[REG_CSR_MEPC]);
   svcinfo("A0:%08x A1:%08x A2:%08x A3:%08x A4:%08x A5:%08x A6:%08x A7:%08x\n",
           regs[REG_A0], regs[REG_A1], regs[REG_A2], regs[REG_A3],
           regs[REG_A4], regs[REG_A5], regs[REG_A6], regs[REG_A7]);
@@ -76,7 +76,7 @@ static void up_registerdump(const uint32_t *regs)
           regs[REG_S4], regs[REG_S5], regs[REG_S6], regs[REG_S7]);
   svcinfo("S8:%08x S9:%08x S10:%08x S11:%08x\n",
           regs[REG_S8], regs[REG_S9], regs[REG_S10], regs[REG_S11]);
-#ifdef LM3232_SAVE_GP
+#ifdef MINERVA32_SAVE_GP
   svcinfo("GP:%08x SP:%08x FP:%08x TP:%08x RA:%08x\n",
           regs[REG_GP], regs[REG_SP], regs[REG_FP], regs[REG_TP], regs[REG_RA]);
 #else
@@ -122,7 +122,7 @@ static void dispatch_syscall(void)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: lm32_swint
+ * Name: minerva_swint
  *
  * Description:
  *   This is software interrupt exception handler that performs context
@@ -130,12 +130,11 @@ static void dispatch_syscall(void)
  *
  ****************************************************************************/
 
-int lm32_swint(int irq, FAR void *context, FAR void *arg)
+int minerva_swint(int irq, FAR void *context, FAR void *arg)
 {
   uint32_t *regs = (uint32_t *)context;
 
   DEBUGASSERT(regs != NULL && regs == g_current_regs);
-  g_current_regs = regs;
 
   /* Software interrupt 0 is invoked with REG_A0 (REG_X10) = system call
    * command and REG_A1-6 = variable number of
@@ -192,7 +191,7 @@ int lm32_swint(int irq, FAR void *context, FAR void *arg)
       case SYS_switch_context:
         {
           DEBUGASSERT(regs[REG_A1] != 0 && regs[REG_A2] != 0);
-          lm32_copystate((uint32_t *)regs[REG_A1], regs);
+          minerva_copystate((uint32_t *)regs[REG_A1], regs);
           g_current_regs = (uint32_t *)regs[REG_A2];
         }
         break;
@@ -223,7 +222,7 @@ int lm32_swint(int irq, FAR void *context, FAR void *arg)
            * the original mode.
            */
 
-          g_current_regs[REG_EPC] = rtcb->xcp.syscall[index].sysreturn;
+          g_current_regs[REG_CSR_MEPC] = rtcb->xcp.syscall[index].sysreturn;
 #error "Missing logic -- need to restore the original mode"
           rtcb->xcp.nsyscalls   = index;
         }
@@ -253,11 +252,11 @@ int lm32_swint(int irq, FAR void *context, FAR void *arg)
 
           /* Setup to return to dispatch_syscall in privileged mode. */
 
-          rtcb->xcpsyscall[index].sysreturn = regs[REG_EPC];
+          rtcb->xcpsyscall[index].sysreturn = regs[REG_CSR_MEPC];
 #error "Missing logic -- Need to save mode"
           rtcb->xcp.nsyscalls  = index + 1;
 
-          regs[REG_EPC] = (uint32_t)dispatch_syscall;
+          regs[REG_CSR_MEPC] = (uint32_t)dispatch_syscall;
 #error "Missing logic -- Need to set privileged mode"
 
           /* Offset R0 to account for the reserved values */

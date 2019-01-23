@@ -1,5 +1,5 @@
 /****************************************************************************
- *  arch/misoc/src/common/hw/common.h
+ * arch/misoc/src/minerva/chip.h
  *
  *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
  *   Author: Ramtin Amin <keytwo@gmail.com>
@@ -33,66 +33,97 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_MISOC_SRC_COMMON_HW_COMMON_H
-#define __ARCH_MISOC_SRC_COMMON_HW_COMMON_H
-
-/****************************************************************************
- * Included Files
- ****************************************************************************/
-
-#include <stdint.h>
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/* To overwrite CSR accessors, define extern, non-inlined versions
- * of csr_read[bwl]() and csr_write[bwl](), and define
- * CSR_ACCESSORS_DEFINED.
- */
-
-#ifndef CSR_ACCESSORS_DEFINED
-#define CSR_ACCESSORS_DEFINED
+#ifndef __ARCH_MISOC_SRC_MINERVA_CHIP_H
+#define __ARCH_MISOC_SRC_MINERVA_CHIP_H 1
 
 /****************************************************************************
  * Inline Functions
  ****************************************************************************/
 
-#ifdef __ASSEMBLER__
-#  define MMPTR(x) x
-#else /* !__ASSEMBLER__ */
-#  define MMPTR(x) (*((volatile unsigned int *)(x)))
+#include "minerva.h"
+#include <arch/minerva/csrdefs.h>
 
-static inline void csr_writeb(uint8_t value, uint32_t addr)
+/****************************************************************************
+ * Inline Functions
+ ****************************************************************************/
+
+#ifdef __cplusplus
+extern "C"
 {
-  *((volatile uint8_t *)addr) = value;
+#endif
+
+
+#define CSR_IRQ_MASK 0x330
+#define CSR_IRQ_PENDING 0x360
+
+#define CSR_DCACHE_INFO 0xCC0
+
+
+#define csrr(reg) ({ unsigned long __tmp; \
+  asm volatile ("csrr %0, " #reg : "=r"(__tmp)); \
+  __tmp; })
+
+#define csrw(reg, val) ({ \
+  if (__builtin_constant_p(val) && (unsigned long)(val) < 32) \
+	asm volatile ("csrw " #reg ", %0" :: "i"(val)); \
+  else \
+	asm volatile ("csrw " #reg ", %0" :: "r"(val)); })
+
+#define csrs(reg, bit) ({ \
+  if (__builtin_constant_p(bit) && (unsigned long)(bit) < 32) \
+	asm volatile ("csrrs x0, " #reg ", %0" :: "i"(bit)); \
+  else \
+	asm volatile ("csrrs x0, " #reg ", %0" :: "r"(bit)); })
+
+#define csrc(reg, bit) ({ \
+  if (__builtin_constant_p(bit) && (unsigned long)(bit) < 32) \
+	asm volatile ("csrrc x0, " #reg ", %0" :: "i"(bit)); \
+  else \
+	asm volatile ("csrrc x0, " #reg ", %0" :: "r"(bit)); })
+
+#ifdef __cplusplus
+}
+#endif
+
+
+static inline unsigned int irq_getie(void)
+{
+  return (csrr(mstatus) & CSR_MSTATUS_MIE) != 0;
 }
 
-static inline uint8_t csr_readb(uint32_t addr)
+static inline void irq_setie(unsigned int ie)
 {
-  return *(volatile uint8_t *)addr;
+  if(ie)
+    csrs(mstatus,CSR_MSTATUS_MIE);
+  else
+    csrc(mstatus,CSR_MSTATUS_MIE);
 }
 
-static inline void csr_writew(uint16_t value, uint32_t addr)
+static inline unsigned int irq_getmask(void)
 {
-  *((volatile uint16_t *)addr) = value;
+  unsigned int mask;
+  asm volatile ("csrr %0, %1" : "=r"(mask) : "i"(CSR_IRQ_MASK));
+  return mask;
 }
 
-static inline uint16_t csr_readw(uint32_t addr)
+static inline void irq_setmask(unsigned int mask)
 {
-  return *(volatile uint16_t *)addr;
+  asm volatile ("csrw %0, %1" :: "i"(CSR_IRQ_MASK), "r"(mask));
 }
 
-static inline void csr_writel(uint32_t value, uint32_t addr)
+static inline unsigned int irq_pending(void)
 {
-  *((volatile uint32_t *)addr) = value;
+  unsigned int pending;
+  asm volatile ("csrr %0, %1" : "=r"(pending) : "i"(CSR_IRQ_PENDING));
+  return pending;
 }
 
-static inline uint32_t csr_readl(uint32_t addr)
-{
-  return *(volatile uint32_t *)addr;
+#ifdef __cplusplus
 }
+#endif
 
-#endif /* !__ASSEMBLER__ */
-#endif /* !CSR_ACCESSORS_DEFINED */
-#endif /* __ARCH_MISOC_SRC_COMMON_HW_COMMON_H */
+/****************************************************************************
+ * Public Function Prototypes
+ ****************************************************************************/
+
+#endif /* __ARCH_MISOC_SRC_MINERVA_CHIP_H */

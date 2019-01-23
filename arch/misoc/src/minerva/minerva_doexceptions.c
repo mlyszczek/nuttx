@@ -1,8 +1,9 @@
 /****************************************************************************
- *  arch/misoc/src/common/hw/common.h
+ * arch/misoc/src/minerva/minerva_doexception.c
  *
- *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
- *   Author: Ramtin Amin <keytwo@gmail.com>
+ *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
+ *           Ramtin Amin <keytwo@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,66 +34,57 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_MISOC_SRC_COMMON_HW_COMMON_H
-#define __ARCH_MISOC_SRC_COMMON_HW_COMMON_H
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
 #include <stdint.h>
+#include <assert.h>
+#include <debug.h>
 
+#include <nuttx/irq.h>
+#include <nuttx/arch.h>
+#include <nuttx/board.h>
+
+#include <arch/irq.h>
+#include <arch/board/board.h>
+
+#include "group/group.h"
+#include "minerva.h"
+#include "chip.h"
 /****************************************************************************
- * Pre-processor Definitions
+ * Public Functions
  ****************************************************************************/
 
-/* To overwrite CSR accessors, define extern, non-inlined versions
- * of csr_read[bwl]() and csr_write[bwl](), and define
- * CSR_ACCESSORS_DEFINED.
- */
-
-#ifndef CSR_ACCESSORS_DEFINED
-#define CSR_ACCESSORS_DEFINED
-
-/****************************************************************************
- * Inline Functions
- ****************************************************************************/
-
-#ifdef __ASSEMBLER__
-#  define MMPTR(x) x
-#else /* !__ASSEMBLER__ */
-#  define MMPTR(x) (*((volatile unsigned int *)(x)))
-
-static inline void csr_writeb(uint8_t value, uint32_t addr)
+uint32_t *minerva_doexception(uint32_t *regs)
 {
-  *((volatile uint8_t *)addr) = value;
-}
+  uint32_t mcause;
+  uint32_t pending;
+  uint32_t *ret;
+  
+  board_autoled_on(LED_INIRQ);
+  
+  mcause = regs[REG_CSR_MCAUSE_NDX];
+  
+  if(mcause & 0x80000000){
+    pending = irq_pending();
+    ret = minerva_decodeirq(pending, regs);
+  } else {
+    mcause = mcause & 0x7fffffff;
+    if(mcause == 11)
+      {
+	regs[REG_CSR_MEPC_NDX] += 4;
+	ret = minerva_doirq(MINERVA_IRQ_SWINT, regs);
+      }
+    else 
+      {
+	while(1);
+      }
 
-static inline uint8_t csr_readb(uint32_t addr)
-{
-  return *(volatile uint8_t *)addr;
+  }
+  
+  board_autoled_off(LED_INIRQ);
+  return ret;
 }
-
-static inline void csr_writew(uint16_t value, uint32_t addr)
-{
-  *((volatile uint16_t *)addr) = value;
-}
-
-static inline uint16_t csr_readw(uint32_t addr)
-{
-  return *(volatile uint16_t *)addr;
-}
-
-static inline void csr_writel(uint32_t value, uint32_t addr)
-{
-  *((volatile uint32_t *)addr) = value;
-}
-
-static inline uint32_t csr_readl(uint32_t addr)
-{
-  return *(volatile uint32_t *)addr;
-}
-
-#endif /* !__ASSEMBLER__ */
-#endif /* !CSR_ACCESSORS_DEFINED */
-#endif /* __ARCH_MISOC_SRC_COMMON_HW_COMMON_H */

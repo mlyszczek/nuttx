@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/misoc/src/lm32/lm32_assert.c
+ * arch/misoc/src/minerva/minerva_assert.c
  *
  *   Copyright (C) 2016, 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -54,7 +54,7 @@
 #include <arch/board/board.h>
 
 #include "sched/sched.h"
-#include "lm32.h"
+#include "minerva.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -170,7 +170,7 @@ void up_assert(const uint8_t *filename, int lineno)
         filename, lineno);
 #endif
 
-  lm32_dumpstate();
+  minerva_dumpstate();
 
 #ifdef CONFIG_ARCH_USBDUMP
   /* Dump USB trace data */

@@ -1,8 +1,9 @@
 /****************************************************************************
- *  arch/misoc/src/common/hw/common.h
+ * arch/misoc/include/minerva/types.h
  *
  *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
- *   Author: Ramtin Amin <keytwo@gmail.com>
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
+ *           Ramtin Amin <keytwo@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,66 +34,62 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_MISOC_SRC_COMMON_HW_COMMON_H
-#define __ARCH_MISOC_SRC_COMMON_HW_COMMON_H
+/* This file should never be included directed but, rather, only indirectly
+ * through stdint.h
+ */
+
+#ifndef __ARCH_MISOC_INCLUDE_MINERVA_TYPES_H
+#define __ARCH_MISOC_INCLUDE_MINERVA_TYPES_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <stdint.h>
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* To overwrite CSR accessors, define extern, non-inlined versions
- * of csr_read[bwl]() and csr_write[bwl](), and define
- * CSR_ACCESSORS_DEFINED.
- */
-
-#ifndef CSR_ACCESSORS_DEFINED
-#define CSR_ACCESSORS_DEFINED
-
 /****************************************************************************
- * Inline Functions
+ * Type Declarations
  ****************************************************************************/
 
-#ifdef __ASSEMBLER__
-#  define MMPTR(x) x
-#else /* !__ASSEMBLER__ */
-#  define MMPTR(x) (*((volatile unsigned int *)(x)))
+#ifndef __ASSEMBLY__
 
-static inline void csr_writeb(uint8_t value, uint32_t addr)
-{
-  *((volatile uint8_t *)addr) = value;
-}
+/* These are the sizes of the standard integer types.  NOTE that these type
+ * names have a leading underscore character.  This file will be included
+ * (indirectly) by include/stdint.h and typedef'ed to the final name without
+ * the underscore character.  This roundabout way of doings things allows
+ * the stdint.h to be removed from the include/ directory in the event that
+ * the user prefers to use the definitions provided by their toolchain header
+ * files
+ */
 
-static inline uint8_t csr_readb(uint32_t addr)
-{
-  return *(volatile uint8_t *)addr;
-}
+typedef signed char        _int8_t;
+typedef unsigned char      _uint8_t;
 
-static inline void csr_writew(uint16_t value, uint32_t addr)
-{
-  *((volatile uint16_t *)addr) = value;
-}
+typedef signed short       _int16_t;
+typedef unsigned short     _uint16_t;
 
-static inline uint16_t csr_readw(uint32_t addr)
-{
-  return *(volatile uint16_t *)addr;
-}
+typedef signed int         _int32_t;
+typedef unsigned int       _uint32_t;
 
-static inline void csr_writel(uint32_t value, uint32_t addr)
-{
-  *((volatile uint32_t *)addr) = value;
-}
+typedef signed long long   _int64_t;
+typedef unsigned long long _uint64_t;
+#define __INT64_DEFINED
 
-static inline uint32_t csr_readl(uint32_t addr)
-{
-  return *(volatile uint32_t *)addr;
-}
+/* A pointer is 4 bytes */
 
-#endif /* !__ASSEMBLER__ */
-#endif /* !CSR_ACCESSORS_DEFINED */
-#endif /* __ARCH_MISOC_SRC_COMMON_HW_COMMON_H */
+typedef signed int         _intptr_t;
+typedef unsigned int       _uintptr_t;
+
+/* This is the size of the interrupt state save returned by up_irq_save(). */
+
+typedef unsigned int       irqstate_t;
+
+#endif /* __ASSEMBLY__ */
+
+/****************************************************************************
+ * Public Function Prototypes
+ ****************************************************************************/
+
+#endif /* __ARCH_MISOC_INCLUDE_MINERVA_TYPES_H */

@@ -1,13 +1,9 @@
 /****************************************************************************
- * arch/risc-v/src/nr5m100/nr5_timerisr.c
+ * arch/misoc/src/minerva/minerva_copystate.c
  *
- *   Copyright (C) 2009 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- *   Modified for MISOC:
- *
- *   Copyright (C) 2016 Ramtin Amin. All rights reserved.
- *   Author: Ramtin Amin <keytwo@gmail.com>
+ *           Ramtin Amin <keytwo@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,107 +41,47 @@
 #include <nuttx/config.h>
 
 #include <stdint.h>
-#include <time.h>
-#include <debug.h>
+#include <arch/irq.h>
 
-#include <nuttx/arch.h>
-#include <nuttx/irq.h>
-#include <arch/board/board.h>
-#include <arch/board/generated/csr.h>
-
-#include "chip.h"
-#include "misoc.h"
+#include "minerva.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* The desired timer interrupt frequency is provided by the definition
- * CLOCKS_PER_SEC (see include/time.h).  CLOCKS_PER_SEC defines the desired
- * number of system clock ticks per second.  That value is a user
- * configurable setting based on CONFIG_USEC_PER_TICK.  It defaults to 100
- * (100 ticks per second = 10 MS interval).
- *
- * Given the timer input frequency (Finput).  The timer correct reload
- * value is:
- *
- *   reload = Finput / CLOCKS_PER_SEC
- */
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
 
-#define SYSTICK_RELOAD ((SYSTEM_CLOCK_FREQUENCY / CLOCKS_PER_SEC) - 1)
-
-/* The size of the reload field is 30 bits.  Verify that the reload value
- * will fit in the reload register.
- */
-
-#if SYSTICK_RELOAD > 0x3fffffff
-#  error SYSTICK_RELOAD exceeds the range of the RELOAD register
-#endif
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Function:  misoc_timer_isr
- *
- * Description:
- *   The timer ISR will perform a variety of services for various portions
- *   of the systems.
- *
+ * Name: minerva_copystate
  ****************************************************************************/
 
-int misoc_timer_isr(int irq, void *context, void *arg)
+/* A little faster than most memcpy's */
+
+void minerva_copystate(uint32_t *dest, uint32_t *src)
 {
-  /* Clear event pending */
+  int i;
 
-  timer0_ev_pending_write(timer0_ev_pending_read());
-
-  /* Process timer interrupt */
-
-  sched_process_timer();
-  return 0;
-}
-
-/****************************************************************************
- * Function:  misoc_timer_initialize
- *
- * Description:
- *   This function is called during start-up to initialize
- *   the timer interrupt.
- *
- ****************************************************************************/
-
-void misoc_timer_initialize(void)
-{
-  /* Clear event pending */
-
-  timer0_ev_pending_write(timer0_ev_pending_read());
-
-  /* Disable timer*/
-
-  timer0_en_write(0);
-
-  /* Setup the timer reload register to generate interrupts at the rate of
-   * CLOCKS_PER_SEC.
+  /* In the MINERVA model, the state is copied from the stack to the TCB,
+   * but only a reference is passed to get the state from the TCB.  So the
+   * following check avoids copying the TCB save area onto itself:
    */
 
-  timer0_reload_write(SYSTICK_RELOAD * 20);
-  timer0_load_write(SYSTICK_RELOAD * 20);
-
-  /* Enable timer */
-
-  timer0_en_write(1);
-
-  /* Attach the timer interrupt vector */
-
-  (void)irq_attach(TIMER0_INTERRUPT, misoc_timer_isr, NULL);
-
-  /* And enable the timer interrupt */
-
-  up_enable_irq(TIMER0_INTERRUPT);
-
-  /* Enable IRQ of the timer core */
-
-  timer0_ev_enable_write(1);
+  if (src != dest)
+    {
+      for (i = 0; i < XCPTCONTEXT_REGS; i++)
+        {
+          *dest++ = *src++;
+        }
+    }
 }
+

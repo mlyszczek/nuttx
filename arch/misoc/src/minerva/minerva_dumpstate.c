@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/misoc/src/lm32/lm32_dumpstate.c
+ * arch/misoc/src/minerva/minerva_dumpstate.c
  *
  *  Copyright (C) 2011 Gregory Nutt. All rights reserved.
  *  Author: Gregory Nutt <gnutt@nuttx.org>
@@ -50,7 +50,7 @@
 #include <arch/board/board.h>
 
 #include "sched/sched.h"
-#include "lm32.h"
+#include "minerva.h"
 
 #ifdef CONFIG_ARCH_STACKDUMP
 
@@ -99,7 +99,7 @@ static inline void up_registerdump(void)
   if (g_current_regs)
     {
       _alert("EPC:%08x \n",
-            g_current_regs[REG_EPC]);
+            g_current_regs[REG_CSR_MEPC]);
       _alert(" X0:%08x  A0:%08x  A1:%08x  A2:%08x  A3:%08x  A4:%08x  A5:%08x  A6:%08x\n",
             g_current_regs[REG_X0_NDX], g_current_regs[REG_X1_NDX],
             g_current_regs[REG_X2_NDX], g_current_regs[REG_X3_NDX],
@@ -121,7 +121,7 @@ static inline void up_registerdump(void)
             g_current_regs[REG_X28_NDX], g_current_regs[REG_X29_NDX],
             g_current_regs[REG_X30_NDX], g_current_regs[REG_X31_NDX]);
       _alert(" IE:%08x\n",
-            g_current_regs[REG_X32_NDX]);
+            g_current_regs[REG_CSR_MSTATUS]);
     }
 }
 
@@ -130,10 +130,10 @@ static inline void up_registerdump(void)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: lm32_dumpstate
+ * Name: minerva_dumpstate
  ****************************************************************************/
 
-void lm32_dumpstate(void)
+void minerva_dumpstate(void)
 {
   struct tcb_s *rtcb = running_task();
   uint32_t sp = up_getsp();
