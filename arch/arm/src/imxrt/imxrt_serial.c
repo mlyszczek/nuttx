@@ -56,9 +56,9 @@
 #include <nuttx/arch.h>
 #include <nuttx/init.h>
 #include <nuttx/power/pm.h>
+#include <nuttx/fs/ioctl.h>
 #include <nuttx/serial/serial.h>
 
-#include <arch/serial.h>
 #include <arch/board/board.h>
 
 #include "chip.h"

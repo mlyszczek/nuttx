@@ -8,13 +8,24 @@
 config LIBC_DLLFCN
 	bool "Shared library support"
 	default n
-	select LIBC_ARCH_ELF
-	select LIBC_MODLIB if !BUILD_KERNEL
+	select LIBC_MODLIB if !BUILD_FLAT
 	select MODULE if BUILD_FLAT
 	depends on EXPERIMENTAL || !BUILD_KERNEL
 	---help---
 		Enabled support for user-space shared libraries.
 
 		A work in progress, hence, marked EXPERIMENTAL
+
+if LIBC_DLLFCN
+
+config LDPATH_INITIAL
+	string "Initial LD_LIBRARY_PATH Value"
+	default ""
+	depends on LIB_ENVPATH
+	---help---
+		The initial value of the LD_LIBRARY_PATH variable.  This is the
+		colon-separated list of absolute paths.  E.g., "/lib:/usr/lib:/system/lib"
+
+endif
 
 # endmenu # Shared Library Support

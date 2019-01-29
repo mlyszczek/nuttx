@@ -155,7 +155,7 @@ void lm32_dumpstate(void)
    * end of the list (flink == NULL)
    */
 
-  if (rtcb->flink == NULL)
+  if (rtcb->pid == 0) /* Check for CPU0 IDLE thread */
     {
       ustackbase = g_idle_topstack - 4;
       ustacksize = CONFIG_IDLETHREAD_STACKSIZE;

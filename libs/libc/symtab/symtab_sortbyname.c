@@ -1,8 +1,8 @@
 /****************************************************************************
- * arch/renesas/include/watchdog.h
+ * libs/libc/symtab/symtab_sortbyname.c
  *
- *   Copyright (C) 2008 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ *   Copyright (C) 2019 Pinecone Inc. All rights reserved.
+ *   Author: Xiang Xiao <xiaoxiang@pinecone.net>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,27 +33,47 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_RENESAS_INCLUDE_WATCHDOG_H
-#define __ARCH_RENESAS_INCLUDE_WATCHDOG_H
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
+#include <nuttx/config.h>
 
-/****************************************************************************
- * Private Data
- ****************************************************************************/
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+
+#include <nuttx/symtab.h>
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
+static int symtab_comparename(FAR const void *arg1, FAR const void *arg2)
+{
+  FAR const struct symtab_s *symtab1 = arg1;
+  FAR const struct symtab_s *symtab2 = arg2;
+
+  return strcmp(symtab1->sym_name, symtab2->sym_name);
+}
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-#endif /* __ARCH_RENESAS_INCLUDE_WATCHDOG_H */
+/****************************************************************************
+ * Name: symtab_sortbyname
+ *
+ * Description:
+ *   Sort the symbol table by name.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void symtab_sortbyname(FAR struct symtab_s *symtab, int nsyms)
+{
+  DEBUGASSERT(symtab != NULL && nsyms != 0);
+  qsort(symtab, nsyms, sizeof(symtab[0]), symtab_comparename);
+}

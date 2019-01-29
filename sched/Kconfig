@@ -724,38 +724,6 @@ config SCHED_IRQMONITOR
 		counts will be available in the mounted procfs file systems at the
 		top-level file, "irqs".
 
-config SCHED_IRQMONITOR_GETTIME
-	bool "Custom Platform-specific Timer"
-	default n
-	depends on SCHED_IRQMONITOR && SCHED_TICKLESS && !SCHED_CRITMONITOR
-	---help---
-		If CONFIG_SCHED_TICKLESS is enabled, then the high resolution
-		Tickless timer will be used by default.  Otherwise, a platform-
-		specific timer is expected (the same timer used with the Critical
-		Section Monitor).  The option will force use of that platform-
-		specifier timer even the CONFIG_SCHED_TICKLESs is defined.
-
-		if CONFIG_SCHED_TICKLESS is not enabled or CONFIG_SCHED_IRQMONITOR_GETTIME
-		is selected, then platform-specific logic must provide the following in
-		order to support high resolution timing:
-
-			uint32_t up_critmon_gettime(void);
-			void up_critmon_convert(uint32_t elapsed, FAR struct timespec *ts);
-
-		The first interface simply provides the current time value in unknown
-		units.  NOTE:  This function may be called early before the timer has
-		been initialized.  In that event, the function should just return a
-		start time of zero.
-
-		Nothing is assumed about the units of this time value.  The following
-		are assumed, however: (1) The time is an unsigned integer value, (2)
-		the time is monotonically increasing, and (3) the elapsed time (also
-		in unknown units) can be obtained by subtracting a start time from
-		the current time.
-
-		The second interface simple converts an elapsed time into well known
-		units for presentation by the ProcFS file system.
-
 config SCHED_CRITMONITOR
 	bool "Enable Critical Section monitoring"
 	default n
@@ -1031,8 +999,8 @@ config SCHED_NOTE_BUFSIZE
 		bytes).
 
 config SCHED_NOTE_GET
-	int "Callable interface to get instrumentatin data"
-	default 2048
+	bool "Callable interface to get instrumentatin data"
+	default n
 	depends on !SCHED_INSTRUMENTATION_CSECTION && (!SCHED_INSTRUMENTATION_SPINLOCK || !SMP)
 	---help---
 		Add support for interfaces to get the size of the next note and also
@@ -1487,7 +1455,6 @@ config MODULE
 	bool "Enable loadable OS modules"
 	default n
 	select LIBC_MODLIB
-	select LIBC_ARCH_ELF
 	---help---
 		Enable support for loadable OS modules.  Default: n
 
@@ -1501,6 +1468,16 @@ config SCHED_WORKQUEUE
 	---help---
 		Create dedicated "worker" threads to handle delayed or asynchronous
 		processing.
+
+config WQUEUE_NOTIFIER
+	bool "Generic work notifier"
+	default n
+	depends on SCHED_WORKQUEUE
+	---help---
+		Enable building of work queue notifier logic that will execute a
+		worker function an event occurs.  This is is a general purpose
+		notifier, but was developed specifically to support poll() logic
+		where the poll must wait for an resources to become available.
 
 config SCHED_HPWORK
 	bool "High priority (kernel) worker thread"
@@ -1566,15 +1543,6 @@ config SCHED_HPWORKSTACKSIZE
 	default 2048
 	---help---
 		The stack size allocated for the worker thread.  Default: 2K.
-
-config WQUEUE_NOTIFIER
-	bool "Generic work notifier"
-	default n
-	---help---
-		Enable building of work queue notifier logic that will execute a
-		worker function an event occurs.  This is is a general purpose
-		notifier, but was developed specifically to support poll() logic
-		where the poll must wait for an resources to become available.
 
 endif # SCHED_HPWORK
 
