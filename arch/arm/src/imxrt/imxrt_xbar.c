@@ -1,8 +1,8 @@
 /****************************************************************************
- * config/samv71-xult/src/sam_appinit.c
+ * arch/arm/src/imxrt/imxrt_xbar.c
  *
- *   Copyright (C) 2015-2016 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ *   Copyright (C) 2019 Gregory Nutt. All rights reserved.
+ *   Author: David Sidrane <david_s5@nscdg.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,79 +40,86 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <stdint.h>
+#include <errno.h>
+#include "chip.h"
+#include "up_arch.h"
+#include "imxrt_xbar.h"
 
-#include <nuttx/arch.h>
-#include <nuttx/board.h>
-#include <arch/board/board.h>
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
 
-#include "samv71-xult.h"
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
 
-#ifdef CONFIG_LIB_BOARDCTL
+static const uintptr_t g_xbars_addresses[] =
+{
+  IMXRT_XBAR1_BASE,
+  IMXRT_XBAR2_BASE,
+  IMXRT_XBAR3_BASE
+};
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: board_app_initialize
+ * Name: imxrt_xbar_connect
  *
  * Description:
- *   Perform application specific initialization.  This function is never
- *   called directly from application code, but only indirectly via the
- *   (non-standard) boardctl() interface using the command BOARDIOC_INIT.
+ *   This function maps the input_index of the cross bar to the output.
  *
- * Input Parameters:
- *   arg - The boardctl() argument is passed to the board_app_initialize()
- *         implementation without modification.  The argument has no
- *         meaning to NuttX; the meaning of the argument is a contract
- *         between the board-specific initalization logic and the
- *         matching application logic.  The value cold be such things as a
- *         mode enumeration value, a set of DIP switch switch settings, a
- *         pointer to configuration data read from a file or serial FLASH,
- *         or whatever you would like to do with it.  Every implementation
- *         should accept zero/NULL as a default configuration.
+ * input_index Parameters:
+ *   mux_index_out   - XBAR Output and mux_select choice.
+ *   mux_index_input - XBAR Input and input_index choice.
  *
  * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is returned on
- *   any failure to indicate the nature of the failure.
+ *   OK on success; Negated errno on failure.
  *
  ****************************************************************************/
 
-int board_app_initialize(uintptr_t arg)
+int imxrt_xbar_connect(uint16_t mux_index_out, uint16_t mux_index_input)
 {
-#ifndef CONFIG_BOARD_INITIALIZE
-  /* Perform board initialization */
+  uintptr_t address;
+  uint16_t mux_select;
+  uint16_t mux_input;
+  uint16_t xbar_index;
+  uint16_t clearbits;
+  int retval;
 
-  return sam_bringup();
-#else
-  return OK;
-#endif
-}
+  retval     = -EINVAL;
+  mux_select = IMXRT_SEL(mux_index_out);
+  mux_input  = IMXRT_SEL(mux_index_input);
+  xbar_index = IMXRT_XBAR(mux_index_out);
+  clearbits  = IMXRT_SEL0_MASK;
 
-#ifdef CONFIG_BOARDCTL_IOCTL
-int board_ioctl(unsigned int cmd, uintptr_t arg)
-{
-  switch(cmd)
+  /* Verify:
+   * 1) The Xbar index is valid.
+   * 2) In and out are on the same Xbar.
+   * 3) Output index is an output.
+   * 4) Input index is input.
+   */
+
+  if (xbar_index < sizeof(g_xbars_addresses) / sizeof(g_xbars_addresses[0]) &&
+      (mux_index_out & XBAR_OUTPUT) == XBAR_OUTPUT &&
+      (mux_index_input & XBAR_INPUT) == XBAR_INPUT)
     {
-      default:
-        return -ENOTTY;  /* Standard return for command not supported */
-        break;
+      address = g_xbars_addresses[xbar_index];
+      address += (mux_select / IMXRT_SEL_PER_REG) * sizeof(uint16_t);
+
+      /* There are 2 selects per Register LSB is even selects and MSB is odd */
+
+      if (mux_select & 1)
+        {
+          clearbits <<= IMXRT_SEL1_SHIFTS;
+          mux_input <<= IMXRT_SEL1_SHIFTS;
+        }
+
+      modifyreg16(address, clearbits, mux_input);
+      retval = OK;
     }
 
-  return OK;
+  return retval;
 }
-#endif
-
-#if defined(CONFIG_BOARDCTL_UNIQUEID)
-int board_uniqueid(uint8_t *uniqueid)
-{
-  if (uniqueid == NULL)
-    {
-      return -EINVAL;
-    }
-
-  return OK;
-}
-#endif
-
-#endif /* CONFIG_LIB_BOARDCTL */
