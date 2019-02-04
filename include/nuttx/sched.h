@@ -150,8 +150,9 @@
 #  define TCB_FLAG_SCHED_SPORADIC  (2 << TCB_FLAG_POLICY_SHIFT) /* Sporadic scheding policy */
 #  define TCB_FLAG_SCHED_OTHER     (3 << TCB_FLAG_POLICY_SHIFT) /* Other scheding policy */
 #define TCB_FLAG_CPU_LOCKED        (1 << 7) /* Bit 7: Locked to this CPU */
-#define TCB_FLAG_EXIT_PROCESSING   (1 << 8) /* Bit 8: Exitting */
-                                            /* Bits 9-15: Available */
+#define TCB_FLAG_SIGNAL_ACTION     (1 << 8) /* Bit 8: In a signal handler */
+#define TCB_FLAG_EXIT_PROCESSING   (1 << 9) /* Bit 9: Exitting */
+                                            /* Bits 10-15: Available */
 
 /* Values for struct task_group tg_flags */
 
@@ -874,7 +875,7 @@ FAR struct socketlist *sched_getsockets(void);
 #endif /* CONFIG_NSOCKET_DESCRIPTORS */
 
 /********************************************************************************
- * Name: task_starthook
+ * Name: nxtask_starthook
  *
  * Description:
  *   Configure a start hook... a function that will be called on the thread
@@ -893,8 +894,8 @@ FAR struct socketlist *sched_getsockets(void);
  ********************************************************************************/
 
 #ifdef CONFIG_SCHED_STARTHOOK
-void task_starthook(FAR struct task_tcb_s *tcb, starthook_t starthook,
-                    FAR void *arg);
+void nxtask_starthook(FAR struct task_tcb_s *tcb, starthook_t starthook,
+                      FAR void *arg);
 #endif
 
 /********************************************************************************
@@ -902,8 +903,8 @@ void task_starthook(FAR struct task_tcb_s *tcb, starthook_t starthook,
  *
  * 1) User code calls vfork().  vfork() is provided in architecture-specific
  *    code.
- * 2) vfork()and calls task_vforksetup().
- * 3) task_vforksetup() allocates and configures the child task's TCB.  This
+ * 2) vfork()and calls nxtask_vforksetup().
+ * 3) nxtask_vforksetup() allocates and configures the child task's TCB.  This
  *    consists of:
  *    - Allocation of the child task's TCB.
  *    - Initialization of file descriptors and streams
@@ -914,16 +915,16 @@ void task_starthook(FAR struct task_tcb_s *tcb, starthook_t starthook,
  *    - Allocate and initialize the stack
  *    - Initialize special values in any CPU registers that were not
  *      already configured by up_initial_state()
- * 5) vfork() then calls task_vforkstart()
- * 6) task_vforkstart() then executes the child thread.
+ * 5) vfork() then calls nxtask_vforkstart()
+ * 6) nxtask_vforkstart() then executes the child thread.
  *
- * task_vforkabort() may be called if an error occurs between steps 3 and 6.
+ * nxtask_vforkabort() may be called if an error occurs between steps 3 and 6.
  *
  ********************************************************************************/
 
-FAR struct task_tcb_s *task_vforksetup(start_t retaddr, size_t *argsize);
-pid_t task_vforkstart(FAR struct task_tcb_s *child);
-void task_vforkabort(FAR struct task_tcb_s *child, int errcode);
+FAR struct task_tcb_s *nxtask_vforksetup(start_t retaddr, size_t *argsize);
+pid_t nxtask_vforkstart(FAR struct task_tcb_s *child);
+void nxtask_vforkabort(FAR struct task_tcb_s *child, int errcode);
 
 /****************************************************************************
  * Name: group_exitinfo
