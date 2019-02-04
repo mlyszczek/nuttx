@@ -122,7 +122,7 @@ _reset_handler:
 	//li t0, MIE_MEIE
 	//csrs mie, t0
 
-	call os_start
+	call nx_start
 1:	j 1b
 
 trap_entry:
