@@ -129,6 +129,15 @@ struct nxbe_window_s
 
   uint8_t flags;
 
+#ifdef CONFIG_NX_RAMBACKED
+  /* Per-window framebuffer support */
+
+  nxgl_coord_t stride;                /* Width of framebuffer in bytes */
+  FAR nxgl_mxpixel_t *fb;             /* Allocated framebuffer in kernal
+                                       * address spaced.  Must be contiguous.
+                                       */
+#endif
+
   /* Client state information this is provide in window callbacks */
 
   FAR void *arg;

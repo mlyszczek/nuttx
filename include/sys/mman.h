@@ -1,7 +1,8 @@
 /****************************************************************************
  * include/sys/mman.h
  *
- *   Copyright (C) 2008, 2009, 2011, 2014 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2008, 2009, 2011, 2014, 2019 Gregory Nutt. All rights
+ *     reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -73,8 +74,14 @@
 #define MAP_EXECUTABLE  0x01000         /* Mark it as an executable */
 #define MAP_LOCKED      0x02000         /* Lock pages mapped into memory */
 #define MAP_NORESERVE   0x04000         /* Do not reserve swap space for this mapping */
-#define MAP_POPULATE    0x08000         /* Populate (prefault) pagetables */
+#define MAP_POPULATE    0x08000         /* Populate (prefault) page tables */
 #define MAP_NONBLOCK    0x10000         /* Do not block on IO */
+
+/* Non-standard, currently used only with libc to allocate contigous,
+ * shareable memory.
+ */
+
+#define MAP_CONTIG      0x20000         /* Allocate contiguous (implies MAP_POPULATE) */
 
 /* Failure return */
 
