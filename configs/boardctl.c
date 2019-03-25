@@ -176,6 +176,38 @@ static inline int boardctl_usbdevctrl(FAR struct boardioc_usbdev_ctrl_s *ctrl)
         break;
 #endif
 
+#ifdef CONFIG_USBMTP
+      case BOARDIOC_USBDEV_MTP:              /* MTP class */
+        switch (ctrl->action)
+          {
+            case BOARDIOC_USBDEV_INITIALIZE: /* Initialize USB MTP device */
+              {
+                ret = board_usbmtp_initialize(ctrl->instance);
+              }
+              break;
+
+            case BOARDIOC_USBDEV_CONNECT:    /* Connect the USB MTP device */
+              {
+                DEBUGASSERT(ctrl->handle != NULL);
+#warning Missing logic
+                ret = -ENOSYS;
+              }
+              break;
+
+            case BOARDIOC_USBDEV_DISCONNECT: /* Disconnect the USB MTP device */
+              {
+                DEBUGASSERT(ctrl->handle != NULL && *ctrl->handle != NULL);
+                usbmtp_uninitialize(*ctrl->handle);
+              }
+              break;
+
+            default:
+              ret = -EINVAL;
+              break;
+          }
+        break;
+#endif
+
 #ifdef CONFIG_USBDEV_COMPOSITE
       case BOARDIOC_USBDEV_COMPOSITE:        /* Composite device */
         switch (ctrl->action)

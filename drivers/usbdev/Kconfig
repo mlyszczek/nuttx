@@ -943,3 +943,149 @@ config CDCECM_PRODUCTSTR
 
 endif # !CDCECM_COMPOSITE
 endif # CDCECM
+
+menuconfig USBMTP
+	bool "USB Media Transfer Protocol (MTP)"
+	default n
+	select FS_READABLE
+	select FS_WRITABLE
+	---help---
+		References:
+		"USB Media Transfer Protocol Specification" Revision 1.1 USB
+		Implementers Forum, April 6, 2011
+
+if USBMTP
+
+config USBMTP_COMPOSITE
+	bool "MTP composite support"
+	default n
+	depends on USBDEV_COMPOSITE
+	---help---
+		Configure the MTP driver as part of a composite driver
+		(only if USBDEV_COMPOSITE is also defined)
+
+config USBMTP_EP0MAXPACKET
+	int "Max packet size for endpoint 0"
+	default 64
+	---help---
+		Max packet size for endpoint 0
+
+# In a composite device the EP-Number and STR-Number is configured
+# dynamically via composite_initialize
+
+if !USBMTP_COMPOSITE
+
+# In a composite device the EP-Number and STR-Number is configured
+# dynamically via composite_initialize
+
+config USBMTP_EPBULKIN
+	int "Bulk IN endpoint number"
+	default 1
+	---help---
+		The logical 7-bit address of a hardware endpoints that support
+		bulk OUT and IN operations
+
+config USBMTP_EPBULKOUT
+	int "Bulk OUT endpoint number"
+	default 2
+	---help---
+		The logical 7-bit address of a hardware endpoints that support
+		bulk OUT and IN operations
+
+config USBMTP_EPINTIN
+	int "Interrupt IN endpoint number"
+	default 3
+	---help---
+		The logical 7-bit address of a hardware endpoint that supports
+		interrupt IN operation.  Default 1.
+
+config USBMTP_EPINTIN_FSSIZE
+	int "Interupt IN full speed MAXPACKET size"
+	default 64
+	---help---
+		Max package size for the interrupt IN endpoint if full speed mode.
+		Default 64.
+
+config USBMTP_EPINTIN_HSSIZE
+	int "Interupt IN high speed MAXPACKET size"
+	default 64
+	---help---
+		Max package size for the interrupt IN endpoint if high speed mode.
+		Default 64.
+
+endif
+
+config USBMTP_NWRREQS
+	int "The number of write requests that can be in flight"
+	default 4
+	---help---
+		The number of write/read requests that can be in flight
+
+config USBMTP_NRDREQS
+	int "The number of read requests that can be in flight"
+	default 4
+	---help---
+		The number of write/read requests that can be in flight
+
+config USBMTP_BULKINREQLEN
+	int "Bulk IN request size"
+	default 512 if USBDEV_DUALSPEED
+	default 64  if !USBDEV_DUALSPEED
+	---help---
+		The size of the buffer in each WRITE request.  This value should to be
+		at least as large as the endpoint maxpacket size .  Most DCDs can divide
+		a large request buffer down and enqueue the smaller, outgoing packets
+		for better performance.  So, ideally, the size of write request buffer
+		should be the size of one block device sector which is, often, 512
+		bytes.  The default, however, is the minimum size of 512 or 64 bytes
+		(depending upon if dual speed operation is supported or not).
+
+config USBMTP_BULKOUTREQLEN
+	int "Bulk OUT request size"
+	default 512 if USBDEV_DUALSPEED
+	default 64  if !USBDEV_DUALSPEED
+	---help---
+		The size of the buffer in each READ request.  This value should to be
+		at least as large as the endpoint maxpacket size.  Most DCDs will return
+		the completed READ request to the caller as each packet is received.
+		Therefore, there is no benefit in increasing the size of this buffer
+		beyond the maximum size of one packet.  Default:  512 or 64 bytes
+		(depending upon if dual speed operation is supported or not).
+
+if !USBMTP_COMPOSITE
+
+# In a composite device the Vendor- and Product-IDs are handled by the
+# composite device
+
+config USBMTP_VENDORID
+	hex "MTP Vendor ID"
+	default 0x584e
+	---help---
+		The vendor ID (VID).  The value here is bogus.  You should not use
+		it in any commercial products!  You must go through the proper
+		channels to request a vendor ID for your company if you do not
+		already have one!
+
+config USBMTP_VENDORSTR
+	string "MTP vendor string"
+	default "NuttX"
+	---help---
+		The vendor ID code/string
+
+config USBMTP_PRODUCTID
+	hex "MTP Product ID"
+	default 0x5342
+	---help---
+		The product ID (PID).
+
+config USBMTP_PRODUCTSTR
+	string "MTP product string"
+	default "MTP for NuttX"
+
+endif # !USBMTP_COMPOSITE
+
+config USBMTP_VERSIONNO
+	hex "USB MTP Version Number"
+	default "0x399"
+
+endif #MTP

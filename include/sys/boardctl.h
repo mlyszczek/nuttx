@@ -252,6 +252,9 @@ enum boardioc_usbdev_identifier_e
 #ifdef CONFIG_USBDEV_COMPOSITE
   , BOARDIOC_USBDEV_COMPOSITE     /* Composite device */
 #endif
+#ifdef CONFIG_USBMTP
+  , BOARDIOC_USBDEV_MTP           /* MTP */
+#endif
 };
 
 enum boardioc_usbdev_action_e
