@@ -39,6 +39,8 @@
 
 #include <nuttx/config.h>
 
+#include <errno.h>
+
 #include <nuttx/board.h>
 
 #include "stm32f4discovery.h"
@@ -92,3 +94,11 @@ int board_app_initialize(uintptr_t arg)
   return stm32_bringup();
 #endif
 }
+
+#ifdef CONFIG_BOARDCTL_IOCTL
+int board_ioctl(unsigned int cmd, uintptr_t arg)
+{
+  return -ENOTTY;
+}
+#endif
+

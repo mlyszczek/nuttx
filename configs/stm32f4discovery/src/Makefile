@@ -65,6 +65,10 @@ ifeq ($(CONFIG_STM32_OTGFS),y)
 CSRCS += stm32_usb.c
 endif
 
+ifeq ($(CONFIG_USBMTP),y)
+CSRCS += stm32_usbmtp.c
+endif
+
 ifeq ($(CONFIG_SENSORS_BH1750FVI),y)
 CSRCS += stm32_bh1750fvi.c
 endif
