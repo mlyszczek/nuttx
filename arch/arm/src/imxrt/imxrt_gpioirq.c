@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/arm/src/imxrt/imxrt_gpioirq.c
  *
- *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018-2019 Gregory Nutt. All rights reserved.
  *   Author:  Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -629,7 +629,9 @@ void imxrt_gpioirq_initialize(void)
   putreg32(0, IMXRT_GPIO1_IMR);
   putreg32(0, IMXRT_GPIO2_IMR);
   putreg32(0, IMXRT_GPIO3_IMR);
+#if defined(IMXRT_GPIO4_IMR)
   putreg32(0, IMXRT_GPIO4_IMR);
+#endif
   putreg32(0, IMXRT_GPIO5_IMR);
 
   /* Disable all unconfigured GPIO interrupts at the NVIC */
@@ -652,11 +654,13 @@ void imxrt_gpioirq_initialize(void)
 #ifndef CONFIG_IMXRT_GPIO3_16_31_IRQ
   up_disable_irq(IMXRT_IRQ_GPIO3_16_31);
 #endif
+#ifdef IMXRT_GPIO4_IMR
 #ifndef CONFIG_IMXRT_GPIO4_0_15_IRQ
   up_disable_irq(IMXRT_IRQ_GPIO4_0_15);
 #endif
 #ifndef CONFIG_IMXRT_GPIO4_16_31_IRQ
   up_disable_irq(IMXRT_IRQ_GPIO4_16_31);
+#endif
 #endif
 #ifndef CONFIG_IMXRT_GPIO5_0_15_IRQ
   up_disable_irq(IMXRT_IRQ_GPIO5_0_15);

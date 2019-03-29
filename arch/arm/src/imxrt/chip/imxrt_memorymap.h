@@ -42,7 +42,9 @@
 
 #include <nuttx/config.h>
 
-#if defined(CONFIG_ARCH_FAMILY_IMXRT105x)
+#if defined(CONFIG_ARCH_FAMILY_IMXRT102x)
+#  include "chip/imxrt102x_memorymap.h"
+#elif defined(CONFIG_ARCH_FAMILY_IMXRT105x)
 #  include "chip/imxrt105x_memorymap.h"
 #elif defined(CONFIG_ARCH_FAMILY_IMXRT106x)
 #  include "chip/imxrt106x_memorymap.h"
