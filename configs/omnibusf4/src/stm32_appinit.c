@@ -2,7 +2,7 @@
  * config/omnibusf4/src/stm32_appinit.c
  *
  *   Copyright (C) 2019 Bill Gatliff. All rights reserved.
- *   Copyright (C) 2012, 2014, 2016, 20018 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2012, 2014, 2016, 2018 Gregory Nutt. All rights reserved.
  *   Author: Bill Gatliff <bgat@billgatliff.com>
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *

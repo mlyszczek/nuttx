@@ -1,7 +1,9 @@
 /****************************************************************************
- * configs/lc823450-xgevk/src/lc823450_reset.c
+ * config/omnibusf4/src/stm32_appinit.c
  *
+ *   Copyright (C) 2019 Bill Gatliff. All rights reserved.
  *   Copyright (C) 2019 Gregory Nutt. All rights reserved.
+ *   Author: Bill Gatliff <bgat@billgatliff.com>
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,39 +41,51 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/arch.h>
+#include <sys/types.h>
+#include <stdint.h>
+#include <errno.h>
+
 #include <nuttx/board.h>
 
-#ifdef CONFIG_BOARDCTL_RESET
+#include "omnibusf4.h"
+
+#ifdef CONFIG_BOARDCTL_IOCTL
 
 /****************************************************************************
- * Public functions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: board_reset
+ * Name: board_ioctl
  *
  * Description:
- *   Reset board.  Support for this function is required by board-level
- *   logic if CONFIG_BOARDCTL_RESET is selected.
+ *   The "landing site" for much of the boardctl() interface. Generic board-
+ *   control functions invoked via ioctl() get routed through here.
+ *
+ *   Since we don't do anything unusual at the moment, this function
+ *   accomplishes nothing except avoid a missing-function linker error if
+ *   CONFIG_BOARDCTL_IOCTL is selected.
  *
  * Input Parameters:
- *   status - Status information provided with the reset event.  This
- *            meaning of this status information is board-specific.  If not
- *            used by a board, the value zero may be provided in calls to
- *            board_reset().
+ *   cmd - IOCTL command being requested.
+ *   arg - Arguments for the IOCTL.
  *
  * Returned Value:
- *   If this function returns, then it was not possible to power-off the
- *   board due to some constraints.  The return value int this case is a
- *   board-specific reason for the failure to shutdown.
+ *   we don't yet support any boardctl IOCTLs.  This function always returns
+ *  -ENOTTY which is the standard IOCTL return value when a command is not
+ *  supported
  *
  ****************************************************************************/
 
-int board_reset(int status)
+int board_ioctl(unsigned int cmd, uintptr_t arg)
 {
-  up_systemreset();
-  return 0;
+  switch (cmd)
+    {
+      default:
+        return -ENOTTY;
+    }
+
+  return OK;
 }
 
-#endif /* CONFIG_BOARDCTL_RESET */
+#endif /* CONFIG_BOARDCTL_IOCTL */

@@ -1,5 +1,5 @@
 /****************************************************************************
- * configs/lc823450-xgevk/src/lc823450_reset.c
+ * libs/libnx/nxmu/nx_synch.c
  *
  *   Copyright (C) 2019 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -39,39 +39,82 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/arch.h>
-#include <nuttx/board.h>
+#include <errno.h>
+#include <debug.h>
 
-#ifdef CONFIG_BOARDCTL_RESET
+#include <nuttx/nx/nx.h>
+#include <nuttx/nx/nxbe.h>
+#include <nuttx/nx/nxmu.h>
 
 /****************************************************************************
- * Public functions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: board_reset
+ * Name: nx_synch
  *
  * Description:
- *   Reset board.  Support for this function is required by board-level
- *   logic if CONFIG_BOARDCTL_RESET is selected.
+ *   This interface can be used to syncrhonize the window client with the
+ *   NX server.  It really just implements an 'echo':  A synch message is
+ *   sent from the window client to the server which then responds
+ *   immediately by sending the NXEVENT_SYNCHED back to the windows client.
+ *
+ *   Due to the highly asynchronous nature of client-server communications,
+ *   nx_synch() is sometimes necessary to assure that the client and server
+ *   are fully synchronized in time.
+ *
+ *   Usage by the window client might be something like this:
+ *
+ *     extern bool g_synched;
+ *     extern sem_t g_synch_sem;
+ *
+ *     g_synched = false;
+ *     ret = nx_synch(hwnd, handle);
+ *     if (ret < 0)
+ *       {
+ *          -- Handle the error --
+ *       }
+ *
+ *     while (!g_synched)
+ *       {
+ *         ret = sem_wait(&g_sync_sem);
+ *         if (ret < 0)
+ *           {
+ *              -- Handle the error --
+ *           }
+ *       }
+ *
+ *   When the windwo listener thread receives the NXEVENT_SYNCHED event, it
+ *   would set g_synched to true and post g_synch_sem, waking up the above
+ *   loop.
  *
  * Input Parameters:
- *   status - Status information provided with the reset event.  This
- *            meaning of this status information is board-specific.  If not
- *            used by a board, the value zero may be provided in calls to
- *            board_reset().
+ *   wnd - The window to be synched
+ *   arg - An argument that will accompany the block messages (This is arg2
+ *         in the event callback).
  *
  * Returned Value:
- *   If this function returns, then it was not possible to power-off the
- *   board due to some constraints.  The return value int this case is a
- *   board-specific reason for the failure to shutdown.
+ *   OK on success; ERROR on failure with errno set appropriately
  *
  ****************************************************************************/
 
-int board_reset(int status)
+int nx_synch(NXWINDOW hwnd, FAR void *arg)
 {
-  up_systemreset();
-  return 0;
-}
+  struct nxsvrmsg_synch_s outmsg;
 
-#endif /* CONFIG_BOARDCTL_RESET */
+#ifdef CONFIG_DEBUG_FEATURES
+  if (hwnd == NULL)
+    {
+      set_errno(EINVAL);
+      return ERROR;
+    }
+#endif
+
+  /* Send the syncrhonization request message. */
+
+  outmsg.msgid = NX_SVRMSG_SYNCH;
+  outmsg.wnd   = (FAR struct nxbe_window_s *)hwnd;
+  outmsg.arg   = arg;
+
+  return nxmu_sendwindow(hwnd, &outmsg, sizeof(struct nxsvrmsg_synch_s));
+}

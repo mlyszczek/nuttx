@@ -130,7 +130,7 @@ enum nxmsg_e
   NX_CLIMSG_NEWPOSITION,      /* New window size/position */
   NX_CLIMSG_MOUSEIN,          /* New mouse positional data available for window */
   NX_CLIMSG_KBDIN,            /* New keypad input available for window */
-  NX_CLIMSG_BLOCKED,          /* The window is blocked */
+  NX_CLIMSG_EVENT,            /* Server->client event */
 
   /* Client-to-Server Messages **********************************************/
 
@@ -139,6 +139,7 @@ enum nxmsg_e
   NX_SVRMSG_OPENWINDOW,       /* Create a new window */
   NX_SVRMSG_CLOSEWINDOW,      /* Close an existing window */
   NX_SVRMSG_BLOCKED,          /* The window is blocked */
+  NX_SVRMSG_SYNCH,            /* Window syncrhonization request */
   NX_SVRMSG_REQUESTBKGD,      /* Open the background window */
   NX_SVRMSG_RELEASEBKGD,      /* Release the background window */
   NX_SVRMSG_SETPOSITION,      /* Window position has changed */
@@ -229,15 +230,14 @@ struct nxclimsg_kbdin_s
 };
 #endif
 
-/* This message confirms that that all queued window messages have been
- * flushed and that the all further window messages are blocked.
- */
+/* This message provides server event notifications to the client. */
 
-struct nxclimsg_blocked_s
+struct nxclimsg_event_s
 {
   uint32_t msgid;                /* NX_CLIMSG_BLOCKED */
   FAR struct nxbe_window_s *wnd; /* The window that is blocked */
   FAR void *arg;                 /* User argument */
+  enum nx_event_e event;         /* Server event */
 };
 
 /* Client-to-Server Message Structures **************************************/
@@ -279,6 +279,18 @@ struct nxsvrmsg_blocked_s
 {
   uint32_t msgid;                /* NX_SVRMSG_BLOCKED */
   FAR struct nxbe_window_s *wnd; /* The window that is blocked */
+  FAR void *arg;                 /* User argument */
+};
+
+/* Synchronization request.  This is essentially an 'echo':  The NX server
+ * will receive the synchronization request and simply respond with a
+ * synchronized event.
+ */
+
+struct nxsvrmsg_synch_s
+{
+  uint32_t msgid;                /* NX_SVRMSG_SYNCH */
+  FAR struct nxbe_window_s *wnd; /* The window that requires synch'ing */
   FAR void *arg;                 /* User argument */
 };
 
