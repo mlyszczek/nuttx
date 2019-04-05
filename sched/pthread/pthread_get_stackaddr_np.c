@@ -1,8 +1,8 @@
 /****************************************************************************
- * libs/libc/pthread/pthread_attr_getstacksize.c
+ * sched/pthread/pthread_get_stackaddr_np.c
  *
- *   Copyright (C) 2007, 2009, 2011 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ *   Copyright (C) 2018 Geoff Norton. All rights reserved.
+ *   Author: Geoff Norton <grompf@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,50 +37,41 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
 #include <sys/types.h>
 #include <pthread.h>
-#include <string.h>
-#include <debug.h>
-#include <errno.h>
+
+#include "pthread/pthread.h"
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name:  pthread_attr_getstacksize
+ * Name: pthread_get_stackaddr_np
  *
  * Description:
+ *   Get a pointer to the base of the pthread stack
  *
- * Input Parameters:
- *   attr
- *   stacksize
+ * Parameters:
+ *   pthread_t - The pthread being queried
  *
  * Returned Value:
- *   0 if successful.  Otherwise, an error code.
- *
- * Assumptions:
+ *   The pthread stack address is returned on success.  NULL is returned
+ *   if the 'thread' argument does not refer to a valid pthread.
  *
  ****************************************************************************/
 
-int pthread_attr_getstacksize(FAR const pthread_attr_t *attr, FAR size_t *stacksize)
+void *pthread_get_stackaddr_np(FAR pthread_t thread)
 {
-  int ret;
+  FAR struct pthread_tcb_s *tcb =
+    (FAR struct pthread_tcb_s *)sched_gettcb((pid_t)thread);
 
-  linfo("attr=0x%p stacksize=0x%p\n", attr, stacksize);
-
-  if (!stacksize)
+  if (tcb == NULL)
     {
-      ret = EINVAL;
-    }
-  else
-    {
-      *stacksize = attr->stacksize;
-      ret = OK;
+      return NULL;
     }
 
-  linfo("Returning %d\n", ret);
-  return ret;
+  return tcb->cmn.adj_stack_ptr;
 }
-
-
