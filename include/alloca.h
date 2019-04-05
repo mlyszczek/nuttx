@@ -1,7 +1,7 @@
 /****************************************************************************
- * libs/libc/pthread/pthread_attr_getstacksize.c
+ * include/alloca.h
  *
- *   Copyright (C) 2007, 2009, 2011 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2019 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,54 +33,20 @@
  *
  ****************************************************************************/
 
-/****************************************************************************
- * Included Files
- ****************************************************************************/
-
-#include <sys/types.h>
-#include <pthread.h>
-#include <string.h>
-#include <debug.h>
-#include <errno.h>
+#ifndef __INCLUDE_ALLOCA_H
+#define __INCLUDE_ALLOCA_H
 
 /****************************************************************************
- * Public Functions
+ * Pre-processor Definitions
  ****************************************************************************/
 
-/****************************************************************************
- * Name:  pthread_attr_getstacksize
- *
- * Description:
- *
- * Input Parameters:
- *   attr
- *   stacksize
- *
- * Returned Value:
- *   0 if successful.  Otherwise, an error code.
- *
- * Assumptions:
- *
- ****************************************************************************/
+#if defined(__GNUC__) && __GNUC__ >= 3
+/* Use GCC >=3 Built-in for alloca */
 
-int pthread_attr_getstacksize(FAR const pthread_attr_t *attr, FAR size_t *stacksize)
-{
-  int ret;
+#  undef  alloca
+#  undef  __alloca
+#  define alloca(size)   __alloca(size)
+#  define __alloca(size) __builtin_alloca(size)
+#endif
 
-  linfo("attr=0x%p stacksize=0x%p\n", attr, stacksize);
-
-  if (!stacksize)
-    {
-      ret = EINVAL;
-    }
-  else
-    {
-      *stacksize = attr->stacksize;
-      ret = OK;
-    }
-
-  linfo("Returning %d\n", ret);
-  return ret;
-}
-
-
+#endif /* __INCLUDE_ALLOCA_H */
