@@ -114,13 +114,7 @@
 #define IMXRT_SIDE(six)                                  ((six) & IMXRT_XBARA_SIDE_MASK)  >> IMXRT_XBARA_SIDE_SHIFTS
 
 /* Collect correct XBAR definitions from chip file */
-#if (defined(CONFIG_ARCH_FAMILY_IMXRT105x) || defined(CONFIG_ARCH_FAMILY_IMXRT106x))
-#include "chip/imxrt105x6x_xbar.h"
-#elif defined(CONFIG_ARCH_FAMILY_IMXRT102x)
-#include "chip/imxrt102x_xbar.h"
-#else
-#error Unrecognised IMXRT family member
-#endif
+#include "chip/imxrt_xbar.h"
 
 /**************************************************************************************************************************************************
  * Public Functions

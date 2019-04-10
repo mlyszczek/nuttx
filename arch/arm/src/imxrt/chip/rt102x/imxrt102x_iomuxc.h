@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/imxrt/imxrt102x_iomuxc.h
+ * arch/arm/src/imxrt/chip/rt102x/imxrt102x_iomuxc.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author:  Gregory Nutt <gnutt@nuttx.org>
@@ -34,8 +34,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT105X_IOMUXC_H
-#define __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT105X_IOMUXC_H
+#ifndef __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT102X_IOMUXC_H
+#define __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT102X_IOMUXC_H
 
 /*****************************************************************************
  * Included Files
@@ -196,7 +196,7 @@
 /* Pad Mux Register Offsets */
 
 #define IMXRT_PADMUX_OFFSET(n)                      (0x0014 + ((unsigned int)(n) << 2))
-#define IMXRT_PADMUX_OFFSET_SNVS(n)                 ((unsigned int)(n-IMXRT_PADMUX_WAKEUP_INDEX) << 2)
+#define IMXRT_PADMUX_OFFSET_SNVS(n)                 ((unsigned int)(n) << 2)
 
 #define IMXRT_PADMUX_GPIO_EMC_00_OFFSET             0x0014
 #define IMXRT_PADMUX_GPIO_EMC_01_OFFSET             0x0018
@@ -1604,4 +1604,4 @@
 #define GPR_GPR25_M7_APC_AC_R3_TOP_MASK                         (0x1fffffff << GPR_GPR25_M7_APC_AC_R3_TOP_SHIFT)
 #define GPR_GPR25_M7_APC_AC_R3_TOP(n)                           ((uint32_t)(n)) << GPR_GPR25_M7_APC_AC_R3_TOP_SHIFT)
 
-#endif /* __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT105X_IOMUXC_H */
+#endif /* __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT102X_IOMUXC_H */

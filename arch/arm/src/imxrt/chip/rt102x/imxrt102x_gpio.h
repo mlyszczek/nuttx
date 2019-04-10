@@ -1,9 +1,10 @@
-/********************************************************************************************
- * arch/arm/src/imxrt/imxrt105x_gpio.h
+/*****************************************************************************
+ * arch/arm/src/imxrt/chip/rt102x/imxrt105x_gpio.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>
  *            David Sidrane <david_s5@nscdg.com>
+ *            Dave Marples <dave@marples.net>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,23 +33,23 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ********************************************************************************************/
+ *****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT105X_GPIO_H
-#define __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT105X_GPIO_H
+#ifndef __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT102X_GPIO_H
+#define __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT102X_GPIO_H
 
-/********************************************************************************************
+/*****************************************************************************
  * Included Files
- ********************************************************************************************/
+ *****************************************************************************/
 
 #include <nuttx/config.h>
 #include "chip/imxrt_memorymap.h"
 
-/********************************************************************************************
+/*****************************************************************************
  * Pre-processor Definitions
- ********************************************************************************************/
+ *****************************************************************************/
 
-/* Register offsets *************************************************************************/
+/* Register offsets **********************************************************/
 
 #define IMXRT_GPIO_DR_OFFSET     0x0000  /* GPIO data register */
 #define IMXRT_GPIO_GDIR_OFFSET   0x0004  /* GPIO direction register */
@@ -62,7 +63,7 @@
 #define IMXRT_GPIO_CLEAR_OFFSET  0x0088  /* GPIO data register CLEAR */
 #define IMXRT_GPIO_TOGGLE_OFFSET 0x008c  /* GPIO data register TOGGLE */
 
-/* Register addresses ***********************************************************************/
+/* Register addresses ********************************************************/
 
 #define IMXRT_GPIO1_DR           (IMXRT_GPIO1_BASE + IMXRT_GPIO_DR_OFFSET)
 #define IMXRT_GPIO1_GDIR         (IMXRT_GPIO1_BASE + IMXRT_GPIO_GDIR_OFFSET)
@@ -100,18 +101,6 @@
 #define IMXRT_GPIO3_CLEAR        (IMXRT_GPIO3_BASE + IMXRT_GPIO_CLEAR_OFFSET)
 #define IMXRT_GPIO3_TOGGLE       (IMXRT_GPIO3_BASE + IMXRT_GPIO_TOGGLE_OFFSET)
 
-#define IMXRT_GPIO4_DR           (IMXRT_GPIO4_BASE + IMXRT_GPIO_DR_OFFSET)
-#define IMXRT_GPIO4_GDIR         (IMXRT_GPIO4_BASE + IMXRT_GPIO_GDIR_OFFSET)
-#define IMXRT_GPIO4_PSR          (IMXRT_GPIO4_BASE + IMXRT_GPIO_PSR_OFFSET)
-#define IMXRT_GPIO4_ICR1         (IMXRT_GPIO4_BASE + IMXRT_GPIO_ICR1_OFFSET)
-#define IMXRT_GPIO4_ICR2         (IMXRT_GPIO4_BASE + IMXRT_GPIO_ICR2_OFFSET)
-#define IMXRT_GPIO4_IMR          (IMXRT_GPIO4_BASE + IMXRT_GPIO_IMR_OFFSET)
-#define IMXRT_GPIO4_ISR          (IMXRT_GPIO4_BASE + IMXRT_GPIO_ISR_OFFSET)
-#define IMXRT_GPIO4_EDGE         (IMXRT_GPIO4_BASE + IMXRT_GPIO_EDGE_OFFSET)
-#define IMXRT_GPIO4_SET          (IMXRT_GPIO4_BASE + IMXRT_GPIO_SET_OFFSET)
-#define IMXRT_GPIO4_CLEAR        (IMXRT_GPIO4_BASE + IMXRT_GPIO_CLEAR_OFFSET)
-#define IMXRT_GPIO4_TOGGLE       (IMXRT_GPIO4_BASE + IMXRT_GPIO_TOGGLE_OFFSET)
-
 #define IMXRT_GPIO5_DR           (IMXRT_GPIO5_BASE + IMXRT_GPIO_DR_OFFSET)
 #define IMXRT_GPIO5_GDIR         (IMXRT_GPIO5_BASE + IMXRT_GPIO_GDIR_OFFSET)
 #define IMXRT_GPIO5_PSR          (IMXRT_GPIO5_BASE + IMXRT_GPIO_PSR_OFFSET)
@@ -124,4 +113,4 @@
 #define IMXRT_GPIO5_CLEAR        (IMXRT_GPIO5_BASE + IMXRT_GPIO_CLEAR_OFFSET)
 #define IMXRT_GPIO5_TOGGLE       (IMXRT_GPIO5_BASE + IMXRT_GPIO_TOGGLE_OFFSET)
 
-#endif /* __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT105X_GPIO_H */
+#endif /* __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT102X_GPIO_H */
