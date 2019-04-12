@@ -2062,7 +2062,7 @@ static inline int imxrt_initphy(struct imxrt_driver_s *priv, bool renogphy)
 
       if (retries >= 3)
         {
-          nerr("ERROR: Failed to read %s PHYID1 at address %d\n", phyaddr);
+          nerr("ERROR: Failed to read %s PHYID1 at address %d\n", BOARD_PHY_NAME, phyaddr);
           return -ENOENT;
         }
 
