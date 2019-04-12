@@ -391,7 +391,10 @@
 
 /* Serial Clock Divider Register 2 */
 
-                                                           /* Bits 0-18:  Reserved */
+                                                           /* Bits 0-17:  Reserved */
+#define CCM_CSCDR2_LPI2C_CLK_SEL                 (1 << 18) /* Bit 18:     Selector for the LPI2C clock multiplexer */
+#  define CCM_CSCDR2_LPI2C_CLK_SEL_PLL3_60M      (0 << 18) /*  derive clock from pll3_60m */
+#  define CCM_CSCDR2_LPI2C_CLK_SEL_OSC_CLK       (1 << 18) /*  derive clock from ock_clk */
 #define CCM_CSCDR2_LPI2C_CLK_PODF_SHIFT          (19)      /* Bits 19-24: Divider for lpi2c clock podf */
 #define CCM_CSCDR2_LPI2C_CLK_PODF_MASK           (0x3f << CCM_CSCDR2_LPI2C_CLK_PODF_SHIFT)
 #  define CCM_CSCDR2_LPI2C_CLK_PODF(n)           ((uint32_t)(n) << CCM_CSCDR2_LPI2C_CLK_PODF_SHIFT)
