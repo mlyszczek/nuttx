@@ -60,6 +60,7 @@
  ****************************************************************************/
 
 /* Configuration ************************************************************/
+
 /* If the USB mass storage device is configured as part of a composite device
  * then both CONFIG_USBDEV_COMPOSITE and CONFIG_USBMTP_COMPOSITE must be
  * defined.
@@ -205,7 +206,7 @@
 #endif
 
 #undef CONFIG_USBMTP_CONFIGSTR
-#define CONFIG_USBMTP_CONFIGSTR "Bulk"
+#define CONFIG_USBMTP_CONFIGSTR "MTP"
 
 /* SCSI daemon */
 
@@ -371,6 +372,7 @@
 /****************************************************************************
  * Public Types
  ****************************************************************************/
+
 /* Endpoint descriptors */
 
 enum usbmtp_epdesc_e
@@ -494,8 +496,8 @@ EXTERN const char g_mtpvendorstr[];
 EXTERN const char g_mtpproductstr[];
 EXTERN const char g_mtpserialstr[];
 
-/* If we are using a composite device, then vendor/product/serial number strings
- * are provided by the composite device logic.
+/* If we are using a composite device, then vendor/product/serial number
+ * strings are provided by the composite device logic.
  */
 
 #else
@@ -508,7 +510,9 @@ EXTERN const char g_compserialstr[];
 #define g_mtpserialstr  g_compserialstr
 #endif
 
-/* Used to hand-off the state structure when the SCSI worker thread is started */
+/* Used to hand-off the state structure when the SCSI worker thread is
+ * started.
+ */
 
 EXTERN FAR struct usbmtp_dev_s *g_usbmtp_handoff;
 
@@ -602,10 +606,12 @@ int usbmtp_copy_epdesc(enum usbmtp_epdesc_e epid,
  ****************************************************************************/
 
 #ifdef CONFIG_USBDEV_DUALSPEED
-int16_t usbmtp_mkcfgdesc(FAR uint8_t *buf, FAR struct usbdev_devinfo_s *devinfo,
+int16_t usbmtp_mkcfgdesc(FAR uint8_t *buf,
+                         FAR struct usbdev_devinfo_s *devinfo,
                          uint8_t speed, uint8_t type);
 #else
-int16_t usbmtp_mkcfgdesc(FAR uint8_t *buf, FAR struct usbdev_devinfo_s *devinfo);
+int16_t usbmtp_mkcfgdesc(FAR uint8_t *buf,
+                         FAR struct usbdev_devinfo_s *devinfo);
 #endif
 
 /****************************************************************************

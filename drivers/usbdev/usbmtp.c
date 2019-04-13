@@ -162,7 +162,9 @@ static struct usbdevclass_driverops_s g_driverops =
   NULL               /* resume */
 };
 
-/* Used to hand-off the state structure when the SCSI worker thread is started */
+/* Used to hand-off the state structure when the SCSI worker thread is
+ * started.
+ */
 
 FAR struct usbmtp_dev_s *g_usbmtp_handoff;
 
@@ -231,7 +233,8 @@ static struct usbdev_req_s *usbmtp_allocreq(FAR struct usbdev_ep_s *ep,
  *
  ****************************************************************************/
 
-static void usbmtp_freereq(FAR struct usbdev_ep_s *ep, struct usbdev_req_s *req)
+static void usbmtp_freereq(FAR struct usbdev_ep_s *ep,
+                           FAR struct usbdev_req_s *req)
 {
   if (ep != NULL && req != NULL)
     {
@@ -239,6 +242,7 @@ static void usbmtp_freereq(FAR struct usbdev_ep_s *ep, struct usbdev_req_s *req)
         {
           EP_FREEBUFFER(ep, req->buf);
         }
+
       EP_FREEREQ(ep, req);
     }
 }
@@ -449,7 +453,8 @@ static void usbmtp_unbind(FAR struct usbdevclass_driver_s *driver,
    * driver un-initialize logic.
    */
 
-  DEBUGASSERT(priv->thstate == USBMTP_STATE_TERMINATED || priv->thstate == USBMTP_STATE_NOTSTARTED);
+  DEBUGASSERT(priv->thstate == USBMTP_STATE_TERMINATED ||
+              priv->thstate == USBMTP_STATE_NOTSTARTED);
 
   /* Make sure that we are not already unbound */
 
@@ -579,20 +584,21 @@ static int usbmtp_setup(FAR struct usbdevclass_driver_s *driver,
     {
       /**********************************************************************
        * Standard Requests
-       **********************************************************************/
+       *********************************************************************/
 
       switch (ctrl->req)
         {
         case USB_REQ_GETDESCRIPTOR:
           {
-            /* The value field specifies the descriptor type in the MS byte and the
-             * descriptor index in the LS byte (order is little endian)
+            /* The value field specifies the descriptor type in the MS byte
+             * and the descriptor index in the LS byte (order is little
+             * endian)
              */
 
             switch (ctrl->value[1])
               {
                 /* If the mass storage device is used in as part of a
-                 * composite device, then the device descriptor is is
+                 * composite device, then the device descriptor is s
                  * provided by logic in the composite device implementation.
                  */
 
@@ -621,9 +627,9 @@ static int usbmtp_setup(FAR struct usbdevclass_driver_s *driver,
               case USB_DESC_TYPE_OTHERSPEEDCONFIG:
 #endif
 
-                /* If the mass storage device is used in as part of a composite device,
-                 * then the configuration descriptor is provided by logic in the
-                 * composite device implementation.
+                /* If the mass storage device is used in as part of a
+                 * composite device, then the configuration descriptor is
+                 * provided by logic in the composite device implementation.
                  */
 
 #ifndef CONFIG_USBMTP_COMPOSITE
@@ -650,14 +656,15 @@ static int usbmtp_setup(FAR struct usbdevclass_driver_s *driver,
                   /* index == language code. */
 
                   ret = usbmtp_mkstrdesc(ctrl->value[0],
-                                         (struct usb_strdesc_s *)ctrlreq->buf);
+                                         (FAR struct usb_strdesc_s *)ctrlreq->buf);
                 }
                 break;
 #endif
-
+FA
               default:
                 {
-                  usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_GETUNKNOWNDESC), value);
+                  usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_GETUNKNOWNDESC),
+                           value);
                 }
                 break;
               }
@@ -744,7 +751,8 @@ static int usbmtp_setup(FAR struct usbdevclass_driver_s *driver,
            break;
 
         default:
-          usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_UNSUPPORTEDSTDREQ), ctrl->req);
+          usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_UNSUPPORTEDSTDREQ),
+                   ctrl->req);
           break;
         }
     }
@@ -772,7 +780,8 @@ static int usbmtp_setup(FAR struct usbdevclass_driver_s *driver,
 
                 if (index != USBMTP_INTERFACEID)
                   {
-                    usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_MSRESETNDX), index);
+                    usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_MSRESETNDX),
+                             index);
                     ret = -EDOM;
                   }
                 else
@@ -802,7 +811,8 @@ static int usbmtp_setup(FAR struct usbdevclass_driver_s *driver,
 
                 if (index != USBMTP_INTERFACEID)
                   {
-                    usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_GETMAXLUNNDX), index);
+                    usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_GETMAXLUNNDX),
+                             index);
                     ret = -EDOM;
                   }
                 else
@@ -1371,7 +1381,9 @@ int usbmtp_configure(unsigned int nluns, void **handle)
 
   /* Allocate the structures needed */
 
-  alloc = (FAR struct usbmtp_alloc_s *)kmm_malloc(sizeof(struct usbmtp_alloc_s));
+  alloc = (FAR struct usbmtp_alloc_s *)
+    kmm_malloc(sizeof(struct usbmtp_alloc_s));
+
   if (!alloc)
     {
       usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_ALLOCDEVSTRUCT), 0);
@@ -1431,6 +1443,7 @@ int usbmtp_configure(unsigned int nluns, void **handle)
 
 #ifndef CONFIG_USBMTP_COMPOSITE
   /* minor - not used */
+
   /* Interfaces (ifnobase == 0) */
 
   priv->devinfo.ninterfaces = USBMTP_NINTERFACES; /* Number of interfaces in the configuration */
@@ -1464,7 +1477,8 @@ errout:
  *   Bind the block driver specified by drvrpath to a USB storage LUN.
  *
  * Input Parameters:
- *   handle      - The handle returned by a previous call to usbmtp_configure().
+ *   handle      - The handle returned by a previous call to
+ *                 usbmtp_configure().
  *   drvrpath    - the full path to the block driver
  *   startsector - A sector offset into the block driver to the start of the
  *                 partition on drvrpath (0 if no partitions)
@@ -1572,7 +1586,8 @@ int usbmtp_bindlun(FAR void *handle, FAR const char *drvrpath,
       priv->iobuffer = (FAR uint8_t *)kmm_malloc(geo.geo_sectorsize);
       if (!priv->iobuffer)
         {
-          usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_ALLOCIOBUFFER), geo.geo_sectorsize);
+          usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_ALLOCIOBUFFER),
+                   geo.geo_sectorsize);
           return -ENOMEM;
         }
 
@@ -1585,7 +1600,8 @@ int usbmtp_bindlun(FAR void *handle, FAR const char *drvrpath,
       tmp = (FAR void *)kmm_realloc(priv->iobuffer, geo.geo_sectorsize);
       if (!tmp)
         {
-          usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_REALLOCIOBUFFER), geo.geo_sectorsize);
+          usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_REALLOCIOBUFFER),
+                   geo.geo_sectorsize);
           return -ENOMEM;
         }
 
