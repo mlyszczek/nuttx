@@ -660,7 +660,7 @@ static int usbmtp_setup(FAR struct usbdevclass_driver_s *driver,
                 }
                 break;
 #endif
-FA
+
               default:
                 {
                   usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_GETUNKNOWNDESC),
