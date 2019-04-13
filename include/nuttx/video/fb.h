@@ -34,8 +34,8 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_VIDIO_FB_H
-#define __INCLUDE_NUTTX_VIDIO_FB_H
+#ifndef __INCLUDE_NUTTX_VIDEO_FB_H
+#define __INCLUDE_NUTTX_VIDEO_FB_H
 
 /****************************************************************************
  * Included Files
@@ -45,6 +45,7 @@
 
 #include <sys/types.h>
 #include <stdint.h>
+
 #include <nuttx/fs/ioctl.h>
 
 /****************************************************************************
@@ -409,13 +410,13 @@ struct fb_cmap_s
 };
 #endif
 
+#ifdef CONFIG_FB_HWCURSOR
+#ifdef CONFIG_FB_HWCURSORIMAGE
 /* If the video controller hardware supports a hardware cursor and
  * that hardware cursor supports user-provided images, then the
  * following structure may be used to provide the cursor image
  */
 
-#ifdef CONFIG_FB_HWCURSOR
-#ifdef CONFIG_FB_HWCURSORIMAGE
 struct fb_cursorimage_s
 {
   fb_coord_t     width;    /* Width of the cursor image in pixels */
@@ -444,7 +445,7 @@ struct fb_cursorsize_s
 };
 #endif
 
-/* The following is used to get the cursor attributes */
+/* The following are used to get/get the cursor attributes via IOCTL command. */
 
 struct fb_cursorattrib_s
 {
@@ -460,13 +461,13 @@ struct fb_cursorattrib_s
 
 struct fb_setcursor_s
 {
-  uint8_t flags;                /* See FB_CUR_* definitions */
-  struct fb_cursorpos_s pos;    /* Cursor position */
+  uint8_t flags;                 /* See FB_CUR_* definitions */
+  struct fb_cursorpos_s pos;     /* Cursor position */
 #ifdef CONFIG_FB_HWCURSORSIZE
-  struct fb_cursorsize_s  size; /* Cursor size */
+  struct fb_cursorsize_s  size;  /* Cursor size */
 #endif
 #ifdef CONFIG_FB_HWCURSORIMAGE
-  struct fb_cursorimage_s img;  /* Cursor image */
+  struct fb_cursorimage_s img;   /* Cursor image */
 #endif
 };
 #endif
@@ -685,4 +686,4 @@ int fb_register(int display, int plane);
 }
 #endif
 
-#endif /* __INCLUDE_NUTTX_VIDIO_FB_H */
+#endif /* __INCLUDE_NUTTX_VIDEO_FB_H */

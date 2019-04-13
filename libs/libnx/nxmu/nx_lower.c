@@ -69,11 +69,10 @@ int nx_lower(NXWINDOW hwnd)
   FAR struct nxbe_window_s *wnd = (FAR struct nxbe_window_s *)hwnd;
   struct nxsvrmsg_lower_s   outmsg;
 
-  /* Send the RAISE message */
+  /* Send the LOWER message */
 
   outmsg.msgid = NX_SVRMSG_LOWER;
   outmsg.wnd   = wnd;
 
   return nxmu_sendwindow(wnd, &outmsg, sizeof(struct nxsvrmsg_lower_s));
 }
-
