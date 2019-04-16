@@ -100,7 +100,7 @@ static void bitmap_clipcopy(FAR struct nxbe_clipops_s *cops,
  * Input Parameters:
  *   wnd   - The window that will receive the bitmap image
  *   dest   - Describes the rectangular on the display that will receive the
- *            the bit map.
+ *            the bit map (window coordinate frame).
  *   src    - The start of the source image.
  *   origin - The origin of the upper, left-most corner of the full bitmap.
  *            Both dest and origin are in window coordinates, however, origin
@@ -193,7 +193,7 @@ static inline void nxbe_bitmap_pwfb(FAR struct nxbe_window_s *wnd,
  * Input Parameters:
  *   wnd    - The window that will receive the bitmap image
  *   dest   - Describes the rectangular region on the display that will
- *            receive the the bit map.
+ *            receive the the bit map (window coordinate frame).
  *   src    - The start of the source image.
  *   origin - The origin of the upper, left-most corner of the full bitmap.
  *            Both dest and origin are in window coordinates, however, origin
@@ -293,7 +293,7 @@ void nxbe_bitmap_dev(FAR struct nxbe_window_s *wnd,
  * Input Parameters:
  *   wnd    - The window that will receive the bitmap image
  *   dest   - Describes the rectangular region on the display that will
- *            receive the the bit map.
+ *            receive the the bit map (window coordinate frame).
  *   src    - The start of the source image.
  *   origin - The origin of the upper, left-most corner of the full bitmap.
  *            Both dest and origin are in window coordinates, however, origin
@@ -329,21 +329,10 @@ void nxbe_bitmap(FAR struct nxbe_window_s *wnd,
   nxbe_bitmap_dev(wnd, dest, src, origin, stride);
 
 #ifdef CONFIG_NX_SWCURSOR
-  /* Update the software cursor if it is visible */
+  /* Update cursor backup memory and redraw the cursor in the modified window
+   * region.
+   */
 
-  if (wnd->be->cursor.visible)
-    {
-      /* Save the modified cursor background region
-       * REVISIT:  Only a single color plane is supported
-       */
-
-      wnd->be->plane[0].cursor.backup(wnd->be, dest, 0);
-
-      /* Restore the software cursor if any part of the cursor was
-       * overwritten by the bitmap copy.
-       */
-
-      wnd->be->plane[0].cursor.draw(wnd->be, dest, 0);
-    }
+  nxbe_cursor_backupdraw_all(wnd, dest);
 #endif
 }

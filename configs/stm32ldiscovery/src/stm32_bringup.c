@@ -1,7 +1,7 @@
 /****************************************************************************
- * graphics/nxbe/nxbe_visible.c
+ * config/stm32ldiscovery/src/stm32_bringup.c
  *
- *   Copyright (C) 2008-2009, 2011 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2013, 2016, 2019 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,84 +39,67 @@
 
 #include <nuttx/config.h>
 
-#include <stdbool.h>
-#include <errno.h>
-#include <debug.h>
+#include <syslog.h>
 
-#include <nuttx/nx/nxglib.h>
+#include <nuttx/board.h>
+#include <arch/board/board.h>
 
-#include "nxbe.h"
-#include "nxmu.h"
-
-/****************************************************************************
- * Private Types
- ****************************************************************************/
-
-struct nxbe_visible_s
-{
-  struct nxbe_clipops_s cops;
-  bool visible;
-};
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: nxbe_clipvisible
- ****************************************************************************/
-
-static void nxbe_clipvisible(FAR struct nxbe_clipops_s *cops,
-                             FAR struct nxbe_plane_s *plane,
-                             FAR const struct nxgl_rect_s *rect)
-{
-  FAR struct nxbe_visible_s *info = (FAR struct nxbe_visible_s *)cops;
-  info->visible = true;
-}
+#include "stm32ldiscovery.h"
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: nxbe_visible
+ * Name: stm32_bringup
  *
  * Description:
- *   Return true if the point, pt, in window wnd is visible.  pt is in
- *   absolute screen coordinates
+ *   Perform architecture-specific initialization
+ *
+ *   CONFIG_BOARD_LATE_INITIALIZE=y :
+ *     Called from board_late_initialize().
+ *
+ *   CONFIG_BOARD_LATE_INITIALIZE=n && CONFIG_LIB_BOARDCTL=y :
+ *     Called from the NSH library
  *
  ****************************************************************************/
 
-bool nxbe_visible(FAR struct nxbe_window_s *wnd,
-                  FAR const struct nxgl_point_s *pos)
+int stm32_bringup(void)
 {
-  struct nxbe_visible_s info;
+  int ret = OK;
 
-  /* Check if the absolute position lies within the window */
+#ifdef CONFIG_STM32_LCD
+  /* Initialize the SLCD and register the SLCD device as /dev/slcd0 */
 
-  if (!nxgl_rectinside(&wnd->bounds, pos))
+  ret = stm32_slcd_initialize();
+  if (ret != OK)
     {
-      return false;
+      syslog(LOG_ERR, "ERROR: stm32_slcd_initialize failed: %d\n", ret);
+      return ret;
     }
+#endif
 
-  /* If this is the top window, then the psition is visible */
+#ifdef CONFIG_PWM
+  /* Initialize PWM and register the PWM device. */
 
-  if (!wnd->above)
+  ret = stm32_pwm_setup();
+  if (ret < 0)
     {
-      return true;
+      syslog(LOG_ERR, "ERROR: stm32_pwm_setup() failed: %d\n", ret);
     }
+#endif
 
-  /* The position within the window range, but the window is not at
-   * the top.  We will have to work harder to determine if the point
-   * visible
-   */
+#ifdef CONFIG_SENSORS_QENCODER
+  /* Initialize and register the qencoder driver */
 
-  info.cops.visible  = nxbe_clipvisible;
-  info.cops.obscured = nxbe_clipnull;
-  info.visible       = false;
+  ret = stm32_qencoder_initialize("/dev/qe0", CONFIG_STM32LDISCO_QETIMER);
+  if (ret != OK)
+    {
+      syslog(LOG_ERR,
+             "ERROR: Failed to register the qencoder: %d\n",
+             ret);
+    }
+#endif
 
-  nxbe_clipper(wnd->above, &wnd->bounds, NX_CLIPORDER_DEFAULT,
-               &info.cops, &wnd->be->plane[0]);
-
-  return info.visible;
+  return ret;
 }

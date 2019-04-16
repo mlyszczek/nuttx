@@ -374,7 +374,60 @@ void nxbe_cursor_setimage(FAR struct nxbe_state_s *be,
 
 void nxbe_cursor_setposition(FAR struct nxbe_state_s *be,
                              FAR const struct nxgl_point_s *pos);
+
 #endif /* CONFIG_NX_SWCURSOR || CONFIG_NX_HWCURSOR */
+
+#ifdef CONFIG_NX_SWCURSOR
+/****************************************************************************
+ * Name: nxbe_cursor_backupdraw and nxbe_cursor_backupdraw_dev
+ *
+ * Description:
+ *   Called after any modification to the display (in window coordinate
+ *   frame) to perform the backup-draw operation on one color plane.
+ *
+ * Input Parameters:
+ *   be    - The back-end state structure instance, or
+ *   wnd   - Window state structure
+ *   rect  - The modified region of the window.  In windows coordinates for
+ *           nxbe_cursor_backupdraw(); in graphics device corrdinates for
+ *           nxbe_cursor_backupdraw_dev().
+ *   plane - The plane number to use.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void nxbe_cursor_backupdraw(FAR struct nxbe_window_s *wnd,
+                            FAR const struct nxgl_rect_s *rect, int plane);
+void nxbe_cursor_backupdraw_dev(FAR struct nxbe_state_s *be,
+                                FAR const struct nxgl_rect_s *rect,
+                                int plane);
+
+/****************************************************************************
+ * Name: nxbe_cursor_backupdraw_all and nxbe_cursor_backupdraw_devall
+ *
+ * Description:
+ *   Called after any modification to the display to perform the backup-draw
+ *   operation on all color planes.
+ *
+ * Input Parameters:
+ *   be    - The back-end state structure instance, or
+ *   wnd   - Window state structure
+ *   rect  - The modified region of the window.  In windows coordinates for
+ *           nxbe_cursor_backupdraw(); in graphics device corrdinates for
+ *           nxbe_cursor_backupdraw_dev().
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void nxbe_cursor_backupdraw_all(FAR struct nxbe_window_s *wnd,
+                                FAR const struct nxgl_rect_s *rect);
+void nxbe_cursor_backupdraw_devall(FAR struct nxbe_state_s *be,
+                                   FAR const struct nxgl_rect_s *rect);
+#endif /*  */
 
 /****************************************************************************
  * Name: nxbe_closewindow
@@ -567,7 +620,7 @@ void nxbe_move(FAR struct nxbe_window_s *wnd,
  * Input Parameters:
  *   wnd    - The window that will receive the bitmap image
  *   dest   - Describes the rectangular region on the display that will
- *            receive the the bit map.
+ *            receive the the bit map (window coordinate frame).
  *   src    - The start of the source image.
  *   origin - The origin of the upper, left-most corner of the full bitmap.
  *            Both dest and origin are in window coordinates, however, origin
@@ -598,7 +651,7 @@ void nxbe_bitmap_dev(FAR struct nxbe_window_s *wnd,
  * Input Parameters:
  *   wnd    - The window that will receive the bitmap image
  *   dest   - Describes the rectangular region on the display that will
- *            receive the the bit map.
+ *            receive the the bit map (window coordinate frame).
  *   src    - The start of the source image.
  *   origin - The origin of the upper, left-most corner of the full bitmap.
  *            Both dest and origin are in window coordinates, however, origin
@@ -634,12 +687,12 @@ void nxbe_bitmap(FAR struct nxbe_window_s *wnd,
  *
  * Input Parameters (same as for nxbe_bitmap_dev):
  *   wnd    - The window that will receive the bitmap image
- *   dest   - Describes the rectangular region on the display that will
- *            receive the the bit map.
+ *   dest   - Describes the rectangular region in the window that will
+ *            receive the the bit map (window coordinate frame).
  *   src    - The start of the source image.
  *   origin - The origin of the upper, left-most corner of the full bitmap.
- *            Both dest and origin are in window coordinates, however, origin
- *            may lie outside of the display.
+ *            Both dest and origin are in window coordinates, however,
+ *            origin may lie outside of the display.
  *   stride - The width of the full source image in bytes.
  *
  * Returned Value:
