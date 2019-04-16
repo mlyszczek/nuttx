@@ -1,0 +1,17 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+config FS_MTP
+	bool "MTP Support"
+	default n
+	depends on !DISABLE_MOUNTPOINT
+	select FS_READABLE
+	select FS_WRITABLE
+	---help---
+		Enable MTP support
+
+if FS_TMPFS
+
+endif
