@@ -304,7 +304,7 @@ static void usbmtp_putle32(uint8_t *buf, uint32_t val)
  * Name: usbmtp_lowlayer_wait
  *
  * Description:
- *   Wait for a SCSI worker thread event.
+ *   Wait for a MTP worker thread event.
  *
  ****************************************************************************/
 
@@ -315,13 +315,13 @@ static void usbmtp_lowlayer_wait(FAR struct usbmtp_dev_s *priv)
 
   uinfo("Enter!\n");
 
-  /* We must hold the SCSI lock to call this function */
+  /* We must hold the MTP lock to call this function */
 
   DEBUGASSERT(priv->thlock.semcount < 1);
 
   /* A flag is used to prevent driving up the semaphore count.  This function
-   * is called (primarily) from the SCSI work thread so we must disable
-   * interrupts momentarily to assure that test of the flag and the wait fo
+   * is called (primarily) from the MTP work thread so we must disable
+   * interrupts momentarily to assure that test of the flag and the wait for
    * the semaphore count are atomic.  Interrupts will, of course, be re-
    * enabled while we wait for the event.
    */
@@ -329,11 +329,11 @@ static void usbmtp_lowlayer_wait(FAR struct usbmtp_dev_s *priv)
   flags = enter_critical_section();
   priv->thwaiting = true;
 
-  /* Relinquish our lock on the SCSI state data */
+  /* Relinquish our lock on the MTP state data */
 
   usbmtp_lowlayer_unlock(priv);
 
-  /* Now wait for a SCSI event to be signalled */
+  /* Now wait for a MTP event to be signalled */
 
   do
     {
@@ -343,203 +343,10 @@ static void usbmtp_lowlayer_wait(FAR struct usbmtp_dev_s *priv)
     }
   while (priv->thwaiting);
 
-  /* Re-acquire our lock on the SCSI state data */
+  /* Re-acquire our lock on the MTP state data */
 
   usbmtp_lowlayer_lock(priv);
   leave_critical_section(flags);
-}
-
-/****************************************************************************
- * Name: usbmtp_cmdtestunitready
- *
- * Description:
- *  Handle the SCSI_CMD_TESTUNITREADY command
- *
- ****************************************************************************/
-
-static inline int usbmtp_cmdtestunitready(FAR struct usbmtp_dev_s *priv)
-{
-  int ret;
-
-  uinfo("Enter!\n");
-
-  priv->u.alloclen = 0;
-  ret = usbmtp_setupcmd(priv, 6, USBMTP_FLAGS_DIRNONE);
-  return ret;
-}
-
-/****************************************************************************
- * Name: usbmtp_setupcmd
- *
- * Description:
- *   Called after each SCSI command is identified in order to perform setup
- *   and verification operations that are common to all SCSI commands.  This
- *   function performs the following common setup operations:
- *
- *     1. Determine the direction of the response
- *     2. Verify lengths
- *     3. Setup and verify the LUN
- *
- *   Includes special logic for INQUIRY and REQUESTSENSE commands
- *
- ****************************************************************************/
-
-static int inline usbmtp_setupcmd(FAR struct usbmtp_dev_s *priv,
-                                  uint8_t cdblen, uint8_t flags)
-{
-  FAR struct usbmtp_lun_s *lun = NULL;
-  uint32_t datlen;
-  uint8_t dir;
-  int ret = OK;
-
-  uinfo("Enter!\n");
-
-  /* Verify the LUN and set up the current LUN reference in the
-   * device structure
-   */
-
-  if (priv->cbwlun < priv->nluns)
-    {
-      /* LUN number is valid in a valid range, but the LUN is not necessarily
-       * bound to a block driver.  That will be checked as necessary in each
-       * individual command.
-       */
-
-      lun       = &priv->luntab[priv->cbwlun];
-      priv->lun = lun;
-    }
-
-  /* Only a few commands may specify unsupported LUNs */
-
-  else if ((flags & USBMTP_FLAGS_LUNNOTNEEDED) == 0)
-    {
-      usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_CMDBADLUN), priv->cbwlun);
-      ret = -EINVAL;
-    }
-
-  /* Extract the direction and data transfer length */
-
-  dir    = flags & USBMTP_FLAGS_DIRMASK;      /* Expected data direction */
-  datlen = 0;
-  if ((flags & USBMTP_FLAGS_BLOCKXFR) == 0)
-    {
-      /* Non-block transfer.  Data length: Host allocation to receive data
-       * (only for device-to-host transfers.  At present, alloclen is set
-       * to zero for all host-to-device, non-block transfers.
-       */
-
-      datlen = priv->u.alloclen;
-    }
-  else if (lun)
-    {
-      /* Block transfer: Calculate the total size of all sectors to be transferred */
-
-      datlen = priv->u.alloclen * lun->sectorsize;
-    }
-
-  /* Check the data direction.  This was set up at the end of the
-   * IDLE state when the CBW was parsed, but if there is no data,
-   * then the direction is none.
-   */
-
-  if (datlen == 0)
-    {
-      /* No data.. then direction is none */
-
-      dir = USBMTP_FLAGS_DIRNONE;
-    }
-
-  /* Compare the expected data length in the command to the data length
-   * in the CBW.
-   */
-
-  else if (priv->cbwlen < datlen)
-    {
-      /* Clip to the length in the CBW and declare a phase error */
-
-      usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_PHASEERROR1), priv->cdb[0]);
-      if ((flags & USBMTP_FLAGS_BLOCKXFR) != 0)
-        {
-          priv->u.alloclen = priv->cbwlen;
-        }
-      else if (lun)
-        {
-          priv->u.xfrlen = priv->cbwlen / lun->sectorsize;
-        }
-
-      priv->phaseerror = 1;
-    }
-
-  /* Initialize the residue */
-
-  priv->residue = priv->cbwlen;
-
-  /* Conflicting data directions is a phase error */
-
-  if (priv->cbwdir != dir && datlen > 0)
-    {
-      usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_PHASEERROR2), priv->cdb[0]);
-      priv->phaseerror = 1;
-      ret             = -EINVAL;
-    }
-
-  /* Compare the length of data in the cdb[] with the expected length
-   * of the command.  These sizes should match exactly.
-   */
-
-  if (cdblen != priv->cdblen)
-    {
-      usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_PHASEERROR3), priv->cdb[0]);
-      priv->phaseerror = 1;
-      ret              = -EINVAL;
-    }
-
-  /* Was a valid LUN provided? */
-
-  if (lun)
-    {
-      /* Retain the sense data for the REQUEST SENSE command */
-
-      if ((flags & USBMTP_FLAGS_RETAINSENSEDATA) == 0)
-        {
-          /* Discard the sense data */
-
-          lun->sd     = SCSI_KCQ_NOSENSE;
-          lun->sdinfo = 0;
-        }
-
-      /* If a unit attention condition exists, then only a restricted set of
-       * commands is permitted.
-       */
-
-      if (lun->uad != SCSI_KCQ_NOSENSE && (flags & USBMTP_FLAGS_UACOKAY) != 0)
-        {
-          /* Command not permitted */
-
-          usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_CMDUNEVIOLATION),
-                   priv->cbwlun);
-          lun->sd  = lun->uad;
-          lun->uad = SCSI_KCQ_NOSENSE;
-          ret      = -EINVAL;
-        }
-    }
-
-  /* The final, 1-byte field of every SCSI command is the Control field which
-   * must be zero
-   */
-
-  if (priv->cdb[cdblen - 1] != 0)
-    {
-      usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_SCSICMDCONTROL), 0);
-      if (lun)
-        {
-          lun->sd = SCSI_KCQIR_INVALIDFIELDINCBA;
-        }
-
-      ret = -EINVAL;
-    }
-
-  return ret;
 }
 
 /****************************************************************************
@@ -561,7 +368,7 @@ static int usbmtp_idlestate(FAR struct usbmtp_dev_s *priv)
   FAR struct usbmtp_req_s *privreq;
   FAR struct usbdev_req_s *req;
   uint8_t *buffer;
-  uint16_t mtpcmd;
+  //uint16_t mtpcmd;
   irqstate_t flags;
   int ret = -EINVAL;
 
@@ -593,13 +400,19 @@ static int usbmtp_idlestate(FAR struct usbmtp_dev_s *priv)
   usbmtp_dumpdata("MTP-", (FAR uint8_t *)buffer,
                   USBMSC_CBW_SIZEOF - USBMSC_MAXCDBLEN + 1);
 
+  usbmtp_lowlayer_lock(priv);
+
+  /* Process received request */
+
+  mtp_process_request((FAR uint8_t *)buffer);
+
+#if 0
   /* Get the current command */
 
   mtpcmd = buffer[7] << 8 | buffer[6];
 
   usbmtp_dumpdata("MTP CMD", &mtpcmd, 2);
 
-  usbmtp_lowlayer_lock(priv);
   switch (mtpcmd)
     {
     case MTP_OPEN_SESSION:                  /* MTP OpenSession */
@@ -616,12 +429,12 @@ static int usbmtp_idlestate(FAR struct usbmtp_dev_s *priv)
       priv->u.alloclen = 0;
       if (ret == OK)
         {
-          priv->lun->sd = SCSI_KCQIR_INVALIDCOMMAND;
           ret = -EINVAL;
         }
 
       break;
     }
+#endif //if 0
 
   usbmtp_lowlayer_unlock(priv);
 
@@ -644,7 +457,7 @@ static int usbmtp_idlestate(FAR struct usbmtp_dev_s *priv)
  * Description:
  *   Called from the worker thread in the USBMTP_STATE_CMDPARSE state.
  *   This state is entered when usbmtp_idlestate obtains a valid CBW
- *   containing SCSI commands.  This function processes those SCSI commands.
+ *   containing MTP commands.  This function processes those MTP commands.
  *
  * Returned value:
  *   If no write request is available or certain other errors occur, this
@@ -666,37 +479,6 @@ static int usbmtp_cmdparsestate(FAR struct usbmtp_dev_s *priv)
 
   if (priv->thstate == USBMTP_STATE_CMDPARSE)
     {
-      /* All commands come through this path (EXCEPT read6/10/12 and
-       * write6/10/12).  For all other commands, the following setup is
-       * expected for the response based on data direction:
-       *
-       * For direction NONE:
-       *   1. priv->u.alloclen == 0
-       *   2. priv->nreqbytes == 0
-       *
-       * For direction = device-to-host:
-       *   1. priv->u.alloclen == allocation length; space set aside by the
-       *      host to receive the device data.  The size of the response
-       *      cannot exceed this value.
-       *   2. response data is in the request currently at the head of
-       *      the priv->wrreqlist queue.  priv->nreqbytes is set to the length
-       *      of data in the response.
-       *
-       * For direction host-to-device
-       *   At present, there are no supported commands that should have
-       *   host-to-device transfers (except write6/10/12 and that command
-       *   logic does not take this path.  The 'residue' is left at the full
-       *   host-to-device data size.
-       *
-       * For all:
-       *   ret set to <0 if an error occurred in parsing the commands.
-       */
-
-      /* For from device-to-hose operations, the residue is the expected size
-       * (the initial value of 'residue') minus the amount actually returned
-       * in the response:
-       */
-
       if (priv->cbwdir == USBMTP_FLAGS_DIRDEVICE2HOST)
         {
           /* The number of bytes in the response cannot exceed the host
@@ -742,7 +524,7 @@ static int usbmtp_cmdparsestate(FAR struct usbmtp_dev_s *priv)
  * Returned value:
  *   If no write request is available or certain other errors occur, this
  *   function returns a negated errno and stays in the USBMTP_STATE_CMDSTATUS
- *   state.  Otherwise, when the SCSI statis is successfully returned, this
+ *   state.  Otherwise, when the MTP statis is successfully returned, this
  *   function sets priv->thstate to USBMTP_STATE_IDLE and returns OK.
  *
  ****************************************************************************/
@@ -783,32 +565,7 @@ static int usbmtp_cmdstatusstate(FAR struct usbmtp_dev_s *priv)
   csw    = (FAR struct usbmsc_cbw_s *)req->buf;
   buffer = (FAR uint8_t *)req->buf;
 
-  /* Extract the sense data from the LUN structure */
-
-  if (lun)
-    {
-      sd = lun->sd;
-    }
-  else
-    {
-      sd = SCSI_KCQIR_INVALIDLUN;
-    }
-
-  /* Determine the CSW status: PASS, PHASEERROR, or FAIL */
-
-  if (priv->phaseerror)
-    {
-      usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_SNDPHERROR), 0);
-      status = USBMSC_CSWSTATUS_PHASEERROR;
-      sd     = SCSI_KCQIR_INVALIDCOMMAND;
-    }
-  else if (sd != SCSI_KCQ_NOSENSE)
-    {
-      usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_SNDCSWFAIL), 0);
-      status = USBMSC_CSWSTATUS_FAIL;
-    }
-
-  /* Format and submit the CSW */
+  /* Format and submit the response */
 
   csw->signature[0] = 'U';
   csw->signature[1] = 'S';
@@ -879,7 +636,7 @@ int usbmtp_lowlayer_main(int argc, char *argv[])
 
   uinfo("Started\n");
 
-  /* Get the SCSI state data handed off from the initialization logic */
+  /* Get the MTP state data handed off from the initialization logic */
 
   priv = g_usbmtp_handoff;
   DEBUGASSERT(priv);
@@ -993,7 +750,7 @@ int usbmtp_lowlayer_main(int argc, char *argv[])
 
       leave_critical_section(flags);
 
-      /* Loop processing each SCSI command state.  Each state handling
+      /* Loop processing each MTP command state.  Each state handling
        * function will do the following:
        *
        * - If it must block for an event, it will return a negated errno value
@@ -1044,7 +801,7 @@ int usbmtp_lowlayer_main(int argc, char *argv[])
  * Name: usbmtp_lowlayer_signal
  *
  * Description:
- *   Signal the SCSI worker thread that SCSI events need service.
+ *   Signal the MTP worker thread that MTP events need service.
  *
  ****************************************************************************/
 
@@ -1074,7 +831,7 @@ void usbmtp_lowlayer_signal(FAR struct usbmtp_dev_s *priv)
  * Name: usbmtp_lowlayer_lock
  *
  * Description:
- *   Get exclusive access to SCSI state data.
+ *   Get exclusive access to MTP state data.
  *
  ****************************************************************************/
 
