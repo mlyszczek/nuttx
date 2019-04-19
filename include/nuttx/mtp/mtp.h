@@ -571,3 +571,20 @@
 #define MTP_FILE_UNDEF_WIN_EXE      0xbe80
 #define MTP_FILE_ALL_IMAGES         0xffffffff
 
+struct mtp_proto_s
+{
+  uint32_t length;
+  uint16_t type;
+  uint16_t opcode;
+  uint32_t trans_id;
+  uint32_t param[5];
+};
+
+struct mtp_resp_s
+{
+  uint32_t length;
+  uint16_t type;
+  uint16_t opcode;
+  uint32_t trans_id;
+  uint32_t param[5];
+};

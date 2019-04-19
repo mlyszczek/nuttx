@@ -74,44 +74,74 @@
  * Public Data
  ****************************************************************************/
 
+struct mtp_resp_s g_response;
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+static void mtp_open_session(void)
+{
+  g_response.length   = 12;
+  g_response.type     = 3;
+  g_response.opcode   = MTP_OK_RESP;
+  g_response.trans_id = 0;
+}
+
+static void mtp_get_dev_info(void)
+{
+  g_response.length   = 32;
+  g_response.type     = 2;
+  g_response.opcode   = 0x1001;
+  g_response.trans_id = 1;
+  g_response.param[0] = 0x00060064;
+  g_response.param[1] = 0x00640000;
+  g_response.param[2] = 0x69006d14;
+  g_response.param[3] = 0x72006300;
+  g_response.param[4] = 0x00006f00;
+}
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-int mtp_process_request(FAR uint8_t *buffer)
+int mtp_process_request(FAR struct mtp_proto_s *proto)
 {
   uint16_t mtpcmd;
   int ret = OK;
 
   /* Get the current command */
 
-  mtpcmd = buffer[7] << 8 | buffer[6];
+  mtpcmd = proto->opcode;
 
   switch (mtpcmd)
     {
-    case MTP_OPEN_SESSION:                  /* MTP OpenSession */
-      syslog(LOG_DEBUG, "Open Session Command!\n");
-      break;
+      case MTP_OPEN_SESSION:    /* MTP OpenSession */
+        syslog(LOG_DEBUG, "Open Session Command!\n");
+        mtp_open_session();
+        break;
 
-    case MTP_GET_DEV_INFO:                  /* MTP GetDeviceInfo */
-      syslog(LOG_DEBUG, "GetDeviceInfo Command!\n");
-      break;
+      case MTP_GET_DEV_INFO:    /* MTP GetDeviceInfo */
+        syslog(LOG_DEBUG, "GetDeviceInfo Command!\n");
+        mtp_get_dev_info();
+        break;
 
-    default:
-      syslog(LOG_DEBUG, "Unknown Command!\n");
-      if (ret == OK)
-        {
-          ret = -EINVAL;
-        }
+      default:
+        syslog(LOG_DEBUG, "Unknown Command!\n");
+        if (ret == OK)
+          {
+            ret = -EINVAL;
+          }
 
-      break;
+        break;
     }
 
   return ret;
+}
+
+FAR uint8_t *mtp_get_response(void)
+{
+  return (FAR uint8_t *)&g_response;
 }
 
 #endif /* CONFIG_DISABLE_MOUNTPOINT */

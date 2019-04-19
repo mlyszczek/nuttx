@@ -367,8 +367,7 @@ static int usbmtp_idlestate(FAR struct usbmtp_dev_s *priv)
 {
   FAR struct usbmtp_req_s *privreq;
   FAR struct usbdev_req_s *req;
-  uint8_t *buffer;
-  //uint16_t mtpcmd;
+  FAR struct mtp_proto_s  *proto;
   irqstate_t flags;
   int ret = -EINVAL;
 
@@ -393,48 +392,17 @@ static int usbmtp_idlestate(FAR struct usbmtp_dev_s *priv)
     }
 
   req = privreq->req;
-  buffer = (uint8_t *)req->buf;
+  proto = (FAR struct mtp_proto_s *)req->buf;
 
   /* Handle the CBW */
 
-  usbmtp_dumpdata("MTP-", (FAR uint8_t *)buffer,
-                  USBMSC_CBW_SIZEOF - USBMSC_MAXCDBLEN + 1);
+  usbmtp_dumpdata("MTP RECV", (FAR uint8_t *)proto, proto->length);
 
   usbmtp_lowlayer_lock(priv);
 
   /* Process received request */
 
-  mtp_process_request((FAR uint8_t *)buffer);
-
-#if 0
-  /* Get the current command */
-
-  mtpcmd = buffer[7] << 8 | buffer[6];
-
-  usbmtp_dumpdata("MTP CMD", &mtpcmd, 2);
-
-  switch (mtpcmd)
-    {
-    case MTP_OPEN_SESSION:                  /* MTP OpenSession */
-      syslog(LOG_DEBUG, "Open Session Command!\n");
-      ret = usbmtp_cmdtestunitready(priv);
-      break;
-
-    case MTP_GET_DEV_INFO:                  /* MTP GetDeviceInfo */
-      syslog(LOG_DEBUG, "GetDeviceInfo Command!\n");
-      ret = usbmtp_cmdtestunitready(priv);
-      break;
-
-    default:
-      priv->u.alloclen = 0;
-      if (ret == OK)
-        {
-          ret = -EINVAL;
-        }
-
-      break;
-    }
-#endif //if 0
+  mtp_process_request(proto);
 
   usbmtp_lowlayer_unlock(priv);
 
@@ -471,74 +439,9 @@ static int usbmtp_idlestate(FAR struct usbmtp_dev_s *priv)
 static int usbmtp_cmdparsestate(FAR struct usbmtp_dev_s *priv)
 {
   FAR struct usbmtp_req_s *privreq;
-  int ret = -EINVAL;
-
-  uinfo("Enter!\n");
-
-  /* Is a response required? */
-
-  if (priv->thstate == USBMTP_STATE_CMDPARSE)
-    {
-      if (priv->cbwdir == USBMTP_FLAGS_DIRDEVICE2HOST)
-        {
-          /* The number of bytes in the response cannot exceed the host
-           * 'allocation length' in the command.
-           */
-
-          if (priv->nreqbytes > priv->u.alloclen)
-            {
-              priv->nreqbytes = priv->u.alloclen;
-            }
-
-          /* The residue is then the number of bytes that were not sent */
-
-          priv->residue -= priv->nreqbytes;
-        }
-
-      /* On return, we need the following:
-       *
-       *   1. Setup for CMDFINISH state if appropriate
-       *   2. priv->thstate set to either CMDPARSE if no buffer was
-       *      available or CMDFINISH to send the response
-       *   3. Return OK to continue; <0 to wait for the next event
-       */
-
-      usbtrace(TRACE_CLASSSTATE(USBMSC_CLASSSTATE_CMDPARSECMDFINISH),
-               priv->cdb[0]);
-
-      priv->thstate = USBMTP_STATE_CMDSTATUS;
-      ret = OK;
-    }
-
-  return ret;
-}
-
-/****************************************************************************
- * Name: usbmtp_cmdstatusstate
- *
- * Description:
- *   Called from the worker thread in the USBMTP_STATE_CMDSTATUS state.
- *   That state is after a CBW has been fully processed.  This function sends
- *   the concluding CSW.
- *
- * Returned value:
- *   If no write request is available or certain other errors occur, this
- *   function returns a negated errno and stays in the USBMTP_STATE_CMDSTATUS
- *   state.  Otherwise, when the MTP statis is successfully returned, this
- *   function sets priv->thstate to USBMTP_STATE_IDLE and returns OK.
- *
- ****************************************************************************/
-
-static int usbmtp_cmdstatusstate(FAR struct usbmtp_dev_s *priv)
-{
-  FAR struct usbmtp_lun_s *lun = priv->lun;
-  FAR struct usbmtp_req_s *privreq;
   FAR struct usbdev_req_s *req;
-  FAR struct usbmsc_csw_s *csw;
+  FAR struct mtp_resp_s   *resp;
   irqstate_t flags;
-  uint32_t sd;
-  uint8_t status = USBMSC_CSWSTATUS_PASS;
-  uint8_t *buffer;
   int ret;
 
   uinfo("Enter!\n");
@@ -561,37 +464,112 @@ static int usbmtp_cmdstatusstate(FAR struct usbmtp_dev_s *priv)
       return -ENOMEM;
     }
 
-  req    = privreq->req;
-  csw    = (FAR struct usbmsc_cbw_s *)req->buf;
-  buffer = (FAR uint8_t *)req->buf;
+  req            = privreq->req;
 
-  /* Format and submit the response */
+  /* Read the MTP response */
 
-  csw->signature[0] = 'U';
-  csw->signature[1] = 'S';
-  csw->signature[2] = 'B';
-  csw->signature[3] = 'S';
-  usbmtp_putle32(csw->tag, priv->cbwtag);
-  usbmtp_putle32(csw->residue, priv->residue);
-  csw->status       = status;
+  resp           = mtp_get_response();
+  req->buf       = resp;
 
-  buffer[0] = 0x0c;
-  buffer[1] = 0x00;
-  buffer[2] = 0x00;
-  buffer[3] = 0x00;
-  buffer[4] = 0x03;
-  buffer[5] = 0x00;
-  buffer[6] = 0x01;
-  buffer[7] = 0x20;
-  buffer[8] = 0x00;
-  buffer[9] = 0x00;
-  buffer[10] = 0x00;
-  buffer[11] = 0x00;
+  usbmtp_dumpdata("MTP SEND", (FAR uint8_t *)req->buf,
+                  resp->length);
 
-  usbmtp_dumpdata("SCSCI CSW", (FAR uint8_t *)csw,
-                  12 /* USBMSC_CSW_SIZEOF */);
+  req->len       = resp->length;
+  req->callback  = usbmtp_wrcomplete;
+  req->priv      = privreq;
+  req->flags     = USBDEV_REQFLAGS_NULLPKT;
 
-  req->len       = 12; /* USBMSC_CSW_SIZEOF */
+  ret            = EP_SUBMIT(priv->epbulkin, req);
+  if (ret < 0)
+    {
+      usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_SNDSTATUSSUBMIT),
+               (uint16_t)-ret);
+
+      flags = enter_critical_section();
+      (void)sq_addlast((FAR sq_entry_t *)privreq, &priv->wrreqlist);
+      leave_critical_section(flags);
+    }
+
+  /* If there is still data to transmit, then STALL and move the the next */
+
+  if (resp->opcode == MTP_GET_DEV_INFO)
+    {
+       usleep (100000);
+       (void)EP_STALL(priv->epbulkin);
+       usleep (100000);
+       priv->thstate = USBMTP_STATE_CMDSTATUS;
+    }
+  else
+    {
+      /* Return to the IDLE state */
+
+      usbtrace(TRACE_CLASSSTATE(USBMSC_CLASSSTATE_CMDSTATUSIDLE), 0);
+      priv->thstate = USBMTP_STATE_IDLE;
+    }
+
+  return OK;
+}
+
+/****************************************************************************
+ * Name: usbmtp_cmdstatusstate
+ *
+ * Description:
+ *   Called from the worker thread in the USBMTP_STATE_CMDSTATUS state.
+ *   That state is after a CBW has been fully processed.  This function sends
+ *   the concluding CSW.
+ *
+ * Returned value:
+ *   If no write request is available or certain other errors occur, this
+ *   function returns a negated errno and stays in the USBMTP_STATE_CMDSTATUS
+ *   state.  Otherwise, when the MTP statis is successfully returned, this
+ *   function sets priv->thstate to USBMTP_STATE_IDLE and returns OK.
+ *
+ ****************************************************************************/
+
+static int usbmtp_cmdstatusstate(FAR struct usbmtp_dev_s *priv)
+{
+  FAR struct usbmtp_req_s *privreq;
+  FAR struct usbdev_req_s *req;
+  FAR struct mtp_resp_s   *resp;
+  irqstate_t flags;
+  int ret;
+
+  uinfo("Enter!\n");
+
+  /* Take a request from the wrreqlist */
+
+  flags = enter_critical_section();
+  privreq = (FAR struct usbmtp_req_s *)sq_remfirst(&priv->wrreqlist);
+  leave_critical_section(flags);
+
+  /* If there no request structures available, then just return an error.
+   * This will cause us to remain in the CMDSTATUS status.  When a request
+   * is returned, the worker thread will be awakened in the
+   * USBMTP_STATE_CMDSTATUS and we will be called again.
+   */
+
+  if (!privreq)
+    {
+      usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_CMDSTATUSWRREQLISTEMPTY), 0);
+      return -ENOMEM;
+    }
+
+  req            = privreq->req;
+
+  /* Read the MTP response */
+
+  resp           = mtp_get_response();
+  req->buf       = resp;
+
+  resp->length   = 12;
+  resp->type     = 3;
+  resp->opcode   = MTP_OK_RESP;
+  resp->trans_id = 1;
+
+  usbmtp_dumpdata("MTP SEND2", (FAR uint8_t *)req->buf,
+                  resp->length);
+
+  req->len       = resp->length;
   req->callback  = usbmtp_wrcomplete;
   req->priv      = privreq;
   req->flags     = USBDEV_REQFLAGS_NULLPKT;
@@ -611,6 +589,17 @@ static int usbmtp_cmdstatusstate(FAR struct usbmtp_dev_s *priv)
 
   usbtrace(TRACE_CLASSSTATE(USBMSC_CLASSSTATE_CMDSTATUSIDLE), 0);
   priv->thstate = USBMTP_STATE_IDLE;
+
+  return OK;
+}
+
+/****************************************************************************
+ * Name: usbmtp_cmdfinishstate
+ ****************************************************************************/
+
+static int usbmtp_cmdfinishstate(FAR struct usbmtp_dev_s *priv)
+{
+  uinfo("Enter!\n");
   return OK;
 }
 
@@ -776,6 +765,10 @@ int usbmtp_lowlayer_main(int argc, char *argv[])
 
             case USBMTP_STATE_CMDSTATUS:        /* Processing the status phase of a command */
               ret = usbmtp_cmdstatusstate(priv);
+              break;
+
+            case USBMTP_STATE_CMDFINISH:
+              ret = usbmtp_cmdfinishstate(priv);
               break;
 
             default:

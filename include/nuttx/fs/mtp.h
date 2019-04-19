@@ -85,7 +85,11 @@ extern "C"
  *
  ****************************************************************************/
 
-int mtp_process_request(FAR uint8_t *buffer);
+/* define it here to avoid compilation error */
+
+struct mtp_proto_s;
+
+int mtp_process_request(FAR struct mtp_proto_s *proto);
 
 #undef EXTERN
 #ifdef __cplusplus
