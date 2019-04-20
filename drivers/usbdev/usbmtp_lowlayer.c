@@ -419,6 +419,7 @@ static int usbmtp_idlestate(FAR struct usbmtp_dev_s *priv)
   return ret;
 }
 
+
 /****************************************************************************
  * Name: usbmtp_cmdparsestate
  *
@@ -492,11 +493,16 @@ static int usbmtp_cmdparsestate(FAR struct usbmtp_dev_s *priv)
 
   /* If there is still data to transmit, then STALL and move the the next */
 
-  if (resp->opcode == MTP_GET_DEV_INFO)
+  if (resp->opcode == MTP_GET_DEV_INFO || resp->opcode == MTP_GET_STORAGE_IDS ||
+      resp->opcode == MTP_GET_STORAGE_INFO)
     {
-       usleep (100000);
-       (void)EP_STALL(priv->epbulkin);
-       usleep (100000);
+       /* Wait transfer to complete */
+
+       while ((priv->theventset & USBMTP_EVENT_WRCOMPLETE) == 0)
+         {
+           usbmtp_lowlayer_wait(priv);
+         }
+
        priv->thstate = USBMTP_STATE_CMDSTATUS;
     }
   else
@@ -561,10 +567,11 @@ static int usbmtp_cmdstatusstate(FAR struct usbmtp_dev_s *priv)
   resp           = mtp_get_response();
   req->buf       = resp;
 
+  /* Return an OK response */
+
   resp->length   = 12;
-  resp->type     = 3;
+  resp->type     = MTP_TYPE_RESPONSE;
   resp->opcode   = MTP_OK_RESP;
-  resp->trans_id = 1;
 
   usbmtp_dumpdata("MTP SEND2", (FAR uint8_t *)req->buf,
                   resp->length);

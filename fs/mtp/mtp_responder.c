@@ -80,25 +80,247 @@ struct mtp_resp_s g_response;
  * Private Functions
  ****************************************************************************/
 
-static void mtp_open_session(void)
+void mtp_open_session(FAR struct mtp_proto_s *proto)
 {
-  g_response.length   = 12;
-  g_response.type     = 3;
-  g_response.opcode   = MTP_OK_RESP;
-  g_response.trans_id = 0;
+  g_response.length      = 12;
+  g_response.type        = MTP_TYPE_RESPONSE;
+  g_response.opcode      = MTP_OK_RESP;
+  g_response.trans_id    = proto->trans_id;
 }
 
-static void mtp_get_dev_info(void)
+void mtp_get_dev_info(FAR struct mtp_proto_s *proto)
 {
-  g_response.length   = 32;
-  g_response.type     = 2;
-  g_response.opcode   = 0x1001;
-  g_response.trans_id = 1;
-  g_response.param[0] = 0x00060064;
-  g_response.param[1] = 0x00640000;
-  g_response.param[2] = 0x69006d14;
-  g_response.param[3] = 0x72006300;
-  g_response.param[4] = 0x00006f00;
+  g_response.length      = 73;
+  g_response.type        = MTP_TYPE_DATA;
+  g_response.opcode      = MTP_GET_DEV_INFO;
+  g_response.trans_id    = proto->trans_id;
+
+  /* uint16 = 100 */
+
+  g_response.payload[0]  = 0x64;
+  g_response.payload[1]  = 0x00;
+
+  /* uint32 = 6 , extension */
+
+  g_response.payload[2]  = 0x06;
+  g_response.payload[3]  = 0;
+  g_response.payload[4]  = 0;
+  g_response.payload[5]  = 0;
+
+  /* uint16 = 100 */
+
+  g_response.payload[6]  = 0x64;
+  g_response.payload[7]  = 0x00;
+
+  /* size = 1, empty string in unicode */
+
+  g_response.payload[8]  = 1;
+  g_response.payload[9]  = 0x00;
+  g_response.payload[10] = 0x00;
+
+  /* 00 00 */
+
+  g_response.payload[11] = 0x00;
+  g_response.payload[12] = 0x00;
+
+  /* Supported Operations */
+
+  /* First we need to report number of functions */
+
+  g_response.payload[13] = 0x0a;
+  g_response.payload[14] = 0x00;
+  g_response.payload[15] = 0x00;
+  g_response.payload[16] = 0x00;
+
+  /* GetDeviceInfo       = 0x1001 */
+
+  g_response.payload[17] = 0x01;
+  g_response.payload[18] = 0x10;
+
+  /* OpenSession         = 0x1002 */
+
+  g_response.payload[19] = 0x02;
+  g_response.payload[20] = 0x10;
+
+  /* CloseSession        = 0x1003 */
+
+  g_response.payload[21] = 0x03;
+  g_response.payload[22] = 0x10;
+
+  /* GetStorageIDs       = 0x1004 */
+
+  g_response.payload[23] = 0x04;
+  g_response.payload[24] = 0x10;
+
+  /* GetStorageInfo      = 0x1005 */
+
+  g_response.payload[25] = 0x05;
+  g_response.payload[26] = 0x10;
+
+  /* GetNumObjects       = 0x1006 */
+
+  g_response.payload[27] = 0x06;
+  g_response.payload[28] = 0x10;
+
+  /* GetObjectHandles    = 0x1007 */
+
+  g_response.payload[29] = 0x07;
+  g_response.payload[30] = 0x10;
+
+  /* GetOjectInfo        = 0x1008 */
+
+  g_response.payload[31] = 0x08;
+  g_response.payload[32] = 0x10;
+
+  /* GetObject           = 0x1009 */
+
+  g_response.payload[33] = 0x09;
+  g_response.payload[34] = 0x10;
+
+  /* GetPartialObj       = 0x101b */
+
+  g_response.payload[35] = 0x1b;
+  g_response.payload[36] = 0x10;
+
+  /* size = 1, empty string in unicode */
+
+  g_response.payload[37] = 1;
+  g_response.payload[38] = 0x00;
+  g_response.payload[39] = 0x00;
+
+  /* size = 1, empty string in unicode */
+
+  g_response.payload[40] = 1;
+  g_response.payload[41] = 0x00;
+  g_response.payload[42] = 0x00;
+
+  /* size = 1, empty string in unicode */
+
+  g_response.payload[43] = 1;
+  g_response.payload[44] = 0x00;
+  g_response.payload[45] = 0x00;
+
+  /* Format Codes */
+
+  g_response.payload[46] = 2;
+
+  /* Code for Undefined Object */
+
+  g_response.payload[47] = 0x00;
+  g_response.payload[48] = 0x30;
+
+  /* Code for Association */
+
+  g_response.payload[49] = 0x01;
+  g_response.payload[50] = 0x30;
+
+  /* Manufacturer */
+
+  g_response.payload[51] = 1;
+  g_response.payload[52] = 0x00;
+  g_response.payload[53] = 0x00;
+
+  /* Product */
+
+  g_response.payload[54] = 1;
+  g_response.payload[55] = 0x00;
+  g_response.payload[56] = 0x00;
+
+  /* version "", size = 1, empty string in unicode */
+
+  g_response.payload[57] = 1;
+  g_response.payload[58] = 0x00;
+  g_response.payload[59] = 0x00;
+
+  /* end */
+
+  g_response.payload[60] = 0x00;
+}
+
+void mtp_get_storage_ids(FAR struct mtp_proto_s *proto)
+{
+  g_response.length      = 47;
+  g_response.type        = MTP_TYPE_DATA;
+  g_response.opcode      = MTP_GET_STORAGE_IDS;
+  g_response.trans_id    = proto->trans_id;
+
+  /* StorageID */
+
+  g_response.payload[0]  = 0x01;
+  g_response.payload[1]  = 0x00;
+  g_response.payload[2]  = 0x00;
+  g_response.payload[3]  = 0x00;
+
+  g_response.payload[4]  = 0x01;
+  g_response.payload[5]  = 0x00;
+
+  g_response.payload[6]  = 0x01;
+  g_response.payload[7]  = 0x00;
+}
+
+void mtp_get_storage_info(FAR struct mtp_proto_s *proto)
+{
+  g_response.length      = 47;
+  g_response.type        = MTP_TYPE_DATA;
+  g_response.opcode      = MTP_GET_STORAGE_INFO;
+  g_response.trans_id    = proto->trans_id;
+
+  /* Return the StorageID: FixRAM 0x0001 | Hierar: 0x0002 */
+
+  g_response.payload[0]  = 0x03;
+  g_response.payload[1]  = 0x00;
+  g_response.payload[2]  = 0x02;
+  g_response.payload[3]  = 0x00;
+
+  /* Access: Read/Write */
+
+  g_response.payload[4]  = 0x00;
+  g_response.payload[5]  = 0x00;
+
+  /* Max size in bytes : 128KB */
+
+  g_response.payload[6]  = 0x00;
+  g_response.payload[7]  = 0x00;
+  g_response.payload[8]  = 0x02;
+  g_response.payload[9]  = 0x00;
+  g_response.payload[10] = 0x00;
+  g_response.payload[11] = 0x00;
+  g_response.payload[12] = 0x00;
+  g_response.payload[13] = 0x00;
+
+  /* Free space in bytes : 64KB */
+
+  g_response.payload[14] = 0x00;
+  g_response.payload[15] = 0x00;
+  g_response.payload[16] = 0x01;
+  g_response.payload[17] = 0x00;
+  g_response.payload[18] = 0x00;
+  g_response.payload[19] = 0x00;
+  g_response.payload[20] = 0x00;
+  g_response.payload[21] = 0x00;
+
+  /* Free objects :  ~16 Millions of objects */
+
+  g_response.payload[22] = 0x00;
+  g_response.payload[23] = 0x00;
+  g_response.payload[24] = 0x00;
+  g_response.payload[25] = 0x01;
+
+  /* Storage Description: "A" */
+
+  g_response.payload[26] = 0x02;
+  g_response.payload[27] = 0x41;
+  g_response.payload[28] = 0x00;
+  g_response.payload[29] = 0x00;
+  g_response.payload[30] = 0x00;
+
+  /* Volume Identifier: "B" */
+
+  g_response.payload[31] = 0x02;
+  g_response.payload[32] = 0x42;
+  g_response.payload[33] = 0x00;
+  g_response.payload[34] = 0x00;
+  g_response.payload[35] = 0x00;
 }
 
 /****************************************************************************
@@ -116,14 +338,31 @@ int mtp_process_request(FAR struct mtp_proto_s *proto)
 
   switch (mtpcmd)
     {
-      case MTP_OPEN_SESSION:    /* MTP OpenSession */
+      case MTP_OPEN_SESSION:     /* MTP OpenSession */
         syslog(LOG_DEBUG, "Open Session Command!\n");
-        mtp_open_session();
+        mtp_open_session(proto);
         break;
 
-      case MTP_GET_DEV_INFO:    /* MTP GetDeviceInfo */
+      case MTP_GET_DEV_INFO:     /* MTP GetDeviceInfo */
         syslog(LOG_DEBUG, "GetDeviceInfo Command!\n");
-        mtp_get_dev_info();
+        mtp_get_dev_info(proto);
+        break;
+
+      case MTP_CLOSE_SESSION:    /* MTP OpenSession */
+        syslog(LOG_DEBUG, "Close Session Command!\n");
+#if 0 /* REVISIT */
+        mtp_close_session(proto);
+#endif
+        break;
+
+      case MTP_GET_STORAGE_IDS:  /* MTP GetStorageIDs */
+        syslog(LOG_DEBUG, "GetStorageIDs Command!\n");
+        mtp_get_storage_ids(proto);
+        break;
+
+      case MTP_GET_STORAGE_INFO: /* MTP GetStorageInfo */
+        syslog(LOG_DEBUG, "GetStorageInfo Command!\n");
+        mtp_get_storage_info(proto);
         break;
 
       default:
