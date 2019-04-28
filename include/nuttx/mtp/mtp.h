@@ -599,6 +599,18 @@
 #define MTP_TYPE_RESPONSE           3
 #define MTP_TYPE_EVENT              4
 
+/* Default StorageID */
+
+#define MTP_DEFAULT_STORAGE_ID      (MTP_STORAGE_FIXEDROM << 16) | 0x0001
+
+/* Default Object Format */
+
+#define MTP_DEFAULT_OBJ_FORMAT      0x00000000
+
+/* Root Object */
+
+#define MTP_ROOT_OBJECT             0xffffffff
+
 struct mtp_proto_s
 {
   uint32_t length;
@@ -614,5 +626,17 @@ struct mtp_resp_s
   uint16_t type;
   uint16_t opcode;
   uint32_t trans_id;
-  uint8_t  payload[64];
+  uint8_t  payload[256];
 };
+
+/* Linked list of objects in the file system */
+
+struct mtp_obj_list_s
+{
+  uint32_t              obj_id;
+  char                  *obj_name;
+  uint8_t               in_root;
+  uint8_t               is_dir;
+  struct mtp_obj_list_s *next;
+};
+

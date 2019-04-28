@@ -104,19 +104,19 @@ static void     usbmtp_dumpdata(const char *msg, const uint8_t *buf,
 
 /* Utility Support Functions ************************************************/
 
-static uint16_t usbmtp_getbe16(uint8_t *buf);
-static uint32_t usbmtp_getbe32(uint8_t *buf);
-static void     usbmtp_putbe16(uint8_t * buf, uint16_t val);
-static void     usbmtp_putbe24(uint8_t *buf, uint32_t val);
-static void     usbmtp_putbe32(uint8_t *buf, uint32_t val);
+static uint16_t usbmtp_getbe16(FAR uint8_t *buf);
+static uint32_t usbmtp_getbe32(FAR uint8_t *buf);
+static void     usbmtp_putbe16(FAR uint8_t * buf, uint16_t val);
+static void     usbmtp_putbe24(FAR uint8_t *buf, uint32_t val);
+static void     usbmtp_putbe32(FAR uint8_t *buf, uint32_t val);
 #if 0 /* not used */
-static uint16_t usbmtp_getle16(uint8_t *buf);
+static uint16_t usbmtp_getle16(FAR uint8_t *buf);
 #endif
-static uint32_t usbmtp_getle32(uint8_t *buf);
+static uint32_t usbmtp_getle32(FAR uint8_t *buf);
 #if 0 /* not used */
-static void     usbmtp_putle16(uint8_t * buf, uint16_t val);
+static void     usbmtp_putle16(FAR uint8_t * buf, uint16_t val);
 #endif
-static void     usbmtp_putle32(uint8_t *buf, uint32_t val);
+static void     usbmtp_putle32(FAR uint8_t *buf, uint32_t val);
 
 /* MTP Command Processing ***************************************************/
 
@@ -139,15 +139,21 @@ static int    usbmtp_cmdstatusstate(FAR struct usbmtp_dev_s *priv);
  ****************************************************************************/
 
 #if defined(CONFIG_DEBUG_INFO) && defined (CONFIG_DEBUG_USB)
-static void usbmtp_dumpdata(const char *msg, const uint8_t *buf, int buflen)
+static void usbmtp_dumpdata(FAR const char *msg, FAR const uint8_t *buf,
+                            int buflen)
 {
   int i;
 
   uinfo("Enter!\n");
 
-  syslog(LOG_DEBUG, "%s:", msg);
+  syslog(LOG_DEBUG, "%s:\n", msg);
   for (i = 0; i < buflen; i++)
     {
+      if ((i % 16) == 0)
+        {
+          syslog(LOG_DEBUG, "\n%08x:", i);
+        }
+
       syslog(LOG_DEBUG, " %02x", buf[i]);
     }
 
@@ -163,7 +169,7 @@ static void usbmtp_dumpdata(const char *msg, const uint8_t *buf, int buflen)
  *
  ****************************************************************************/
 
-static uint16_t usbmtp_getbe16(uint8_t *buf)
+static uint16_t usbmtp_getbe16(FAR uint8_t *buf)
 {
   uinfo("Enter!\n");
   return ((uint16_t)buf[0] << 8) | ((uint16_t)buf[1]);
@@ -177,7 +183,7 @@ static uint16_t usbmtp_getbe16(uint8_t *buf)
  *
  ****************************************************************************/
 
-static uint32_t usbmtp_getbe32(uint8_t *buf)
+static uint32_t usbmtp_getbe32(FAR uint8_t *buf)
 {
   uinfo("Enter!\n");
   return ((uint32_t)buf[0] << 24) | ((uint32_t)buf[1] << 16) |
@@ -193,7 +199,7 @@ static uint32_t usbmtp_getbe32(uint8_t *buf)
  *
  ****************************************************************************/
 
-static void usbmtp_putbe16(uint8_t * buf, uint16_t val)
+static void usbmtp_putbe16(FAR uint8_t * buf, uint16_t val)
 {
   uinfo("Enter!\n");
   buf[0] = val >> 8;
@@ -209,7 +215,7 @@ static void usbmtp_putbe16(uint8_t * buf, uint16_t val)
  *
  ****************************************************************************/
 
-static void usbmtp_putbe24(uint8_t *buf, uint32_t val)
+static void usbmtp_putbe24(FAR uint8_t *buf, uint32_t val)
 {
   uinfo("Enter!\n");
   buf[0] = val >> 16;
@@ -226,7 +232,7 @@ static void usbmtp_putbe24(uint8_t *buf, uint32_t val)
  *
  ****************************************************************************/
 
-static void usbmtp_putbe32(uint8_t *buf, uint32_t val)
+static void usbmtp_putbe32(FAR uint8_t *buf, uint32_t val)
 {
   uinfo("Enter!\n");
   buf[0] = val >> 24;
@@ -244,7 +250,7 @@ static void usbmtp_putbe32(uint8_t *buf, uint32_t val)
  ****************************************************************************/
 
 #if 0 /* not used */
-static uint16_t usbmtp_getle16(uint8_t *buf)
+static uint16_t usbmtp_getle16(FAR uint8_t *buf)
 {
   return ((uint16_t)buf[1] << 8) | ((uint16_t)buf[0]);
 }
@@ -258,7 +264,7 @@ static uint16_t usbmtp_getle16(uint8_t *buf)
  *
  ****************************************************************************/
 
-static uint32_t usbmtp_getle32(uint8_t *buf)
+static uint32_t usbmtp_getle32(FAR uint8_t *buf)
 {
   uinfo("Enter!\n");
   return ((uint32_t)buf[3] << 24) | ((uint32_t)buf[2] << 16) |
@@ -275,7 +281,7 @@ static uint32_t usbmtp_getle32(uint8_t *buf)
  ****************************************************************************/
 
 #if 0 /* not used */
-static void usbmtp_putle16(uint8_t * buf, uint16_t val)
+static void usbmtp_putle16(FAR uint8_t *buf, uint16_t val)
 {
   buf[0] = val;
   buf[1] = val >> 8;
@@ -291,7 +297,7 @@ static void usbmtp_putle16(uint8_t * buf, uint16_t val)
  *
  ****************************************************************************/
 
-static void usbmtp_putle32(uint8_t *buf, uint32_t val)
+static void usbmtp_putle32(FAR uint8_t *buf, uint32_t val)
 {
   uinfo("Enter!\n");
   buf[0] = val;
@@ -419,7 +425,6 @@ static int usbmtp_idlestate(FAR struct usbmtp_dev_s *priv)
   return ret;
 }
 
-
 /****************************************************************************
  * Name: usbmtp_cmdparsestate
  *
@@ -493,8 +498,12 @@ static int usbmtp_cmdparsestate(FAR struct usbmtp_dev_s *priv)
 
   /* If there is still data to transmit, then STALL and move the the next */
 
-  if (resp->opcode == MTP_GET_DEV_INFO || resp->opcode == MTP_GET_STORAGE_IDS ||
-      resp->opcode == MTP_GET_STORAGE_INFO)
+  if (resp->opcode == MTP_GET_DEV_INFO ||
+      resp->opcode == MTP_GET_STORAGE_IDS ||
+      resp->opcode == MTP_GET_STORAGE_INFO ||
+      resp->opcode == MTP_GET_OBJ_HANDLES ||
+      resp->opcode == MTP_GET_OBJ_INFO ||
+      resp->opcode == MTP_GET_OBJ)
     {
        /* Wait transfer to complete */
 
@@ -623,7 +632,7 @@ static int usbmtp_cmdfinishstate(FAR struct usbmtp_dev_s *priv)
  *
  ****************************************************************************/
 
-int usbmtp_lowlayer_main(int argc, char *argv[])
+int usbmtp_lowlayer_main(int argc, FAR char *argv[])
 {
   FAR struct usbmtp_dev_s *priv;
   irqstate_t flags;
