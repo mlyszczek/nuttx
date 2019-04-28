@@ -602,9 +602,9 @@ static ssize_t can_read(FAR struct file *filep, FAR char *buffer,
 {
   FAR struct inode         *inode = filep->f_inode;
   FAR struct can_dev_s     *dev = inode->i_private;
-  FAR sstruct can_reader_s *reader = NULL;
-  FAR sstruct list_node    *node;
-  FAR sstruct can_rxfifo_s *fifo;
+  FAR struct can_reader_s  *reader = NULL;
+  FAR struct list_node     *node;
+  FAR struct can_rxfifo_s  *fifo;
   size_t                    nread;
   irqstate_t                flags;
   int                       ret = 0;
@@ -1290,7 +1290,7 @@ int can_receive(FAR struct can_dev_s *dev, FAR struct can_hdr_s *hdr,
   FAR struct can_rxfifo_s *fifo;
   FAR uint8_t             *dest;
   FAR struct list_node    *node;
-  FAR struct list_node    *node;
+  FAR struct list_node    *tmp;
   int                      nexttail;
   int                      errcode = -ENOMEM;
   int                      i;
