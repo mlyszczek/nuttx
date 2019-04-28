@@ -49,7 +49,7 @@
 #include <nuttx/nx/nx.h>
 #include <nuttx/nx/nxtypes.h>
 
-#ifndef defined(CONFIG_NX_SWCURSOR) || defined(CONFIG_NX_HWCURSOR)
+#if defined(CONFIG_NX_SWCURSOR) || defined(CONFIG_NX_HWCURSOR)
 
 #undef EXTERN
 #if defined(__cplusplus)
@@ -79,13 +79,12 @@ extern "C"
  *    a process space and will not be generally available.  In that case,
  *    we could keep the image in a shared memory region or perhaps copy the
  *    image into a kernel internal buffer.  Neither of those are implemented.
- * 4. Only a single color plane is supported at present.
  */
 
 #if (defined(CONFIG_NX_SWCURSOR) && \
     (defined(CONFIG_NX_LCDDRIVER) || !defined(CONFIG_NX_DISABLE_1BPP) || \
     !defined(CONFIG_NX_DISABLE_2BPP) || !defined(CONFIG_NX_DISABLE_4BPP) || \
-     defined(CONFIG_BUILD_KERNEL) || CONFIG_NX_NPLANES > 1))
+     defined(CONFIG_BUILD_KERNEL)))
 #  undef CONFIG_NX_NOCURSOR
 #  undef CONFIG_NX_SWCURSOR
 #  define CONFIG_NX_NOCURSOR 1
@@ -124,7 +123,7 @@ struct nx_cursorimage_s
  * Name: nxcursor_enable
  *
  * Description:
- *   Enable/disable presentation of the cursor
+ *   Enable/disable presentation of the cursor.
  *
  * Input Parameters:
  *   hnd    - The server handle returned by nx_connect()
@@ -143,12 +142,12 @@ int nxcursor_enable(NXHANDLE hnd, bool enable);
  * Description:
  *   Set the cursor image.
  *
- *   The image is provided a a 2-bits-per-pixel image.  The two bit incoding
- *   is as followings:
+ *   The image is provided a a 2-bits-per-pixel image.  The two bit encoding
+ *   is as follows:
  *
- *   00 - The transparent background
- *   01 - Color1:  The main color of the cursor
- *   10 - Color2:  The color of any border
+ *   00 - The transparent background.
+ *   01 - Color1:  The main color of the cursor.
+ *   10 - Color2:  The color of any border.
  *   11 - Color3:  A blend color for better imaging (fake anti-aliasing).
  *
  *   NOTE: The NX logic will reference the user image buffer repeatedly.
@@ -179,7 +178,7 @@ int nxcursor_setimage(NXHANDLE hnd, FAR const struct nx_cursorimage_s *image);
  *   pos - The new cursor position
  *
  * Returned Value:
- *   OK on success; ERROR on failure with errno set appropriately
+ *   OK on success; ERROR on failure with errno set appropriately.
  *
  ****************************************************************************/
 

@@ -1118,6 +1118,27 @@ config STM32F7_FLASH_ART_ACCELERATOR
 		Enable if code and/or read-only data is accessed through ITCM bus instead of
 		AXIM bus.
 
+config STM32F7_PROGMEM
+	bool "Flash progmem support"
+	default n
+	---help---
+		Add progmem support, start block and end block options are provided to 
+		obtain an uniform flash memory mapping.
+
+if STM32F7_PROGMEM
+
+config STM32F7_PROGMEM_STARTBLOCK
+	int "First mapped progmem block"
+	default 0
+	range 0 64
+
+config STM32F7_PROGMEM_LASTBLOCK
+	int "Last mapped progmem block"
+	default -1
+	range -1 64
+
+endif # STM32F7_PROGMEM
+
 menu "STM32 Peripheral Support"
 
 # These "hidden" settings determine is a peripheral option is available for the
@@ -2448,6 +2469,27 @@ config STM32F7_DMACAPABLE
 		attempt the DMA or fall back to a different transfer method.
 
 menu "Timer Configuration"
+
+if SCHED_TICKLESS
+
+config STM32F7_TICKLESS_TIMER
+	int "Tickless hardware timer"
+	default 2
+	range 1 14
+	---help---
+		If the Tickless OS feature is enabled, then one clock must be
+		assigned to provided the timer needed by the OS.
+
+config STM32F7_TICKLESS_CHANNEL
+	int "Tickless timer channel"
+	default 1
+	range 1 4
+	---help---
+		If the Tickless OS feature is enabled, the one clock must be
+		assigned to provided the free-running timer needed by the OS
+		and one channel on that clock is needed to handle intervals.
+
+endif # SCHED_TICKLESS
 
 config STM32F7_TIM1_PWM
 	bool "TIM1 PWM"

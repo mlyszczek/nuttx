@@ -85,6 +85,7 @@ void NXGL_FUNCNAME(nxglib_cursor_backup, NXGLIB_SUFFIX)
   nxgl_coord_t width;
   nxgl_coord_t height;
   nxgl_coord_t sstride;
+  nxgl_coord_t dwidth;
   nxgl_coord_t dstride;
   int row;
   int col;
@@ -98,17 +99,18 @@ void NXGL_FUNCNAME(nxglib_cursor_backup, NXGLIB_SUFFIX)
   nxgl_rectintersect(&intersection, &intersection, bounds);
   if (!nxgl_nullrect(&intersection))
     {
-      /* Get the width and the height of the images in pixels/rows */
+      /* Get the width and the height of the images to copy in pixels/rows */
 
-      width   = be->cursor.bounds.pt2.x - be->cursor.bounds.pt1.x + 1;
-      height  = be->cursor.bounds.pt2.y - be->cursor.bounds.pt1.y + 1;
+      width   = intersection.pt2.x - intersection.pt1.x + 1;
+      height  = intersection.pt2.y - intersection.pt1.y + 1;
 
       /* Get the width of the images in bytes. */
 
       plane   = &be->plane[planeno];
       sstride = plane->pinfo.stride;
 
-      dstride = NXGL_SCALEX(width);
+      dwidth  = be->cursor.bounds.pt2.x - be->cursor.bounds.pt1.x + 1;
+      dstride = NXGL_SCALEX(dwidth);
 
       /* Get the origin position in the background image */
 
@@ -117,10 +119,10 @@ void NXGL_FUNCNAME(nxglib_cursor_backup, NXGLIB_SUFFIX)
       /* Get the source and destination addresses */
 
       fbmem  = (FAR uint8_t *)plane->pinfo.fbmem;
-      sline  = (FAR uint8_t *)fbmem + sstride * be->cursor.bounds.pt1.y +
-                NXGL_SCALEX(be->cursor.bounds.pt1.x);
+      sline  = (FAR uint8_t *)fbmem + sstride * intersection.pt1.y +
+                NXGL_SCALEX(intersection.pt1.x);
       dline  = (FAR uint8_t *)be->cursor.bkgd + dstride * origin.y +
-                NXGL_SCALEX(origin.y);
+                NXGL_SCALEX(origin.x);
 
       /* Save the cursor background by copying the device graphics memory */
 
