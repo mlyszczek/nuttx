@@ -1,5 +1,5 @@
 /********************************************************************************************
- * arch/arm/src/imxrt/imxrt106x_gpio.h
+ * arch/arm/src/imxrt/rt106x/imxrt106x_gpio.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>

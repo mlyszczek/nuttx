@@ -1,5 +1,5 @@
 /*****************************************************************************
- * arch/arm/src/imxrt/chip/imxrt105x_dmamux.h
+ * arch/arm/src/imxrt/chip/rt102x/imxrt102x_dmamux.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>

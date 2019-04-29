@@ -1,9 +1,9 @@
-/****************************************************************************
- * arch/arm/src/imxrt/chip/imxrt102x_memorymap.h
+/************************************************************************************
+ * arch/arm/src/imxrt/chip/rt106x/imxrt106x_memorymap.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
- *           Dave Marples <dave@marples.net>
+ *   Authors: Gregory Nutt <gnutt@nuttx.org>
+ *            David Sidrane <david_s5@nscdg.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,47 +32,46 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- *****************************************************************************/
+ ************************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT102X_MEMORYMAP_H
-#define __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT102X_MEMORYMAP_H
+#ifndef __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT106X_MEMORYMAP_H
+#define __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT106X_MEMORYMAP_H
 
-/*****************************************************************************
+/************************************************************************************
  * Included Files
- *****************************************************************************/
+ ************************************************************************************/
 
 #include <nuttx/config.h>
 
-/*****************************************************************************
+/************************************************************************************
  * Pre-processor Definitions
- *****************************************************************************/
+ ************************************************************************************/
 
 /* System memory map */
 
-#define IMXRT_ITCM_BASE           0x00000000  /* 256KB ITCM */
-                               /* 0x00040000     768KB ITCM Reserved */
+#define IMXRT_ITCM_BASE           0x00000000  /* 512KB ITCM */
+                               /* 0x00080000     512KB ITCM Reserved */
                                /* 0x00100000     1MB ITCM Reserved */
-#define IMXRT_ROMCP_BASE          0x00200000  /* 96KB ROMCP */
-                               /* 0x00218000     416KB ROMCP Reserved */
+#define IMXRT_ROMCP_BASE          0x00200000  /* 128KB ROMCP */
+                               /* 0x00220000     384KB ROMCP Reserved */
                                /* 0x00280000     1536KB Reserved */
                                /* 0x00400000     124MB Reserved */
-                               /* 0x00800000     1527MB Reserved */
-#define IMXRT_FLEXSPI_BASE        0x06000000  /* 128MB FlexSPI (Aliased) */
-#define IMXRT_SEMCA_BASE          0x06800000  /* 639MB SEMC (Aliased) */
-                               /* 0x90000000 256MB SEMC (Aliased) */
-#define IMXRT_DTCM_BASE           0x20000000  /* 256KB DTCM */
-                               /* 0x20040000     768KB DTCM Reserved */
+#define IMXRT_FLEXSPI_BASE        0x08000000  /* 128MB FlexSPI (Aliased) */
+#define IMXRT_SEMCA_BASE          0x10000000  /* 256MB SEMC (Aliased) */
+#define IMXRT_DTCM_BASE           0x20000000  /* 512KB DTCM */
+                               /* 0x20080000     512KB DTCM Reserved */
                                /* 0x20100000     1MB Reserved */
-#define IMXRT_OCRAM_BASE          0x20200000  /* 256KB OCRAM */
-                               /* 0x20240000     1792KB OCRAM Reserved */
+#define IMXRT_OCRAM2_BASE         0x20200000  /* 512KB OCRAM2 */
+#define IMXRT_OCRAM_BASE          0x20280000  /* 512KB OCRAM FlexRAM */
+                               /* 0x20300000     512KB OCRAM Reserved */
                                /* 0x20400000     252MB Reserved */
                                /* 0x30000000     256MB Reserved */
 #define IMXRT_AIPS1_BASE          0x40000000  /* 1MB AIPS-1 */
 #define IMXRT_AIPS2_BASE          0x40100000  /* 1MB AIPS-2 */
 #define IMXRT_AIPS3_BASE          0x40200000  /* 1MB AIPS-3 */
 #define IMXRT_AIPS4_BASE          0x40300000  /* 1MB AIPS-4 */
-                               /* 0x40400000     12MB Reserved */
-                               /* 0x41000000     1MB Reserved */
+                               /* 40400000       12MB Reserved */
+#define IMXRT_MAINCNF_BASE        0x41000000  /* 1MB "main" configuration port */
 #define IMXRT_MCNF_BASE           0x41100000  /* 1MB "m" configuration port */
                                /* 41200000       1MB Reserved for "per" GPV */
                                /* 41300000       1MB Reserved for "ems" GPV */
@@ -81,10 +80,14 @@
                                /* 0x41600000     1MB GPV Reserved */
                                /* 0x41700000     1MB GPV Reserved */
                                /* 0x41800000     8MB Reserved */
-                               /* 0x42000000     32MB Reserved */
+#define IMXRT_AIPS5_BASE          0x42000000  /* 1MB AIPS-5 */
+                               /* 0x42100000     31MB Reserved */
                                /* 0x44000000     64MB Reserved */
                                /* 0x48000000     384MB Reserved */
-#define IMXRT_FLEXCIPHER_BASE     0x60000000  /* 504MB FlexSPI/ FlexSPI ciphertext */
+#define IMXRT_FLEXCIPHER_BASE     0x60000000  /* 256MB FlexSPI/ FlexSPI ciphertext */
+#define IMXRT_FLEX2CIPHER_BASE    0x70000000  /* 240MB FlexSPI2/ FlexSPI ciphertext */
+#define IMXRT_FLEXSPI2TX_BASE     0x7f000000  /* 4MB FlexSPI2 TX FIFO */
+#define IMXRT_FLEXSPI2RX_BASE     0x7f400000  /* 4MB FlexSPI2 RX FIFO */
 #define IMXRT_FLEXSPITX_BASE      0x7f800000  /* 4MB FlexSPI TX FIFO */
 #define IMXRT_FLEXSPIRX_BASE      0x7fc00000  /* 4MB FlexSPI RX FIFO */
 #define IMXRT_EXTMEM_BASE         0x80000000  /* 1.5GB SEMC external memories shared memory space */
@@ -95,12 +98,12 @@
 
                                /* 0x40000000     256KB Reserved */
                                /* 0x40040000     240KB Reserved */
-#define IMXRT_AIPS1CNF_BASE       0x4007c000  /* 16KB AIPS-1 Configuration */
+#define IMXRT_AIPS1CNF_BASE       0x4007c000  /* 6KB AIPS-1 Configuration */
 #define IMXRT_DCDC_BASE           0x40080000  /* 16KB DCDC */
 #define IMXRT_PIT_BASE            0x40084000  /* 16KB PIT */
                                /* 0x40088000     16KB Reserved */
                                /* 0x4008c000     16KB Reserved */
-                               /* 0x40090000     16KB Reserved */
+#define IMXRT_MTR_BASE            0x40090000  /* 16KB MTR */
 #define IMXRT_ACMP_BASE           0x40094000  /* 16KB ACMP */
                                /* 0x40098000     16KB Reserved */
                                /* 0x4009c000     16KB Reserved */
@@ -108,7 +111,7 @@
 #define IMXRT_IOMUXCSNVSGPR_BASE  0x400a4000  /* 16KB IOMUXC_SNVS_GPR */
 #define IMXRT_IOMUXCSNVS_BASE     0x400a8000  /* 16KB IOMUXC_SNVS */
 #define IMXRT_IOMUXCGPR_BASE      0x400ac000  /* 16KB IOMUXC_GPR */
-#define IMXRT_FLEXRAM_BASE        0x400b0000  /* 16KB CM7_MXRT(FLEXRAM) */
+#define IMXRT_FLEXRAM_BASE        0x400b0000  /* 16KB CM7_MX6RT(FLEXRAM) */
 #define IMXRT_EWM_BASE            0x400b4000  /* 16KB EWM */
 #define IMXRT_WDOG1_BASE          0x400b8000  /* 16KB WDOG1 */
 #define IMXRT_WDOG3_BASE          0x400bc000  /* 16KB WDOG3 */
@@ -146,21 +149,21 @@
                                /* 0x401a4000     16KB Reserved */
                                /* 0x401a8000     16KB Reserved */
 #define IMXRT_FLEXIO1_BASE        0x401ac000  /* 16KB FlexIO1 */
-                               /* 0x401b0000     16KB Reserved */
+#define IMXRT_FLEXIO2_BASE        0x401b0000  /* 16KB FlexIO2 */
                                /* 0x401b4000     16KB Reserved */
 #define IMXRT_GPIO1_BASE          0x401b8000  /* 16KB GPIO1 */
 #define IMXRT_GPIO2_BASE          0x401bc000  /* 16KB GPIO2 */
 #define IMXRT_GPIO3_BASE          0x401c0000  /* 16KB GPIO3 */
-                               /* 0x401c4000     16KB Reserved */
+#define IMXRT_GPIO4_BASE          0x401c4000  /* 16KB GPIO4 */
                                /* 0x401c8000     16KB Reserved */
                                /* 0x401cc000     16KB Reserved */
 #define IMXRT_CAN1_BASE           0x401d0000  /* 16KB CAN1 */
 #define IMXRT_CAN2_BASE           0x401d4000  /* 16KB CAN2 */
-                               /* 0x401d8000     16KB Reserved */
+#define IMXRT_CAN3_BASE           0x401d8000  /* 16KB CAN3 */
 #define IMXRT_QTIMER1_BASE        0x401dc000  /* 16KB QTimer1 */
 #define IMXRT_QTIMER2_BASE        0x401e0000  /* 16KB QTimer2 */
-                               /* 0x401e4000     16KB Reserved */
-                               /* 0x401e8000     16KB Reserved */
+#define IMXRT_QTIMER3_BASE        0x401e4000  /* 16KB QTimer3 */
+#define IMXRT_QTIMER4_BASE        0x401e8000  /* 16KB QTimer4 */
 #define IMXRT_GPT1_BASE           0x401ec000  /* 16KB GPT1 */
 #define IMXRT_GPT2_BASE           0x401f0000  /* 16KB GPT2 */
 #define IMXRT_OCOTP_BASE          0x401f4000  /* 16KB OCOTP */
@@ -181,21 +184,22 @@
                                /* 0x40298000     16KB Reserved */
                                /* 0x4029c000     16KB Reserved */
                                /* 0x402a0000     16KB Reserved */
-                               /* 0x402a4000     16KB Reserved */
-#define IMXRT_FLEXSPIC_BASE       0x402a8000  /* 16KB FlexSPI controller */
+#define IMXRT_FLEXSPI2C_BASE      0x402a4000  /* 16KB FlexSPI2 */
+#define IMXRT_FLEXSPIC_BASE       0x402a8000  /* 16KB FlexSPI  */
                                /* 0x402ac000     16KB Reserved */
                                /* 0x402b0000     16KB Reserved */
-                               /* 0x402b4000     16KB Reserved */
-                               /* 0x402b8000     16KB Reserved */
-                               /* 0x402bc000     16KB Reserved */
+#define IMXRT_PXP_BASE            0x402b4000  /* 16KB PXP */
+#define IMXRT_LCDIF_BASE          0x402b8000  /* 16KB LCDIF */
+#define IMXRT_CSI_BASE            0x402bc000  /* 16KB CSI */
 #define IMXRT_USDHC1_BASE         0x402c0000  /* 16KB USDHC1 */
 #define IMXRT_USDHC2_BASE         0x402c4000  /* 16KB USDHC2 */
                                /* 0x402c8000     16KB Reserved */
                                /* 0x402cc000     16KB Reserved */
                                /* 0x402d0000     16KB Reserved */
                                /* 0x402d4000     16KB Reserved */
+#define IMXRT_ENET2_BASE          0x402d4000  /* 16KB ENET2 */
 #define IMXRT_ENET_BASE           0x402d8000  /* 16KB ENET */
-                              /*  0x402dc000     16KB Reserved */
+#define IMXRT_USBPL301_BASE       0x402dc000  /* 16KB USB(PL301) */
 #define IMXRT_USB_BASE            0x402e0000  /* 16KB USB(USB) */
                                /* 0x402e4000     16KB Reserved */
                                /* 0x402e8000     16KB Reserved */
@@ -224,24 +228,60 @@
                                /* 0x403ac000     16KB Reserved */
 #define IMXRT_ADCETC_BASE         0x403b0000  /* 16KB ADC_ETC */
 #define IMXRT_AOI1_BASE           0x403b4000  /* 16KB AOI1 */
-                               /* 0x403b8000     16KB Reserved */
+#define IMXRT_AOI2_BASE           0x403b8000  /* 16KB AOI2 */
 #define IMXRT_XBAR1_BASE          0x403bc000  /* 16KB XBAR1 */
 #define IMXRT_XBAR2_BASE          0x403c0000  /* 16KB XBAR2 */
-                               /* 0x403c4000     16KB Reserved */
+#define IMXRT_XBAR3_BASE          0x403c4000  /* 16KB XBAR3 */
 #define IMXRT_ENC1_BASE           0x403c8000  /* 16KB ENC1 */
 #define IMXRT_ENC2_BASE           0x403cc000  /* 16KB ENC2 */
-                               /* 0x403d0000     16KB Reserved */
-                               /* 0x403d4000     16KB Reserved */
+#define IMXRT_ENC3_BASE           0x403d0000  /* 16KB ENC3 */
+#define IMXRT_ENC4_BASE           0x403d4000  /* 16KB ENC4 */
                                /* 0x403d8000     16KB Reserved */
 #define IMXRT_FLEXPWM1_BASE       0x403dc000  /* 16KB FLEXPWM1 */
 #define IMXRT_FLEXPWM2_BASE       0x403e0000  /* 16KB FLEXPWM2 */
-                               /* 0x403e4000     16KB Reserved */
-                               /* 0x403e8000     16KB Reserved */
+#define IMXRT_FLEXPWM3_BASE       0x403e4000  /* 16KB FLEXPWM3 */
+#define IMXRT_FLEXPWM4_BASE       0x403e8000  /* 16KB FLEXPWM4 */
 #define IMXRT_BEE_BASE            0x403ec000  /* 16KB BEE */
 #define IMXRT_LPI2C1_BASE         0x403f0000  /* 16KB  */
 #define IMXRT_LPI2C2_BASE         0x403f4000  /* 16KB LPI2C2 */
 #define IMXRT_LPI2C3_BASE         0x403f8000  /* 16KB LPI2C3 */
 #define IMXRT_LPI2C4_BASE         0x403fc000  /* 16KB LPI2C4 */
+
+/* AIPS-5 memory map */
+
+#define IMXRT_GPIO6_BASE          0x42000000  /* 16KB GPIO6 */
+#define IMXRT_GPIO7_BASE          0x42004000  /* 16KB GPIO7 */
+#define IMXRT_GPIO8_BASE          0x42008000  /* 16KB GPIO8 */
+#define IMXRT_GPIO9_BASE          0x4200c000  /* 16KB GPIO9 */
+                               /* 0x42010000     16KB Reserved */
+                               /* 0x42014000     16KB Reserved */
+                               /* 0x42018000     16KB Reserved */
+                               /* 0x4201c000     16KB Reserved */
+#define IMXRT_FLEXIO3_BASE        0x42020000  /* 16KB FlexIO3 */
+                               /* 0x42024000     16KB Reserved */
+                               /* 0x42028000     16KB Reserved */
+                               /* 0x4202c000     16KB Reserved */
+                               /* 0x42030000     16KB Reserved */
+                               /* 0x42034000     16KB Reserved */
+                               /* 0x42038000     16KB Reserved */
+                               /* 0x4203c000     16KB Reserved */
+                               /* 0x42040000     16KB Reserved */
+                               /* 0x42044000     16KB Reserved */
+                               /* 0x42048000     16KB Reserved */
+                               /* 0x4204c000     16KB Reserved */
+                               /* 0x42050000     16KB Reserved */
+                               /* 0x42054000     16KB Reserved */
+                               /* 0x42058000     16KB Reserved */
+                               /* 0x4205c000     16KB Reserved */
+                               /* 0x42060000     16KB Reserved */
+                               /* 0x42064000     16KB Reserved */
+                               /* 0x42068000     16KB Reserved */
+                               /* 0x4206c000     16KB Reserved */
+                               /* 0x42070000     16KB Reserved */
+                               /* 0x42074000     16KB Reserved */
+                               /* 0x42078000     16KB Reserved */
+                               /* 0x4207c000     16KB Reserved */
+                               /* 0x42080000     512KB Reserved Off Platform */
 
 /* PPB memory map */
 
@@ -258,4 +298,4 @@
 #define IMXRT_PROCROM_BASE        0xe00fe000  /* 4KB Processor ROM */
 #define IMXRT_PPBROM_BASE         0xe00ff000  /* 4KB PPB ROM */
 
-#endif /* __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT102X_MEMORYMAP_H */
+#endif /* __ARCH_ARM_SRC_IMXRT_CHIP_IMXRT106X_MEMORYMAP_H */
