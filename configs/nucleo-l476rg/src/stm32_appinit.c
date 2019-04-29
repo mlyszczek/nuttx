@@ -370,11 +370,11 @@ int board_app_initialize(uintptr_t arg)
 #ifdef CONFIG_WL_CC1101
   /* Initialize and register the cc1101 radio */
 
-  ret = stm32_cc1101_initialize();
+  ret = stm32l4_cc1101_initialize();
   if (ret < 0)
     {
       syslog(LOG_ERR,
-             "ERROR: stm32_cc1101_initialize failed: %d\n",
+             "ERROR: stm32l4_cc1101_initialize failed: %d\n",
              ret);
       return ret;
     }

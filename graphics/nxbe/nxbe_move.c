@@ -180,6 +180,8 @@ static void nxbe_clipmovedest(FAR struct nxbe_clipops_s *cops,
     {
       struct nxbe_move_s srcinfo;
 
+      /* Move the visible part of window */
+
       srcinfo.cops.visible  = nxbe_clipmovesrc;
       srcinfo.cops.obscured = nxbe_clipmoveobscured;
       srcinfo.offset        = offset;
@@ -198,7 +200,8 @@ static void nxbe_clipmovedest(FAR struct nxbe_clipops_s *cops,
  *
  * Input Parameters:
  *   wnd    - The window within which the move is to be done
- *   rect   - Describes the rectangular region to move (absolute positions)
+ *   rect   - Describes the rectangular region to move (absolute device
+ *            positions)
  *   offset - The offset to move the region
  *
  * Returned Value:
@@ -211,6 +214,9 @@ static inline void nxbe_move_dev(FAR struct nxbe_window_s *wnd,
                                  FAR const struct nxgl_point_s *offset)
 {
   struct nxbe_move_s info;
+#ifdef CONFIG_NX_SWCURSOR
+  struct nxgl_rect_s dest;
+#endif
   int i;
 
   info.cops.visible  = nxbe_clipmovedest;
@@ -260,6 +266,12 @@ static inline void nxbe_move_dev(FAR struct nxbe_window_s *wnd,
         }
     }
 
+#ifdef CONFIG_NX_SWCURSOR
+  /* Apply the offsets to the source window to get the destination window */
+
+  nxgl_rectoffset(&dest, rect, offset->x, offset->y);
+#endif
+
   /* Then perform the move */
 
 #if CONFIG_NX_NPLANES > 1
@@ -268,8 +280,31 @@ static inline void nxbe_move_dev(FAR struct nxbe_window_s *wnd,
   i = 0;
 #endif
     {
+#ifdef CONFIG_NX_SWCURSOR
+      /* Is the cursor visible? */
+
+      if (wnd->be->cursor.visible)
+        {
+          /* Remove the cursor from the source region */
+
+          wnd->be->plane[i].cursor.erase(wnd->be, rect, i);
+        }
+#endif
+
       nxbe_clipper(wnd->above, &info.srcrect, info.order,
                    &info.cops, &wnd->be->plane[i]);
+
+#ifdef CONFIG_NX_SWCURSOR
+      /* Backup and redraw the cursor in the modified region.
+       *
+       * REVISIT:  This and the following logic belongs in the function
+       * nxbe_clipfill().  It is here only because the struct nxbe_state_s
+       * (wnd->be) is not available at that point.  This may result in an
+       * excessive number of cursor updates.
+       */
+
+      nxbe_cursor_backupdraw_dev(wnd->be, &dest, i);
+#endif
     }
 }
 
@@ -377,7 +412,7 @@ static inline void nxbe_move_pwfb(FAR struct nxbe_window_s *wnd,
    * framebuffer to the destination rectangle device graphics memory.
    */
 
-  nxbe_bitmap_dev(wnd, &destrect, src, &origin, wnd->stride);
+  nxbe_flush(wnd, &destrect, src, &origin, wnd->stride);
 }
 #endif
 
