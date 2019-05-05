@@ -1,7 +1,7 @@
 /************************************************************************************
  * configs/nucleo-h743zi/include/board.h
  *
- *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2018, 2019 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>
  *            Simon Laube <simon@leitwert.ch>
  *            Mateusz Szafoni <raiden00@railab.me>
@@ -199,6 +199,28 @@
 #define STM32_RCC_D3CFGR_D3PPRE   RCC_D3CFGR_D3PPRE_HCLKd4       /* PCLK4 = HCLK / 4 */
 #define STM32_PCLK4_FREQUENCY     (STM32_HCLK_FREQUENCY/4)
 
+/* Timer clock frequencies */
+
+/* Timers driven from APB1 will be twice PCLK1 */
+
+#define STM32_APB1_TIM2_CLKIN   (2*STM32_PCLK1_FREQUENCY)
+#define STM32_APB1_TIM3_CLKIN   (2*STM32_PCLK1_FREQUENCY)
+#define STM32_APB1_TIM4_CLKIN   (2*STM32_PCLK1_FREQUENCY)
+#define STM32_APB1_TIM5_CLKIN   (2*STM32_PCLK1_FREQUENCY)
+#define STM32_APB1_TIM6_CLKIN   (2*STM32_PCLK1_FREQUENCY)
+#define STM32_APB1_TIM7_CLKIN   (2*STM32_PCLK1_FREQUENCY)
+#define STM32_APB1_TIM12_CLKIN  (2*STM32_PCLK1_FREQUENCY)
+#define STM32_APB1_TIM13_CLKIN  (2*STM32_PCLK1_FREQUENCY)
+#define STM32_APB1_TIM14_CLKIN  (2*STM32_PCLK1_FREQUENCY)
+
+/* Timers driven from APB2 will be twice PCLK2 */
+
+#define STM32_APB2_TIM1_CLKIN   (2*STM32_PCLK2_FREQUENCY)
+#define STM32_APB2_TIM8_CLKIN   (2*STM32_PCLK2_FREQUENCY)
+#define STM32_APB2_TIM15_CLKIN  (2*STM32_PCLK2_FREQUENCY)
+#define STM32_APB2_TIM16_CLKIN  (2*STM32_PCLK2_FREQUENCY)
+#define STM32_APB2_TIM17_CLKIN  (2*STM32_PCLK2_FREQUENCY)
+
 /* Kernel Clock Configuration
  *
  * Note: look at Table 54 in ST Manual
@@ -249,6 +271,25 @@
  */
 
 #define BOARD_FLASH_WAITSTATES 4
+
+/* SDMMC definitions ****************************************************************/
+
+/* Init 400kHz, PLL1Q/(2*250) */
+
+#define STM32_SDMMC_INIT_CLKDIV     (250 << STM32_SDMMC_CLKCR_CLKDIV_SHIFT)
+
+/* Just set these to 25 MHz for now, PLL1Q/(2*4), for default speed 12.5MB/s */
+
+#define STM32_SDMMC_MMCXFR_CLKDIV   (4 << STM32_SDMMC_CLKCR_CLKDIV_SHIFT)
+#define STM32_SDMMC_SDXFR_CLKDIV    (4 << STM32_SDMMC_CLKCR_CLKDIV_SHIFT)
+
+#define STM32_SDMMC_CLKCR_EDGE      STM32_SDMMC_CLKCR_NEGEDGE
+
+/* Ethernet definitions ****************************************************************/
+
+#define GPIO_ETH_RMII_TXD0    GPIO_ETH_RMII_TXD0_2    /* PG13 */
+#define GPIO_ETH_RMII_TXD1    GPIO_ETH_RMII_TXD1_1    /* PB 13 */
+#define GPIO_ETH_RMII_TX_EN   GPIO_ETH_RMII_TX_EN_2
 
 /* LED definitions ******************************************************************/
 /* The Nucleo-144 board has numerous LEDs but only three, LD1 a Green LED, LD2 a Blue

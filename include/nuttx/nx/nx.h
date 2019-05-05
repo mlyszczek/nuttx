@@ -51,6 +51,7 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
 /* Configuration ************************************************************/
 
 #ifndef CONFIG_NX_NPLANES
@@ -84,6 +85,7 @@
 /****************************************************************************
  * Public Types
  ****************************************************************************/
+
 /* Handles ******************************************************************/
 
 /* The interface to the NX server is managed using a opaque handle: */
@@ -148,8 +150,8 @@ struct nx_callback_s
    *            the overall display
    *   bounds - The bounding rectangle that the describes the entire
    *            display
-   *   arg  - User provided argument (see nx_openwindow, nx_requestbkgd,
-   *          nxtk_openwindow, or nxtk_opentoolbar)
+   *   arg    - User provided argument (see nx_openwindow, nx_requestbkgd,
+   *            nxtk_openwindow, or nxtk_opentoolbar)
    *
    * Returned Value:
    *   None
@@ -171,8 +173,8 @@ struct nx_callback_s
    *   hwnd    - Window handle
    *   pos     - The (x,y) position of the mouse
    *   buttons - See NX_MOUSE_* definitions
-   *   arg  - User provided argument (see nx_openwindow, nx_requestbkgd,
-   *          nxtk_openwindow, or nxtk_opentoolbar)
+   *   arg     - User provided argument (see nx_openwindow, nx_requestbkgd,
+   *             nxtk_openwindow, or nxtk_opentoolbar)
    *
    * Returned Value:
    *   None
@@ -676,6 +678,25 @@ int nx_lower(NXWINDOW hwnd);
  ****************************************************************************/
 
 int nx_modal(NXWINDOW hwnd, bool modal);
+
+/****************************************************************************
+ * Name: nx_setvisibility
+ *
+ * Description:
+ *   Select if the window is visible or hidden.  A hidden window is still
+ *   present will will update normally, but will be on the visiable on the
+ *   display until it is unhidden.
+ *
+ * Input Parameters:
+ *   hwnd - The window to be modified
+ *   hide - True: Window will be hidden; false: Window will be visible
+ *
+ * Returned Value:
+ *   OK on success; ERROR on failure with errno set appropriately
+ *
+ ****************************************************************************/
+
+int nx_setvisibility(NXWINDOW hwnd, bool hide);
 
 /****************************************************************************
  * Name: nx_setpixel
