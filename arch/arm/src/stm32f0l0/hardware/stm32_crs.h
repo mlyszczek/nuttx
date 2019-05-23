@@ -78,19 +78,19 @@
 #define CRS_CFGR_SYNCDIV_SHIFT     24        /* Bits 24-26: SYNC divider */
 #define CRS_CFGR_SYNCDIV_MASK      (7 << CRS_CFGR_SYNCDIV_SHIFT)
 #  define CRS_CFGR_SYNCDIV_d1      (0 << CRS_CFGR_SYNCDIV_SHIFT) /* Not divided */
-#  define CRS_CFGR_SYNCDIV_d2      (1 << CRS_CFGR_SYNCDIV_SHIFT) /* divided by 2) */
-#  define CRS_CFGR_SYNCDIV_d4      (2 << CRS_CFGR_SYNCDIV_SHIFT) /* divided by 4) */
-#  define CRS_CFGR_SYNCDIV_d8      (3 << CRS_CFGR_SYNCDIV_SHIFT) /* divided by 8) */
-#  define CRS_CFGR_SYNCDIV_d16     (4 << CRS_CFGR_SYNCDIV_SHIFT) /* divided by 16) */
-#  define CRS_CFGR_SYNCDIV_d32     (5 << CRS_CFGR_SYNCDIV_SHIFT) /* divided by 32) */
-#  define CRS_CFGR_SYNCDIV_d64     (6 << CRS_CFGR_SYNCDIV_SHIFT) /* divided by 64) */
-#  define CRS_CFGR_SYNCDIV_d128    (6 << CRS_CFGR_SYNCDIV_SHIFT) /* divided by 128) */
+#  define CRS_CFGR_SYNCDIV_d2      (1 << CRS_CFGR_SYNCDIV_SHIFT) /* divided by 2 */
+#  define CRS_CFGR_SYNCDIV_d4      (2 << CRS_CFGR_SYNCDIV_SHIFT) /* divided by 4 */
+#  define CRS_CFGR_SYNCDIV_d8      (3 << CRS_CFGR_SYNCDIV_SHIFT) /* divided by 8 */
+#  define CRS_CFGR_SYNCDIV_d16     (4 << CRS_CFGR_SYNCDIV_SHIFT) /* divided by 16 */
+#  define CRS_CFGR_SYNCDIV_d32     (5 << CRS_CFGR_SYNCDIV_SHIFT) /* divided by 32 */
+#  define CRS_CFGR_SYNCDIV_d64     (6 << CRS_CFGR_SYNCDIV_SHIFT) /* divided by 64 */
+#  define CRS_CFGR_SYNCDIV_d128    (7 << CRS_CFGR_SYNCDIV_SHIFT) /* divided by 128 */
 #define CRS_CFGR_SYNCSRC_SHIFT     28        /* Bits 28-29: SYNC signal source selection */
 #define CRS_CFGR_SYNCSRC_MASK      (3 << CRS_CFGR_SYNCSRC_SHIFT)
 #  define CRS_CFGR_SYNCSRC_GPIO    (0 << CRS_CFGR_SYNCSRC_SHIFT) /* GPIO as SYNC signal source */
 #  define CRS_CFGR_SYNCSRC_LSE     (1 << CRS_CFGR_SYNCSRC_SHIFT) /* LSE as SYNC signal source */
 #  define CRS_CFGR_SYNCSRC_USBSOF  (2 << CRS_CFGR_SYNCSRC_SHIFT) /* USB SOF as SYNC signal source */
-#define CRS_CFGR_SYNCPOL           (1 << 30) /* SYNC polarity selection */
+#define CRS_CFGR_SYNCPOL           (1 << 31) /* SYNC polarity selection */
 
 /* CRS interrupt and status register */
 

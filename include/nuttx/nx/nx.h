@@ -404,9 +404,11 @@ int nx_eventnotify(NXHANDLE handle, int signo);
  *
  * Input Parameters:
  *   handle - The handle returned by nx_connect()
- *   flags  - Optional flags.  Must be zero unless CONFIG_NX_RAMBACKED is
- *            enabled.  In that case, it may be zero or
- *            NXBE_WINDOW_RAMBACKED
+ *   flags  - Optional flags.  These include:
+ *            NXBE_WINDOW_RAMBACKED:  Creates a RAM backed window.  This
+ *              option is only valid if CONFIG_NX_RAMBACKED is enabled.
+ *            NXBE_WINDOW_HIDDEN:  The window is create in the HIDDEN state
+ *             and can be made visible later with nx_setvisibility().
  *   cb     - Callbacks used to process window events
  *   arg    - User provided value that will be returned with NX callbacks.
  *
@@ -684,7 +686,7 @@ int nx_modal(NXWINDOW hwnd, bool modal);
  *
  * Description:
  *   Select if the window is visible or hidden.  A hidden window is still
- *   present will will update normally, but will be on the visiable on the
+ *   present and will update normally, but will not be visible on the
  *   display until it is unhidden.
  *
  * Input Parameters:
@@ -697,6 +699,27 @@ int nx_modal(NXWINDOW hwnd, bool modal);
  ****************************************************************************/
 
 int nx_setvisibility(NXWINDOW hwnd, bool hide);
+
+/****************************************************************************
+ * Name: nx_ishidden
+ *
+ * Description:
+ *   Return true if the window is hidden.
+ *
+ *   NOTE:  There will be a delay between the time that the visibility of
+ *   the window is changed via nx_setvisibily() before that new setting is
+ *   reported by nx_ishidden().  nx_synch() may be used if temporal
+ *   synchronization is required.
+ *
+ * Input Parameters:
+ *   hwnd - The window to be queried
+ *
+ * Returned Value:
+ *   True: the window is hidden, false: the window is visible
+ *
+ ****************************************************************************/
+
+bool nx_ishidden(NXWINDOW hwnd);
 
 /****************************************************************************
  * Name: nx_setpixel

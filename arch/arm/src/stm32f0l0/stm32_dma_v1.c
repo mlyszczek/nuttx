@@ -49,6 +49,8 @@
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 
+#include <arch/chip/chip.h>
+
 #include "up_arch.h"
 #include "up_internal.h"
 #include "sched/sched.h"
@@ -159,12 +161,12 @@ static struct stm32_dma_s g_dma[DMA_NCHANNELS] =
   },
   {
     .chan     = 3,
-    .irq      = STM32_IRQ_DMA2CH45,
+    .irq      = STM32_IRQ_DMA2CH4,
     .base     = STM32_DMA2_BASE + STM32_DMACHAN_OFFSET(3),
   },
   {
     .chan     = 4,
-    .irq      = STM32_IRQ_DMA2CH45,
+    .irq      = STM32_IRQ_DMA2CH5,
     .base     = STM32_DMA2_BASE + STM32_DMACHAN_OFFSET(4),
   },
 #endif
@@ -292,7 +294,7 @@ static int stm32_dmainterrupt(int irq, void *context, FAR void *arg)
     }
   else
 #if STM32_NDMA > 1
-  if (irq >= STM32_IRQ_DMA2CH1 && irq <= STM32_IRQ_DMA2CH45)
+  if (irq >= STM32_IRQ_DMA2CH1 && irq <= STM32_IRQ_DMA2CH5)
     {
       chndx = irq - STM32_IRQ_DMA2CH1 + DMA1_NCHANNELS;
     }

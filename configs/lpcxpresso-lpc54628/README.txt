@@ -115,10 +115,17 @@ STATUS
   2018-10-24:  Dave Marples now has the LPC43 SD/MMC working reliably.  I
     have ported all of Dave's change to the LPC54 but have done no further
     testing as of this writing.  The feature is still marked EXPERIMENTAL.
+  2019-05-08:  I brought in the USB0 OHCI USB host driver from LPC17.  Since
+    OHCI is well standardized, this should work out of the box provided that
+    the peripheral is properly configured, initialized, and clocked.  The
+    clock setup logic is missing as of this writing (the driver is not yet
+    even included in the build and completely unverified).
 
   There is still no support for the Accelerometer, SPIFI, or USB.  There is
   a complete but not entirely functional SD card driver and and tested SPI
-  driver.  There are no on-board devices to support SPI testing.
+  driver.  There is also a partial port of the USB0 OHCI host driver if
+  anyone is ambitious enought to finish that off.  There are no on-board
+  devices to support SPI testing.
 
 Configurations
 ==============
@@ -509,10 +516,14 @@ Configurations
 
       2019-03-20:  Everything works fine!
 
-  twm4nx:
+  twm4nx1 and twmnx2:
 
-    This configuration exercises the port of TWM to NuttX.  A description of
-    that port is available at apps/graphics/twm4nx/README.txt.
+    These configuration exercises the port of TWM to NuttX.  A description of
+    that port is available at apps/graphics/twm4nx/README.txt.  The two
+    configurations are identical, differing on in the "theme" of the UI.
+    twm4nx1 uses framed windows in dark, bright primary colors reminiscent of
+    Windows98. twm4nx2 uses border-less windows in pastel shades for a more
+    contemporary look.
 
     NOTES:
     1. This version uses the on-board display with the touchscreen for
@@ -522,6 +533,37 @@ Configurations
        a USB keyboard.
 
     STATUS:
-    2019-05-04:  Initial display is clean but touchscren input is not yet
-       functional.  Left-click main menu functionality is required to test
-       much more.
+
+    Refer to apps/graphics/twm4nx/README.txt for an overall status.  Here
+    just some issues/topics unique to the LPCXpresso-LPC54628 and/or this
+    configuration.
+
+    1. The NxTerm application is available as the "NuttShell" entry in the
+       Main Menu.  When pressed, this will bring up an NSH session in a
+       Twm4Nx window.  There is an issue, however:  The NxTerm gets its
+       input from the console (/dev/console).  Since the NxTerm keyboard 
+       input comes directly from /dev/console, it goes to whichever task has
+       an outstanding read on the console device.  That works well if there
+       is only a single NxTerm window.  But if there are multiple NxTerm
+       windows, then it is anyone's guess  which will receive the keyboard
+       input.  That does not work well in such cases.
+
+    2. There is a responsive-ness issue the the FT5x06 touchscreen controller.
+       The pin selected by the board designers will not support interrupts.
+       Therefore, a fallback polled mode is use.  This polled mode has
+       significant inherent delays that effect the user experience when
+       touching buttons or grabbing and moving objects on the desktop.
+
+    3. There is no touchscreen calibration yet.  But fortunately, the FT5x06
+       has the same resolution and orientation as the LCD and so can be used
+       without any calibration.  There are still inaccuracies due to the
+       lack of calibration, however.  These show up especially along the
+       very top of the display where it can be very difficult to touch
+       buttons or grab'n'move object.
+
+    4. Color artifacts:  In the CLASSIC configuration, the background of the
+       cental NX image is a slightly different hue of blue.  For the
+       CONTEMPORARY configuration, the toolbar buttons are supposed to be
+       borderless.  There is however, a fine border around each toolbar
+       widget with ruins the feel that the theme was trying for.
+

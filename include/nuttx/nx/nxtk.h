@@ -122,9 +122,11 @@ extern "C"
  *
  * Input Parameters:
  *   handle - The handle returned by nx_connect
- *   flags  - Optional flags.  Must be zero unless CONFIG_NX_RAMBACKED is
- *            enabled.  In that case, it may be zero or
- *            NXBE_WINDOW_RAMBACKED
+ *   flags  - Optional flags.  These include:
+ *            NXBE_WINDOW_RAMBACKED:  Creates a RAM backed window.  This
+ *              option is only valid if CONFIG_NX_RAMBACKED is enabled.
+ *            NXBE_WINDOW_HIDDEN:  The window is create in the HIDDEN state
+ *             and can be made visible later with nxtk_setvisibility().
  *   cb     - Callbacks used to process window events
  *   arg    - User provided value that will be returned with NXTK callbacks.
  *
@@ -352,7 +354,7 @@ int nxtk_modal(NXTKWINDOW hfwnd, bool modal);
  *
  * Description:
  *   Select if the window is visible or hidden.  A hidden window is still
- *   present will will update normally, but will be on the visiable on the
+ *   present and will update normally, but will not be on visible on the
  *   display until it is unhidden.
  *
  * Input Parameters:
@@ -365,6 +367,27 @@ int nxtk_modal(NXTKWINDOW hfwnd, bool modal);
  ****************************************************************************/
 
 int nxtk_setvisibility(NXTKWINDOW hfwnd, bool hide);
+
+/****************************************************************************
+ * Name: nxtk_ishidden
+ *
+ * Description:
+ *   Return true if the window is hidden.
+ *
+ *   NOTE:  There will be a delay between the time that the visibility of
+ *   the window is changed via nxtk_setvisibily() before that new setting is
+ *   reported by nxtk_ishidden().  nxtk_synch() may be used if temporal
+ *   synchronization is required.
+ *
+ * Input Parameters:
+ *   hfwnd - The window to be queried
+ *
+ * Returned Value:
+ *   True: the window is hidden, false: the window is visible
+ *
+ ****************************************************************************/
+
+bool nxtk_ishidden(NXTKWINDOW hfwnd);
 
 /****************************************************************************
  * Name: nxtk_fillwindow

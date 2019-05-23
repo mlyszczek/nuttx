@@ -57,10 +57,12 @@
 #  define STM32_NSPI            2  /* Two SPI modules (SPI or I2S) */
 #  define STM32_NI2S            2  /* Two I2S modules (SPI or I2S) */
 #  define STM32_NI2C            2  /* Two I2C modules */
+#  define STM32_NDMA            1  /* 1 DMA1, 7-channels */
 #  define STM32_NUSART          2  /* Two USARTs modules */
 #  define STM32_NCAN            0  /* No CAN controllers */
 #  define STM32_NUSBDEV         1  /* One USB full-speed device controller */
 #  define STM32_NUSBOTG         0  /* No USB OTG FS/HS (only USB 2.0 device) */
+#  define STM32_NADC            1  /* One 12-bit module */
 #  define STM32_NDAC            1  /* One DAC channel */
 #  define STM32_NCOMP           2  /* Two Analog Comparators */
 #  define STM32_NCAP            13 /* Capacitive sensing channels (14 on UFQFPN32)) */
@@ -82,6 +84,7 @@
 #  define STM32_NSPI            2  /* Two SPI modules (SPI or I2S) */
 #  define STM32_NI2S            2  /* Two I2S modules (SPI or I2S) */
 #  define STM32_NI2C            2  /* Two I2C modules */
+#  define STM32_NDMA            1  /* 1 DMA1, 7-channels */
 #  define STM32_NUSART          4  /* Four USARTs module */
 #  define STM32_NCAN            1  /* One CAN controller */
 #  define STM32_NUSBDEV         1  /* One USB full-speed device controller */
@@ -109,6 +112,7 @@
 #  define STM32_NSPI            2  /* Two SPI modules (SPI or I2S) */
 #  define STM32_NI2S            2  /* Two I2S modules (SPI or I2S) */
 #  define STM32_NI2C            2  /* Two I2C modules */
+#  define STM32_NDMA            1  /* 1 DMA1, 7-channels */
 #  define STM32_NUSART          4  /* Four USARTs module */
 #  define STM32_NCAN            1  /* One CAN controller */
 #  define STM32_NUSBDEV         1  /* One USB full-speed device controller */
@@ -136,6 +140,7 @@
 #  define STM32_NSPI            2  /* Two SPI modules (SPI or I2S) */
 #  define STM32_NI2S            2  /* Two I2S modules (SPI or I2S) */
 #  define STM32_NI2C            2  /* Two I2C modules */
+#  define STM32_NDMA            1  /* 1 DMA1, 7-channels */
 #  define STM32_NUSART          4  /* Four USARTs module */
 #  define STM32_NCAN            1  /* One CAN controller */
 #  define STM32_NUSBDEV         1  /* One USB full-speed device controller */
@@ -163,6 +168,7 @@
 #  define STM32_NSPI            2  /* Two SPI modules (SPI or I2S) */
 #  define STM32_NI2S            2  /* Two I2S modules (SPI or I2S) */
 #  define STM32_NI2C            2  /* Two I2C modules */
+#  define STM32_NDMA            2  /* DMA1, DMA2 */
 #  define STM32_NUSART          6  /* Six USARTs modules */
 #  define STM32_NCAN            1  /* One CAN controller */
 #  define STM32_NUSBDEV         0  /* No USB full-speed device controller */
@@ -191,6 +197,7 @@
 #  define STM32_NSPI            2  /* Two SPI modules (SPI or I2S) */
 #  define STM32_NI2S            2  /* Two I2S modules (SPI or I2S) */
 #  define STM32_NI2C            2  /* Two I2C modules */
+#  define STM32_NDMA            2  /* DMA1, DMA2 */
 #  define STM32_NUSART          8  /* Eight USARTs modules */
 #  define STM32_NCAN            1  /* One CAN controller */
 #  define STM32_NUSBDEV         0  /* No USB full-speed device controller */

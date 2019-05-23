@@ -1,5 +1,5 @@
 /************************************************************************************
- * arch/arm/src/stm32f0l0/stm32_rcc.h
+ * arch/arm/src/stm32f0l0/stm32_hsi48.h
  *
  *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.orgr>
@@ -51,7 +51,8 @@
 
 enum syncsrc_e
 {
-  SYNCSRC_GPIO = 0, /* GPIO selected as SYNC signal source */
+  SYNCSRC_NONE = 0, /* No SYNC signal */
+  SYNCSRC_GPIO,     /* GPIO selected as SYNC signal source */
   SYNCSRC_LSE,      /* LSE selected as SYNC signal source */
   SYNCSRC_USB,      /* USB SOF selected as SYNC signal source */
 };
