@@ -48,8 +48,8 @@
 
 #include <arch/irq.h>
 #include <arch/stm32h7/chip.h>
-#include "chip/stm32_pinmap.h"
-#include "chip/stm32_memorymap.h"
+#include "hardware/stm32_pinmap.h"
+#include "hardware/stm32_memorymap.h"
 
 /************************************************************************************
  * Pre-processor Definitions
