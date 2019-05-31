@@ -1,0 +1,36 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+if ARCH_RX65N
+comment "RX65N Configuration Options"
+
+menu "RX65N Peripheral Selections"
+
+endmenu # RX65N Peripheral Selections
+endif
+
+if ARCH_RX65N_RSK1MB
+comment "RX65N on RSKRX65N-1MB Configuration Options"
+
+menu "RX65N Peripheral Selections"
+
+endmenu # RX65N Peripheral Selections
+endif
+
+if ARCH_RX65N_RSK2MB
+comment "RX65N on RSKRX65N-2MB Configuration Options"
+
+menu "RX65N Peripheral Selections"
+
+endmenu # RX65N Peripheral Selections
+endif
+
+if ARCH_RX65N_GRROSE
+comment "RX65N on GR-ROSE Configuration Options"
+
+menu "RX65N Peripheral Selections"
+
+endmenu # RX65N Peripheral Selections
+endif

@@ -1,0 +1,118 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+if ARCH_RX65N
+comment "RX65N Configuration Options"
+
+menu "RX65N Peripheral Selections"
+
+config RX65N_SCI2
+	bool "SCI2"
+	default n
+	select SCI2_SERIALDRIVER
+config ICU
+	bool "ICU"
+	default y
+
+endmenu # RX65N Peripheral Selections
+endif
+
+if ARCH_RX65N_RSK1MB
+comment "RX65N on RSKRX65N-1MB Configuration Options"
+
+menu "RX65N Peripheral Selections"
+
+config RX65N_SCI2
+	bool "SCI2"
+	default n
+	select SCI2_SERIALDRIVER
+config ICU
+	bool "ICU"
+	default y
+
+endmenu # RX65N Peripheral Selections
+endif
+
+if ARCH_RX65N_RSK2MB
+comment "RX65N on RSKRX65N-2MB Configuration Options"
+
+menu "RX65N Peripheral Selections"
+
+config RX65N_SCI2
+	bool "SCI2"
+	select SCI2_SERIALDRIVER
+config RX65N_SCI8
+	bool "SCI8"
+	select SCI8_SERIALDRIVER
+config ICU
+	bool "ICU"
+	default y
+
+endmenu # RX65N Peripheral Selections
+endif
+
+if ARCH_RX65N_GRROSE
+comment "RX65N on GR-ROSE Configuration Options"
+
+menu "RX65N Peripheral Selections"
+
+config RX65N_SCI0
+	bool "SCI0"
+	default n
+	select SCI0_SERIALDRIVER
+config RX65N_SCI1
+	bool "SCI1"
+	default y
+	select SCI1_SERIALDRIVER
+config RX65N_SCI2
+	bool "SCI2"
+	default y
+	select SCI2_SERIALDRIVER
+config RX65N_SCI3
+	bool "SCI3"
+	default n
+	select SCI3_SERIALDRIVER
+config RX65N_SCI4
+	bool "SCI4"
+	default n
+	select SCI4_SERIALDRIVER
+config RX65N_SCI5
+	bool "SCI5"
+	default y
+	select SCI5_SERIALDRIVER
+config RX65N_SCI6
+	bool "SCI6"
+	default y
+	select SCI6_SERIALDRIVER
+config RX65N_SCI7
+	bool "SCI7"
+	default n
+	select SCI7_SERIALDRIVER
+config RX65N_SCI8
+	bool "SCI8"
+	default y
+	select SCI8_SERIALDRIVER
+config RX65N_SCI9
+	bool "SCI9"
+	default n
+	select SCI9_SERIALDRIVER
+config RX65N_SCI10
+	bool "SCI10"
+	default n
+	select SCI10_SERIALDRIVER
+config RX65N_SCI11
+	bool "SCI11"
+	default n
+	select SCI11_SERIALDRIVER
+config RX65N_SCI12
+	bool "SCI12"
+	default n
+	select SCI12_SERIALDRIVER
+config ICU
+	bool "ICU"
+	default y
+
+endmenu # RX65N Peripheral Selections
+endif

@@ -407,6 +407,16 @@ config SCI1_SERIAL_CONSOLE
 	depends on SCI1_SERIALDRIVER
 	select SERIAL_CONSOLE
 
+config SCI2_SERIAL_CONSOLE
+	bool "SCI2"
+	depends on SCI2_SERIALDRIVER
+	select SERIAL_CONSOLE
+
+config SCI8_SERIAL_CONSOLE
+	bool "SCI8"
+	depends on SCI8_SERIALDRIVER
+	select SERIAL_CONSOLE
+
 config OTHER_SERIAL_CONSOLE
 	bool "Other serial console"
 	select SERIAL_CONSOLE

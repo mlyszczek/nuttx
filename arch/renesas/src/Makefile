@@ -1,7 +1,8 @@
 ############################################################################
 # arch/renesas/src/Makefile
 #
-#   Copyright (C) 2008, 2011-2012, 2014, 2016 Gregory Nutt. All rights reserved.
+#   Copyright (C) 2008, 2011-2012, 2014, 2016, 2019 Gregory Nutt. All rights
+#     reserved.
 #   Author: Gregory Nutt <gnutt@nuttx.org>
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,6 +37,10 @@
 -include $(TOPDIR)/Make.defs
 -include chip/Make.defs
 
+ifeq ($(CONFIG_ARCH_RX65N),y)
+ARCH_SUBDIR = rx65n
+endif
+
 CPPFLAGS += $(EXTRADEFINES)
 CFLAGS += $(EXTRADEFINES)
 CXXFLAGS += $(EXTRADEFINES)
@@ -43,34 +48,36 @@ CXXFLAGS += $(EXTRADEFINES)
 ifeq ($(CONFIG_WINDOWS_NATIVE),y)
   ARCH_SRCDIR = $(TOPDIR)\arch\$(CONFIG_ARCH)\src
   NUTTX = $(TOPDIR)\nuttx$(EXEEXT)
-  CFLAGS += -I$(ARCH_SRCDIR)\chip
-  CFLAGS += -I$(ARCH_SRCDIR)\common
-  CFLAGS += -I$(ARCH_SRCDIR)\$(ARCH_SUBDIR)
-  CFLAGS += -I$(TOPDIR)\sched
+  CFLAGS += -I=$(ARCH_SRCDIR)\chip
+  CFLAGS += -I=$(ARCH_SRCDIR)\common
+  CFLAGS += -I=$(ARCH_SRCDIR)\$(ARCH_SUBDIR)
+  CFLAGS += -I=$(TOPDIR)\sched
 else
   ARCH_SRCDIR = $(TOPDIR)/arch/$(CONFIG_ARCH)/src
 ifeq ($(WINTOOL),y)
-  NUTTX = "${shell cygpath -w $(TOPDIR)/nuttx$(EXEEXT)}"
-  CFLAGS += -I "${shell cygpath -w $(ARCH_SRCDIR)/chip}"
-  CFLAGS += -I "${shell cygpath -w $(ARCH_SRCDIR)/common}"
-  CFLAGS += -I "${shell cygpath -w $(ARCH_SRCDIR)/$(ARCH_SUBDIR)}"
-  CFLAGS += -I "${shell cygpath -w $(TOPDIR)/sched}"
+  NUTTX = ${shell cygpath -w $(TOPDIR)/nuttx$(EXEEXT)}
+  CFLAGS += -I ${shell cygpath -w $(ARCH_SRCDIR)/chip}
+  CFLAGS += -I ${shell cygpath -w $(ARCH_SRCDIR)/common}
+  CFLAGS += -I ${shell cygpath -w $(ARCH_SRCDIR)/$(ARCH_SUBDIR)}
+  CFLAGS += -I. -isystem ${shell cygpath -w $(TOPDIR)/sched}
 else
   NUTTX = $(TOPDIR)/nuttx$(EXEEXT)
   CFLAGS += -I$(ARCH_SRCDIR)/chip
   CFLAGS += -I$(ARCH_SRCDIR)/common
   CFLAGS += -I$(ARCH_SRCDIR)/$(ARCH_SUBDIR)
   CFLAGS += -I$(TOPDIR)/sched
+  CFLAGS += -I$(TOPDIR)/arch/$(CONFIG_ARCH)/include/rx65n/
 endif
 endif
 
-CFLAGS += -I$(ARCH_SRCDIR)/chip -I$(ARCH_SRCDIR)/common -I$(TOPDIR)/sched
+CFLAGS += -I=$(ARCH_SRCDIR)/chip -I=$(ARCH_SRCDIR)/common -I=$(TOPDIR)/sched -I=$(ARCH_SRCDIR)/configs/rx65n/src/
+CFLAGS += -I=$(TOPDIR)/arch/$(CONFIG_ARCH)/include
 
 HEAD_OBJ = $(HEAD_ASRC:.S=$(OBJEXT))
 STARTUP_OBJS ?= $(HEAD_OBJ)
 
 ASRCS = $(CHIP_ASRCS) $(CMN_ASRCS)
-AOBJS = $(ASRCS:.S=$(OBJEXT))
+AOBJS = $(CHIP_ASRCS:.S=$(OBJEXT))
 
 CSRCS = $(CHIP_CSRCS) $(CMN_CSRCS)
 COBJS = $(CSRCS:.c=$(OBJEXT))
@@ -134,16 +141,28 @@ libarch$(LIBEXT): $(OBJS)
 	$(call ARCHIVE, $@, $(OBJS))
 
 board/libboard$(LIBEXT):
-	$(Q) $(MAKE) -C board TOPDIR="$(TOPDIR)" libboard$(LIBEXT) EXTRADEFINES=$(EXTRADEFINES)
+	 $(Q)  $(MAKE) -C board TOPDIR="$(TOPDIR)" libboard$(LIBEXT) EXTRADEFINES=$(EXTRADEFINES)
 
 nuttx$(EXEEXT): $(HEAD_OBJ) board/libboard$(LIBEXT)
 	@echo "LD: nuttx"
+ifeq ($(WINTOOL),y)
+	$(Q) $(LD) --entry=__start  $(LDFLAGS) $(LIBPATHS) -o  ${shell cygpath -m "$(TOPDIR)"}/$@ $(HEAD_OBJ) \
+		$(LDSTARTGROUP) $(LDLIBS) $(EXTRA_LIBS) "$(LIBGCC)" $(LDENDGROUP)
+	@echo "LD: nuttx"
+ifneq ($(CONFIG_WINDOWS_NATIVE),y)
+	$(Q) $(NM) /cygwin64$(TOPDIR)/$@ | \
+	grep -v '\(compiled\)\|\(\$(OBJEXT)$$\)\|\( [aUw] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)' | \
+	sort > $(TOPDIR)/System.map
+endif
+else
 	$(Q) $(LD) --entry=__start $(LDFLAGS) $(LIBPATHS) -o $(TOPDIR)/$@ $(HEAD_OBJ) \
 		$(LDSTARTGROUP) $(LDLIBS) $(EXTRA_LIBS) $(LIBGCC) $(LDENDGROUP)
+	@echo "LD: nuttx"
 ifneq ($(CONFIG_WINDOWS_NATIVE),y)
 	$(Q) $(NM) $(TOPDIR)/$@ | \
 	grep -v '\(compiled\)\|\(\$(OBJEXT)$$\)\|\( [aUw] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)' | \
 	sort > $(TOPDIR)/System.map
+endif
 endif
 
 # This is part of the top-level export target
@@ -162,7 +181,8 @@ export_startup: board/libboard$(LIBEXT) $(STARTUP_OBJS)
 ifeq ($(BOARDMAKE),y)
 	$(Q) $(MAKE) -C board TOPDIR="$(TOPDIR)" depend
 endif
-	$(Q) $(MKDEP) --dep-path chip --dep-path common "$(CC)" -- $(CFLAGS) -- $(SRCS) >Make.dep
+#	$(Q) $(MKDEP) --dep-path chip --dep-path common "$(CC)" -- $(CFLAGS) -- $(SRCS) >Make.dep
+	$(Q) $(MKDEP) --dep-path chip --dep-path common "$(CC)" -- $(CFLAGS) -- $(CSRCS) >Make.dep
 	$(Q) touch $@
 
 depend: .depend
