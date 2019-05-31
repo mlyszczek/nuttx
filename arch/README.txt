@@ -230,6 +230,7 @@ arch/renesas - Support for Renesas and legacy Hitachi microcontrollers.
     MCU support
       arch/renesas/include/m16c and arch/renesas/src/m16c
       arch/renesas/include/sh1 and arch/renesas/src/sh1
+      arch/renesas/include/rx65n and arch/renesas/src/rx65n
 
 arch/or1k
     This directory is dedicated to ports to OpenRISC architectures.

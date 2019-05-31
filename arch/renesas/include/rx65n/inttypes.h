@@ -214,4 +214,4 @@
 #define SCNxMAX     "llx"
 #define SCNxPTR     "x"
 
-#endif /* __ARCH_AVR_INCLUDE_SH1_INTTYPES_H */
+#endif /* __ARCH_RENESAS_INCLUDE_RX65N_INTTYPES_H */
