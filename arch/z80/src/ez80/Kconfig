@@ -30,6 +30,10 @@ config EZ80_SPI
 	bool "SPI"
 	default n
 
+config EZ80_RTC
+	bool "RTC"
+	default n
+
 config EZ80_EMAC
 	bool "Ethernet MAC"
 	default n
