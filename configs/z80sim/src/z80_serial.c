@@ -50,10 +50,9 @@
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/serial/serial.h>
-#include <arch/serial.h>
 
 #include "up_arch.h"
-#include "up_internal.h"
+#include "z80_internal.h"
 
 #ifdef USE_SERIALDRIVER
 
@@ -113,22 +112,24 @@ static uart_dev_t g_uartport =
   { 1 },                    /* closesem */
   { 0 },                    /* xmitsem */
   { 0 },                    /* recvsem */
+  { 0 },                    /* pollsem */
   {                         /* xmit */
     { 1 },                  /*   sem */
     0,                      /*   head */
     0,                      /*   tail */
     CONFIG_UART_TXBUFSIZE,  /*   size */
-    g_uarttxbuffer,         /*   buffer */
+    g_uarttxbuffer          /*   buffer */
   },
   {                         /* recv */
     { 1 },                  /*   sem */
     0,                      /*   head */
     0,                      /*   tail */
     CONFIG_UART_RXBUFSIZE,  /*   size */
-    g_uartrxbuffer,         /*   buffer */
+    g_uartrxbuffer          /*   buffer */
   },
   &g_uart_ops,              /* ops */
   NULL,                     /* priv */
+  NULL                      /* pollfds */
 };
 
 /****************************************************************************
@@ -308,29 +309,14 @@ static bool up_txempty(FAR struct uart_dev_s *dev)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_serialinit
+ * Name: z80_serial_initialize
  *
  * Description:
- *   Performs the low level UART initialization early in
- *   debug so that the serial console will be available
- *   during bootup.  This must be called before up_serialinit.
+ *   Register serial console and serial ports.
  *
  ****************************************************************************/
 
-void up_earlyserialinit(void)
-{
-}
-
-/****************************************************************************
- * Name: up_serialinit
- *
- * Description:
- *   Register serial console and serial ports.  This assumes
- *   that up_earlyserialinit was called previously.
- *
- ****************************************************************************/
-
-void up_serialinit(void)
+void z80_serial_initialize(void)
 {
   (void)uart_register("/dev/console", &g_uartport);
   (void)uart_register("/dev/ttyS0", &g_uartport);

@@ -1,5 +1,5 @@
 /************************************************************************************
- * configs/stm32f4discovery/src/stm32_bmp180.c
+ * configs/nucleo-l476rg/src/stm32_bmp180.c
  *
  *   Copyright (C) 2015 Alan Carvalho de Assis. All rights reserved.
  *   Author: Alan Carvalho de Assis <acassis@gmail.com>

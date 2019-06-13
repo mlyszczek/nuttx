@@ -44,8 +44,8 @@
 #include <nuttx/arch.h>
 #include <nuttx/sched.h>
 
-#include "chip/chip.h"
-#include "up_internal.h"
+#include "chip.h"
+#include "z80_internal.h"
 #include "up_arch.h"
 
 /****************************************************************************

@@ -60,12 +60,19 @@ Version 5.2.1
   however, I encountered compiler internal errors.  I did not pursue that
   build any further.
 
+Version 5.3.0
+
+  I verifed compilation using 5.30 on June 2, 2019.  To use this version,
+  I had to make spurious modification to the implementation of gmtimer() to
+  work around an internal compiler error.  I have still not verified that
+  are no errors in the compiled code.
+
 Other Versions
-  If you use any version of ZDS-II other than 5.1.1 or 5.2.1 or if you install
-  ZDS-II at any location other than the default location, you will have to
-  modify one or two files:  (2) configs/ez80f910200zco/*/Make.defs and (2)
-  arch/z80/src/ez80/Toolchain.defs.  You may also have to modify you PATH
-  environment variable.
+  If you use any version of ZDS-II other than 5.1.1, 5.2.1, or 5.3.0 or
+  if you install ZDS-II at any location other than the default location,
+  you will have to modify three files:  (1) arch/arm/z80/src/ez80/Kconfig,
+  (2) configs/ez80f910200zco/scripts/Make.defs and, perhaps, (3)
+  arch/z80/src/ez80/Toolchain.defs.
 
 Configurations
 ^^^^^^^^^^^^^^
