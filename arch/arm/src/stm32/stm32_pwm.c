@@ -111,9 +111,9 @@
 #define TIMTYPE_TIM12      TIMTYPE_COUNTUP16
 #define TIMTYPE_TIM13      TIMTYPE_COUNTUP16
 #define TIMTYPE_TIM14      TIMTYPE_COUNTUP16
-#define TIMTYPE_TIM15      TIMTYPE_COUNTUP16_N
-#define TIMTYPE_TIM16      TIMTYPE_COUNTUP16_N
-#define TIMTYPE_TIM17      TIMTYPE_COUNTUP16_N
+#define TIMTYPE_TIM15      TIMTYPE_COUNTUP16_N /* Treated as ADVTIM */
+#define TIMTYPE_TIM16      TIMTYPE_COUNTUP16_N /* Treated as ADVTIM */
+#define TIMTYPE_TIM17      TIMTYPE_COUNTUP16_N /* Treated as ADVTIM */
 
 /* Timer clock source, RCC EN offset, enable bit,
  * RCC RST offset, reset bit to use
@@ -674,7 +674,7 @@ static struct stm32_pwmchan_s g_pwm1channels[] =
       .pincfg  = 0,    /* No available externaly */
     }
 #endif
-  }
+  },
 #endif
 #ifdef CONFIG_STM32_TIM1_CHANNEL6
   {
@@ -1234,7 +1234,7 @@ static struct stm32_pwmchan_s g_pwm8channels[] =
       .pincfg  = 0,    /* No available externaly */
     }
 #endif
-  }
+  },
 #endif
 #ifdef CONFIG_STM32_TIM8_CHANNEL6
   {
@@ -3200,7 +3200,7 @@ static int pwm_break_dt_configure(FAR struct stm32_pwmtimer_s *priv)
 
   /* Configure lock */
 
-  bdtr |= priv->lock << GTIM_BDTR_LOCK_SHIFT;
+  bdtr |= priv->lock << ATIM_BDTR_LOCK_SHIFT;
 
   /* Write BDTR register at once */
 
@@ -3394,7 +3394,6 @@ static int pwm_pulsecount_timer(FAR struct pwm_lowerhalf_s *dev,
 
       pwm_soft_update(dev);
 
-#if 0
       /* Now set the value of the RCR that will be loaded on the next
        * update event.
        */
@@ -3402,7 +3401,6 @@ static int pwm_pulsecount_timer(FAR struct pwm_lowerhalf_s *dev,
       priv->count = info->count;
       priv->curr  = pwm_pulsecount(info->count - priv->prev);
       pwm_putreg(priv, STM32_ATIM_RCR_OFFSET, (uint16_t)priv->curr - 1);
-#endif
     }
 
   /* Otherwise, just clear the repetition counter */
@@ -3885,7 +3883,7 @@ static uint8_t pwm_pulsecount(uint32_t count)
    * just return the count.
    */
 
-  if (count <= GTIM_RCR_REP_MAX)
+  if (count <= ATIM_RCR_REP_MAX)
     {
       return (uint8_t)count;
     }
@@ -3897,16 +3895,16 @@ static uint8_t pwm_pulsecount(uint32_t count)
    * and 128.
    */
 
-  else if (count < (3 * GTIM_RCR_REP_MAX / 2))
+  else if (count < (3 * ATIM_RCR_REP_MAX / 2))
     {
-      return (uint8_t)((GTIM_RCR_REP_MAX + 1) >> 1);
+      return (uint8_t)((ATIM_RCR_REP_MAX + 1) >> 1);
     }
 
   /* Otherwise, return the maximum.  The final count will be 64 or more */
 
   else
     {
-      return (uint8_t)GTIM_RCR_REP_MAX;
+      return (uint8_t)ATIM_RCR_REP_MAX;
     }
 }
 #endif  /* HAVE_PWM_INTERRUPT */

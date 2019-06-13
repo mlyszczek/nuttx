@@ -1,6 +1,5 @@
 /************************************************************************************
  * arch/z80/src/ez80/ez80f91_spi.h
- * arch/z80/src/chip/ez80f91_spi.h
  *
  *   Copyright (C) 2009-2010, 2015 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -61,7 +60,7 @@
  * No bit definitions -- These two 8-bit registers set the 16-bit BRG divider value
  */
 
-/* SPI Control (CTL} Register Definitions */
+/* SPI Control (CTL) Register Definitions */
 
 #define SPI_CTL_IRQEN    (1 << 7) /* Bit 7: 1=SPI system interrupt is enabled */
 #define SPI_CTL_SPIEN    (1 << 5) /* Bit 5: 1=SPI is enabled */
@@ -100,7 +99,7 @@ extern "C"
  * Public Functions
  ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Name: ez80_spibus_initialize
  *
  * Description:
@@ -120,24 +119,24 @@ extern "C"
  * Returned Value:
  *   Valid SPI device structre reference on succcess; a NULL on failure
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 FAR struct spi_dev_s *ez80_spibus_initialize(int port);
 
 /************************************************************************************
- * The external functions, ez80_spiselect, ez80_spistatus, ans ez80_spicmddata must
+ * The external functions, ez80_spiselect, ez80_spistatus, and ez80_spicmddata must
  * be provided by board-specific logic.  These are implementations of the select,
  * status, and cmddata methods of the SPI interface defined by struct spi_ops_s (see
- * include/nuttx/spi/spi.h).  All other methods (including ez80_spibus_initialize()) are
- * provided by common logic.  To use this common SPI logic on your board:
+ * include/nuttx/spi/spi.h).  All other methods (including ez80_spibus_initialize())
+ * are provided by common logic.  To use this common SPI logic on your board:
  *
- *   1. Provide ez80_spiselect() and ez80_spistatus() functions in your board-specific
- *      logic.  This function will perform chip selection and status operations using
- *      GPIOs in the way your board is configured.
+ *   1. Provide ez80_spiselect() and ez80_spistatus() functions in your board-
+ *      specific logic.  This function will perform chip selection and status
+ *      operations using GPIOs in the way your board is configured.
  *   2. If CONFIG_SPI_CMDDATA is defined in your NuttX configuration, provide the
- *      ez80_spiscmddata() function in your board-specific logic.  This function will
- *      perform cmd/data selection operations using GPIOs in the way your board is
- *      configured.
+ *      ez80_spiscmddata() function in your board-specific logic.  This function
+ *      will perform cmd/data selection operations using GPIOs in the way your board
+ *      is configured.
  *   3. Add a call to ez80_spibus_initialize() in your low level initialization logic
  *   4. The handle returned by ez80_spibus_initialize() may then be used to bind the
  *      SPI driver to higher level logic (e.g., calling  mmcsd_spislotinitialize(),

@@ -1,7 +1,8 @@
 /****************************************************************************
  * libs/libc/time/lib_gmtimer.c
  *
- *   Copyright (C) 2007, 2009, 2011, 2015 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007, 2009, 2011, 2015, 2019 Gregory Nutt. All rights
+ *     reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,26 +61,16 @@
 
 /* Calendar/UTC conversion routines */
 
-static void   clock_utc2calendar(time_t utc, int *year, int *month, int *day);
+static void   clock_utc2calendar(time_t utc, FAR int *year, FAR int *month,
+                                 FAR int *day);
 #ifdef CONFIG_GREGORIAN_TIME
-static void   clock_utc2gregorian (time_t jdn, int *year, int *month, int *day);
-
+static void   clock_utc2gregorian(time_t jdn, FAR int *year, FAR int *month,
+                                  FAR int *day);
 #ifdef CONFIG_JULIAN_TIME
-static void   clock_utc2julian(time_t jdn, int *year, int *month, int *day);
+static void   clock_utc2julian(time_t jdn, FAR int *year, FAR int *month,
+                               FAR int *day);
 #endif /* CONFIG_JULIAN_TIME */
 #endif /* CONFIG_GREGORIAN_TIME */
-
-/****************************************************************************
- * Public Constant Data
- ****************************************************************************/
-
-/****************************************************************************
- * Public Data
- ****************************************************************************/
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
 
 /****************************************************************************
  * Private Functions
@@ -97,7 +88,8 @@ static void   clock_utc2julian(time_t jdn, int *year, int *month, int *day);
  ****************************************************************************/
 
 #ifdef CONFIG_GREGORIAN_TIME
-static void clock_utc2calendar(time_t utc, int *year, int *month, int *day)
+static void clock_utc2calendar(time_t utc, FAR int *year, FAR int *month,
+                               FAR int *day)
 {
 #ifdef CONFIG_JULIAN_TIME
 
@@ -117,20 +109,27 @@ static void clock_utc2calendar(time_t utc, int *year, int *month, int *day)
 #endif /* CONFIG_JULIAN_TIME */
 }
 
-static void clock_utc2gregorian(time_t jd, int *year, int *month, int *day)
+static void clock_utc2gregorian(time_t jd, FAR int *year, FAR int *month,
+                                FAR int *day)
 {
-  long	l, n, i, j, d, m, y;
+  long l;
+  long n;
+  long i;
+  long j;
+  long d;
+  long m;
+  long y;
 
   l = jd + 68569;
-  n = (4*l) / 146097;
-  l = l - (146097*n + 3)/4;
-  i = (4000*(l+1))/1461001;
-  l = l - (1461*i)/4 + 31;
-  j = (80*l)/2447;
-  d = l - (2447*j)/80;
-  l = j/11;
-  m = j + 2 - 12*l;
-  y = 100*(n-49) + i + l;
+  n = (4 * l) / 146097;
+  l = l - (146097 * n + 3)/4;
+  i = (4000 * (l + 1)) / 1461001;
+  l = l - (1461 * i) / 4 + 31;
+  j = (80 * l) / 2447;
+  d = l - (2447 * j) / 80;
+  l = j / 11;
+  m = j + 2 - 12 * l;
+  y = 100 * (n - 49) + i + l;
 
   *year  = y;
   *month = m;
@@ -139,20 +138,28 @@ static void clock_utc2gregorian(time_t jd, int *year, int *month, int *day)
 
 #ifdef CONFIG_JULIAN_TIME
 
-static void clock_utc2julian(time_t jd, int *year, int *month, int *day)
+static void clock_utc2julian(time_t jd, FAR int *year, FAR int *month,
+                             FAR int *day)
 {
-  long	j, k, l, n, d, i, m, y;
+  long j;
+  long k;
+  long l;
+  long n;
+  long d;
+  long i;
+  long m;
+  long y;
 
   j = jd + 1402;
-  k = (j-1)/1461;
-  l = j - 1461*k;
-  n = (l-1)/365 - l/1461;
-  i = l - 365*n + 30;
-  j = (80*i)/2447;
-  d = i - (2447*j)/80;
-  i = j/11;
-  m = j + 2 - 12*i;
-  y = 4*k + n + i - 4716;
+  k = (j - 1) / 1461;
+  l = j - 1461 * k;
+  n = (l - 1) / 365 - l / 1461;
+  i = l - 365 * n + 30;
+  j = (80 * i) / 2447;
+  d = i - (2447 * j)/80;
+  i = j / 11;
+  m = j + 2 - 12 * i;
+  y = 4 * k + n + i - 4716;
 
   *year  = y;
   *month = m;
@@ -181,36 +188,39 @@ static void clock_utc2calendar(time_t days, FAR int *year, FAR int *month,
   days   -= value * (4 * 365 + 1); /* Remaining days */
   value <<= 2;                     /* Years since the epoch */
 
-  /* Then we will brute force the next 0-3 years */
+  /* Then we will brute force the next 0-3 years
+   *
+   * Is this year a leap year? (we'll need this later too)
+   */
 
-  for (; ; )
+  leapyear = clock_isleapyear(value + 1970);
+
+  /* Get the number of days in the year */
+
+  tmp = (leapyear ? 366 : 365);
+
+  /* Do we have that many days left to account for? */
+
+  while (days >= tmp)
     {
-      /* Is this year a leap year (we'll need this later too) */
+      /* Yes.. bump up the year and subtract the number of days in the year */
+
+      value++;
+      days -= tmp;
+
+      /* Is the next year a leap year? */
 
       leapyear = clock_isleapyear(value + 1970);
 
-      /* Get the number of days in the year */
+      /* Get the number of days in the next year */
 
       tmp = (leapyear ? 366 : 365);
-
-      /* Do we have that many days? */
-
-      if (days >= tmp)
-        {
-           /* Yes.. bump up the year */
-
-           value++;
-           days -= tmp;
-        }
-      else
-        {
-           /* Nope... then go handle months */
-
-           break;
-        }
     }
 
-  /* At this point, value has the year and days has number days into this year */
+  /* At this point, 'value' has the years since 1970 and 'days' has number
+   * of days into that year.  'leapyear' is true if the year in 'value' is
+   * a leap year.
+   */
 
   *year = 1970 + value;
 
@@ -225,8 +235,8 @@ static void clock_utc2calendar(time_t days, FAR int *year, FAR int *month,
 
       value = (min + max) >> 1;
 
-      /* Get the number of days that occurred before the beginning of the month
-       * following the midpoint.
+      /* Get the number of days that occurred before the beginning of the
+       * month following the midpoint.
        */
 
       tmp = clock_daysbeforemonth(value + 1, leapyear);
@@ -348,10 +358,11 @@ FAR struct tm *gmtime_r(FAR const time_t *timer, FAR struct tm *result)
 
 #if defined(CONFIG_TIME_EXTENDED)
   result->tm_wday  = clock_dayoftheweek(day, month, year);
-  result->tm_yday  = day + clock_daysbeforemonth(result->tm_mon, clock_isleapyear(year));
+  result->tm_yday  = day +
+                     clock_daysbeforemonth(result->tm_mon,
+                                           clock_isleapyear(year));
   result->tm_isdst = 0;
 #endif
 
   return result;
 }
-

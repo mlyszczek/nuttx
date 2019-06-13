@@ -44,12 +44,13 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <nuttx/irq.h>
 #include <nuttx/mm/gran.h>
 
-#include <nuttx/irq.h>
+#include <arch/irq.h>
 #include <arch/io.h>
 
-#include "up_internal.h"
+#include "z80_internal.h"
 #include "z180_mmu.h"
 
 /****************************************************************************
@@ -125,7 +126,7 @@ static inline FAR struct z180_cbr_s *z180_mmu_alloccbr(void)
  *   called very early in the boot process to get the basic operating
  *   memory configuration correct.  This function does *not* perform all
  *   necessray MMU initialization... only the basics needed at power-up.
- *   up_mmuinit() must be called later to complete the entire MMU
+ *   z80_mmu_initialize() must be called later to complete the entire MMU
  *   initialization.
  *
  ****************************************************************************/
@@ -150,7 +151,7 @@ void z180_mmu_lowinit(void) __naked
 }
 
 /****************************************************************************
- * Name: up_mmuinit
+ * Name: z80_mmu_initialize
  *
  * Description:
  *   Perform higher level initialization of the MMU and physical memory
@@ -158,7 +159,7 @@ void z180_mmu_lowinit(void) __naked
  *
  ****************************************************************************/
 
-int up_mmuinit(void)
+int z80_mmu_initialize(void)
 {
   /* Here we use the granule allocator as a page allocator.  We lie and
    * say that 1 page is 1 byte.
@@ -273,7 +274,7 @@ int up_addrenv_create(size_t textsize, size_t datasize, size_t heapsize,
 
   /* Now allocate the physical memory to back up the address environment */
 
-  alloc = (uintptr_t)gran_alloc(npages);
+  alloc = (uintptr_t)gran_alloc(g_physhandle, npages);
   if (alloc == NULL)
     {
       serr("ERROR: Failed to allocate %d pages\n", npages);
@@ -522,7 +523,7 @@ int up_addrenv_coherent(FAR const group_addrenv_t *addrenv)
  ****************************************************************************/
 
 int up_addrenv_clone(FAR const group_addrenv_t *src,
-                     FAR group_addrenv_t *dest);
+                     FAR group_addrenv_t *dest)
 {
   DEBUGASSERT(src && dest);
 
@@ -582,7 +583,7 @@ int up_addrenv_attach(FAR struct task_group_s *group, FAR struct tcb_s *tcb)
  *
  ****************************************************************************/
 
-int up_addrenv_detach(FAR struct task_group_s *group, FAR struct tcb_s *tcb);
+int up_addrenv_detach(FAR struct task_group_s *group, FAR struct tcb_s *tcb)
 {
   /* There is nothing that needs to be done */
 

@@ -52,7 +52,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/serial/serial.h>
 
-#include "chip/chip.h"
+#include "chip.h"
 #include "up_internal.h"
 
 #ifdef USE_SERIALDRIVER
@@ -704,7 +704,7 @@ void up_earlyserialinit(void)
   uint8_t regval;
 
   /* Configure UART alternate pin functions.  This may duplicate logic in
-   * z16f_lowuartinit() or z16f_lowinit().
+   * z16f_lowuartinit() or z16f_board_initialize().
    */
 
 #ifdef CONFIG_Z16F_UART0
