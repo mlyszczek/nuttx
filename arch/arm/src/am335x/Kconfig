@@ -97,7 +97,8 @@ config AM335X_GPIO
 config AM335X_LCD
 	bool "LCD controller"
 	default n
-	depends on EXPERIMENTAL
+	depends on VIDEO && EXPERIMENTAL
+	select VIDEO_EDID
 
 config AM335X_TSC
 	bool "Touchscreen Controller"

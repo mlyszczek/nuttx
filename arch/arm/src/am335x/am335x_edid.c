@@ -47,6 +47,7 @@
 #include <nuttx/config.h>
 
 #include <string.h>
+#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 
@@ -67,26 +68,6 @@
 
 #define MAX_PIXEL_CLOCK 126000
 #define MAX_BANDWIDTH   (1280*1024*60)
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static const struct edid_videomode_s g_vgamode =
-{
-  25175,                   /* dotclock */
-  640,                     /* hdisplay */
-  656,                     /* hsync_start */
-  752,                     /* hsync_end */
-  800,                     /* htotal */
-  480,                     /* vdisplay */
-  490,                     /* vsync_start */
-  492,                     /* vsync_end */
-  525,                     /* vtotal */
-  VID_NHSYNC | VID_NVSYNC, /* flags */
-  "640x480x60",            /* name */
-  0                        /* hskew */
-};
 
 /****************************************************************************
  * Private Functions
@@ -317,8 +298,10 @@ void am335x_lcd_edid(FAR const uint8_t *edid, size_t edid_len,
 
   if (videomode == NULL)
     {
-      videomode = &g_vgamode;
+      videomode = edid_mode_lookup("640x480x60");
+      DEBUGASSERT(videomode != NULL);
     }
+
 
   lcdinfo("Detected videomode: %dx%d @ %dKHz\n",
           videomode->hdisplay, videomode->vdisplay,
