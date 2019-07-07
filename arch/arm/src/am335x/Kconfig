@@ -103,12 +103,8 @@ config AM335X_TSC
 	bool "Touchscreen Controller"
 	default n
 
-config AM335X_LCDC
-	bool "LCD Controller"
-	default n
-
 config AM335X_CPSW
-	bool "Ethernet subsustem"
+	bool "Ethernet subsystem"
 	default n
 
 config AM335X_PWMSS

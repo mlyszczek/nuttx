@@ -47,10 +47,12 @@
 #include <nuttx/config.h>
 
 #include <string.h>
+#include <errno.h>
+#include <debug.h>
 
 #include <nuttx/lcd/edid.h>
 
-#include "am355x_lcd.h"
+#include "am335x_lcd.h"
 
 /****************************************************************************
  * Pre-processor definitions Functions
@@ -79,7 +81,7 @@
  ****************************************************************************/
 
 static uint32_t
-  am335x_videomode_vrefresh(FAR const struct edid_videomode_s *mode)
+  am335x_videomode_vrefresh(FAR const struct edid_videomode_s *videomode)
 {
   uint32_t refresh;
 
@@ -113,7 +115,7 @@ static bool
   am335x_videomode_valid(FAR const struct edid_videomode_s *videomode)
 {
   uint32_t hbp;
-  uint32_t fp;
+  uint32_t hfp;
   uint32_t hsw;
   uint32_t vbp;
   uint32_t vfp;
@@ -199,9 +201,10 @@ static bool
  *
  ****************************************************************************/
 
-static const struct videomode *am335x_lcd_pickmode(FAR const struct edid_info *ei)
+static const struct edid_videomode_s *
+  am335x_lcd_pickmode(FAR struct edid_info_s *ei)
 {
-  const struct videomode *videomode;
+  FAR const struct edid_videomode_s *videomode;
   int n;
 
   /* Get standard VGA as default */
@@ -224,7 +227,7 @@ static const struct videomode *am335x_lcd_pickmode(FAR const struct edid_info *e
    * are sorted on closest match to that mode.
    */
 
-  sort_modes(ei->edid_modes, &ei->edid_preferred_mode, ei->edid_nmodes);
+  edid_sort_modes(ei->edid_modes, &ei->edid_preferred_mode, ei->edid_nmodes);
 
   /* Pick the first valid mode in the list */
 
@@ -271,7 +274,7 @@ int am335x_lcd_edid(FAR const uint8_t *edid, size_t edid_len,
                     FAR struct edid_videomode_s *selected)
 {
   FAR const struct edid_videomode_s *videomode = NULL;
-  struct edid_info ei;
+  struct edid_info_s ei;
 
   /* Parse the EDID data */
 

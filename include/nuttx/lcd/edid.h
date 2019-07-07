@@ -461,4 +461,42 @@ struct edid_info_s
   struct edid_videomode_s edid_modes[64];
 };
 
+/********************************************************************************************
+ * Public Function Prototypes
+ ********************************************************************************************/
+
+/********************************************************************************************
+ * Name:  edid_parse
+ *
+ * Description:
+ *   Given a block of raw EDID data, parse the data and convert it to the 'digested' form
+ *   of struct edid_info_s.
+ *
+ * Input Parameters:
+ *   data - A reference to the raw EDID data
+ *   edid - The location to return the digested EDID data.
+ *   
+ * 
+ ********************************************************************************************/
+
+int edid_parse(FAR const uint8_t *data, FAR struct edid_info_s *edid);
+
+/********************************************************************************************
+ * Name:  edid_sort_modes
+ *
+ * Description:
+ *   Sort video modes by refresh rate, aspect ratio (*), then resolution.
+ *   Preferred mode or largest mode is first in the list and other modes
+ *   are sorted on closest match to that mode.
+ *
+ * Input Parameters:
+ *   modes     - A reference to the first entry in a list of video modes
+ *   preferred - A pointer to the pointer to the preferred mode in the list
+ *   nmodes    - The number of modes in the list
+ *
+ ********************************************************************************************/
+
+int edid_sort_modes(FAR struct edid_videomode_s *modes,
+                    FAR struct edid_videomode_s **preferred, unsigned int nmodes);
+
 #endif /* __INCLUDE_NUTTX_LCD_EDID_H */
