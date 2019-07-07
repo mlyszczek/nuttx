@@ -388,7 +388,7 @@
 
 struct edid_videomode_s
 {
-  int dot_clock;    /* Dot clock frequency in kHz. */
+  int dotclock;     /* Dot clock frequency in kHz. */
   int hdisplay;
   int hsync_start;
   int hsync_end;
@@ -397,7 +397,7 @@ struct edid_videomode_s
   int vsync_start;
   int vsync_end;
   int vtotal;
-  int flags;        /* Video mode flags; see below. */
+  int flags;        /* Video mode flags; see above. */
   FAR const char *name;
   int hskew;
 };

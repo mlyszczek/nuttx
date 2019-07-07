@@ -219,15 +219,16 @@ void am335x_lcd_initialize(FAR const struct am335x_panel_info_s *panel);
  *   selected - A user provided location to receive the selected video mode.
  *
  * Returned value:
- *   Zero (OK) is returned on success; a negated errno value is returned in
- *   the case of a failure.
+ *   None.  Always succeeds.  The logic will fallback to VGA mode if no
+ *   EDID data is provided or if there is no valid video mode in the EDID
+ *   data.
  *
  ****************************************************************************/
 
 struct edid_videomode_s; /* Forward reference */
 
-int am335x_lcd_edid(FAR const uint8_t *edid, size_t edid_len,
-                    FAR struct am335x_panel_info_s *panel,
-                    FAR struct edid_videomode_s *selected);
+void am335x_lcd_edid(FAR const uint8_t *edid, size_t edid_len,
+                     FAR struct am335x_panel_info_s *panel,
+                     FAR struct edid_videomode_s *selected);
 
 #endif /* __ARCH_ARM_SRC_AM335X_AM335X_LCD_H */

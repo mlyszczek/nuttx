@@ -69,6 +69,26 @@
 #define MAX_BANDWIDTH   (1280*1024*60)
 
 /****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static const struct edid_videomode_s g_vgamode =
+{
+  25175,                   /* dotclock */
+  640,                     /* hdisplay */
+  656,                     /* hsync_start */
+  752,                     /* hsync_end */
+  800,                     /* htotal */
+  480,                     /* vdisplay */
+  490,                     /* vsync_start */
+  492,                     /* vsync_end */
+  525,                     /* vtotal */
+  VID_NHSYNC | VID_NVSYNC, /* flags */
+  "640x480x60",            /* name */
+  0                        /* hskew */
+};
+
+/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -87,7 +107,7 @@ static uint32_t
 
   /* Calculate vertical refresh rate */
 
-  refresh = (videomode->dot_clock * 1000 / videomode->htotal);
+  refresh = (videomode->dotclock * 1000 / videomode->htotal);
   refresh = (refresh + videomode->vtotal / 2) / videomode->vtotal;
 
   if (videomode->flags & VID_INTERLACE)
@@ -122,7 +142,7 @@ static bool
   uint32_t vsw;
   uint32_t vrefresh;
 
-  if (videomode->dot_clock > MAX_PIXEL_CLOCK)
+  if (videomode->dotclock > MAX_PIXEL_CLOCK)
     {
       return false;
     }
@@ -264,41 +284,40 @@ static const struct edid_videomode_s *
  *    selected - A user provided location to receive the selected video mode.
  *
  * Returned value:
- *   Zero (OK) is returned on success; a negated errno value is returned in
- *   the case of a failure.
+ *   None.  Always succeeds.  The logic will fallback to VGA mode if no
+ *   EDID data is provided or if there is no valid video mode in the EDID
+ *   data.
  *
  ****************************************************************************/
 
-int am335x_lcd_edid(FAR const uint8_t *edid, size_t edid_len,
-                    FAR struct am335x_panel_info_s *panel,
-                    FAR struct edid_videomode_s *selected)
+void am335x_lcd_edid(FAR const uint8_t *edid, size_t edid_len,
+                     FAR struct am335x_panel_info_s *panel,
+                     FAR struct edid_videomode_s *selected)
 {
   FAR const struct edid_videomode_s *videomode = NULL;
   struct edid_info_s ei;
 
-  /* Parse the EDID data */
+  /* Do we have EDID data? */
 
-  if (edid_parse(edid, &ei) == 0)
+  if (edid != NULL && edid_len > 0)
     {
-      videomode = am335x_lcd_pickmode(&ei);
-    }
-  else
-    {
-      lcderr("ERROR: Failed to parse EDID\n");
-      return -EINVAL;
+      /* Parse the EDID data */
+
+      if (edid_parse(edid, &ei) == 0)
+        {
+          videomode = am335x_lcd_pickmode(&ei);
+        }
+      else
+        {
+          lcderr("ERROR: Failed to parse EDID\n");
+        }
     }
 
   /* Use standard VGA as fallback */
 
   if (videomode == NULL)
     {
-      videomode = pick_mode_by_ref(640, 480, 60);
-    }
-
-  if (videomode == NULL)
-    {
-      lcderr("ERROR: Failed to find usable videomode");
-      return -ENOSYS;
+      videomode = &g_vgamode;
     }
 
   lcdinfo("Detected videomode: %dx%d @ %dKHz\n",
@@ -319,7 +338,7 @@ int am335x_lcd_edid(FAR const uint8_t *edid, size_t edid_len,
 
   panel->hsync_active    = ((videomode->flags & VID_NHSYNC) != 0);
   panel->vsync_active    = ((videomode->flags & VID_NVSYNC) == 0);
-  panel->panel_pixclk    = videomode->dot_clock * 1000;
+  panel->panel_pixclk    = videomode->dotclock * 1000;
 
   /* Set other values to the default */
 
@@ -353,6 +372,4 @@ int am335x_lcd_edid(FAR const uint8_t *edid, size_t edid_len,
     {
       memcpy(selected, videomode, sizeof(struct edid_videomode_s));
     }
-
-  return OK;
 }
