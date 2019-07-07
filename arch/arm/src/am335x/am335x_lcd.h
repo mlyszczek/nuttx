@@ -54,6 +54,7 @@
 #include <nuttx/config.h>
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include <nuttx/nx/nxglib.h>
 
@@ -63,19 +64,16 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Configuration */
+/* Configuration ************************************************************/
 
-/* Base address of the video RAM frame buffer */
+/* Background color */
 
-#ifndef CONFIG_AM335X_LCD_VRAMBASE
-#  define CONFIG_AM335X_LCD_VRAMBASE ((uint32_t)AM335X_EXTDRAM_CS0 + 0x00010000)
+#ifndef CONFIG_AM335X_LCD_BACKCOLOR
+#  warning "Assuming background color == 16"
+#  define CONFIG_AM335X_LCD_BACKCOLOR 0  /* Initial background color */
 #endif
 
-/* LCD refresh rate */
-
-#ifndef CONFIG_AM335X_LCD_REFRESH_FREQ
-#  define CONFIG_AM335X_LCD_REFRESH_FREQ (50) /* Hz */
-#endif
+/* Default characteristics (may be overridden via struct am335x_panel_info_s */
 
 /* Bits per pixel / color format */
 
@@ -95,102 +93,141 @@
 #elif defined(CONFIG_AM335X_LCD_BPP12_444)
 #  define AM335X_BPP       1            12
 #  define AM335X_COLOR_FMT              FB_FMT_RGB12_444
-#elif defined(CONFIG_AM335X_LCD_BPP16)
-#  define AM335X_BPP                    16
-#  define AM335X_COLOR_FMT              FB_FMT_Y16
 #elif defined(CONFIG_AM335X_LCD_BPP16_565)
 #  define AM335X_BPP                    16
 #  define AM335X_COLOR_FMT              FB_FMT_RGB16_565
 #elif defined(CONFIG_AM335X_LCD_BPP24)
-#  define AM335X_BPP                    32  /* Only 24 of 32 bits used for RGB */
+#  define AM335X_BPP                    24 RGB */
 #  define AM335X_COLOR_FMT              FB_FMT_RGB24
-#  ifndef CONFIG_AM335X_LCD_TFTPANEL
-#    error "24 BPP is only available for a TFT panel"
-#  endif
 #else
-#  ifndef CONFIG_AM335X_LCD_TFTPANEL
-#    warning "Assuming 24 BPP"
-#    define AM335X_BPP                  24
-#    define CONFIG_AM335X_LCD_BPP24     1
-#    define AM335X_COLOR_FMT            FB_FMT_RGB24
-#  else
-#    warning "Assuming 16 BPP 5:6:5"
-#    define AM335X_BPP                  16
-#    define CONFIG_AM335X_LCD_BPP16_565 1
-#    define AM335X_COLOR_FMT            FB_FMT_RGB16_565
-#  endif
+#  warning "Assuming 16 BPP 5:6:5"
+#  define AM335X_BPP                    16
+#  define CONFIG_AM335X_LCD_BPP16_565   1
+#  define AM335X_COLOR_FMT              FB_FMT_RGB16_565
 #endif
 
-/* Background color */
-
-#ifndef CONFIG_AM335X_LCD_BACKCOLOR
-#  define CONFIG_AM335X_LCD_BACKCOLOR 0  /* Initial background color */
+#ifndef CONFIG_AM335X_LCD_ACBIAS
+#  warning "Assuming AC bias == 255"
+#  define CONFIG_AM335X_LCD_ACBIAS 255
 #endif
 
-/* Horizontal video characteristics */
-
-#ifndef CONFIG_AM335X_LCD_HWIDTH
-#  define CONFIG_AM335X_LCD_HWIDTH 480 /* Width in pixels */
+#ifndef CONFIG_AM335X_LCD_ACBIAS_PINT
+#  warning "Assuming AC bias per interrupt == 0"
+#  define CONFIG_AM335X_LCD_ACBIAS_PINT 0
 #endif
 
-#ifndef CONFIG_AM335X_LCD_HPULSE
-#  define CONFIG_AM335X_LCD_HPULSE 2
+#if defined(CONFIG_AM335X_LCD_DMA_BURST1)
+#  define AM335X_LCD_DMA_BURSTSZ 1
+#elif defined(CONFIG_AM335X_LCD_DMA_BURST2)
+#  define AM335X_LCD_DMA_BURSTSZ 2
+#elif defined(CONFIG_AM335X_LCD_DMA_BURST4)
+#  define AM335X_LCD_DMA_BURSTSZ 4
+#elif defined(CONFIG_AM335X_LCD_DMA_BURST8)
+#  define AM335X_LCD_DMA_BURSTSZ 8
+#elif defined(CONFIG_AM335X_LCD_DMA_BURST16)
+#  define AM335X_LCD_DMA_BURSTSZ 16
+#else
+#  warning "Assuming DMA burst size == 16"
+#  define CONFIG_AM335X_LCD_DMA_BURST16 1
+#  define AM335X_LCD_DMA_BURSTSZ 16
 #endif
 
-#ifndef CONFIG_AM335X_LCD_HFRONTPORCH
-#  define CONFIG_AM335X_LCD_HFRONTPORCH 5
+#ifndef CONFIG_AM335X_LCD_FDD
+#  warning "Assuming FDD == 128"
+#  define CONFIG_AM335X_LCD_FDD 128
 #endif
 
-#ifndef CONFIG_AM335X_LCD_HBACKPORCH
-#  define CONFIG_AM335X_LCD_HBACKPORCH 40
-#endif
+/****************************************************************************
+ * Public Types
+ ****************************************************************************/
 
-/* Vertical video characteristics */
+/* Describes the LCD panel configuration */
 
-#ifndef CONFIG_AM335X_LCD_VHEIGHT
-#  define CONFIG_AM335X_LCD_VHEIGHT 272 /* Height in rows */
-#endif
+struct am335x_panel_info_s
+{
+  bool     hsync_active;    /* HSync active */
+  bool     vsync_active;    /* Invert VSync */
+  bool     sync_edge;       /* HSYNC/VSYNC rise or fall */
+  bool     sync_ctrl;       /* Hsync/Vsync pixel clock control on/off */
+  bool     pixelclk_active; /* Invert pixel clock */
 
-#ifndef CONFIG_AM335X_LCD_VPULSE
-#  define CONFIG_AM335X_LCD_VPULSE 2
-#endif
+  uint32_t panel_width;     /* Display width (pixels) */
+  uint32_t panel_height;    /* Display height (lines) */
+  uint32_t panel_hfp;       /* Horizontal front porch (pixels) */
+  uint32_t panel_hbp;       /* Horizontal back porch (pixels) */
+  uint32_t panel_hsw;       /* HSync width */
+  uint32_t panel_vfp;       /* Vertical front porch (lines) */
+  uint32_t panel_vbp;       /* Vertical back porch (lines) */
+  uint32_t panel_vsw;       /* VSync width */
+  uint32_t panel_pixclk;    /* Pixel clock */
 
-#ifndef CONFIG_AM335X_LCD_VFRONTPORCH
-#  define CONFIG_AM335X_LCD_VFRONTPORCH 8
-#endif
-
-#ifndef CONFIG_AM335X_LCD_VBACKPORCH
-#  define CONFIG_AM335X_LCD_VBACKPORCH 8
-#endif
+  uint32_t acbias;          /* AC bias pin frequency */
+  uint32_t acbias_pint;     /* AC bias pins transitions per interrupt */
+  uint32_t dma_burstsz;     /* DMA burst size */
+  uint32_t bpp;             /* Bits per pixel */
+  uint32_t fdd;             /* Palette loading delay */
+};
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: am335x_lcdclear
+ * Name: am335x_lcd_initialize
  *
  * Description:
- *   This is a non-standard LCD interface just for the LPC54xx.  Clearing
- *   the display in the normal way by writing a sequences of runs that
- *   covers the entire display can be slow.  Here the display is cleared by
- *   simply setting all VRAM memory to the specified color.
+ *   Initialize the AM335x for use the display described by the provided
+ *   instance of struct am335x_panel_info_s.
+ *
+ *   This function must be called by board specific logic to initialize the
+ *   LCD.  Normally the calling sequence is as follows:
+ *
+ *   1a. Graphics application starts and initializes the NX server via
+ *       boardctl(BOARDIOC_NX_START).  This calls the graphics
+ *       initialization function nxmu_start() which, in turn, will call
+ *       up_fbinitialize().  Or,
+ *   1b. The framebuffer character driver is initialized and calls
+ *       up_fbinitialize().
+ *   2.  The function up_fbinitialize() must reside in board specific logic
+ *       under configs/.  It must create the instance of struct
+ *       am335x_panel_info_s and callThis function with that instance.
+ *
+ *   For a directly connected LCD, the struct am335x_panel_info_s may be
+ *   initialized with constant data.  If there is access to Extended
+ *   Display Identification Data (EDIDI), then the board-specific logic
+ *   may read the EDID data and use am335x_lcd_edid() to use the EDID data
+ *   to initialize the instance.
  *
  ****************************************************************************/
 
-void am335x_lcdclear(nxgl_mxpixel_t color);
+void am335x_lcd_initialize(FAR const struct am335x_panel_info_s *panel);
 
 /****************************************************************************
- * Name: am335x_backlight
+ * Name: am335x_lcd_edid
  *
  * Description:
- *   If CONFIG_AM335X_LCD_BACKLIGHT is defined, then the board-specific logic
- *   must provide this interface to turn the backlight on and off.
+ *   If there is access to Extended Display Identification Data (EDID),
+ *   then the board-specific logic may read the EDID data and use this
+ *   function to initialize an instance of struct am335x_panel_info_s.
+ *
+ *   The returned video mode may optionally be returned to configure HDMI.
+ *
+ * Input Parameters:
+ *   edid     - A reference to the raw EDID data.
+ *   len      - The length of the EDID data in bytes
+ *   panel    - A user provided location to receive the panel data.
+ *   selected - A user provided location to receive the selected video mode.
+ *
+ * Returned value:
+ *   Zero (OK) is returned on success; a negated errno value is returned in
+ *   the case of a failure.
  *
  ****************************************************************************/
 
-#ifdef CONFIG_AM335X_LCD_BACKLIGHT
-void am335x_backlight(bool blon);
-#endif
+struct edid_videomode_s; /* Forward reference */
+
+int am335x_lcd_edid(FAR const uint8_t *edid, size_t edid_len,
+                    FAR struct am335x_panel_info_s *panel,
+                    FAR struct edid_videomode_s *selected);
 
 #endif /* __ARCH_ARM_SRC_AM335X_AM335X_LCD_H */

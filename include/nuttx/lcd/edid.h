@@ -7,6 +7,12 @@
  *
  * Reference:  Wikipedia
  *
+ * Some of structures in this file derive from FreeBSD which has a
+ * compatible 2-clause BSD license:
+ *
+ *  Copyright (c) 2006 Itronix Inc. All rights reserved.
+ *  Written by Garrett D'Amore for Itronix Inc.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -356,4 +362,103 @@
                                                      * According to LS-EXT, actual contents varies
                                                      * from manufacturer.  However, the value is
                                                      * later used by DDDB. */
+
+/* Video mode flags used in struct hdmi_videomode_s */
+
+#define VID_PHSYNC                        (1 << 0)
+#define VID_NHSYNC                        (1 << 1)
+#define VID_PVSYNC                        (1 << 2)
+#define VID_NVSYNC                        (1 << 3)
+#define VID_INTERLACE                     (1 << 4)
+#define VID_DBLSCAN                       (1 << 5)
+#define VID_CSYNC                         (1 << 6)
+#define VID_PCSYNC                        (1 << 7)
+#define VID_NCSYNC                        (1 << 8)
+#define VID_HSKEW                         (1 << 9)
+#define VID_BCAST                         (1 << 10)
+#define VID_PIXMUX                        (1 << 11)
+#define VID_DBLCLK                        (1 << 12)
+#define VID_CLKDIV2                       (1 << 13)
+
+/********************************************************************************************
+ * Pre-processor Definitions
+ ********************************************************************************************/
+
+/* This structure represents one video mode extracted from the EDID */
+
+struct edid_videomode_s
+{
+  int dot_clock;    /* Dot clock frequency in kHz. */
+  int hdisplay;
+  int hsync_start;
+  int hsync_end;
+  int htotal;
+  int vdisplay;
+  int vsync_start;
+  int vsync_end;
+  int vtotal;
+  int flags;        /* Video mode flags; see below. */
+  FAR const char *name;
+  int hskew;
+};
+
+/* These structures is a user-friendly digest of the EDID data. */
+
+struct edid_chroma_s
+{
+  uint16_t ec_redx;
+  uint16_t ec_redy;
+  uint16_t ec_greenx;
+  uint16_t ec_greeny;
+  uint16_t ec_bluex;
+  uint16_t ec_bluey;
+  uint16_t ec_whitex;
+  uint16_t ec_whitey;
+};
+
+struct edid_range_s
+{
+  uint16_t er_min_vfreq;  /* Hz */
+  uint16_t er_max_vfreq;  /* Hz */
+  uint16_t er_min_hfreq;  /* kHz */
+  uint16_t er_max_hfreq;  /* kHz */
+  uint16_t er_max_clock;  /* MHz */
+  int      er_have_gtf2;
+  uint16_t er_gtf2_hfreq;
+  uint16_t er_gtf2_c;
+  uint16_t er_gtf2_m;
+  uint16_t er_gtf2_k;
+  uint16_t er_gtf2_j;
+};
+
+struct edid_info_s
+{
+  uint8_t  edid_vendor[4];
+  char     edid_vendorname[16];
+  char     edid_productname[16];
+  char     edid_comment[16];
+  char     edid_serial[16];
+  uint16_t edid_product;
+  uint8_t  edid_version;
+  uint8_t  edid_revision;
+  int      edid_year;
+  int      edid_week;
+  uint8_t  edid_video_input;
+  uint8_t  edid_max_hsize;    /* in cm */
+  uint8_t  edid_max_vsize;    /* in cm */
+  uint8_t  edid_gamma;
+  uint8_t  edid_features;
+  uint8_t  edid_ext_block_count;
+  int      edid_have_range;
+
+  struct edid_range_s  edid_range;
+  struct edid_chroma_s edid_chroma;
+
+  /* Parsed modes */
+
+  FAR struct edid_videomode_s  *edid_preferred_mode;
+  int      edid_nmodes;
+  struct edid_videomode_s edid_modes[64];
+};
+
 #endif /* __INCLUDE_NUTTX_LCD_EDID_H */

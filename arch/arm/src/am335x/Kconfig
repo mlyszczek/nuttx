@@ -278,73 +278,33 @@ config AM335X_LCD_REFRESH_FREQ
 	---help---
 		LCD refesh rate (Hz)
 
-config AM335X_LCD_BACKLIGHT
-	bool "Enable backlight"
-	default y
-	---help---
-		Enable backlight support.  If AM335X_LCD_BACKLIGHT is selected, then
-		the board-specific logic must provide this lpc54_backlight()
-		interface so that the LCD driver can turn the backlight on and off
-		as necessary.  You should select this option and implement
-		lpc54_backlight() if your board provides GPIO control over the
-		backlight.  This interface provides only ON/OFF control of the
-		backlight.  If you want finer control over the backlight level (for
-		example, using PWM), then this interface would need to be extended.
-
-config AM335X_LCD_TFTPANEL
-	bool "TFT Panel"
-	default y
-	---help---
-		TFT Panel vs. STN display.  STN display panels require algorithmic
-		pixel pattern generation to provide pseudo gray scaling on
-		monochrome displays, or color creation on color displays.  TFT
-		display panels require the digital color value of each pixel to be
-		applied to the display data inputs.
-
-config AM335X_LCD_MONOCHROME
-	bool "Monochrome LCD"
-	default n
-	depends on !AM335X_LCD_TFTPANEL
-	---help---
-		STN LCD monochrome/color selection.  Selects monochrome LCD.  This
-		selection has no meaning for a TFT panel.
-
 choice
 	prompt "Bits per pixel"
-	default AM335X_LCD_BPP24 if AM335X_LCD_TFTPANEL
-	default AM335X_LCD_BPP16_565 if !AM335X_LCD_TFTPANEL
+	default AM335X_LCD_BPP16_565
 
 config AM335X_LCD_BPP1
 	bool "1 BPP"
-	depends on AM335X_LCD_MONOCHROME
 
 config AM335X_LCD_BPP2
 	bool "2 BPP"
-	depends on AM335X_LCD_MONOCHROME
 
 config AM335X_LCD_BPP4
 	bool "4 BPP"
-	depends on AM335X_LCD_MONOCHROME
 
 config AM335X_LCD_BPP8
 	bool "8 BPP"
-	depends on AM335X_LCD_MONOCHROME
 
 config AM335X_LCD_BPP12_444
 	bool "12 bpp, 4:4:4 mode"
-	depends on !AM335X_LCD_MONOCHROME
-
-config AM335X_LCD_BPP16
-	bool "16 BPP"
-	depends on AM335X_LCD_MONOCHROME
 
 config AM335X_LCD_BPP16_565
 	bool "16 BPP, 5:6:5 mode"
-	depends on !AM335X_LCD_MONOCHROME
 
 config AM335X_LCD_BPP24
-	bool "24 BPP, 8:8:8 mode"
-	depends on AM335X_LCD_TFTPANEL
+	bool "24 BPP, 8:8:8 mode (packed)"
+
+config AM335X_LCD_BPP32
+	bool "32 BPP, 8:8:8 mode (unpacked)"
 
 endchoice
 
@@ -361,41 +321,53 @@ config AM335X_LCD_BACKCOLOR
 	---help---
 		Initial background color
 
-config AM335X_LCD_HWIDTH
-	int "Display width (pixels)"
-	default 480
-	---help---
-		Horizontal width the display in pixels
+config AM335X_LCD_ACBIAS
+	int "AC bias pin frequency"
+	default 255
+	range 0 255
 
-config AM335X_LCD_HPULSE
-	int "Horizontal pulse"
-	default 2
+config AM335X_LCD_ACBIAS_PINT
+	int "AC bias pin transitions per interrupt"
+	default 0
+	range 0 15
 
-config AM335X_LCD_HFRONTPORCH
-	int "Horizontal front porch"
-	default 5
+choice
+	prompt "DMA burst size"
+	default AM335X_LCD_DMA_BURST16
 
-config AM335X_LCD_HBACKPORCH
-	int "Horizontal back porch"
-	default 40
+config AM335X_LCD_DMA_BURST1
+	bool "1"
 
-config AM335X_LCD_VHEIGHT
-	int "Display height (rows)"
-	default 272
-	---help---
-		Vertical height of the display in rows
+config AM335X_LCD_DMA_BURST2
+	bool "2"
 
-config AM335X_LCD_VPULSE
-	int "Vertical pulse"
-	default 2
+config AM335X_LCD_DMA_BURST4
+	bool "4"
 
-config AM335X_LCD_VFRONTPORCH
-	int "Vertical front porch"
-	default 8
+config AM335X_LCD_DMA_BURST8
+	bool "8"
 
-config AM335X_LCD_VBACKPORCH
-	int "Vertical back porch"
-	default 8
+config AM335X_LCD_DMA_BURST16
+	bool "16"
+
+endchoice
+
+config AM335X_LCD_FDD
+	int "Palette loading delay"
+	default 128
+	range 0 255
+
+config AM335X_LCD_SYNC_EDGE
+	bool "HSYNC/VSYNC rise or fall"
+	default n
+
+config AM335X_LCD_SYNC_CTRL
+	bool "Hsync/Vsync pixel clock control on/off"
+	default y
+
+config AM335X_LCD_PIXCLK_INVERT
+	bool "Invert pixel clock"
+	default y
 
 endmenu # LCD Configuration
 endif # ARCH_CHIP_AM335X
