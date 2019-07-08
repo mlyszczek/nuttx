@@ -44,11 +44,14 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/sched.h>
 #include <nuttx/irq.h>
 
-#include "chip/switch.h"
+#include <arch/irq.h>
+
+#include "switch.h"
 #include "sched/sched.h"
-#include "up_internal.h"
+#include "z80_internal.h"
 
 /****************************************************************************
  * Private Functions
@@ -58,7 +61,8 @@
  * Name: z180_sigsetup
  ****************************************************************************/
 
-static void z180_sigsetup(FAR struct tcb_s *tcb, sig_deliver_t sigdeliver, FAR chipreg_t *regs)
+static void z180_sigsetup(FAR struct tcb_s *tcb, sig_deliver_t sigdeliver,
+                          FAR chipreg_t *regs)
 {
   /* Save the return address and interrupt state. These will be restored by
    * the signal trampoline after the signals have been delivered.
@@ -70,7 +74,7 @@ static void z180_sigsetup(FAR struct tcb_s *tcb, sig_deliver_t sigdeliver, FAR c
 
   /* Then set up to vector to the trampoline with interrupts disabled */
 
-  regs[XCPT_PC]  = (chipreg_t)up_sigdeliver;
+  regs[XCPT_PC]  = (chipreg_t)z80_sigdeliver;
   regs[XCPT_I]   = 0;
 }
 
