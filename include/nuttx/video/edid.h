@@ -1,5 +1,5 @@
 /********************************************************************************************
- * include/nuttx/lcd/edid.h
+ * include/nuttx/video/edid.h
  * EDID (Extended Display Identification Data) Format
  *
  *   Copyright (C) 2019 Gregory Nutt. All rights reserved.
@@ -42,8 +42,8 @@
  *
  ********************************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_LCD_EDID_H
-#define __INCLUDE_NUTTX_LCD_EDID_H
+#ifndef __INCLUDE_NUTTX_VIDEO_EDID_H
+#define __INCLUDE_NUTTX_VIDEO_EDID_H
 
 /********************************************************************************************
  * Included Files
@@ -601,9 +601,12 @@ int edid_parse(FAR const uint8_t *data, FAR struct edid_info_s *edid);
  * Name:  edid_sort_modes
  *
  * Description:
- *   Sort video modes by refresh rate, aspect ratio (*), then resolution.
+ *   Sort video modes by refresh rate, aspect ratio, then resolution.
  *   Preferred mode or largest mode is first in the list and other modes
  *   are sorted on closest match to that mode.
+ *
+ *   Note that the aspect ratio calculation treats "close" aspect ratios
+ *   (within 12.5%) as the same for this purpose.
  *
  * Input Parameters:
  *   modes     - A reference to the first entry in a list of video modes
@@ -628,4 +631,4 @@ void edid_sort_modes(FAR struct edid_videomode_s *modes,
 
 FAR const struct edid_videomode_s *edid_mode_lookup(FAR const char *name);
 
-#endif /* __INCLUDE_NUTTX_LCD_EDID_H */
+#endif /* __INCLUDE_NUTTX_VIDEO_EDID_H */
