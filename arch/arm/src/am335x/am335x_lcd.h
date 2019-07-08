@@ -190,17 +190,44 @@ struct am335x_panel_info_s
  *       up_fbinitialize().
  *   2.  The function up_fbinitialize() must reside in board specific logic
  *       under configs/.  It must create the instance of struct
- *       am335x_panel_info_s and callThis function with that instance.
+ *       am335x_panel_info_s and call this function with that instance.
  *
- *   For a directly connected LCD, the struct am335x_panel_info_s may be
- *   initialized with constant data.  If there is access to Extended
- *   Display Identification Data (EDIDI), then the board-specific logic
- *   may read the EDID data and use am335x_lcd_edid() to use the EDID data
- *   to initialize the instance.
+ *   For a directly connected LCD, either (1) the struct am335x_panel_info_s
+ *   may be initialized with constant data or (2) the desired video mode can
+ *   obtained via lookup from edid_mode_lookup() and the struct
+ *   am335x_panel_info_s can be created with am335x_lcd_videomode().
+ *
+ *   If there is access to Extended Display Identification Data (EDID), then
+ *   the board-specific logic may read the EDID data and use
+ *   am335x_lcd_edid() to use the EDID data to initialize the struct
+ *   am335x_panel_info_s instance.
  *
  ****************************************************************************/
 
 void am335x_lcd_initialize(FAR const struct am335x_panel_info_s *panel);
+
+/****************************************************************************
+ * Name: am335x_lcd_videomode
+ *
+ * Description:
+ *   If the video mod is known, then the board-specific logic may read the
+ *   use this function to convert the video mode data to an instance of
+ *   struct am335x_panel_info_s which then may be used to initialize the
+ *   the LCD/
+ *
+ * Input Parameters:
+ *    videomode - A reference to the desired video mode.
+ *    panel    - A user provided location to receive the panel data.
+ *
+ * Returned value:
+ *   None.  Always succeeds.
+ *
+ ****************************************************************************/
+
+struct edid_videomode_s; /* Forward reference */
+
+void am335x_lcd_videomode(FAR const struct edid_videomode_s *videomode,
+                          FAR struct am335x_panel_info_s *panel);
 
 /****************************************************************************
  * Name: am335x_lcd_edid
@@ -224,8 +251,6 @@ void am335x_lcd_initialize(FAR const struct am335x_panel_info_s *panel);
  *   data.
  *
  ****************************************************************************/
-
-struct edid_videomode_s; /* Forward reference */
 
 void am335x_lcd_edid(FAR const uint8_t *edid, size_t edid_len,
                      FAR struct am335x_panel_info_s *panel,

@@ -249,6 +249,74 @@ static const struct edid_videomode_s *
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: am335x_lcd_videomode
+ *
+ * Description:
+ *   If the video mod is known, then the board-specific logic may read the
+ *   use this function to convert the video mode data to an instance of
+ *   struct am335x_panel_info_s which then may be used to initialize the
+ *   the LCD/
+ *
+ * Input Parameters:
+ *    videomode - A reference to the desired video mode.
+ *    panel    - A user provided location to receive the panel data.
+ *
+ * Returned value:
+ *   None.  Always succeeds.
+ *
+ ****************************************************************************/
+
+void am335x_lcd_videomode(FAR const struct edid_videomode_s *videomode,
+                          FAR struct am335x_panel_info_s *panel)
+{
+  lcdinfo("Detected videomode: %dx%d @ %dKHz\n",
+          videomode->hdisplay, videomode->vdisplay,
+          am335x_videomode_vrefresh(videomode));
+
+  panel->panel_width     = videomode->hdisplay;
+  panel->panel_height    = videomode->vdisplay;
+  panel->panel_hfp       = videomode->hsync_start - videomode->hdisplay;
+  panel->panel_hbp       = videomode->htotal      - videomode->hsync_end;
+  panel->panel_hsw       = videomode->hsync_end   - videomode->hsync_start;
+  panel->panel_vfp       = videomode->vsync_start - videomode->vdisplay;
+  panel->panel_vbp       = videomode->vtotal      - videomode->vsync_end;
+  panel->panel_vsw       = videomode->vsync_end   - videomode->vsync_start;
+  panel->pixelclk_active = true;
+
+  /* Logic for HSYNC should be reversed */
+
+  panel->hsync_active    = ((videomode->flags & VID_NHSYNC) != 0);
+  panel->vsync_active    = ((videomode->flags & VID_NVSYNC) == 0);
+  panel->panel_pixclk    = videomode->dotclock * 1000;
+
+  /* Set other values to the default */
+
+#ifdef CONFIG_AM335X_LCD_SYNC_EDGE
+  panel->sync_edge       = true;
+#else
+  panel->sync_edge       = false;
+#endif
+
+#ifdef CONFIG_AM335X_LCD_SYNC_CTRL
+  panel->sync_ctrl       = true;
+#else
+  panel->sync_ctrl       = false;
+#endif
+
+#ifdef CONFIG_AM335X_LCD_PIXCLK_INVERT
+  panel->pixelclk_active = true;
+#else
+  panel->pixelclk_active = false;
+#endif
+
+  panel->acbias          = CONFIG_AM335X_LCD_ACBIAS;
+  panel->acbias_pint     = CONFIG_AM335X_LCD_ACBIAS_PINT;
+  panel->dma_burstsz     = AM335X_LCD_DMA_BURSTSZ;
+  panel->bpp             = AM335X_BPP;
+  panel->fdd             = CONFIG_AM335X_LCD_FDD;
+}
+
+/****************************************************************************
  * Name: am335x_lcd_edid
  *
  * Description:
@@ -302,52 +370,9 @@ void am335x_lcd_edid(FAR const uint8_t *edid, size_t edid_len,
       DEBUGASSERT(videomode != NULL);
     }
 
+  /* Initialize the LCD using the selected video mode */
 
-  lcdinfo("Detected videomode: %dx%d @ %dKHz\n",
-          videomode->hdisplay, videomode->vdisplay,
-          am335x_videomode_vrefresh(videomode));
-
-  panel->panel_width     = videomode->hdisplay;
-  panel->panel_height    = videomode->vdisplay;
-  panel->panel_hfp       = videomode->hsync_start - videomode->hdisplay;
-  panel->panel_hbp       = videomode->htotal      - videomode->hsync_end;
-  panel->panel_hsw       = videomode->hsync_end   - videomode->hsync_start;
-  panel->panel_vfp       = videomode->vsync_start - videomode->vdisplay;
-  panel->panel_vbp       = videomode->vtotal      - videomode->vsync_end;
-  panel->panel_vsw       = videomode->vsync_end   - videomode->vsync_start;
-  panel->pixelclk_active = true;
-
-  /* Logic for HSYNC should be reversed */
-
-  panel->hsync_active    = ((videomode->flags & VID_NHSYNC) != 0);
-  panel->vsync_active    = ((videomode->flags & VID_NVSYNC) == 0);
-  panel->panel_pixclk    = videomode->dotclock * 1000;
-
-  /* Set other values to the default */
-
-#ifdef CONFIG_AM335X_LCD_SYNC_EDGE
-  panel->sync_edge       = true;
-#else
-  panel->sync_edge       = false;
-#endif
-
-#ifdef CONFIG_AM335X_LCD_SYNC_CTRL
-  panel->sync_ctrl       = true;
-#else
-  panel->sync_ctrl       = false;
-#endif
-
-#ifdef CONFIG_AM335X_LCD_PIXCLK_INVERT
-  panel->pixelclk_active = true;
-#else
-  panel->pixelclk_active = false;
-#endif
-
-  panel->acbias          = CONFIG_AM335X_LCD_ACBIAS;
-  panel->acbias_pint     = CONFIG_AM335X_LCD_ACBIAS_PINT;
-  panel->dma_burstsz     = AM335X_LCD_DMA_BURSTSZ;
-  panel->bpp             = AM335X_BPP;
-  panel->fdd             = CONFIG_AM335X_LCD_FDD;
+  am335x_lcd_videomode(videomode, panel);
 
   /* Return the selected video mode */
 
