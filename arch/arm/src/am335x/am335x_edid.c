@@ -51,7 +51,7 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/lcd/edid.h>
+#include <nuttx/video/edid.h>
 
 #include "am335x_lcd.h"
 
