@@ -39,6 +39,7 @@
 
 #include <nuttx/config.h>
 
+#include <stdio.h>
 #include <sys/mount.h>
 #include <sys/types.h>
 #include <errno.h>
@@ -52,6 +53,10 @@
 #include <nuttx/usb/rndis.h>
 #endif
 
+#ifdef CONFIG_USERLED_LOWER
+#include <nuttx/leds/userled.h>
+#endif
+
 #include <arch/chip/pm.h>
 #include "chip.h"
 
@@ -62,25 +67,45 @@
 #include "cxd56_gpio.h"
 #include "cxd56_pinconfig.h"
 
+#ifdef CONFIG_CXD56_PM_PROCFS
+#  include "cxd56_powermgr_procfs.h"
+#endif
+
+#ifdef CONFIG_TIMER
+#  include "cxd56_timer.h"
+#endif
+
+#ifdef CONFIG_WDT
+#  include "cxd56_wdt.h"
+#endif
+
 #ifdef CONFIG_CXD56_RTC
-#include <nuttx/timers/rtc.h>
-#include "cxd56_rtc.h"
+#  include <nuttx/timers/rtc.h>
+#  include "cxd56_rtc.h"
 #endif
 
 #ifdef CONFIG_CXD56_CPUFIFO
-#include "cxd56_cpufifo.h"
+#  include "cxd56_cpufifo.h"
 #endif
 
 #ifdef CONFIG_CXD56_ICC
-#include "cxd56_icc.h"
+#  include "cxd56_icc.h"
 #endif
 
 #ifdef CONFIG_CXD56_FARAPI
-#include "cxd56_farapi.h"
+#  include "cxd56_farapi.h"
 #endif
 
-#ifdef CONFIG_USBDEV
-#include "cxd56_usbdev.h"
+#if defined(CONFIG_USBDEV) && defined(CONFIG_FS_PROCFS_REGISTER)
+#  include "cxd56_usbdev.h"
+#endif
+
+#ifdef CONFIG_PWM
+#  include "cxd56_pwm.h"
+#endif
+
+#ifdef CONFIG_CXD56_ADC
+#  include <arch/chip/adc.h>
 #endif
 
 #include "spresense.h"
@@ -127,6 +152,21 @@ static int nsh_cpucom_initialize(void)
 #  define nsh_cpucom_initialize() (OK)
 #endif
 
+#ifdef CONFIG_TIMER
+static void timer_initialize(void)
+{
+  int i;
+  char devname[16];
+
+  for (i = 0; i < CXD56_TIMER_NUM; i++)
+    {
+      snprintf(devname, sizeof(devname), "/dev/timer%d", i);
+      cxd56_timer_initialize(devname, i);
+    }
+  return;
+}
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -162,12 +202,58 @@ int cxd56_bringup(void)
       _err("ERROR: Failed to initialize powermgr.\n");
     }
 
+#ifdef CONFIG_CXD56_PM_PROCFS
+  ret = cxd56_pm_initialize_procfs();
+  if (ret < 0)
+    {
+      _err("ERROR: Failed to initialize powermgr.\n");
+    }
+#endif
+
   wlock.info = PM_CPUWAKELOCK_TAG('C', 'A', 0);
   wlock.count = 0;
   up_pm_acquire_wakelock(&wlock);
 
 #ifdef CONFIG_RTC_DRIVER
   rtc_initialize(0, cxd56_rtc_lowerhalf());
+#endif
+
+#ifdef CONFIG_TIMER
+  timer_initialize();
+#endif
+
+#ifdef CONFIG_CXD56_WDT
+  ret = cxd56_wdt_initialize();
+  if (ret < 0)
+    {
+      _err("ERROR: Failed to initialize WDT.\n");
+    }
+#endif
+
+#ifdef CONFIG_CXD56_I2C_DRIVER
+  #ifdef CONFIG_CXD56_I2C0
+  ret = board_i2cdev_initialize(0);
+  if (ret < 0)
+    {
+      _err("ERROR: Failed to initialize I2C0.\n");
+    }
+  #endif
+
+  #ifdef CONFIG_CXD56_I2C1
+  ret = board_i2cdev_initialize(1);
+  if (ret < 0)
+    {
+      _err("ERROR: Failed to initialize I2C1.\n");
+    }
+  #endif
+
+  #ifdef CONFIG_CXD56_I2C2
+  ret = board_i2cdev_initialize(2);
+  if (ret < 0)
+    {
+      _err("ERROR: Failed to initialize I2C2.\n");
+    }
+  #endif
 #endif
 
   cxd56_uart_initialize();
@@ -191,8 +277,8 @@ int cxd56_bringup(void)
 
 #ifdef CONFIG_FS_PROCFS
 
-#ifdef CONFIG_FS_PROCFS_REGISTER
-  /* register usbdev procfs */
+#if defined(CONFIG_USBDEV) && defined(CONFIG_FS_PROCFS_REGISTER)
+  /* Register usbdev procfs */
 
   ret = cxd56_usbdev_procfs_register();
   if (ret < 0)
@@ -204,7 +290,39 @@ int cxd56_bringup(void)
   ret = mount(NULL, CXD56_PROCFS_MOUNTPOINT, "procfs", 0, NULL);
   if (ret < 0)
     {
-      serr("ERROR: Failed to mount the procfs: %d\n", errno);
+      _err("ERROR: Failed to mount the procfs: %d\n", errno);
+    }
+#endif
+
+#ifdef CONFIG_PWM
+  ret = board_pwm_setup();
+  if (ret < 0)
+    {
+      _err("ERROR: Failed to initialze pwm. \n");
+    }
+#endif
+
+#ifdef CONFIG_CXD56_ADC
+  ret = cxd56_adcinitialize();
+  if (ret < 0)
+    {
+      _err("ERROR: Failed to initialze adc. \n");
+    }
+#endif
+
+#ifdef CONFIG_USERLED_LOWER
+  ret = userled_lower_initialize("/dev/userleds");
+  if (ret < 0)
+    {
+      _err("ERROR: Failed to initialze led. \n");
+    }
+#endif
+
+#ifdef CONFIG_CXD56_SFC
+  ret = board_flash_initialize();
+  if (ret < 0)
+    {
+      _err("ERROR: Failed to initialze SPI-Flash. %d\n", errno);
     }
 #endif
 
@@ -220,22 +338,11 @@ int cxd56_bringup(void)
   cxd56_gpio_write(PIN_SDIO_DATA2, false);
   cxd56_gpio_write(PIN_SDIO_DATA3, false);
 
-#if defined(CONFIG_CXD56_SDIO) && !defined(CONFIG_CXD56_SPISD)
+#if defined(CONFIG_CXD56_SDIO)
   ret = board_sdcard_initialize();
   if (ret < 0)
     {
-      _err("ERROR: Failed to initialze sdhci. \n");
-    }
-#endif
-
-#ifdef CONFIG_CXD56_SPISD
-  /* Mount the SPI-based MMC/SD block driver */
-
-  ret = board_spisd_initialize(0, 4);
-  if (ret < 0)
-    {
-      ferr("ERROR: Failed to initialize SPI device to MMC/SD: %d\n",
-           ret);
+      _err("ERROR: Failed to initialize sdhci. \n");
     }
 #endif
 
@@ -256,6 +363,22 @@ int cxd56_bringup(void)
   mac[4] = (CONFIG_NETINIT_MACADDR_1 >> (8 * 1)) & 0xff;
   mac[5] = (CONFIG_NETINIT_MACADDR_1 >> (8 * 0)) & 0xff;
   usbdev_rndis_initialize(mac);
+#endif
+
+#ifdef CONFIG_WL_GS2200M
+  ret = board_gs2200m_initialize("/dev/gs2200m", 5);
+  if (ret < 0)
+    {
+      _err("ERROR: Failed to initialze GS2200M. \n");
+    }
+#endif
+
+#ifdef CONFIG_SENSORS_BMI160_I2C
+  ret = board_bmi160_initialize(0);
+  if (ret < 0)
+    {
+      _err("ERROR: Failed to initialze BMI160. \n");
+    }
 #endif
 
   return 0;

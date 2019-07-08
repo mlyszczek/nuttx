@@ -46,8 +46,6 @@
 #include <nuttx/config.h>
 #include "chip.h"
 
-#ifdef CONFIG_CXD56_GPIO_IRQ
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -135,6 +133,7 @@ extern "C"
  *   pin - Pin number defined in cxd56_pinconfig.h
  *   gpiocfg - GPIO Interrupt Polarity and Noise Filter Configuration Value
  *   isr - Interrupt handler
+ *   arg - Argument for the interrupt handler
  *
  * Returned Value:
  *   IRQ number on success; a negated errno value on failure.
@@ -144,7 +143,8 @@ extern "C"
  *
  ****************************************************************************/
 
-int cxd56_gpioint_config(uint32_t pin, uint32_t gpiocfg, xcpt_t isr);
+int cxd56_gpioint_config(uint32_t pin, uint32_t gpiocfg, xcpt_t isr,
+                         FAR void *arg);
 
 /****************************************************************************
  * Name: cxd56_gpioint_irq
@@ -228,8 +228,6 @@ int cxd56_gpioint_status(uint32_t pin, cxd56_gpioint_status_t *stat);
 #if defined(__cplusplus)
 }
 #endif
+
 #endif /* __ASSEMBLY__ */
-
-#endif /* CONFIG_CXD56_GPIO_IRQ */
-
 #endif /* __ARCH_ARM_SRC_CXD56XX_CXD56_GPIOINT_H */
