@@ -36,7 +36,7 @@
 -include $(TOPDIR)/Make.defs
 
 ASRCS =
-CSRCS = stm32_boot.c stm32_bringup.c
+CSRCS = stm32_boot.c stm32_bringup.c stm32_spi.c
 
 ifeq ($(CONFIG_ARCH_LEDS),y)
 CSRCS += stm32_autoleds.c
@@ -78,6 +78,26 @@ endif
 
 ifeq ($(CONFIG_ARCH_FPU),y)
 CSRCS += stm32_ostest.c
+endif
+
+ifeq ($(CONFIG_SENSORS_BMP180),y)
+CSRCS += stm32_bmp180.c
+endif
+
+ifeq ($(CONFIG_DAC),y)
+CSRCS += stm32_dac.c
+endif
+
+ifeq ($(CONFIG_SENSORS_INA219),y)
+CSRCS += stm32_ina219.c
+endif
+
+ifeq ($(CONFIG_TIMER),y)
+CSRCS += stm32_timer.c
+endif
+
+ifeq ($(CONFIG_IEEE802154_MRF24J40),y)
+CSRCS += stm32_mrf24j40.c
 endif
 
 include $(TOPDIR)/configs/Board.mk
