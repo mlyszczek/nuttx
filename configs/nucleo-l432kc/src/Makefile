@@ -48,7 +48,11 @@ ifeq ($(CONFIG_ARCH_BUTTONS),y)
 CSRCS +=  stm32_buttons.c
 endif
 
-ifeq ($(CONFIG_ADC),y)
+ifeq ($(CONFIG_DEV_GPIO),y)
+  CSRCS += stm32_gpio.c
+endif
+
+ifeq ($(CONFIG_STM32L4_ADC),y)
 CSRCS += stm32_adc.c
 endif
 
@@ -74,6 +78,10 @@ endif
 
 ifeq ($(CONFIG_PWM),y)
 CSRCS += stm32_pwm.c
+endif
+
+ifeq ($(CONFIG_SENSORS_ZEROCROSS),y)
+  CSRCS += stm32_zerocross.c
 endif
 
 ifeq ($(CONFIG_TIMER),y)

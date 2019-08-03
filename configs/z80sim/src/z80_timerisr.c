@@ -51,7 +51,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Function:  z80sim_timerisr
+ * Function: z80sim_timerisr
  *
  * Description:
  *   The timer ISR will perform a variety of services for various portions of
@@ -78,5 +78,7 @@ int z80sim_timerisr(int irq, FAR chipreg_t *regs, void *arg)
 
 void z80_timer_initialize(void)
 {
-  /* The timer interrupt was attached in up_irqinitialize -- see comments there */
+  /* The timer interrupt was attached in z80_irq_initialize -- see comments
+   * there.
+   */
 }

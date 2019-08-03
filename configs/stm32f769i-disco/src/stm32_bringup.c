@@ -46,7 +46,6 @@
 #include <debug.h>
 #include <errno.h>
 
-#include "stm32_ccm.h"
 #include "stm32f769i-disco.h"
 
 /****************************************************************************
@@ -71,6 +70,7 @@ int stm32_bringup(void)
 {
   int ret = OK;
 
+#ifdef CONFIG_FS_PROCFS
 #ifdef CONFIG_STM32_CCM_PROCFS
   /* Register the CCM procfs entry.  This must be done before the procfs is
    * mounted.
@@ -81,11 +81,11 @@ int stm32_bringup(void)
 
   /* Mount the procfs file system */
 
-  ret = mount(NULL, SAMV71_PROCFS_MOUNTPOINT, "procfs", 0, NULL);
+  ret = mount(NULL, STM32_PROCFS_MOUNTPOINT, "procfs", 0, NULL);
   if (ret < 0)
     {
-      SYSLOG(LOG_ERR, "ERROR: Failed to mount procfs at %s: %d\n",
-             SAMV71_PROCFS_MOUNTPOINT, ret);
+      syslog(LOG_ERR, "ERROR: Failed to mount procfs at %s: %d\n",
+             STM32_PROCFS_MOUNTPOINT, ret);
     }
 #endif
 
