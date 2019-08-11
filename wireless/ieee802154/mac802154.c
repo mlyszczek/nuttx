@@ -88,6 +88,9 @@ static void mac802154_rxframe(FAR const struct ieee802154_radiocb_s *radiocb,
                               FAR struct ieee802154_data_ind_s *ind);
 static void mac802154_rxframe_worker(FAR void *arg);
 
+static void mac802154_edresult(FAR const struct ieee802154_radiocb_s *radiocb,
+                               uint8_t edval);
+
 static void mac802154_sfevent(FAR const struct ieee802154_radiocb_s *radiocb,
                               enum ieee802154_sfevent_e sfevent);
 
@@ -339,6 +342,7 @@ void mac802154_createdatareq(FAR struct ieee802154_privmac_s *priv,
 
   txdesc->frame = iob;
   txdesc->frametype = IEEE802154_FRAME_COMMAND;
+  txdesc->ackreq = true;
 
   /* Save a copy of the destination addressing information into the tx
    * descriptor.  We only do this for commands to help with handling their
@@ -1629,10 +1633,50 @@ static void mac802154_rxdatareq(FAR struct ieee802154_privmac_s *priv,
 
   txdesc->frame = iob;
   txdesc->frametype = IEEE802154_FRAME_DATA;
+  txdesc->ackreq = false;
 
   mac802154_unlock(priv)
 
   priv->radio->txdelayed(priv->radio, txdesc, 0);
+}
+
+/****************************************************************************
+ * Name: mac802154_edresult
+ *
+ * Description:
+ *   Called from the radio driver through the callback struct.  This
+ *   function is called when the radio has finished an energy detect operation.
+ *   This is triggered by a SCAN.request primitive with ScanType set to Energy
+ *   Detect (ED)
+ *
+ ****************************************************************************/
+
+static void mac802154_edresult(FAR const struct ieee802154_radiocb_s *radiocb,
+                               uint8_t edval)
+{
+  FAR struct mac802154_radiocb_s *cb =
+    (FAR struct mac802154_radiocb_s *)radiocb;
+  FAR struct ieee802154_privmac_s *priv;
+
+  DEBUGASSERT(cb != NULL && cb->priv != NULL);
+  priv = cb->priv;
+
+  /* Get exclusive access to the driver structure.  We don't care about any
+   * signals so if we see one, just go back to trying to get access again.
+   */
+
+  mac802154_lock(priv, false);
+
+  /* If we are actively performing a scan operation, notify the scan handler */
+
+  if (priv->curr_op == MAC802154_OP_SCAN)
+    {
+      mac802154_edscan_onresult(priv, edval);
+    }
+
+  /* Relinquish control of the private structure */
+
+  mac802154_unlock(priv);
 }
 
 static void mac802154_sfevent(FAR const struct ieee802154_radiocb_s *radiocb,
@@ -2090,8 +2134,6 @@ MACHANDLE mac802154_create(FAR struct ieee802154_radio_s *radiodev)
 {
   FAR struct ieee802154_privmac_s *mac;
   FAR struct ieee802154_radiocb_s *radiocb;
-  uint8_t eaddr[IEEE802154_EADDRSIZE];
-  int i;
 
   /* Allocate object */
 
@@ -2125,6 +2167,7 @@ MACHANDLE mac802154_create(FAR struct ieee802154_radio_s *radiodev)
   radiocb->txdone    = mac802154_txdone;
   radiocb->rxframe   = mac802154_rxframe;
   radiocb->sfevent   = mac802154_sfevent;
+  radiocb->edresult  = mac802154_edresult;
 
   /* Bind our callback structure */
 
@@ -2136,15 +2179,6 @@ MACHANDLE mac802154_create(FAR struct ieee802154_radio_s *radiodev)
   mac802154_resetqueues(mac);
 
   mac802154_req_reset((MACHANDLE)mac, true);
-
-  /* Set the default extended address */
-
-  for (i = 0; i < IEEE802154_EADDRSIZE; i++)
-    {
-      eaddr[i] = (CONFIG_IEEE802154_DEFAULT_EADDR >> (8 * i)) & 0xFF;
-    }
-
-  mac802154_seteaddr(mac, eaddr);
 
   return (MACHANDLE)mac;
 }
