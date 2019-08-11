@@ -68,16 +68,47 @@
 /* CMU Register Bitfield Definitions ************************************************/
 
 /* Global Configuration Register */
-#define CMU_GCR_
+
+#define CMU_GCR_FCE              (1 << 0)  /* Bit 0:  Frequency Check Enable */
+
 /* Reference Count Configuration Register */
-#define CMU_RCCR_
+
+#define CMU_RCCR_REFCNT_SHIFT    (0)       /* Bits 0-15:  Reference clock count */
+#define CMU_RCCR_REFCNT_MASK     (0xffff << CMU_RCCR_REFCNT_SHIFT)
+#  define CMU_RCCR_REFCNT(n)     ((uint32_t)(n) << CMU_RCCR_REFCNT_SHIFT)
+
 /* High Threshold Configuration Register */
-#define CMU_HTCR_
+
+#define CMU_HTCR_HFREF_SHIFT     (0)       /* Bits 0-23:  High frequency reference threshold */
+#define CMU_HTCR_HFREF_MASK      (0xffffff << CMU_HTCR_HFREF_SHIFT)
+#  define CMU_HTCR_HFREF(n)      ((uint32_t)(n) << CMU_HTCR_HFREF_SHIFT)
+
 /* Low Threshold Configuration Register */
-#define CMU_LTCR_
+
+#define CMU_LTCR_LFREF_SHIFT     (0)       /* Bits 0-23:  Low Frequency Reference Threshold. */
+#define CMU_LTCR_LFREF_MASK      (0xffffff << CMU_LTCR_LFREF_SHIFT)
+#  define CMU_LTCR_LFREF(n)      ((uint32_t)(n) << CMU_LTCR_LFREF_SHIFT)
+
 /* Status Register */
-#define CMU_SR_
+
+#define CMU_SR_FLL               (1 << 0)  /* Bit 0:  Frequency < low frequency reference threshold */
+#define CMU_SR_FHH               (1 << 1)  /* Bit 1:  Frequency > high frequency reference threshold */
+#define CMU_SR_STATE_SHIFT       (2)       /* Bits 2-3:  Module state */
+#define CMU_SR_STATE_MASK        (3 << CMU_SR_STATE_SHIFT)
+#  define CMU_SR_STATE_INIT      (1 << CMU_SR_STATE_SHIFT)  /* Initialization state */
+#  define CMU_SR_STATE_INITWAIT  (2 << CMU_SR_STATE_SHIFT)  /* Initialization wait state */
+#  define CMU_SR_STATE_FREQCHECK (3 << CMU_SR_STATE_SHIFT)  /* Frequency check state */
+#define CMU_SR_RS                (1 << 4)  /* Bit 4: Run Status */
+
 /* Interrupt Enable Register */
-#define CMU_IER_
+
+#define CMU_IER_FLLIE            (1 << 0)  /* Bit 0:  Frequency < low frequency reference threshold,
+                                            * synchronous */
+#define CMU_IER_FHHIE            (1 << 1)  /* Bit 1:  Frequency > high frequency reference threshold,
+                                            * synchronous */
+#define CMU_IER_FLLAIE           (1 << 2)  /* Bit 2:  Frequency < low frequency reference threshold,
+                                            * asynchronous */
+#define CMU_IER_FHHAIE           (1 << 3)  /* Bit 3:  Frequency > high frequency reference threshold,
+                                            * asynchronous */
 
 #endif /* __ARCH_ARM_SRC_S32K1XX_HARDWARE_S32K1XX_CMU_H */
