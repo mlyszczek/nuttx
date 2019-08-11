@@ -75,59 +75,13 @@ endif
 # Source file specific to the S32k11x family
 
 CHIP_ASRCS  =
-CHIP_CSRCS  = s32k14x_clockconfig.c s32k14x_irq.c s32k14x_clrpend.c
-CHIP_CSRCS += s32k14x_allocateheap.c s32k14x_lowputc.c s32k14x_gpio.c s32k14x_reset.c
-
-ifneq ($(CONFIG_SCHED_TICKLESS),y)
-CHIP_CSRCS += s32k14x_timerisr.c
-else
-CHIP_CSRCS += s32k14x_tickless.c
-endif
+CHIP_CSRCS  = s32k14x_irq.c s32k14x_clrpend.c
 
 ifeq ($(CONFIG_BUILD_PROTECTED),y)
 CHIP_CSRCS += s32k14x_userspace.c s32k14x_mpuinit.c
 endif
 
-ifeq ($(CONFIG_LPC54_DMA),y)
-CHIP_CSRCS += s32k14x_dma.c
-endif
-
-ifneq ($(CONFIG_ARCH_IDLE_CUSTOM),y)
-CHIP_CSRCS += s32k14x_idle.c
-endif
-
-ifeq ($(CONFIG_LPC54_GPIOIRQ),y)
-CHIP_CSRCS += s32k14x_gpioirq.c
-endif
-
-ifeq ($(CONFIG_RTC),y)
-CHIP_CSRCS += s32k14x_rtc.c
-ifeq ($(CONFIG_RTC_DRIVER),y)
-CHIP_CSRCS += s32k14x_rtc_lowerhalf.c
-endif
-endif
-
-ifeq ($(CONFIG_LPC54_WWDT),y)
-CHIP_CSRCS += s32k14x_wwdt.c
-endif
-
-ifeq ($(CONFIG_LPC54_RNG),y)
-CHIP_CSRCS += s32k14x_rng.c
-endif
-
-ifeq ($(CONFIG_LPC54_HAVE_USART),y)
-CHIP_CSRCS += s32k14x_serial.c
-endif
-
-ifeq ($(CONFIG_LPC54_HAVE_I2C_MASTER),y)
-CHIP_CSRCS += s32k14x_i2c_master.c
-endif
-
-ifeq ($(CONFIG_LPC54_HAVE_SPI_MASTER),y)
-CHIP_CSRCS += s32k14x_spi_master.c
-endif
-
-ifeq ($(CONFIG_LPC54_ETHERNET),y)
+ifeq ($(CONFIG_S32K1XX_ETHERNET),y)
 CHIP_CSRCS += s32k14x_ethernet.c
 endif
 
