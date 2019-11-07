@@ -80,14 +80,6 @@ int main(int argc, char **argv, char **envp)
   sim_cpu0_initialize();
 #endif
 
-#ifdef CONFIG_PM
-  /* Power management should be initialized early in the (simulated) boot
-   * sequence.
-   */
-
-  pm_initialize();
-#endif
-
   /* Then start NuttX */
 
   if (setjmp(g_simabort) == 0)

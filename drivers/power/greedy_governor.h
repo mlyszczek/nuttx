@@ -1,8 +1,7 @@
 /****************************************************************************
- * drivers/power/pm_initialize.c
+ * user_governor/user_governor.c
  *
- *   Copyright (C) 2011-2012, 2017 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ *   Copyright (C) 2019 Matias Nitsche. All rights reserved.
  *   Author: Matias Nitsche <mnitsche@dc.uba.ar>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,86 +33,57 @@
  *
  ****************************************************************************/
 
+#ifndef __USER_GOVERNOR_C__
+#define __USER_GOVERNOR_C__
+
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <nuttx/config.h>
-
-#include <semaphore.h>
-
-#include <nuttx/semaphore.h>
+#include <nuttx/input/ioctl.h>
 #include <nuttx/power/pm.h>
 
-#include "pm.h"
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
 
-#if defined(CONFIG_PM_GOVERNOR_ACTIVITY)
-#  include "activity_governor.h"
-#elif defined(CONFIG_PM_GOVERNOR_GREEDY)
-#  include "greedy_governor.h"
-#endif
-
-#ifdef CONFIG_PM
+/****************************************************************************
+ * Type Definitions
+ ****************************************************************************/
 
 /****************************************************************************
  * Public Data
  ****************************************************************************/
 
-/* All PM global data: */
-
-/* Initialize the registry and the PM global data structures.  The PM
- * global data structure resides in .data which is zeroed at boot time.  So
- * it is only required to initialize non-zero elements of the PM global
- * data structure here.
- */
-
-struct pm_global_s g_pmglobals =
+#ifdef __cplusplus
+#define EXTERN extern "C"
+extern "C"
 {
-  .regsem = SEM_INITIALIZER(1)
-};
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: pm_initialize
- *
- * Description:
- *   This function is called by MCU-specific one-time at power on reset in
- *   order to initialize the power management capabilities.  This function
- *   must be called *very* early in the initialization sequence *before* any
- *   other device drivers are initialize (since they may attempt to register
- *   with the power management subsystem).
- *
- * Input Parameters:
- *   None.
- *
- * Returned Value:
- *    None.
- *
- ****************************************************************************/
-
-void pm_initialize(void)
-{
-  /* Select governor */
-
-#if defined(CONFIG_PM_GOVERNOR_ACTIVITY)
-  g_pmglobals.governor = pm_activity_governor_initialize();
-#elif defined(CONFIG_PM_GOVERNOR_GREEDY)
-  g_pmglobals.governor = pm_greedy_governor_initialize();
-#elif defined(CONFIG_PM_GOVERNOR_CUSTOM)
-  /* TODO: call to board function to retrieve custom governor,
-   * such as board_pm_governor_initialize()
-   */
-
-#  error "Not supported yet"
+#else
+#define EXTERN extern
 #endif
 
-  /* Initialize selected governor */
+/****************************************************************************
+ * Public Function Prototypes
+ ****************************************************************************/
 
-  g_pmglobals.governor->initialize();
+/****************************************************************************
+ * Name: pm_greedy_governor_register
+ *
+ * Description:
+ *   Return the greedy governor instance.
+ *
+ * Returned Value:
+ *   A pointer to the governor struct. Otherwise NULL is returned on error.
+ *
+ ****************************************************************************/
+
+const struct pm_governor_s *pm_greedy_governor_initialize(void);
+
+#undef EXTERN
+#ifdef __cplusplus
 }
+#endif
 
-#endif /* CONFIG_PM */
-
+#endif // __USER_GOVERNOR_C__
