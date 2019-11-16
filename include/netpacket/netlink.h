@@ -352,6 +352,8 @@
 
 /* NETLINK_CRYPTO protocol message types ************************************/
 
+/* NETLINK_CRYPTO message types */
+
 #define CRYPTO_MSG_NEWALG     (RTM_LASTMSG + 1)
 #define CRYPTO_MSG_DELALG     (RTM_LASTMSG + 2)
 #define CRYPTO_MSG_UPDATEALG  (RTM_LASTMSG + 3)
@@ -361,7 +363,7 @@
 
 #define CRYPTO_MSG_LAST       (RTM_LASTMSG + 6)
 
-/* Netlink message attributes. */
+/* NETLINK_CRYPTO report attributes. */
 
 #define CRYPTOCFGA_UNSPEC           0
 #define CRYPTOCFGA_PRIORITY_VAL     1  /* Argument: uint32_t */
