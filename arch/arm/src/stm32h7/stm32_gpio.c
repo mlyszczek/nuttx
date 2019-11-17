@@ -57,7 +57,7 @@
  * families
  */
 
-#if defined(CONFIG_STM32H7_STM32H7X3XX)
+#if defined(CONFIG_STM32H7_STM32H7X3XX) || defined(CONFIG_STM32H7_STM32H7X7XX)
 
 /****************************************************************************
  * Public Data
