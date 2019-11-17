@@ -58,7 +58,7 @@
 #include "stm32_otg.h"
 #include "stm32h747i-disco.h"
 
-#ifdef CONFIG_STM32H7_OTGFS
+#ifdef CONFIG_STM32H7_OTGHS
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -67,16 +67,16 @@
 #if defined(CONFIG_USBDEV) || defined(CONFIG_USBHOST)
 #  define HAVE_USB 1
 #else
-#  warning "CONFIG_STM32_OTGFS is enabled but neither CONFIG_USBDEV nor CONFIG_USBHOST"
+#  warning "CONFIG_STM32H7_OTGHS is enabled but neither CONFIG_USBDEV nor CONFIG_USBHOST"
 #  undef HAVE_USB
 #endif
 
-#ifndef CONFIG_NUCLEOH743ZI_USBHOST_PRIO
-#  define CONFIG_NUCLEOH743ZI_USBHOST_PRIO 100
+#ifndef CONFIG_STM32H747XI_DISCO_USBHOST_PRIO
+#  define CONFIG_STM32H747XI_DISCO_USBHOST_PRIO 100
 #endif
 
-#ifndef CONFIG_NUCLEOH743ZI_USBHOST_STACKSIZE
-#  define CONFIG_NUCLEOH743ZI_USBHOST_STACKSIZE 1024
+#ifndef CONFIG_STM32H747XI_DISCO_USBHOST_STACKSIZE
+#  define CONFIG_STM32H747XI_DISCO_USBHOST_STACKSIZE 1024
 #endif
 
 /****************************************************************************
@@ -137,20 +137,16 @@ static int usbhost_waiter(int argc, char *argv[])
  *
  * Description:
  *   Called from stm32_usbinitialize very early in inialization to setup USB-related
- *   GPIO pins for the nucleo-144 board.
+ *   GPIO pins for the STM32H747I DISCO board.
  *
  ****************************************************************************/
 
 void stm32_usbinitialize(void)
 {
-  /* The OTG FS has an internal soft pull-up.  No GPIO configuration is required */
+  /* Configure the Overcurrent GPIO */
 
-  /* Configure the OTG FS VBUS sensing GPIO, Power On, and Overcurrent GPIOs */
-
-#ifdef CONFIG_STM32H7_OTGFS
-  stm32_configgpio(GPIO_OTGFS_VBUS);
-  stm32_configgpio(GPIO_OTGFS_PWRON);
-  stm32_configgpio(GPIO_OTGFS_OVER);
+#ifdef CONFIG_STM32H7_OTGHS
+  stm32_configgpio(GPIO_OTGHS_OVER);
 #endif
 }
 
@@ -232,15 +228,15 @@ int stm32_usbhost_initialize(void)
   /* Then get an instance of the USB host interface */
 
   uinfo("Initialize USB host\n");
-  g_usbconn = stm32_otgfshost_initialize(0);
+  g_usbconn = stm32_otghshost_initialize(0);
   if (g_usbconn)
     {
       /* Start a thread to handle device connection. */
 
       uinfo("Start usbhost_waiter\n");
 
-      pid = kthread_create("usbhost", CONFIG_NUCLEOH743ZI_USBHOST_PRIO,
-                           CONFIG_NUCLEOH743ZI_USBHOST_STACKSIZE,
+      pid = kthread_create("usbhost", CONFIG_STM32H747XI_DISCO_USBHOST_PRIO,
+                           CONFIG_STM32H747XI_DISCO_USBHOST_STACKSIZE,
                            (main_t)usbhost_waiter, (FAR char * const *)NULL);
       return pid < 0 ? -ENOEXEC : OK;
     }
@@ -254,7 +250,7 @@ int stm32_usbhost_initialize(void)
  *
  * Description:
  *   Enable/disable driving of VBUS 5V output.  This function must be provided be
- *   each platform that implements the STM32 OTG FS host interface
+ *   each platform that implements the STM32 OTG HS host interface
  *
  *   "On-chip 5 V VBUS generation is not supported. For this reason, a charge pump
  *    or, if 5 V are available on the application board, a basic power switch, must
@@ -280,9 +276,6 @@ void stm32_usbhost_vbusdrive(int iface, bool enable)
 {
   DEBUGASSERT(iface == 0);
 
-  /* Set the Power Switch by driving the active low enable pin */
-
-  stm32_gpiowrite(GPIO_OTGFS_PWRON, !enable);
 }
 #endif
 
@@ -306,7 +299,7 @@ void stm32_usbhost_vbusdrive(int iface, bool enable)
 #ifdef CONFIG_USBHOST
 int stm32_setup_overcurrent(xcpt_t handler, void *arg)
 {
-  return stm32_gpiosetevent(GPIO_OTGFS_OVER, true, true, true, handler, arg);
+  return stm32_gpiosetevent(GPIO_OTGHS_OVER, true, true, true, handler, arg);
 }
 #endif
 
@@ -328,4 +321,4 @@ void stm32_usbsuspend(FAR struct usbdev_s *dev, bool resume)
 }
 #endif
 
-#endif /* CONFIG_STM32_OTGFS */
+#endif /* CONFIG_STM32_OTGHS */

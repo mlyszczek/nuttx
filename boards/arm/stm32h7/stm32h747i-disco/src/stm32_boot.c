@@ -70,7 +70,7 @@ void stm32_boardinitialize(void)
   board_autoled_initialize();
 #endif
 
-#if defined(CONFIG_STM32H7_OTGFS) || defined(CONFIG_STM32H7_HOST)
+#if defined(CONFIG_STM32H7_OTGHS) || defined(CONFIG_STM32H7_HOST)
   /* Initialize USB */
 
   stm32_usbinitialize();

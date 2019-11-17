@@ -11,7 +11,7 @@ README
   - One pushbuttons (user and reset)
   - Four-way joystick controller with select key
   - 32.768 kHz crystal oscillator
-  - USB OTG FS with Micro-AB connectors
+  - USB OTG HS with Micro-AB connectors
   - Ethernet connector compliant with IEEE-802.3-2002
   - Board connectors:
     - Camera

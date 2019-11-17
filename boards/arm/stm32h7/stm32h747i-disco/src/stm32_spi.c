@@ -64,7 +64,7 @@
  * Name: stm32_spidev_initialize
  *
  * Description:
- *   Called to configure SPI chip select GPIO pins for the Nucleo-144 board.
+ *   Called to configure SPI chip select GPIO pins for the STM32H747I-DISCO board.
  *
  ****************************************************************************/
 
@@ -75,17 +75,6 @@ void stm32_spidev_initialize(void)
    *       Here, we only initialize chip select pins unique to the board
    *       architecture.
    */
-
-#ifdef CONFIG_STM32H7_SPI3
-#  ifdef CONFIG_WL_NRF24L01
-  /* Configure the SPI-based NRF24L01 chip select GPIO */
-
-  spiinfo("Configure GPIO for SPI3/CS\n");
-
-  stm32_configgpio(GPIO_NRF24L01_CS);
-  stm32_gpiowrite(GPIO_NRF24L01_CS, true);
-#  endif
-#endif
 }
 
 /****************************************************************************
@@ -144,15 +133,6 @@ void stm32_spi3select(FAR struct spi_dev_s *dev, uint32_t devid, bool selected)
 {
   switch (devid)
     {
-#ifdef CONFIG_WL_NRF24L01
-      case SPIDEV_WIRELESS(0):
-        spiinfo("nRF24L01 device %s\n", selected ? "asserted" : "de-asserted");
-
-        /* Set the GPIO low to select and high to de-select */
-
-        stm32_gpiowrite(GPIO_NRF24L01_CS, !selected);
-        break;
-#endif
       default:
         break;
     }
@@ -163,11 +143,6 @@ uint8_t stm32_spi3status(FAR struct spi_dev_s *dev, uint32_t devid)
   uint8_t status = 0;
   switch (devid)
     {
-#ifdef CONFIG_WL_NRF24L01
-      case SPIDEV_WIRELESS(0):
-        status |= SPI_STATUS_PRESENT;
-        break;
-#endif
       default:
         break;
     }
