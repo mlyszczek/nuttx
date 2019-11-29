@@ -64,6 +64,7 @@
 #define PF_PACKET     17         /* Low level packet interface */
 #define PF_BLUETOOTH  31         /* Bluetooth sockets */
 #define PF_IEEE802154 36         /* Low level IEEE 802.15.4 radio frame interface */
+#define PF_ALG        38         /* Crypto algorithm sockets */
 #define PF_PKTRADIO   64         /* Low level packet radio interface */
 
 /* Supported Address Families. Opengroup.org requires only AF_UNSPEC,
@@ -80,6 +81,7 @@
 #define AF_PACKET      PF_PACKET
 #define AF_BLUETOOTH   PF_BLUETOOTH
 #define AF_IEEE802154  PF_IEEE802154
+#define AF_ALG         PF_ALG
 #define AF_PKTRADIO    PF_PKTRADIO
 
 /* The socket created by socket() has the indicated type, which specifies

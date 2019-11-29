@@ -339,6 +339,37 @@ ssize_t netlink_route_recvfrom(FAR struct socket *psock,
                                FAR struct sockaddr_nl *from);
 #endif
 
+/****************************************************************************
+ * Name: netlink_crypto_sendto()
+ *
+ * Description:
+ *   Perform the sendto() operation for the NETLINK_CRYPTO protocol.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NETLINK_CRYPTO
+ssize_t netlink_crypto_sendto(FAR struct socket *psock,
+                              FAR const struct nlmsghdr *nlmsg,
+                              size_t len, int flags,
+                              FAR const struct sockaddr_alg *to,
+                              socklen_t tolen);
+#endif
+
+/****************************************************************************
+ * Name: netlink_crypto_recvfrom()
+ *
+ * Description:
+ *   Perform the recvfrom() operation for the NETLINK_CRYPTO protocol.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NETLINK_CRYPTO
+ssize_t netlink_crypto_recvfrom(FAR struct socket *psock,
+                                FAR struct nlmsghdr *nlmsg,
+                                size_t len, int flags,
+                                FAR struct sockaddr_alg *from);
+#endif
+
 #undef EXTERN
 #ifdef __cplusplus
 }

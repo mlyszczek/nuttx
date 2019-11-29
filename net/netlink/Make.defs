@@ -44,6 +44,10 @@ ifeq ($(CONFIG_NETLINK_ROUTE),y)
 NET_CSRCS += netlink_route.c
 endif
 
+ifeq ($(CONFIG_NETLINK_CRYPTO),y)
+NET_CSRCS += netlink_crypto.c
+endif
+
 # Include netlink build support
 
 DEPPATH += --dep-path netlink

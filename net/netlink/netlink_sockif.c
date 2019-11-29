@@ -152,6 +152,11 @@ static int netlink_setup(FAR struct socket *psock, int protocol)
         break;
 #endif
 
+#ifdef CONFIG_NETLINK_CRYPTO
+      case NETLINK_CRYPTO:
+        break;
+#endif
+
       default:
         return -EPROTONOSUPPORT;
     }
@@ -802,6 +807,14 @@ static ssize_t netlink_sendto(FAR struct socket *psock, FAR const void *buf,
         break;
 #endif
 
+#ifdef CONFIG_NETLINK_CRYPTO
+      case NETLINK_CRYPTO:
+        ret = netlink_crypto_sendto(psock, nlmsg, len, flags,
+                                    (FAR struct sockaddr_alg *)to,
+                                    tolen);
+        break;
+#endif
+
       default:
        ret = -EOPNOTSUPP;
        break;
@@ -860,6 +873,18 @@ static ssize_t netlink_recvfrom(FAR struct socket *psock, FAR void *buf,
         if (ret >= 0 && fromlen != NULL)
           {
             *fromlen = sizeof(struct sockaddr_nl);
+          }
+
+        break;
+#endif
+
+#ifdef CONFIG_NETLINK_CRYPTO
+      case NETLINK_CRYPTO:
+        ret = netlink_crypto_recvfrom(psock, nlmsg, len, flags,
+                                      (FAR struct sockaddr_alg *)from);
+        if (ret >= 0 && fromlen != NULL)
+          {
+            *fromlen = sizeof(struct sockaddr_alg);
           }
 
         break;

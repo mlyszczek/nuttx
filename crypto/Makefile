@@ -68,6 +68,10 @@ ifeq ($(CONFIG_CRYPTO_RANDOM_POOL),y)
   CRYPTO_CSRCS += random_pool.c
 endif
 
+ifeq ($(CONFIG_NETLINK_CRYPTO),y)
+  CRYPTO_CSRCS += crypto_netlink.c
+endif
+
 endif # CONFIG_CRYPTO
 
 ASRCS = $(CRYPTO_ASRCS)
