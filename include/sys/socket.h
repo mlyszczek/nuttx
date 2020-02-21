@@ -131,7 +131,7 @@
 
 /* Protocol levels supported by get/setsockopt(): */
 
-#define SOL_SOCKET      0 /* Only socket-level options supported */
+#define SOL_SOCKET       0 /* Only socket-level options supported */
 
 /* Socket-level options */
 
@@ -202,13 +202,13 @@
                             * return: int
                             */
 
-                            
 /* The options are unsupported but included for compatibility
  * and portability
  */
+
 #define SO_TIMESTAMP    29
-#define SO_SNDBUFFORCE	32 
-#define SO_RCVBUFFORCE	33 
+#define SO_SNDBUFFORCE  32
+#define SO_RCVBUFFORCE  33
 #define SO_RXQ_OVFL     40
 
 /* Protocol-level socket operations. */
