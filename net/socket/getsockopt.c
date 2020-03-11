@@ -278,6 +278,19 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
         }
         break;
 
+#ifdef CONFIG_NET_TIMESTAMP
+      case SO_TIMESTAMP:
+        {
+          if (*value_len != sizeof(int))
+            {
+              return -EINVAL;
+            }
+
+          *(FAR int *)value = (int)psock->s_timestamp;
+        }
+        break;
+#endif
+
       /* The following are not yet implemented
        * (return values other than {0,1})
        */
