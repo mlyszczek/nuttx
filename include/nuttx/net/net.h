@@ -217,7 +217,7 @@ struct sock_intf_s
                     FAR socklen_t *fromlen);
 #ifdef CONFIG_NET_RECVMSG_CMSG
   CODE ssize_t    (*si_recvmsg)(FAR struct socket *psock,
-		            FAR struct msghdr *msg, int flags);
+                FAR struct msghdr *msg, int flags);
 #endif
   CODE int        (*si_close)(FAR struct socket *psock);
 #ifdef CONFIG_NET_USRSOCK
