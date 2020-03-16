@@ -510,8 +510,13 @@ static int netlink_connect(FAR struct socket *psock,
  ****************************************************************************/
 
 static int netlink_accept(FAR struct socket *psock,
+<<<<<<< HEAD
                           FAR struct sockaddr *addr, FAR socklen_t *addrlen,
                           FAR struct socket *newsock)
+=======
+                          FAR struct sockaddr *addr,
+                          FAR socklen_t *addrlen, FAR struct socket *newsock)
+>>>>>>> Code style fixes 4
 {
   return -EOPNOTSUPP;
 }
@@ -649,8 +654,13 @@ static int netlink_poll(FAR struct socket *psock, FAR struct pollfd *fds,
           conn->pollsem    = fds->sem;
           conn->pollevent  = &fds->revents;
 
+<<<<<<< HEAD
           ret = netlink_notifier_setup(netlink_response_available,
                                        conn, conn);
+=======
+          ret = netlink_notifier_setup(netlink_response_available, conn,
+                                       conn);
+>>>>>>> Code style fixes 4
           if (ret < 0)
             {
               nerr("ERROR: netlink_notifier_setup() failed: %d\n", ret);
@@ -729,7 +739,12 @@ static ssize_t netlink_send(FAR struct socket *psock, FAR const void *buf,
  *   returned when the socket was not actually connected.
  *
  * Input Parameters:
+<<<<<<< HEAD
  *   psock    A reference to the structure of the socket to be connected
+=======
+ *   psock    A reference to the socket structure of the socket
+ *            to be connected
+>>>>>>> Code style fixes 4
  *   buf      Data to send
  *   len      Length of data to send
  *   flags    Send flags (ignored)
